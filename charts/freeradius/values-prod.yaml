@@ -1,9 +1,0 @@
-persistence:
-  enabled: false
-  existingClaim: "data"
-  subPath: ""
-  storageClass: "openebs-hostpath"
-
-service:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
