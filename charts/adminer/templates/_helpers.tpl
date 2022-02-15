@@ -70,7 +70,7 @@ Create the name of the SSL certificate to use
 
 {{ define "istioCertificateSecret" }}
 {{- if .Values.istio.certificate.existingSecret }}
-  {{ .Values.dags.persistence.existingClaim }}
+  {{ .Values.istio.certificate.existingSecret }}
 {{- else }}
   {{- default (printf "%s-tls" (include "adminer.fullname" .)) }}
 {{- end }}

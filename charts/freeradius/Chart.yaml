@@ -1,5 +1,5 @@
 annotations:
-  category: Auth
+  category: DeveloperTools
 apiVersion: v2
 appVersion: 3.0.25
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
