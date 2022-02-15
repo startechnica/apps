@@ -1,0 +1,54 @@
+apiVersion: v1
+entries:
+
+  adminer:
+    - annotations:
+        category: DatabaseManagement
+      apiVersion: v2
+      appVersion: 4.8.1
+      description: Adminer is a full-featured database management tool written in PHP. Conversely
+        to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer
+        is available for MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB,
+        Elasticsearch and MongoDB
+      home: https://www.adminer.org
+      icon: https://raw.githubusercontent.com/Kong/docker-official-docs/master/adminer/logo.png
+      keywords:
+        - adminer
+        - postgres
+        - mysql
+        - sqlite
+        - elasticsearch
+        - mongodb
+        - database
+        - sql
+      maintainers:
+        - name: Firmansyah Nainggolan
+          email: firmansyah@nainggolan.id
+          url: https://firmansyah.nainggolan.id
+      name: adminer
+      sources:
+        - https://www.adminer.org
+      version: 0.1.7
+
+  freeradius:
+    - annotations:
+        category: DeveloperTools
+      apiVersion: v2
+      appVersion: 3.0.25
+      description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
+        distributed under the GNU General Public License, version 2, and is free for download and use.
+      home: https://freeradius.org/
+      icon: https://freeradius.org/img/wordmark.svg
+      keywords:
+        - freeradius
+        - radius
+        - mysql
+        - sql
+      maintainers:
+        - name: Firmansyah Nainggolan
+          email: firmansyah@nainggolan.id
+          url: https://firmansyah.nainggolan.id
+      name: freeradius
+      sources:
+        - https://freeradius.org/
+      version: 0.1.0
