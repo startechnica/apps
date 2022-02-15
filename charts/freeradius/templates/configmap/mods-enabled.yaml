@@ -1,0 +1,12 @@
+#####################################
+## FreeRADIUS ConfigMap mods-enabled
+#####################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freeradius-mods
+  namespace: {{ .Release.Namespace | quote }}
+{{- $Global := . }}
+data:
+  sql: |-
+{{ tpl (.Files.Get "files/mods-enabled/sql") . | nindent 4 }}
