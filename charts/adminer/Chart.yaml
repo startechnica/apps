@@ -24,4 +24,4 @@ maintainers:
 name: adminer
 sources:
   - https://www.adminer.org
-version: 0.1.7
+version: 0.1.1
