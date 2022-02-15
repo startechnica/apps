@@ -1,0 +1,29 @@
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/VirtualService" }}
+{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Release.Name }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "adminer.labels" . | nindent 4 }}
+    app.kubernetes.io/component: adminer
+spec:
+  hosts:
+  {{- if .Values.istio.hosts }}
+    {{- toYaml .Values.istio.hosts | nindent 4 }}
+  {{- end }}
+  gateways:
+  - {{ .Release.Name }}-gateway
+  http:
+  - route:
+    - destination:
+        host: {{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local
+        port:
+          number: {{ .Values.service.port }}
+{{- end }}
+{{- end }}
+---

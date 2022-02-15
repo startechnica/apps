@@ -1,0 +1,192 @@
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+
+## @section Common parameters
+
+## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
+##
+kubeVersion: ""
+## @param nameOverride String to partially override adminer.fullname
+##
+nameOverride: ""
+## @param fullnameOverride String to fully override adminer.fullname
+##
+fullnameOverride: ""
+## @param hostAliases Add deployment host aliases
+## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+##
+hostAliases: []
+## @param commonLabels Labels to add to all deployed objects
+##
+commonLabels: {}
+## @param commonAnnotations Annotations to add to all deployed objects
+##
+commonAnnotations: {}
+## @param clusterDomain Default Kubernetes cluster domain
+##
+clusterDomain: cluster.local
+## @param extraDeploy Array of extra objects to deploy with the release
+##
+extraDeploy: []
+
+replicaCount: 1
+
+image:
+  repository: adminer
+  tag: 4.8.1-standalone
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# See envs from https://hub.docker.com/_/adminer/
+config:
+  plugins: ""
+  design: "pepa-linha"
+  externalserver: ""
+  port: 8080
+  base_url: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+  ## Set the LoadBalancer service type to internal only.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+  ##
+  # loadBalancerIP:
+
+  ## Load Balancer sources
+  ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+  ##
+  # loadBalancerSourceRanges:
+  # - 10.10.10.0/24
+
+## Configure Ingress based on the documentation here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+##
+ingress:
+  enabled: false
+  annotations: {}
+  tls: []
+  hosts: []
+  path: /
+
+# kubectl create secret generic ca --from-file=ca.pem
+# cat > login-ssl.php << EOF
+# <?php
+# require_once('plugins/login-ssl.php');
+# return new AdminerLoginSsl(array("ca" => "/secrets/ca.pem"));
+# EOF
+# kubectl create configmap plugins-enabled --from-file=login-ssl.php
+# volumeMounts:
+#   - name: ca
+#     mountPath: "/secrets/"
+#     readOnly: true
+#   - name: plugins-enabled
+#     mountPath: "/var/www/html/plugins-enabled/"
+#     readOnly: true
+
+# volumes:
+#   - name: ca
+#     secret:
+#       secretName: ca
+#   - name: plugins-enabled
+#     configMap:
+#       name: plugins-enabled
+
+# If the adminer stops heartbeating for 5 minutes (30*20s) kill the
+# adminer and let Kubernetes restart it
+livenessProbe:
+  initialDelaySeconds: 15
+  timeoutSeconds: 30
+  failureThreshold: 20
+  periodSeconds: 30
+
+readinessProbe:
+  initialDelaySeconds: 15
+  timeoutSeconds: 30
+  failureThreshold: 20
+  periodSeconds: 30
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+#resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Create ServiceAccount
+serviceAccount:
+  # Specifies whether a ServiceAccount should be created
+  create: true
+  # The name of the ServiceAccount to use.
+  # If not set and create is true, a name is generated using the release name
+  name: ~
+
+  # Annotations to add to worker kubernetes service account.
+  annotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+istio:
+  enabled: false
+  namespace: istio-system
+  hosts:
+    - "adminer.app.example.id"
+
+  certificate:
+    create: true
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: selfsigned-issuer
+    existingSecret: ~
+
+  gateway:
+    enabled: true
+    ingressGateway: ingressgateway
+    servers:
+      - port:
+          number: 80
+          name: http-adminer
+          protocol: HTTP
+      - port:
+          number: 443
+          name: https-adminer
+          protocol: HTTPS
+        tls:
+          mode: SIMPLE
+
+  virtualService:
+    enabled: true
+
+organization: Adminer
