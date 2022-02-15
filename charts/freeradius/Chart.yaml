@@ -4,7 +4,7 @@ apiVersion: v2
 appVersion: 3.0.25
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
   distributed under the GNU General Public License, version 2, and is free for download and use.
-home: https://freeradius.org/
+home: https://github.com/startechnica/apps/tree/main/charts/freeradius
 icon: https://freeradius.org/img/wordmark.svg
 keywords:
   - freeradius
