@@ -44,13 +44,57 @@ clusterDomain: cluster.local
 ##
 extraDeploy: []
 
-replicaCount: 1
+## Enable diagnostic mode in the deployment
+##
+diagnosticMode:
+  ## @param diagnosticMode.enabled Enable diagnostic mode (all probes will be disabled and the command will be overridden)
+  ##
+  enabled: false
+  ## @param diagnosticMode.command Command to override all containers in the deployment
+  ##
+  command:
+    - sleep
+  ## @param diagnosticMode.args Args to override all containers in the deployment
+  ##
+  args:
+    - infinity
 
+## @section FreeRADIUS common parameters
+
+## FreeRADIUS image
+## ref: https://hub.docker.com/r/bitnami/mariadb/tags/
+## @param image.registry FreeRADIUS image registry
+## @param image.repository FreeRADIUS image repository
+## @param image.tag FreeRADIUS image tag (immutable tags are recommended)
+## @param image.pullPolicy FreeRADIUS image pull policy
+## @param image.pullSecrets Specify docker-registry secret names as an array
+## @param image.debug Specify if debug logs should be enabled
+##
 image:
+  registry: docker.io
   repository: adminer
   tag: 4.8.1-standalone
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
   pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## Example:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
   pullSecrets: []
+  ## Set to true if you would like to see extra information on logs
+  ## It turns BASH and/or NAMI debugging in the image
+  ##
+  debug: false
+## @param architecture FreeRADIUS architecture (`standalone` or `replication`)
+##
+architecture: standalone
+
+replicaCount: 1
 
 # See envs from https://hub.docker.com/_/adminer/
 config:
