@@ -1,58 +1,117 @@
 apiVersion: v1
 entries:
-
   adminer:
-    - annotations:
-        category: DatabaseManagement
-      apiVersion: v2
-      appVersion: 4.8.1
-      description: Adminer is a full-featured database management tool written in PHP. Conversely
-        to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer
-        is available for MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB,
-        Elasticsearch and MongoDB
-      home: https://www.adminer.org
-      icon: https://raw.githubusercontent.com/Kong/docker-official-docs/master/adminer/logo.png
-      keywords:
-        - adminer
-        - postgres
-        - mysql
-        - sqlite
-        - elasticsearch
-        - mongodb
-        - database
-        - sql
-      maintainers:
-        - name: Firmansyah Nainggolan
-          email: firmansyah@nainggolan.id
-          url: https://firmansyah.nainggolan.id
-      name: adminer
-      sources:
-        - https://www.adminer.org
-      urls:
-        - https://github.com/startechnica/apps/releases/download/adminer-0.1.7/adminer-0.1.7.tgz
-      version: 0.1.7
-
+  - annotations:
+      category: DatabaseManagement
+    apiVersion: v2
+    appVersion: 4.8.1
+    created: "0001-01-01T00:00:00Z"
+    description: Adminer is a full-featured database management tool written in PHP.
+      Conversely to phpMyAdmin, it consist of a single file ready to deploy to the
+      target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite,
+      MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
+    home: https://www.adminer.org
+    icon: https://raw.githubusercontent.com/Kong/docker-official-docs/master/adminer/logo.png
+    keywords:
+    - adminer
+    - postgres
+    - mysql
+    - sqlite
+    - elasticsearch
+    - mongodb
+    - database
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: adminer
+    sources:
+    - https://www.adminer.org
+    urls:
+    - https://github.com/startechnica/apps/releases/download/adminer-0.1.7/adminer-0.1.7.tgz
+    version: 0.1.7
+  - annotations:
+      category: DatabaseManagement
+    apiVersion: v2
+    appVersion: 4.8.1
+    created: "2022-02-15T09:34:35.85112151Z"
+    description: Adminer is a full-featured database management tool written in PHP.
+      Conversely to phpMyAdmin, it consist of a single file ready to deploy to the
+      target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite,
+      MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
+    digest: be7b263ac4b0e8b299810cce682071d26a16d914ad25bdc658408b1d4e9f5f0d
+    home: https://github.com/startechnica/apps/tree/main/charts/adminer
+    icon: https://raw.githubusercontent.com/Kong/docker-official-docs/master/adminer/logo.png
+    keywords:
+    - adminer
+    - postgres
+    - mysql
+    - sqlite
+    - elasticsearch
+    - mongodb
+    - database
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: adminer
+    sources:
+    - https://www.adminer.org
+    urls:
+    - https://github.com/startechnica/apps/releases/download/adminer-0.1.1/adminer-0.1.1.tgz
+    version: 0.1.1
   freeradius:
-    - annotations:
-        category: DeveloperTools
-      apiVersion: v2
-      appVersion: 3.0.25
-      description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
-        distributed under the GNU General Public License, version 2, and is free for download and use.
-      home: https://freeradius.org/
-      icon: https://freeradius.org/img/wordmark.svg
-      keywords:
-        - freeradius
-        - radius
-        - mysql
-        - sql
-      maintainers:
-        - name: Firmansyah Nainggolan
-          email: firmansyah@nainggolan.id
-          url: https://firmansyah.nainggolan.id
-      name: freeradius
-      sources:
-        - https://freeradius.org/
-      urls:
-        - https://github.com/startechnica/apps/releases/download/freeradius-0.1.0/freeradius-0.1.0.tgz
-      version: 0.1.0
+  - annotations:
+      category: DeveloperTools
+    apiVersion: v2
+    appVersion: 3.0.25
+    created: "2022-02-15T09:34:35.974286583Z"
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    digest: 12a0d299c7148b7ec39ed1f6c7a71763c66cc7b3ef124cf92aed9242219feadb
+    home: https://github.com/startechnica/apps/tree/main/charts/freeradius
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - mysql
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-0.1.1/freeradius-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      category: DeveloperTools
+    apiVersion: v2
+    appVersion: 3.0.25
+    created: "0001-01-01T00:00:00Z"
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    home: https://freeradius.org/
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - mysql
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-0.1.0/freeradius-0.1.0.tgz
+    version: 0.1.0
+generated: "2022-02-15T09:34:35.974329383Z"
