@@ -28,6 +28,8 @@ entries:
       name: adminer
       sources:
         - https://www.adminer.org
+      urls:
+        - https://github.com/startechnica/apps/releases/download/adminer-0.1.7/adminer-0.1.7.tgz
       version: 0.1.7
 
   freeradius:
@@ -51,4 +53,6 @@ entries:
       name: freeradius
       sources:
         - https://freeradius.org/
+      urls:
+        - https://github.com/startechnica/apps/releases/download/freeradius-0.1.0/freeradius-0.1.0.tgz
       version: 0.1.0
