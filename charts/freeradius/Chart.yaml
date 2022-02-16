@@ -1,5 +1,5 @@
 annotations:
-  category: Auth
+  category: AccessManagement
 apiVersion: v2
 appVersion: 3.0.25
 dependencies:
@@ -27,4 +27,4 @@ maintainers:
 name: freeradius
 sources:
   - https://freeradius.org/
-version: 0.1.0
+version: 0.1.2

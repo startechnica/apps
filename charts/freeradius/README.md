@@ -6,6 +6,7 @@ FreeRADIUS is a modular, high performance free RADIUS suite developed and distri
 
 [Overview of FreeRADIUS](https://freeradius.org/)
 
+**This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
 
 ## TL;DR
 
