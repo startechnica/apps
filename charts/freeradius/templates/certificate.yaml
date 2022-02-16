@@ -30,7 +30,7 @@ spec:
     - {{ .Release.Name | quote }}
   dnsNames:
   {{- $altNames := list (printf "%s.%s.svc.%s" $fullname $releaseNamespace $clusterDomain) (printf "%s.%s" $fullname $releaseNamespace) $fullname }}
-  {{- range $altNames }}
+  {{- with $altNames }}
     {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}
