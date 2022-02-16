@@ -31,7 +31,7 @@ $ helm install my-release startechnica/freeradius --namespace my-release --creat
 
 These commands deploy FreeRADIUS on the Kubernetes cluster in the default configuration.
 
-> **Tip**: List all releases using `helm list`
+> **Tip**: List all releases using `helm list -A`
 
 ## Uninstalling the Chart
 
