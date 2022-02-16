@@ -34,6 +34,41 @@ entries:
     version: 0.1.1
   freeradius:
   - annotations:
+      category: AccessManagement
+    apiVersion: v2
+    appVersion: 3.0.25
+    created: "2022-02-16T09:28:10.610596869Z"
+    dependencies:
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    digest: 9365e7d7176ef4595429d5673d879f9dbffafd6724cf16c83a7c03ff99db72e1
+    home: https://freeradius.org/
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - mysql
+    - postgresql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-0.1.2/freeradius-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
       category: DeveloperTools
     apiVersion: v2
     appVersion: 3.0.25
@@ -84,4 +119,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/freeradius-0.1.0/freeradius-0.1.0.tgz
     version: 0.1.0
-generated: "2022-02-15T09:34:35.974329383Z"
+generated: "2022-02-16T09:28:10.610610269Z"
