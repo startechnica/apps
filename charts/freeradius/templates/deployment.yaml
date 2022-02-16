@@ -110,7 +110,7 @@ spec:
             {{- end }}
             {{- if and .Values.tls.enabled }}
             - name: freeradius-tls
-              mountPath: "/etc/freeradius/tls"
+              mountPath: "/etc/freeradius/certs/tls"
               readOnly: true
             {{- end }}
             - name: freeradius-mods
