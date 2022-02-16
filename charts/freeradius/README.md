@@ -87,9 +87,9 @@ The command removes all the Kubernetes components associated with the chart and 
 
 | Name                                    | Description                                                                               | Value   |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| `replicaCount`                          | Number of FreeRADIUS replicas to deploy                                                        | `1`     |
-| `podLabels`                             | Additional labels for FreeRADIUS pods                                                          | `{}`    |
-| `podAnnotations`                        | Annotations for FreeRADIUS pods                                                                | `{}`    |
+| `replicaCount`                          | Number of FreeRADIUS replicas to deploy                                                   | `1`     |
+| `podLabels`                             | Additional labels for FreeRADIUS pods                                                     | `{}`    |
+| `podAnnotations`                        | Annotations for FreeRADIUS pods                                                           | `{}`    |
 | `podAffinityPreset`                     | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`       | `""`    |
 | `podAntiAffinityPreset`                 | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`  | `soft`  |
 | `nodeAffinityPreset.type`               | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard` | `""`    |
@@ -99,16 +99,16 @@ The command removes all the Kubernetes components associated with the chart and 
 | `nodeSelector`                          | Node labels for pod assignment. Evaluated as a template.                                  | `{}`    |
 | `tolerations`                           | Tolerations for pod assignment. Evaluated as a template.                                  | `{}`    |
 | `priorityClassName`                     | Priority class name                                                                       | `""`    |
-| `podSecurityContext.enabled`            | Enabled FreeRADIUS pods' Security Context                                                      | `false` |
-| `podSecurityContext.fsGroup`            | Set FreeRADIUS pod's Security Context fsGroup                                                  | `1001`  |
-| `podSecurityContext.sysctls`            | sysctl settings of the FreeRADIUS pods                                                         | `[]`    |
-| `containerSecurityContext.enabled`      | Enabled FreeRADIUS containers' Security Context                                                | `false` |
-| `containerSecurityContext.runAsUser`    | Set FreeRADIUS container's Security Context runAsUser                                          | `1001`  |
-| `containerSecurityContext.runAsNonRoot` | Set FreeRADIUS container's Security Context runAsNonRoot                                       | `true`  |
-| `containerPorts.http`                   | Sets http port inside FreeRADIUS container                                                     | `8080`  |
-| `containerPorts.https`                  | Sets https port inside FreeRADIUS container                                                    | `""`    |
-| `resources.limits`                      | The resources limits for the FreeRADIUS container                                              | `{}`    |
-| `resources.requests`                    | The requested resources for the FreeRADIUS container                                           | `{}`    |
+| `podSecurityContext.enabled`            | Enabled FreeRADIUS pods' Security Context                                                 | `false` |
+| `podSecurityContext.fsGroup`            | Set FreeRADIUS pod's Security Context fsGroup                                             | `1001`  |
+| `podSecurityContext.sysctls`            | sysctl settings of the FreeRADIUS pods                                                    | `[]`    |
+| `containerSecurityContext.enabled`      | Enabled FreeRADIUS containers' Security Context                                           | `false` |
+| `containerSecurityContext.runAsUser`    | Set FreeRADIUS container's Security Context runAsUser                                     | `1001`  |
+| `containerSecurityContext.runAsNonRoot` | Set FreeRADIUS container's Security Context runAsNonRoot                                  | `true`  |
+| `containerPorts.http`                   | Sets http port inside FreeRADIUS container                                                | `8080`  |
+| `containerPorts.https`                  | Sets https port inside FreeRADIUS container                                               | `""`    |
+| `resources.limits`                      | The resources limits for the FreeRADIUS container                                         | `{}`    |
+| `resources.requests`                    | The requested resources for the FreeRADIUS container                                      | `{}`    |
 | `livenessProbe.enabled`                 | Enable livenessProbe                                                                      | `true`  |
 | `livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                   | `30`    |
 | `livenessProbe.periodSeconds`           | Period seconds for livenessProbe                                                          | `10`    |
@@ -123,14 +123,14 @@ The command removes all the Kubernetes components associated with the chart and 
 | `readinessProbe.successThreshold`       | Success threshold for readinessProbe                                                      | `1`     |
 | `customLivenessProbe`                   | Override default liveness probe                                                           | `{}`    |
 | `customReadinessProbe`                  | Override default readiness probe                                                          | `{}`    |
-| `autoscaling.enabled`                   | Enable autoscaling for FreeRADIUS deployment                                                   | `false` |
+| `autoscaling.enabled`                   | Enable autoscaling for FreeRADIUS deployment                                              | `false` |
 | `autoscaling.minReplicas`               | Minimum number of replicas to scale back                                                  | `""`    |
 | `autoscaling.maxReplicas`               | Maximum number of replicas to scale out                                                   | `""`    |
 | `autoscaling.targetCPU`                 | Target CPU utilization percentage                                                         | `""`    |
 | `autoscaling.targetMemory`              | Target Memory utilization percentage                                                      | `""`    |
 | `extraVolumes`                          | Array to add extra volumes                                                                | `[]`    |
 | `extraVolumeMounts`                     | Array to add extra mount                                                                  | `[]`    |
-| `serviceAccount.create`                 | Enable creation of ServiceAccount for freeradius pod                                           | `false` |
+| `serviceAccount.create`                 | Enable creation of ServiceAccount for freeradius pod                                      | `false` |
 | `serviceAccount.name`                   | The name of the ServiceAccount to use.                                                    | `""`    |
 | `serviceAccount.annotations`            | Annotations for service account. Evaluated as a template.                                 | `{}`    |
 | `serviceAccount.autoMount`              | Auto-mount the service account token in the pod                                           | `false` |
@@ -146,25 +146,9 @@ The command removes all the Kubernetes components associated with the chart and 
 
 | Name                                       | Description                                                                                       | Value                  |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------- |
-| `cloneStaticSiteFromGit.enabled`           | Get the server static content from a Git repository                                               | `false`                |
-| `cloneStaticSiteFromGit.image.registry`    | Git image registry                                                                                | `docker.io`            |
-| `cloneStaticSiteFromGit.image.repository`  | Git image repository                                                                              | `startechnica/git`     |
-| `cloneStaticSiteFromGit.image.tag`         | Git image tag (immutable tags are recommended)                                                    | `2.34.1-debian-10-r33` |
-| `cloneStaticSiteFromGit.image.pullPolicy`  | Git image pull policy                                                                             | `IfNotPresent`         |
-| `cloneStaticSiteFromGit.image.pullSecrets` | Specify docker-registry secret names as an array                                                  | `[]`                   |
-| `cloneStaticSiteFromGit.repository`        | Git Repository to clone static content from                                                       | `""`                   |
-| `cloneStaticSiteFromGit.branch`            | Git branch to checkout                                                                            | `""`                   |
-| `cloneStaticSiteFromGit.interval`          | Interval for sidecar container pull from the Git repository                                       | `60`                   |
-| `cloneStaticSiteFromGit.gitClone.command`  | Override default container command for git-clone-repository                                       | `[]`                   |
-| `cloneStaticSiteFromGit.gitClone.args`     | Override default container args for git-clone-repository                                          | `[]`                   |
-| `cloneStaticSiteFromGit.gitSync.command`   | Override default container command for git-repo-syncer                                            | `[]`                   |
-| `cloneStaticSiteFromGit.gitSync.args`      | Override default container args for git-repo-syncer                                               | `[]`                   |
-| `cloneStaticSiteFromGit.extraEnvVars`      | Additional environment variables to set for the in the containers that clone static site from git | `[]`                   |
-| `cloneStaticSiteFromGit.extraVolumeMounts` | Add extra volume mounts for the Git containers                                                    | `[]`                   |
-| `serverBlock`                              | Custom server block to be added to FreeRADIUS configuration                                       | `""`                   |
-| `existingServerBlockConfigmap`             | ConfigMap with custom server block to be added to FreeRADIUS configuration                        | `""`                   |
-| `staticSiteConfigmap`                      | Name of existing ConfigMap with the server static site content                                    | `""`                   |
-| `staticSitePVC`                            | Name of existing PVC with the server static site content                                          | `""`                   |
+| `modsEnabled.enabled`                      | Get the server static content from a Git repository                                               | `true`                 |
+| `sitesEnabled.status.port`                 | Git image registry                                                                                | `18121`            |
+| `sitesEnabled.status.secret`               | Git image repository                                                                              | `adminsecret`     |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
@@ -203,29 +187,13 @@ Alternatively, you can use a ConfigMap or a Secret with the environment variable
 
 This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod's affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
 
-As an alternative, you can use of the preset configurations for pod affinity, pod anti-affinity, and node affinity available at the [startechnica/common](https://github.com/startechnica/charts/tree/master/startechnica/common#affinity) chart. To do so, set the `podAffinityPreset`, `podAntiAffinityPreset`, or `nodeAffinityPreset` parameters.
-
 ### Deploying extra resources
 
 There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
 
-### Ingress
-
-This chart provides support for ingress resources. If you have an ingress controller installed on your cluster, such as [freeradius-ingress-controller](https://github.com/startechnica/charts/tree/master/startechnica/freeradius-ingress-controller) or [contour](https://github.com/startechnica/charts/tree/master/startechnica/contour) you can utilize the ingress controller to serve your application.
-
-To enable ingress integration, please set `ingress.enabled` to `true`.
-
-#### Hosts
-
-Most likely you will only want to have one hostname that maps to this FreeRADIUS installation. If that's your case, the property `ingress.hostname` will set it. However, it is possible to have more than one host. To facilitate this, the `ingress.extraHosts` object can be specified as an array. You can also use `ingress.extraTLS` to add the TLS configuration for extra hosts.
-
-For each host indicated at `ingress.extraHosts`, please indicate a `name`, `path`, and any `annotations` that you may want the ingress controller to know about.
-
-For annotations, please see [this document](https://github.com/kubernetes/ingress-freeradius/blob/master/docs/user-guide/freeradius-configuration/annotations.md). Not all annotations are supported by all ingress controllers, but this document does a good job of indicating which annotation is supported by many popular ingress controllers.
-
 ## Troubleshooting
 
-Find more information about how to deal with common errors related to Bitnami's Helm charts in [this troubleshooting guide](https://docs.startechnica.com/general/how-to/troubleshoot-helm-chart-issues).
+Find more information about how to deal with common errors related to Startechnica's Helm charts in [this troubleshooting guide](https://startechnica.github.io/doc/troubleshoot-helm-chart-issues).
 
 ## Upgrading
 
