@@ -21,6 +21,7 @@ spec:
   template:
     metadata:
       annotations:
+        checksum/configmap-config: {{ include (print $.Template.BasePath "/configmap/config.yaml") . | sha256sum }}
         checksum/configmap-mods: {{ include (print $.Template.BasePath "/configmap/mods-enabled.yaml") . | sha256sum }}
         checksum/configmap-sites: {{ include (print $.Template.BasePath "/configmap/sites-enabled.yaml") . | sha256sum }}
       labels:
@@ -42,10 +43,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           args: ["-x","-l","/dev/stdout"]
           env:
-            - name: SITE_STATUS_CLIENT_SECRET
-              value: adminsecret
-          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+            - name: FOO
+              value: "bar"
           envFrom:
+            - configMapRef:
+                name: freeradius-config
+          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:
                 name: {{ .Values.extraEnvVarsCM }}
@@ -63,7 +66,7 @@ spec:
               containerPort: 1813
               protocol: UDP
             - name: status
-              containerPort: 18121
+              containerPort: {{ .Values.sitesEnabled.status.port }}
               protocol: UDP
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.startupProbe.enabled }}
@@ -73,7 +76,7 @@ spec:
                 - sh
                 - -c
                 - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:18121 status ${SITE_STATUS_CLIENT_SECRET}
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe: {{- omit .Values.livenessProbe "enabled" | toYaml | nindent 12 }}
@@ -82,7 +85,7 @@ spec:
                 - sh
                 - -c
                 - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:18121 status ${SITE_STATUS_CLIENT_SECRET}
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe: {{- omit .Values.readinessProbe "enabled" | toYaml | nindent 12 }}
@@ -91,7 +94,7 @@ spec:
                 - sh
                 - -c
                 - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:18121 status ${SITE_STATUS_CLIENT_SECRET}
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- end }}
           {{- if .Values.resources }}

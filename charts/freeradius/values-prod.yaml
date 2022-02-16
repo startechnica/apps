@@ -1,9 +1,18 @@
-persistence:
-  enabled: false
-  existingClaim: "data"
-  subPath: ""
-  storageClass: "openebs-hostpath"
+# image:
+#   registry: tccr.io
+#   repository: truecharts/freeradius
+#   tag: v3.0.25@sha256:071d2533ecfe74993de840359c939cf6fd25d4ea34322bf6211055e0e5e9d96f
 
 service:
   type: LoadBalancer
   externalTrafficPolicy: Local
+
+modsEnabled:
+  sql:
+    enabled: true
+    server: mariadb.mariadb.svc
+    port: 3306
+    login: radius_user
+    password: radius
+    radiusdb: radiusdb
+

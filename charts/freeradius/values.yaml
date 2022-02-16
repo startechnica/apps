@@ -403,7 +403,7 @@ revisionHistoryLimit: 3
 ## Specifies whether a ServiceAccount should be created
 ##
 serviceAccount:
-  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Keycloak pods
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for FreeRADIUS pods
   ##
   create: true
   ## @param serviceAccount.name Name of the created ServiceAccount
@@ -413,3 +413,26 @@ serviceAccount:
   ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
   ##
   automountServiceAccountToken: false
+
+
+modsEnabled:
+  sql:
+    enabled: true
+    dialect: mysql
+    server: localhost
+    port: 3306
+    login: radius
+    password: radius
+    radiusdb: radiusdb
+    tableClient: nas
+
+sitesEnabled:
+  status:
+    port: 18121
+    secret: adminsecret
+
+mariadb:
+  enabled: false
+
+postgresql:
+  enabled: false
