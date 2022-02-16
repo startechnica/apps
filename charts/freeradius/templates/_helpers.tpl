@@ -64,13 +64,9 @@ Create the name of the service account to use
 {{/*
 Create the name of the SSL certificate to use
 */}}
-{{- define "istioCertificateSecret2" -}}
-{{- default (printf "%s-tls" (include "freeradius.fullname" .)) .Values.istio.certificate.existingSecret }}
-{{- end }}
-
-{{ define "istioCertificateSecret" }}
-{{- if .Values.istio.certificate.existingSecret }}
-  {{ .Values.dags.persistence.existingClaim }}
+{{ define "tlsSecretName" }}
+{{- if .Values.tls.secretName }}
+  {{ .Values.tls.secretName }}
 {{- else }}
   {{- default (printf "%s-tls" (include "freeradius.fullname" .)) }}
 {{- end }}

@@ -2,6 +2,15 @@ annotations:
   category: AccessManagement
 apiVersion: v2
 appVersion: 3.0.25
+dependencies:
+- name: mariadb
+  condition: mariadb.enabled
+  repository: https://charts.bitnami.com/bitnami
+  version: 10.x.x
+- name: postgresql
+  condition: postgresql.enabled
+  repository: https://charts.bitnami.com/bitnami
+  version: 10.x.x
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
   distributed under the GNU General Public License, version 2, and is free for download and use.
 home: https://freeradius.org/
@@ -18,4 +27,4 @@ maintainers:
 name: freeradius
 sources:
   - https://freeradius.org/
-version: 0.1.3
+version: 0.1.2

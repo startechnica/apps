@@ -108,6 +108,11 @@ spec:
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
             {{- end }}
+            {{- if and .Values.tls.enabled }}
+            - name: freeradius-tls
+              mountPath: "/etc/freeradius/certs/tls"
+              readOnly: true
+            {{- end }}
             - name: freeradius-mods
               mountPath: /etc/freeradius/mods-enabled/sql
               subPath: sql
@@ -127,6 +132,11 @@ spec:
           persistentVolumeClaim:
             claimName: {{ tpl .Values.persistence.existingClaim . }}
         {{- end }}
+        {{- if and .Values.tls.enabled }}
+        - name: freeradius-tls
+          secret:
+            secretName: {{ include "tlsSecretName" . }}
+        {{- end }}
         - name: freeradius-mods
           configMap:
             name: freeradius-mods
@@ -145,3 +155,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+---
