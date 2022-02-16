@@ -723,7 +723,7 @@ session {
 
 	#
 	#  See "Simultaneous Use Checking Queries" in mods-available/sql
-#	sql
+	sql
 }
 
 

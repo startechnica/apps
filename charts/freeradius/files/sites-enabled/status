@@ -34,7 +34,7 @@ server status {
 		type = status
 
 		ipaddr = 127.0.0.1
-		port = 18121
+		port = $ENV{FREERADIUS_SITES_STATUS_PORT}
 	}
 
 	#
@@ -52,7 +52,7 @@ server status {
 	#
 	client admin {
 		ipaddr = 127.0.0.1
-		secret = adminsecret
+		secret = $ENV{FREERADIUS_SITES_STATUS_SECRET}
 	}
 
 	#

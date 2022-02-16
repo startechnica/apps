@@ -60,7 +60,6 @@ sql {
 	#
 #	driver = "rlm_sql_null"
 	driver = "rlm_sql_${dialect}"
-#	driver = "rlm_sql_mysql"
 
 	#
 	#  Driver-specific subsections.  They will only be loaded and
@@ -161,10 +160,10 @@ sql {
 
 	# Connection info:
 	#
-	server = "mariadb.mariadb.svc"
-	port = 3306
-	login = "radius_user"
-	password = "radius"
+	server = $ENV{FREERADIUS_MODS_SQL_SERVER}
+	port = $ENV{FREERADIUS_MODS_SQL_PORT}
+	login = $ENV{FREERADIUS_MODS_SQL_LOGIN}
+	password = $ENV{FREERADIUS_MODS_SQL_PASSWORD}
 
 	# Connection info for Mongo
 	# Authentication Without SSL
@@ -179,7 +178,7 @@ sql {
 	# server = mongodb://<DERIVED USERNAME>@192.168.0.2:PORT/DATABASE?authSource=$external&ssl=true&authMechanism=MONGODB-X509
 
 	# Database table configuration for everything except Oracle
-	radius_db = "radiusdb"
+	radius_db = $ENV{FREERADIUS_MODS_SQL_DB}
 
 	# If you are using Oracle then use this instead
 #	radius_db = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SID=your_sid)))"
@@ -187,8 +186,8 @@ sql {
 	# If you're using postgresql this can also be used instead of the connection info parameters
 #	radius_db = "dbname=radius host=localhost user=radius password=raddpass"
 
-        # Postgreql doesn't take tls{} options in its module config like mysql does - if you want to
-        # use SSL connections then use this form of connection info parameter
+    # Postgreql doesn't take tls{} options in its module config like mysql does - if you want to
+    # use SSL connections then use this form of connection info parameter
 #	radius_db = "host=localhost port=5432 dbname=radius user=radius password=raddpass sslmode=verify-full sslcert=/etc/ssl/client.crt sslkey=/etc/ssl/client.key sslrootcert=/etc/ssl/ca.crt" 
 
 	# If you want both stop and start records logged to the
@@ -350,7 +349,7 @@ sql {
 	read_clients = yes
 
 	# Table to keep radius client info
-	client_table = "nas"
+	client_table = $ENV{FREERADIUS_MODS_SQL_TABLE_CLIENT}
 
 	#
 	# The group attribute specific to this instance of rlm_sql
