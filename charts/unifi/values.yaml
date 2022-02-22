@@ -103,9 +103,9 @@ unifiHost: ""
 ## @param unifiHome UniFi Controller home directory
 ##
 unifiHome: /unifi
-## @param javaOpts Custom JVM parameters
+## @param jvmExtraOpts Custom JVM extra parameters
 ##
-javaOpts: []
+jvmExtraOpts: []
 ## @param disableInitialization Skip performing the initial bootstrapping for UniFi Controller
 ##
 disableInitialization: "no"
