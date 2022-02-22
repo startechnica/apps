@@ -36,20 +36,38 @@ spec:
   {{- end }}
   ports:
     - name: http-controller
-      port: {{ .Values.service.ports.http }}
+      port: {{ .Values.service.ports.httpController }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.httpController }}
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.http))) }}
-      nodePort: {{ .Values.service.nodePorts.http }}
+      nodePort: {{ .Values.service.nodePorts.httpController }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     - name: https-controller
-      port: {{ .Values.service.ports.https }}
+      port: {{ .Values.service.ports.httpsController }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.httpsController }}
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.https))) }}
-      nodePort: {{ .Values.service.nodePorts.https }}
+      nodePort: {{ .Values.service.nodePorts.httpsController }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: http-portal
+      port: {{ .Values.service.ports.httpPortal }}
+      protocol: TCP
+      targetPort: {{ .Values.containerPorts.httpPortal }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.http))) }}
+      nodePort: {{ .Values.service.nodePorts.httpPortal }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: https-portal
+      port: {{ .Values.service.ports.httpsPortal }}
+      protocol: TCP
+      targetPort: {{ .Values.containerPorts.httpsPortal }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.https))) }}
+      nodePort: {{ .Values.service.nodePorts.httpsPortal }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
