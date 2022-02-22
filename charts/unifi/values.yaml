@@ -259,8 +259,8 @@ resources:
 containerPorts:
   httpController: 8080
   httpsController: 8443
-  httpCaptivePortal: 8880
-  httpsCaptivePortal: 8843
+  httpPortal: 8880
+  httpsPortal: 8843
   speedtest: 6789
   stun: 3478
   syslog: 5514
@@ -352,8 +352,8 @@ service:
   ports:
     httpController: 8080
     httpsController: 8443
-    httpCaptivePortal: 8880
-    httpsCaptivePortal: 8843
+    httpPortal: 8880
+    httpsPortal: 8843
     speedtest: 6789
     stun: 3478
     syslog: 5514

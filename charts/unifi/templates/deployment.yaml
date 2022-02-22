@@ -141,11 +141,17 @@ spec:
             {{- end }}
           {{- end }}
           ports:
-            - name: http
-              containerPort: {{ .Values.containerPorts.http }}
+            - name: http-controller
+              containerPort: {{ .Values.containerPorts.httpController }}
               protocol: TCP
-            - name: https
-              containerPort: {{ .Values.containerPorts.https }}
+            - name: https-controller
+              containerPort: {{ .Values.containerPorts.httpsController }}
+              protocol: TCP
+            - name: http-portal
+              containerPort: {{ .Values.containerPorts.httpPortal }}
+              protocol: TCP
+            - name: https-portal
+              containerPort: {{ .Values.containerPorts.httpsPortal }}
               protocol: TCP
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.startupProbe.enabled }}
@@ -186,8 +192,8 @@ spec:
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: jenkins-data
-              mountPath: /bitnami/jenkins
+            - name: unifi-data
+              mountPath: /unifi
             {{- if .Values.extraVolumeMounts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -204,13 +210,13 @@ spec:
             - |
               python -u ./jenkins_exporter.py -j http://127.0.0.1:8080 --user $JENKINS_USERNAME --password $JENKINS_PASSWORD
           env:
-            - name: JENKINS_USERNAME
+            - name: UNIFI_USERNAME
               value: {{ .Values.jenkinsUser | quote }}
-            - name: JENKINS_PASSWORD
+            - name: UNIFI_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "common.names.fullname" . }}
-                  key: jenkins-password
+                  key: unifi-password
           ports:
             - name: metrics
               containerPort: 9118
@@ -234,7 +240,7 @@ spec:
         {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes:
-        - name: jenkins-data
+        - name: unifi-data
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ default (include "common.names.fullname" .) (tpl .Values.persistence.existingClaim $) }}
