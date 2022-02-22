@@ -15,7 +15,6 @@ metadata:
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
     {{- end }}
-    volume.alpha.kubernetes.io/storage-class: {{ ternary "default" (trimPrefix "storageClassName: " (include "common.storage.class" (dict "persistence" .Values.persistence "global" .Values.global))) (empty (include "common.storage.class" (dict "persistence" .Values.persistence "global" .Values.global))) }}
 spec:
   accessModes:
   {{- range .Values.persistence.accessModes }}
