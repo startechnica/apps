@@ -576,7 +576,7 @@ volumePermissions:
 ## @section MongoDB Parameters
 
 mongodb:
-  enabled: true
+  enabled: false
 
   architecture: standalone
   auth:
