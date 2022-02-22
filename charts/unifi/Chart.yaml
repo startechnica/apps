@@ -3,6 +3,11 @@ annotations:
 apiVersion: v2
 appVersion: v6.5.55
 dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    tags:
+      - bitnami-common
+    version: 1.x.x
   - name: mongodb
     condition: mongodb.enabled
     repository: https://charts.bitnami.com/bitnami
@@ -21,4 +26,4 @@ name: unifi
 sources:
   - https://www.ui.com
   - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
-version: 0.1.3
+version: 0.1.0
