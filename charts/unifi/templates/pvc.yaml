@@ -34,4 +34,3 @@ spec:
   {{- end -}}
   {{- include "common.storage.class" (dict "persistence" .Values.persistence "global" .Values.global) | nindent 2 }}
 {{- end -}}
----
