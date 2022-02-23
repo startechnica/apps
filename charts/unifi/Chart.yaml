@@ -32,5 +32,6 @@ name: unifi
 sources:
   - https://www.ui.com
   - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
+  - https://unpoller.com/
   - https://github.com/unifi-poller/unifi-poller
 version: 0.1.0

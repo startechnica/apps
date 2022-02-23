@@ -1,0 +1,7 @@
+
+
+metrics:
+  enabled: true
+
+influxdb:
+  enabled: false
