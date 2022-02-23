@@ -47,3 +47,14 @@ Check if there are rolling tags in the images
 {{- include "common.warnings.rollingTag" .Values.image }}
 {{- include "common.warnings.rollingTag" .Values.metrics.image }}
 {{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "unifi.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{ default (include "unifi.fullname" .) .Values.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}

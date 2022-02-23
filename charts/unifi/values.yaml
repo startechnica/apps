@@ -144,10 +144,6 @@ extraEnvVarsSecret: ""
 updateStrategy:
   type: RollingUpdate
 
-## @param serviceAccountName UniFi Controller pod service account name
-##
-serviceAccountName: ""
-
 ## @param priorityClassName UniFi Controller pod priority class name
 ##
 priorityClassName: ""
@@ -489,6 +485,39 @@ ingress:
   ##
   ingressClassName: ""
 
+## @section RBAC parameter
+## Specifies whether a ServiceAccount should be created
+##
+serviceAccount:
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for UniFi Controller pods
+  ##
+  create: true
+  ## @param serviceAccount.name Name of the created ServiceAccount
+  ## If not set and create is true, a name is generated using the fullname template
+  ##
+  name: ""
+  ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+  ##
+  automountServiceAccountToken: false
+## Specifies whether RBAC resources should be created
+##
+rbac:
+  ## @param rbac.create Whether to create and use RBAC resources or not
+  ##
+  create: false
+  ## @param rbac.rules Custom RBAC rules
+  ## Example:
+  ## rules:
+  ##   - apiGroups:
+  ##       - ""
+  ##     resources:
+  ##       - pods
+  ##     verbs:
+  ##       - get
+  ##       - list
+  ##
+  rules: []
+
 ## @section Persistence Parameters
 
 ## Persistence Parameters
@@ -572,8 +601,11 @@ volumePermissions:
   securityContext:
     runAsUser: 0
 
-## @section MongoDB Parameters
+## @section Database Parameters
 
+## MongoDB chart configuration
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/mongodb/values.yaml
+##
 mongodb:
   enabled: false
 
@@ -584,6 +616,28 @@ mongodb:
     enabled: false
     # storageClass: ""
     # size: 8Gi
+
+## External database configuration
+##
+externalDatabase:
+  ## @param externalDatabase.host Host of the external database
+  ##
+  host: ""
+  ## @param externalDatabase.port Database port
+  ##
+  port: 5432
+  ## @param externalDatabase.user non admin username for Keycloak Database
+  ##
+  user: unifi
+  ## @param externalDatabase.password Database password
+  ##
+  password: ""
+  ## @param externalDatabase.database Database name
+  ##
+  database: unifi
+  ## @param externalDatabase.existingSecret Use an existing secret file with the external PostgreSQL credentials
+  ##
+  existingSecret: ""
 
 ## @section Metrics Parameters
 
