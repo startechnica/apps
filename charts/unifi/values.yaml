@@ -94,8 +94,7 @@ image:
 
 ## @section UniFi Controller Configuration parameters
 ## UniFi Controller settings based on environment variables
-## ref: https://github.com/bitnami/bitnami-docker-jenkins#configuration
-
+## ref: https://github.com/jacobalberty/unifi-docker
 
 ## UniFi Controller authentication parameters
 ##
@@ -660,10 +659,15 @@ mongodb:
     # size: 8Gi
 
 ## InfluxDB chart configuration
-## ref: https://github.com/bitnami/charts/blob/master/bitnami/influxdb/values.yaml
+## ref: https://github.com/influxdata/helm-charts/blob/master/charts/influxdb/values.yaml
 ##
 influxdb:
   enabled: false
+  setDefaultUser:
+    enabled: false
+    user:
+      username: "admin"
+      password: ""
 
 ## External database configuration
 ##
@@ -673,7 +677,7 @@ externalDatabase:
   host: ""
   ## @param externalDatabase.port Database port
   ##
-  port: 5432
+  port: 27017
   ## @param externalDatabase.user non admin username for UniFi Controller Database
   ##
   user: unifi
@@ -730,6 +734,9 @@ metrics:
   resources:
     limits: {}
     requests: {}
+
+  webserver:
+    enabled: false
   ## UniFi Controller exporter service parameters
   ##
   service:
@@ -738,10 +745,14 @@ metrics:
     type: ClusterIP
     ## @param metrics.service.port UniFi Controller exporter service port
     ##
-    port: 9130
+    ports:
+      metrics: 9130
+      poller: 37288
     ## @param metrics.service.nodePort Node port for exporter
     ##
-    nodePort: ""
+    nodePorts:
+      metrics: 9130
+      poller: 37288
     ## @param metrics.service.externalTrafficPolicy UniFi Controller exporter service external traffic policy
     ## ref: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
     ##

@@ -258,6 +258,10 @@ spec:
           ports:
             - name: metrics
               containerPort: 9130
+            {{- if .Values.metrics.webserver.enabled }}
+            - name: poller
+              containerPort: 37288
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /metrics
