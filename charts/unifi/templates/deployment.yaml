@@ -256,7 +256,7 @@ spec:
             - name: UP_PROMETHEUS_DISABLE
               value: "false"
             - name: UP_PROMETHEUS_HTTP_LISTEN
-              value: {{ printf "0.0.0.0:%d" .Values.metrics.containerPorts.metrics | quote }}
+              value: {{ printf "0.0.0.0:%v" .Values.metrics.containerPorts.metrics | quote }}
             - name: TZ
               value: {{ .Values.timezone | quote }}
           ports:
