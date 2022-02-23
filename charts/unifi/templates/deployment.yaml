@@ -238,11 +238,11 @@ spec:
           {{- end }}
           env:
             {{- if .Values.auth.unifiUser }}
-            - name: UNIFI_USERNAME
+            - name: UP_UNIFI_DEFAULT_USER
               value: {{ .Values.auth.unifiUser | quote }}
             {{- end }}
             {{- if .Values.auth.unifiPassword }}
-            - name: UNIFI_PASSWORD
+            - name: UP_UNIFI_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
                   name: {{ include "common.names.fullname" . }}

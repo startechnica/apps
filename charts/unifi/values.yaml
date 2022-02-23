@@ -99,13 +99,13 @@ image:
 ## UniFi Controller authentication parameters
 ##
 auth:
-  ## @param jenkinsUser UniFi Controller username
+  ## @param unifiUser UniFi Controller username
   ##
-  unifiUser: user
+  unifiUser: unifiuser
   ## @param unifiPassword UniFi Controller user password
   ## Defaults to a random 10-character alphanumeric string if not set
   ##
-  unifiPassword: ""
+  unifiPassword: unifipassword
   ## @param auth.existingSecret An already existing secret containing auth info
   ## e.g:
   ## existingSecret:
