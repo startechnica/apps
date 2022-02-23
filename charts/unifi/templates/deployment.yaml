@@ -126,6 +126,14 @@ spec:
               value: {{ .Values.containerPorts.httpController | quote }}
             - name: UNIFI_HTTPS_PORT
               value: {{ .Values.containerPorts.httpsController | quote }}
+            - name: UNIFI_STDOUT
+              value: "true"
+            - name: DB_URI
+              value: mongodb://{{ .Release.Name }}-mongodb:27017/unifi
+            - name: DB_NAME
+              value: "unifi"
+            - name: STATDB_URI
+              value: mongodb://{{ .Release.Name }}-mongodb:27017/unifi_stat
             - name: JVM_MAX_HEAP_SIZE
               value: 1024M
             {{- if .Values.jvmExtraOpts }}

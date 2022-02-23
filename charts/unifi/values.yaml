@@ -626,7 +626,7 @@ externalDatabase:
   ## @param externalDatabase.port Database port
   ##
   port: 5432
-  ## @param externalDatabase.user non admin username for Keycloak Database
+  ## @param externalDatabase.user non admin username for UniFi Controller Database
   ##
   user: unifi
   ## @param externalDatabase.password Database password
