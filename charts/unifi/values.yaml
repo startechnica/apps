@@ -107,6 +107,14 @@ auth:
   ## Defaults to a random 10-character alphanumeric string if not set
   ##
   unifiPassword: ""
+  ## @param auth.existingSecret An already existing secret containing auth info
+  ## e.g:
+  ## existingSecret:
+  ##   name: mySecret
+  ##   keyMapping:
+  ##     unifi-password: myPasswordKey
+  ##
+  existingSecret: ""
   ## TLS encryption parameters
   ## ref: https://github.com/jacobalberty/unifi-docker#certificate-support
   ##

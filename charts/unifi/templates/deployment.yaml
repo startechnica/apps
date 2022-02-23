@@ -109,13 +109,17 @@ spec:
           lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
           env:
+            {{- if .Values.auth.unifiUser }}
             - name: UNIFI_USERNAME
-              value: {{ .Values.unifiUser | quote }}
+              value: {{ .Values.auth.unifiUser | quote }}
+            {{- end }}
+            {{- if .Values.auth.unifiPassword }}
             - name: UNIFI_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "common.names.fullname" . }}
                   key: unifi-password
+            {{- end }}
             - name: TZ
               value: {{ .Values.timezone | quote }}
             - name: RUNAS_UID0
@@ -238,13 +242,17 @@ spec:
             - |
               python -u ./jenkins_exporter.py -j http://127.0.0.1:8080 --user $UNIFI_USERNAME --password $UNIFI_PASSWORD
           env:
+            {{- if .Values.auth.unifiUser }}
             - name: UNIFI_USERNAME
               value: {{ .Values.unifiUser | quote }}
+            {{- end }}
+            {{- if .Values.auth.unifiPassword }}
             - name: UNIFI_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "common.names.fullname" . }}
                   key: unifi-password
+            {{- end }}
             - name: TZ
               value: {{ .Values.timezone | quote }}
           ports:
