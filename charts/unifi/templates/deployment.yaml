@@ -183,15 +183,15 @@ spec:
           {{- if .Values.startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
             tcpSocket:
-              port: http
+              port: {{ .Values.containerPorts.httpController }}
           {{- else if .Values.customStartupProbe }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
-              path: /login
-              port: http
+              path: /manage
+              port: https-control
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
@@ -203,8 +203,8 @@ spec:
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: /login
-              port: http
+              path: /manage
+              port: https-control
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
@@ -237,7 +237,7 @@ spec:
               python -u ./jenkins_exporter.py -j http://127.0.0.1:8080 --user $JENKINS_USERNAME --password $JENKINS_PASSWORD
           env:
             - name: UNIFI_USERNAME
-              value: {{ .Values.jenkinsUser | quote }}
+              value: {{ .Values.unifiUser | quote }}
             - name: UNIFI_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -245,7 +245,7 @@ spec:
                   key: unifi-password
           ports:
             - name: metrics
-              containerPort: 9118
+              containerPort: 9130
           livenessProbe:
             httpGet:
               path: /metrics
