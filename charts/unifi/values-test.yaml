@@ -5,6 +5,7 @@ persistence:
 
 metrics:
   enabled: true
+  liveness: false
 
 mongodb:
   enabled: true

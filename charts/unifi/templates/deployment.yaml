@@ -261,6 +261,7 @@ spec:
             - name: poller
               containerPort: 37288
             {{- end }}
+          {{- if .Values.metrics.liveness }}
           livenessProbe:
             httpGet:
               path: /metrics
@@ -273,6 +274,7 @@ spec:
               port: metrics
             initialDelaySeconds: 5
             timeoutSeconds: 1
+          {{- end }}
           {{- if .Values.metrics.resources }}
           resources: {{- toYaml .Values.metrics.resources | nindent 12 }}
           {{- end }}
