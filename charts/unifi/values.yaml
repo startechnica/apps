@@ -146,7 +146,7 @@ updateStrategy:
 
 ## @param serviceAccountName UniFi Controller pod service account name
 ##
-serviceAccountName: "default"
+serviceAccountName: ""
 
 ## @param priorityClassName UniFi Controller pod priority class name
 ##
@@ -261,11 +261,10 @@ containerPorts:
   httpsController: 8443
   httpPortal: 8880
   httpsPortal: 8843
+  discovery: 10001
   speedtest: 6789
   stun: 3478
   syslog: 5514
-  discovery: 10001
-
 ## Configure Pods Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 ## @param podSecurityContext.enabled Enabled UniFi Controller pods' Security Context
@@ -354,10 +353,10 @@ service:
     httpsController: 8443
     httpPortal: 8880
     httpsPortal: 8843
+    discovery: 10001
     speedtest: 6789
     stun: 3478
     syslog: 5514
-    discovery: 10001
   ## Node ports to expose
   ## @param service.nodePorts.http Node port for HTTP
   ## @param service.nodePorts.https Node port for HTTPS
@@ -368,10 +367,10 @@ service:
     httpsController: ""
     httpCaptivePortal: ""
     httpsCaptivePortal: ""
+    discovery: ""
     speedtest: ""
     stun: ""
     syslog: ""
-    discovery: ""
   ## @param service.clusterIP UniFi Controller service Cluster IP
   ## e.g.:
   ## clusterIP: None
@@ -602,8 +601,8 @@ metrics:
   ##
   image:
     registry: docker.io
-    repository: bitnami/jenkins-exporter
-    tag: 0.20171225.0-debian-10-r705
+    repository: golift/unifi-poller
+    tag: 2.1.3
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -620,7 +619,7 @@ metrics:
   ##
   containerSecurityContext:
     enabled: true
-    runAsUser: 1001
+    runAsUser: 999
   ## UniFi Controller exporter resource requests and limits
   ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
   ## @param metrics.resources.limits The resources limits for the UniFi Controller exporter container
@@ -637,7 +636,7 @@ metrics:
     type: ClusterIP
     ## @param metrics.service.port UniFi Controller exporter service port
     ##
-    port: 9122
+    port: 9130
     ## @param metrics.service.nodePort Node port for exporter
     ##
     nodePort: ""

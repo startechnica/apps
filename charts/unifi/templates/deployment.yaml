@@ -116,6 +116,12 @@ spec:
                   key: unifi-password
             - name: TZ
               value: "Asia/Jakarta"
+            - name: RUNAS_UID0
+              value: "false"
+            - name: UNIFI_UID
+              value: {{ .Values.containerSecurityContext.runAsUser | quote }}
+            - name: UNIFI_GID
+              value: {{ .Values.podSecurityContext.fsGroup | quote }}
             - name: UNIFI_HTTP_PORT
               value: {{ .Values.containerPorts.httpController | quote }}
             - name: UNIFI_HTTPS_PORT
@@ -153,6 +159,18 @@ spec:
             - name: https-portal
               containerPort: {{ .Values.containerPorts.httpsPortal }}
               protocol: TCP
+            - name: discovery
+              containerPort: {{ .Values.containerPorts.discovery }}
+              protocol: UDP
+            - name: speedtest
+              containerPort: {{ .Values.containerPorts.speedtest }}
+              protocol: TCP
+            - name: stun
+              containerPort: {{ .Values.containerPorts.stun }}
+              protocol: UDP
+            - name: syslog
+              containerPort: {{ .Values.containerPorts.syslog }}
+              protocol: UDP
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}

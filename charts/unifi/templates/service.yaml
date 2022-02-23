@@ -39,7 +39,7 @@ spec:
       port: {{ .Values.service.ports.httpController }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.httpController }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.http))) }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.httpController))) }}
       nodePort: {{ .Values.service.nodePorts.httpController }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
@@ -48,7 +48,7 @@ spec:
       port: {{ .Values.service.ports.httpsController }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.httpsController }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.https))) }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.httpsController))) }}
       nodePort: {{ .Values.service.nodePorts.httpsController }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
@@ -57,7 +57,7 @@ spec:
       port: {{ .Values.service.ports.httpPortal }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.httpPortal }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.http))) }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.httpPortal))) }}
       nodePort: {{ .Values.service.nodePorts.httpPortal }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
@@ -66,8 +66,44 @@ spec:
       port: {{ .Values.service.ports.httpsPortal }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.httpsPortal }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.https))) }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.httpsPortal))) }}
       nodePort: {{ .Values.service.nodePorts.httpsPortal }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: udp-discovery
+      port: {{ .Values.service.ports.discovery }}
+      protocol: UDP
+      targetPort: {{ .Values.containerPorts.discovery }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.discovery))) }}
+      nodePort: {{ .Values.service.nodePorts.discovery }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: tcp-speedtest
+      port: {{ .Values.service.ports.speedtest }}
+      protocol: TCP
+      targetPort: {{ .Values.containerPorts.speedtest }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.speedtest))) }}
+      nodePort: {{ .Values.service.nodePorts.speedtest }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: udp-stun
+      port: {{ .Values.service.ports.stun }}
+      protocol: UDP
+      targetPort: {{ .Values.containerPorts.stun }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.stun))) }}
+      nodePort: {{ .Values.service.nodePorts.stun }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: udp-syslog
+      port: {{ .Values.service.ports.syslog }}
+      protocol: UDP
+      targetPort: {{ .Values.containerPorts.syslog }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.syslog))) }}
+      nodePort: {{ .Values.service.nodePorts.syslog }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
