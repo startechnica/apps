@@ -145,4 +145,46 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/freeradius-0.1.0/freeradius-0.1.0.tgz
     version: 0.1.0
-generated: "2022-02-22T06:52:51.224823055Z"
+  unifi:
+  - annotations:
+      category: NetworkManagement
+    apiVersion: v2
+    appVersion: v6.5.55
+    created: "2022-02-23T10:55:16.921942013Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    - condition: influxdb.enabled
+      name: influxdb
+      repository: https://helm.influxdata.com
+      version: 4.x.x
+    - condition: mongodb.enabled
+      name: mongodb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    description: UniFi Network Application to manager UniFi devices
+    digest: 1d6b53bc43ab9548aef56b6768c8833d4d0f038b02e051072e62ee47edaad3fa
+    home: https://github.com/startechnica/apps/tree/main/charts/unifi
+    icon: https://prd-www-cdn.ubnt.com/static/favicon-152.png
+    keywords:
+    - ubiquiti
+    - unifi
+    - unifi-poller
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: unifi
+    sources:
+    - https://www.ui.com
+    - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
+    - https://unpoller.com/
+    - https://github.com/unifi-poller/unifi-poller
+    urls:
+    - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
+    version: 0.1.0
+generated: "2022-02-23T10:55:16.921959613Z"
