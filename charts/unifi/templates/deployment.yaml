@@ -236,15 +236,10 @@ spec:
           {{- if .Values.metrics.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.metrics.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
-          command:
-            - sh
-            - -c
-            - |
-              python -u ./jenkins_exporter.py -j http://127.0.0.1:8080 --user $UNIFI_USERNAME --password $UNIFI_PASSWORD
           env:
             {{- if .Values.auth.unifiUser }}
             - name: UNIFI_USERNAME
-              value: {{ .Values.unifiUser | quote }}
+              value: {{ .Values.auth.unifiUser | quote }}
             {{- end }}
             {{- if .Values.auth.unifiPassword }}
             - name: UNIFI_PASSWORD
