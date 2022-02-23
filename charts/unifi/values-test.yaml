@@ -1,6 +1,12 @@
 
 
+persistence:
+  enabled: true
+
 metrics:
+  enabled: true
+
+mongodb:
   enabled: true
 
 influxdb:
