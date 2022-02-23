@@ -249,9 +249,14 @@ spec:
                 secretKeyRef:
                   name: {{ include "common.names.fullname" . }}
                   key: influxdb-password
+            {{- else }}
+            - name: UP_INFLUXDB_DISABLE
+              value: "true"
             {{- end }}
             - name: UP_PROMETHEUS_DISABLE
               value: "false"
+            - name: UP_PROMETHEUS_HTTP_LISTEN
+              value: {{ printf "0.0.0.0:%s" (include .Values.metrics.containerPorts.metrics .) }}
             - name: TZ
               value: {{ .Values.timezone | quote }}
           ports:

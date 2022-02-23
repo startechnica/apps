@@ -8,7 +8,7 @@ persistence:
 
 metrics:
   enabled: true
-  liveness: false
+  # liveness: false
 
 mongodb:
   enabled: true

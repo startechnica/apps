@@ -734,6 +734,13 @@ metrics:
   resources:
     limits: {}
     requests: {}
+## Container ports
+## @param metrics.containerPorts.metrics UniFi Poller metrics container port
+## @param metrics.containerPorts.poller UniFi Poller webserver container port
+##
+  containerPorts:
+    metrics: 9130
+    poller: 37288
 
   webserver:
     enabled: false
