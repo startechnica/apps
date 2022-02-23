@@ -109,17 +109,6 @@ spec:
           lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
           env:
-            {{- if .Values.auth.unifiUser }}
-            - name: UNIFI_USERNAME
-              value: {{ .Values.auth.unifiUser | quote }}
-            {{- end }}
-            {{- if .Values.auth.unifiPassword }}
-            - name: UNIFI_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}
-                  key: unifi-password
-            {{- end }}
             - name: TZ
               value: {{ .Values.timezone | quote }}
             - name: RUNAS_UID0
@@ -248,6 +237,21 @@ spec:
                   name: {{ include "common.names.fullname" . }}
                   key: unifi-password
             {{- end }}
+            {{- if .Values.influxdb.enabled }}
+            - name: UP_INFLUXDB_DB
+              value: unifi
+            - name: UP_INFLUXDB_URL
+              value: http://{{ .Release.Name }}-influxdb:8086
+            - name: UP_INFLUXDB_USER
+              value: {{ .Values.influxdb.setDefaultUser.user.username | quote }}
+            - name: UP_INFLUXDB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}
+                  key: influxdb-password
+            {{- end }}
+            - name: UP_PROMETHEUS_DISABLE
+              value: "false"
             - name: TZ
               value: {{ .Values.timezone | quote }}
           ports:
