@@ -1,6 +1,6 @@
 <!--- app-name: FreeRADIUS -->
 
-# FreeRADIUS Helm chart
+# Helm chart for FreeRADIUS
 
 FreeRADIUS is a modular, high performance free RADIUS suite developed and distributed under the GNU General Public License, version 2, and is free for download and use.
 
