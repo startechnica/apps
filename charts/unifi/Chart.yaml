@@ -1,7 +1,7 @@
 annotations:
   category: NetworkManagement
 apiVersion: v2
-appVersion: v6.5.55
+appVersion: v7.0.23
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
@@ -34,4 +34,4 @@ sources:
   - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
   - https://unpoller.com/
   - https://github.com/unifi-poller/unifi-poller
-version: 0.1.0
+version: 0.1.1

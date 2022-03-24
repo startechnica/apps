@@ -14,7 +14,7 @@ global:
   ##   - myRegistryKeySecretName
   ##
   imagePullSecrets: []
-  storageClass: "openebs-hostpath"
+  storageClass: ""
 
 ## @section Common parameters
 
@@ -41,7 +41,7 @@ clusterDomain: cluster.local
 extraDeploy: []
 ## @param timezone String of timezone of the release
 ##
-timezone: "Asia/Jakarta"
+timezone: "UTC"
 
 ## @section Diagnostic Mode Parameters
 
