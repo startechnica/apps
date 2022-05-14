@@ -12,14 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 {{- if or ( gt .Capabilities.KubeVersion.Major "1" ) ( ge .Capabilities.KubeVersion.Minor "16" ) }}
-apiVersion: v1
-kind: ConfigMap
+{{- if .Values.manifests.customResourceDefinition }}
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
 metadata:
-  name: multus-cni-config
-  namespace: {{ .Release.Namespace | quote }}
-  labels:
-{{- include "multus.labels" . | indent 4 }}
-data:
-  cni-conf.json: |-
-{{ toJson .Values.config.cni_conf | indent 4 }}
+  name: network-attachment-definitions.k8s.cni.cncf.io
+spec:
+  group: k8s.cni.cncf.io
+  scope: Namespaced
+  names:
+    plural: network-attachment-definitions
+    singular: network-attachment-definition
+    kind: NetworkAttachmentDefinition
+    shortNames:
+    - net-attach-def
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                config:
+                  type: string
+{{- end }}
 {{- end }}

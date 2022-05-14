@@ -90,3 +90,4 @@ image:
   ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
+
