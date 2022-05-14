@@ -1,0 +1,92 @@
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+
+## @section Common parameters
+
+## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
+##
+kubeVersion: ""
+## @param nameOverride String to partially override adminer.fullname
+##
+nameOverride: ""
+## @param fullnameOverride String to fully override adminer.fullname
+##
+fullnameOverride: ""
+## @param hostAliases Add deployment host aliases
+## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+##
+hostAliases: []
+## @param commonLabels Labels to add to all deployed objects
+##
+commonLabels: {}
+## @param commonAnnotations Annotations to add to all deployed objects
+##
+commonAnnotations: {}
+## @param clusterDomain Default Kubernetes cluster domain
+##
+clusterDomain: cluster.local
+## @param extraDeploy Array of extra objects to deploy with the release
+##
+extraDeploy: []
+
+## Enable diagnostic mode in the deployment
+##
+diagnosticMode:
+  ## @param diagnosticMode.enabled Enable diagnostic mode (all probes will be disabled and the command will be overridden)
+  ##
+  enabled: false
+  ## @param diagnosticMode.command Command to override all containers in the deployment
+  ##
+  command:
+    - sleep
+  ## @param diagnosticMode.args Args to override all containers in the deployment
+  ##
+  args:
+    - infinity
+
+## @section Multus common parameters
+
+## Multus image
+## ref: https://hub.docker.com/r/bitnami/mariadb/tags/
+## @param image.registry Multus image registry
+## @param image.repository Multus image repository
+## @param image.tag Multus image tag (immutable tags are recommended)
+## @param image.pullPolicy Multus image pull policy
+## @param image.pullSecrets Specify docker-registry secret names as an array
+## @param image.debug Specify if debug logs should be enabled
+##
+image:
+  registry: ghcr.io
+  repository: k8snetworkplumbingwg/multus-cni
+  tag: "stable"
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## Example:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  pullSecrets: []
+  ## Set to true if you would like to see extra information on logs
+  ## It turns BASH and/or NAMI debugging in the image
+  ##
+  debug: false
