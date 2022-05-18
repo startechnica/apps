@@ -23,4 +23,4 @@ name: multus
 sources:
   - https://github.com/k8snetworkplumbingwg/multus-cni
   - https://npwg-team.slack.com
-version: 0.1.0
+version: 0.1.1
