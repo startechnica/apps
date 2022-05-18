@@ -150,6 +150,36 @@ entries:
       category: NetworkPlumbing
     apiVersion: v2
     appVersion: v3.8
+    created: "2022-05-18T09:25:55.141363302Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    description: Multus CNI is a container network interface (CNI) plugin for Kubernetes
+      that enables attaching multiple network interfaces to pods.
+    digest: ac9d0c34465e9562bd8188063c20e32332d8bfdc565675023f8230368e2b7c8a
+    home: https://github.com/startechnica/apps/tree/main/charts/multus
+    icon: https://github.com/k8snetworkplumbingwg/multus-cni/raw/master/docs/images/Multus.png
+    keywords:
+    - multus
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: multus
+    sources:
+    - https://github.com/k8snetworkplumbingwg/multus-cni
+    - https://npwg-team.slack.com
+    urls:
+    - https://github.com/startechnica/apps/releases/download/multus-0.1.1/multus-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      category: NetworkPlumbing
+    apiVersion: v2
+    appVersion: v3.8
     created: "2022-05-14T08:25:03.481495594Z"
     dependencies:
     - name: common
@@ -218,4 +248,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-05-14T08:25:03.60893798Z"
+generated: "2022-05-18T09:25:55.141383698Z"
