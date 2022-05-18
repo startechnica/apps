@@ -150,36 +150,36 @@ containerSecurityContext:
   privileged: true
 
 multusConfiguration: |-
-    {
-      "name": "multus-cni-network",
-      "type": "multus",
-      "capabilities": {
-        "portMappings": true
-      },
-      "delegates": [
-        {
-          "cniVersion": "0.3.1",
-          "name": "default-cni-network",
-          "plugins": [
-            {
-              "type": "flannel",
-              "name": "flannel.1",
-                "delegate": {
-                  "isDefaultGateway": true,
-                  "hairpinMode": true
-                }
-              },
-              {
-                "type": "portmap",
-                "capabilities": {
-                  "portMappings": true
-                }
+  {
+    "name": "multus-cni-network",
+    "type": "multus",
+    "capabilities": {
+      "portMappings": true
+    },
+    "delegates": [
+      {
+        "cniVersion": "0.3.1",
+        "name": "default-cni-network",
+        "plugins": [
+          {
+            "type": "flannel",
+            "name": "flannel.1",
+              "delegate": {
+                "isDefaultGateway": true,
+                "hairpinMode": true
               }
-          ]
-        }
-      ],
-      "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"
-    }
+            },
+            {
+              "type": "portmap",
+              "capabilities": {
+                "portMappings": true
+              }
+            }
+        ]
+      }
+    ],
+    "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"
+  }
 
 ## @param configurationConfigMap ConfigMap with the Multus configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
 ##

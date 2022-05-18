@@ -29,6 +29,6 @@ data:
   {{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
 {{- else if .Values.multusConfiguration }}
   cni-conf.json: |-
-{{ toJson .Values.multusConfiguration.cni_conf | indent 4 }}
+{{ toJson .Values.multusConfiguration | indent 4 }}
 {{- end }}
 {{- end }}
