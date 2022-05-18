@@ -268,3 +268,187 @@ lifecycleHooks: {}
 ## @param priorityClassName Priority Class Name for Daemonset
 ##
 priorityClassName: system-node-critical
+## @param initContainers Additional init containers (this value is evaluated as a template)
+## extraInitContainers:
+## - name: do-something
+##   image: bitnami/minideb
+##   command: ['do', 'something']
+##
+initContainers: []
+## @param extraContainers Additional containers (this value is evaluated as a template)
+##
+extraContainers: []
+## extraVolumes and extraVolumeMounts allows you to mount other volumes
+## @param extraVolumes Extra volumes
+## @param extraVolumeMounts Mount extra volume(s)
+## Example Use Cases:
+##  mount certificates to enable data-in-transit encryption
+##  mount keys for data-at-rest encryption using file plugin
+## e.g:
+## extraVolumes:
+## - name: mariadb-certs
+##   secret:
+##     defaultMode: 288
+##     secretName: mariadb-certs
+## - name: mariadb-encryption
+##   secret:
+##     defaultMode: 288
+##     secretName: mariadb-encryption
+##
+extraVolumes: []
+## extraVolumeMounts:
+## - name: mariadb-certs
+##   mountPath: /certs
+##   readOnly: true
+## - name: mariadb-encryption
+##   mountPath: /encryption
+##   readOnly: true
+##
+extraVolumeMounts: []
+## MariaDB Galera containers' resource requests and limits
+## We usually recommend not to specify default resources and to leave this as a conscious
+## choice for the user. This also increases chances charts run on environments with little
+## resources, such as Minikube. If you do want to specify resources, uncomment the following
+## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+## @param resources.limits The resources limits for the container
+## @param resources.requests The requested resources for the container
+##
+resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 0.5
+  ##    memory: 256Mi
+  limits: {}
+  ## Examples:
+  ## requests:
+  ##    cpu: 0.5
+  ##    memory: 256Mi
+  requests: {}
+## MariaDB Galera containers' liveness probe
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+## @param livenessProbe.enabled Turn on and off liveness probe
+## @param livenessProbe.initialDelaySeconds Delay before liveness probe is initiated
+## @param livenessProbe.periodSeconds How often to perform the probe
+## @param livenessProbe.timeoutSeconds When the probe times out
+## @param livenessProbe.failureThreshold Minimum consecutive failures for the probe
+## @param livenessProbe.successThreshold Minimum consecutive successes for the probe
+##
+livenessProbe:
+  enabled: true
+  ## Initializing the database could take some time
+  ##
+  initialDelaySeconds: 120
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+## MariaDB Galera containers' readiness probe
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+## @param readinessProbe.enabled Turn on and off readiness probe
+## @param readinessProbe.initialDelaySeconds Delay before readiness probe is initiated
+## @param readinessProbe.periodSeconds How often to perform the probe
+## @param readinessProbe.timeoutSeconds When the probe times out
+## @param readinessProbe.failureThreshold Minimum consecutive failures for the probe
+## @param readinessProbe.successThreshold Minimum consecutive successes for the probe
+##
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+## MariaDB Galera containers' startup probe
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+## @param startupProbe.enabled Turn on and off startup probe
+## @param startupProbe.initialDelaySeconds Delay before startup probe is initiated
+## @param startupProbe.periodSeconds How often to perform the probe
+## @param startupProbe.timeoutSeconds When the probe times out
+## @param startupProbe.failureThreshold Minimum consecutive failures for the probe
+## @param startupProbe.successThreshold Minimum consecutive successes for the probe
+##
+startupProbe:
+  enabled: false
+  ## Initializing the database could take some time
+  ##
+  initialDelaySeconds: 120
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  ## Let's wait 600 seconds by default, it should give enough time in any cluster for mysql to init
+  ##
+  failureThreshold: 48
+## @param customStartupProbe Custom liveness probe for the Web component
+##
+customStartupProbe: {}
+## @param customLivenessProbe Custom liveness probe for the Web component
+##
+customLivenessProbe: {}
+## @param customReadinessProbe Custom rediness probe for the Web component
+##
+customReadinessProbe: {}
+## Pod disruption budget configuration
+##
+podDisruptionBudget:
+  ## @param podDisruptionBudget.create Specifies whether a Pod disruption budget should be created
+  ##
+  create: false
+  ## @param podDisruptionBudget.minAvailable Minimum number / percentage of pods that should remain scheduled
+  ##
+  minAvailable: 1
+  ## @param podDisruptionBudget.maxUnavailable Maximum number / percentage of pods that may be made unavailable
+  ##
+  maxUnavailable: ""
+
+  ## Prometheus exporter configuration
+##
+metrics:
+  ## @param metrics.enabled Start a side-car prometheus exporter
+  ##
+  enabled: false
+  ## Bitnami MySQL Prometheus exporter image
+  ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
+  ## @param metrics.image.registry MariaDB Prometheus exporter image registry
+  ## @param metrics.image.repository MariaDB Prometheus exporter image repository
+  ## @param metrics.image.tag MariaDB Prometheus exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy MariaDB Prometheus exporter image pull policy
+  ## @param metrics.image.pullSecrets MariaDB Prometheus exporter image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/mysqld-exporter
+    tag: 0.14.0-debian-10-r45
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRules:
+    ## @param metrics.prometheusRules.enabled if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRules.additionalLabels [object] Additional labels to add to the PrometheusRule so it is picked up by the operator
+    ## If using the [Helm Chart](https://github.com/helm/charts/tree/master/stable/prometheus-operator) this is the name of the Helm release and 'app: prometheus-operator'
+    ##
+    additionalLabels:
+      app: prometheus-operator
+      release: prometheus
+    ## @param metrics.prometheusRules.rules PrometheusRule rules to configure
+    ## e.g:
+    ##  - alert: MariaDB-Down
+    ##    annotations:
+    ##      message: 'MariaDB instance {{ $labels.instance }} is down'
+    ##      summary: MariaDB instance is down
+    ##    expr: absent(up{job="mariadb-galera"} == 1)
+    ##    labels:
+    ##      severity: warning
+    ##      service: mariadb-galera
+    ##    for: 5m
+    ##
+    rules: {}
