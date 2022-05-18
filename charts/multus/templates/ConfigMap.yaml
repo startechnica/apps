@@ -19,15 +19,16 @@ metadata:
   namespace: {{ .Release.Namespace | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
-  {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 data:
 {{- if (.Files.Glob "files/cni-conf.json") }}
-{{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
+  {{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
 {{- else if .Values.multusConfiguration }}
   cni-conf.json: |-
 {{ toJson .Values.multusConfiguration.cni_conf | indent 4 }}
+{{- end }}
 {{- end }}
