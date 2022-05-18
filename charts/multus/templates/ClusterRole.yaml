@@ -13,10 +13,9 @@
 # limitations under the License.
 {{- if and .Values.serviceAccount.create .Values.rbac.create }}
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
-kind: Role
+kind: ClusterRole
 metadata:
-  name: {{ template "common.names.fullname" . }}
-  namespace: kube-system
+  name: {{ template "multus.serviceAccountName" . }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
   {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
