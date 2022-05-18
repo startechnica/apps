@@ -79,19 +79,23 @@ spec:
           image: {{ template "multus.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.command }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
           {{- else }}
-          command: ["/entrypoint.sh"]
-          {{- end }}
-          {{- if .Values.diagnosticMode.enabled }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
-          {{- else if .Values.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
-          {{- else }}
-            - "--multus-conf-file=auto"
-            - "--cni-version=0.3.1"
+          command:
+            - /bin/bash
+            - -cex
+            - |
+              #!/bin/bash
+              sed "s|__KUBERNETES_NODE_NAME__|${KUBERNETES_NODE_NAME}|g" /tmp/multus-conf/00-multus.conf.template > /tmp/multus-conf/00-multus.conf
+              /entrypoint.sh \
+                --multus-conf-file=/tmp/multus-conf/00-multus.conf
           {{- end }}
           env:
             - name: KUBERNETES_NODE_NAME
@@ -124,7 +128,8 @@ spec:
             - name: cnibin
               mountPath: /host/opt/cni/bin
             - name: multus-cfg
-              mountPath: /tmp/multus-conf
+              mountPath: /tmp/multus-conf/00-multus.conf.template
+              subPath: "cni-conf.json"
             {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
             {{- end }}
@@ -136,23 +141,6 @@ spec:
         {{- if .Values.sidecars }}
         {{- include "common.tplvalues.render" (dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
-      initContainers:
-        - name: install-multus-binary
-          image: {{ template "multus.image" . }}
-          command:
-            - "cp"
-            - "/usr/src/multus-cni/bin/multus"
-            - "/host/opt/cni/bin/multus"
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "15Mi"
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - name: cnibin
-              mountPath: /host/opt/cni/bin
-              mountPropagation: Bidirectional
       volumes:
         - name: cni
           hostPath:
@@ -163,9 +151,6 @@ spec:
         - name: multus-cfg
           configMap:
             name: multus-cni-config
-            items:
-            - key: cni-conf.json
-              path: 70-multus.conf
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}

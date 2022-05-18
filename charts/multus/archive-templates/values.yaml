@@ -149,37 +149,25 @@ containerSecurityContext:
   # runAsNonRoot: true
   privileged: true
 
-multusConfiguration: |-
-    {
-      "name": "multus-cni-network",
-      "type": "multus",
-      "capabilities": {
-        "portMappings": true
-      },
-      "delegates": [
-        {
-          "cniVersion": "0.3.1",
-          "name": "default-cni-network",
-          "plugins": [
-            {
-              "type": "flannel",
-              "name": "flannel.1",
-                "delegate": {
-                  "isDefaultGateway": true,
-                  "hairpinMode": true
-                }
-              },
-              {
-                "type": "portmap",
-                "capabilities": {
-                  "portMappings": true
-                }
-              }
-          ]
-        }
-      ],
-      "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"
-    }
+multusConfiguration:
+  cni_conf:
+    name: multus-cni-network
+    type: multus
+    kubeconfig: /etc/cni/net.d/multus.d/multus.kubeconfig
+    cniVersion: 0.3.1
+    confDir: /etc/cni/net.d
+    cniDir: /var/lib/cni/multus
+    binDir: /opt/cni/bin
+    logFile: /var/log/multus.log
+    logLevel: panic
+    capabilities:
+      portMappings: true
+    readinessindicatorfile: ""
+    namespaceIsolation: false
+    clusterNetwork: k8s-pod-network
+    defaultNetwork: []
+    delegates: []
+    systemNamespaces: ["kube-system"]
 
 ## @param configurationConfigMap ConfigMap with the Multus configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
 ##
@@ -329,16 +317,12 @@ resources:
   ## limits:
   ##    cpu: 0.5
   ##    memory: 256Mi
-  limits:
-    cpu: "100m"
-    memory: "50Mi"
+  limits: {}
   ## Examples:
   ## requests:
   ##    cpu: 0.5
   ##    memory: 256Mi
-  requests:
-    cpu: "100m"
-    memory: "50Mi"
+  requests: {}
 ## MariaDB Galera containers' liveness probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param livenessProbe.enabled Turn on and off liveness probe

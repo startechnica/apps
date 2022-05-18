@@ -1,2 +1,5 @@
 {
+    "yaml.schemas": {
+        "https://json.schemastore.org/helmfile.json": "vscode-vfs://github%2B7b2276223a312c22726566223a7b2274797065223a342c226964223a226d756c747573227d7d/startechnica/apps/charts/multus/archive-templates/DaemonSet.yaml"
+    }
 }
