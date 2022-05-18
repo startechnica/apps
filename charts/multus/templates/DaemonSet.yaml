@@ -28,9 +28,13 @@ spec:
     matchLabels:
       app: {{- include "common.labels.matchLabels" . | nindent 6 }}
   updateStrategy:
-    type: RollingUpdate
+    type: {{ .Values.updateStrategy.type }}
+    {{- if (eq "Recreate" .Values.updateStrategy.type) }}
+    rollingUpdate: null
+    {{- else }}
     rollingUpdate:
       maxUnavailable: 1
+    {{- end }}
   template:
     metadata:
       {{- if .Values.podAnnotations }}
