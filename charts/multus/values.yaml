@@ -127,7 +127,7 @@ extraEnvVarsSecret: ""
 rbac:
   ## @param rbac.create Specify whether RBAC resources should be created and used
   ##
-  create: false
+  create: true
 ## Pod Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 ## @param podSecurityContext.enabled Enable security context
