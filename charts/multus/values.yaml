@@ -100,7 +100,7 @@ image:
 serviceAccount:
   create: true
   name: ""
-  automountServiceAccountToken: false
+  automountServiceAccountToken: true
   annotations: {}
 ## @param command Override default container command (useful when using custom images)
 ##
@@ -191,9 +191,6 @@ initdbScriptsConfigMap: ""
 ## extraFlags: "--max-connect-errors=1000 --max_connections=155"
 ##
 extraFlags: ""
-## @param replicaCount Desired number of cluster nodes
-##
-replicaCount: 3
 ## @param updateStrategy.type updateStrategy for Multus Master StatefulSet
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 ##
