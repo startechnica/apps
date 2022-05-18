@@ -11,12 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.multusConfiguration.cni_conf) (not .Values.configurationConfigMap) }}
-apiVersion: v1
-kind: ConfigMap
+{{- if or ( gt .Capabilities.KubeVersion.Major "1" ) ( ge .Capabilities.KubeVersion.Minor "16" ) }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
-  name: multus-cni-config
+  name: {{ .Release.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "multus.serviceAccountName" . }}
   namespace: {{ .Release.Namespace | quote }}
+{{- end }}
+
+{{- if and .Values.serviceAccount.create .Values.rbac.create }}
+apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "common.names.fullname" . }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
   {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
@@ -24,10 +38,12 @@ metadata:
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-data:
-{{- if (.Files.Glob "files/cni-conf.json") }}
-{{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
-{{- else if .Values.multusConfiguration }}
-  cni-conf.json: |-
-{{ toJson .Values.multusConfiguration.cni_conf | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ template "common.names.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "multus.serviceAccountName" . }}
+    namespace: {{ include "common.names.namespace" . | quote }}
 {{- end }}

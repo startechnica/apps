@@ -2,12 +2,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "adminer.fullname" . }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
-    app.kubernetes.io/name: {{ include "adminer.name" . }}
-    helm.sh/chart: {{ include "adminer.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "adminer.name" . }}
+    helm.sh/chart: {{ include "adminer.chart" . }}
 {{- with .Values.labels }}
 {{ toYaml . | indent 4 }}
 {{- end }}

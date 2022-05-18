@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.multusConfiguration.cni_conf) (not .Values.configurationConfigMap) }}
-apiVersion: v1
-kind: ConfigMap
+{{- if and .Values.serviceAccount.create .Values.rbac.create }}
+apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
+kind: Role
 metadata:
-  name: multus-cni-config
-  namespace: {{ .Release.Namespace | quote }}
+  name: {{ template "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
   {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
@@ -24,10 +24,24 @@ metadata:
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-data:
-{{- if (.Files.Glob "files/cni-conf.json") }}
-{{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
-{{- else if .Values.multusConfiguration }}
-  cni-conf.json: |-
-{{ toJson .Values.multusConfiguration.cni_conf | indent 4 }}
+rules:
+  - apiGroups: ["k8s.cni.cncf.io"]
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/status
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
 {{- end }}
