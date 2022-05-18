@@ -30,5 +30,5 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ template "multus.serviceAccountName" . }}
-    namespace: {{ include "common.names.namespace" . | quote }}
+    namespace: kube-system
 {{- end }}
