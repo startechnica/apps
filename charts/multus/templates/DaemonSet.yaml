@@ -15,7 +15,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ template "common.names.fullname" . }}-node
-  namespace: kube-system
+  namespace: {{ include "multus.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
