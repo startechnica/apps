@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "freeradius.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "freeradius.name" . }}
+    helm.sh/chart: {{ include "freeradius.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.labels }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "freeradius.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-config: {{ include (print $.Template.BasePath "/configmap/config.yaml") . | sha256sum }}
+        checksum/configmap-mods: {{ include (print $.Template.BasePath "/configmap/mods-enabled.yaml") . | sha256sum }}
+        checksum/configmap-sites: {{ include (print $.Template.BasePath "/configmap/sites-enabled.yaml") . | sha256sum }}
+      labels:
+        app.kubernetes.io/name: {{ include "freeradius.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+{{- with .Values.labels }}
+{{ toYaml . | indent 8 }}
+{{- end }}
+    spec:
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.image.pullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}      
+      containers:
+        - name: freeradius
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          args: ["-x","-l","/dev/stdout"]
+          env:
+            - name: FOO
+              value: "bar"
+          envFrom:
+            - configMapRef:
+                name: freeradius-config
+          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ .Values.extraEnvVarsCM }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.extraEnvVarsSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: auth
+              containerPort: 1812
+              protocol: UDP
+            - name: acct
+              containerPort: 1813
+              protocol: UDP
+            - name: status
+              containerPort: {{ .Values.sitesEnabled.status.port }}
+              protocol: UDP
+          {{- if not .Values.diagnosticMode.enabled }}
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe: {{- omit .Values.startupProbe "enabled" | toYaml | nindent 12 }}
+            exec:
+              command:
+                - sh
+                - -c
+                - >-
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+          {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe: {{- omit .Values.livenessProbe "enabled" | toYaml | nindent 12 }}
+            exec:
+              command:
+                - sh
+                - -c
+                - >-
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe: {{- omit .Values.readinessProbe "enabled" | toYaml | nindent 12 }}
+            exec:
+              command:
+                - sh
+                - -c
+                - >-
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.resources }}
+          resources: {{ toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+            - name: data
+              mountPath: /etc/raddb
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath }}
+              {{- end }}
+            {{- end }}
+            {{- if and .Values.tls.enabled }}
+            - name: freeradius-tls
+              mountPath: "/etc/freeradius/certs/tls"
+              readOnly: true
+            {{- end }}
+            - name: freeradius-mods
+              mountPath: /etc/freeradius/mods-enabled/sql
+              subPath: sql
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/default
+              subPath: default
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/status
+              subPath: status
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- end }}
+      serviceAccountName: {{ include "freeradius.serviceAccountName" . }}
+      volumes:
+        {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ tpl .Values.persistence.existingClaim . }}
+        {{- end }}
+        {{- if and .Values.tls.enabled }}
+        - name: freeradius-tls
+          secret:
+            secretName: {{ include "tlsSecretName" . }}
+        {{- end }}
+        - name: freeradius-mods
+          configMap:
+            name: freeradius-mods
+        - name: freeradius-sites
+          configMap:
+            name: freeradius-sites
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+{{- if .Values.affinity }}
+{{ toYaml .Values.affinity | indent 8 }}
+{{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+---
