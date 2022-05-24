@@ -4,8 +4,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: freeradius-config
+  name: {{ printf "%s-env" (include "common.names.fullname" .) }}
   namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 data:
   {{- if .Values.modsEnabled.sql.enabled }}
   FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modsEnabled.sql.dialect }}
@@ -18,7 +25,6 @@ data:
   {{- end }}
 
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.sitesEnabled.status.port | quote }}
-  FREERADIUS_SITES_STATUS_SECRET: {{ .Values.sitesEnabled.status.secret }}
+  FREERADIUS_SITES_STATUS_SECRET: {{ .Values.sitesEnabled.status.secret | quote }}
 
   FREERADIUS_SITES_DEFAULT_PORT: "1812"
-
