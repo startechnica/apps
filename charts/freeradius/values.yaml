@@ -232,7 +232,7 @@ rbac:
 ##
 podSecurityContext:
   enabled: true
-  fsGroup: 1001
+  fsGroup: 101
 ## FreeRADIUS secondary container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
 ## @param containerSecurityContext.enabled FreeRADIUS secondary container securityContext
@@ -241,7 +241,7 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
-  runAsUser: 1001
+  runAsUser: 101
   runAsNonRoot: true
 ## FreeRADIUS secondary container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
