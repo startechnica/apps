@@ -90,6 +90,10 @@ image:
 ##
 architecture: standalone
 
+
+
+
+
 configuration: ""
 ## @param existingConfigmap Name of existing ConfigMap with FreeRADIUS configuration
 ## NOTE: When it's set the configuration parameter is ignored
@@ -98,6 +102,7 @@ existingConfigmap: ""
 ## @param extraStartupArgs Extra default startup args
 ##
 extraStartupArgs: ""
+
 
 ## @param primary.command Override default container command on FreeRADIUS container(s) (useful when using custom images)
 ##
@@ -198,6 +203,7 @@ tolerations: []
 ##     whenUnsatisfiable: DoNotSchedule
 ##
 topologySpreadConstraints: {}
+
 ## @param priorityClassName Priority class for FreeRADIUS secondary pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
 ##
@@ -210,6 +216,15 @@ schedulerName: ""
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
 ##
 podManagementPolicy: ""
+
+
+## Role Based Access
+## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+##
+rbac:
+  ## @param rbac.create Specify whether RBAC resources should be created and used
+  ##
+  create: false
 ## FreeRADIUS secondary Pod security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 ## @param podSecurityContext.enabled Enable security context for FreeRADIUS secondary pods
@@ -457,6 +472,19 @@ serviceAccount:
   ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
   ##
   automountServiceAccountToken: false
+
+## Pod disruption budget configuration
+##
+podDisruptionBudget:
+  ## @param podDisruptionBudget.create Specifies whether a Pod disruption budget should be created
+  ##
+  create: false
+  ## @param podDisruptionBudget.minAvailable Minimum number / percentage of pods that should remain scheduled
+  ##
+  minAvailable: 1
+  ## @param podDisruptionBudget.maxUnavailable Maximum number / percentage of pods that may be made unavailable
+  ##
+  maxUnavailable: ""
 
 modsEnabled:
   sql:
