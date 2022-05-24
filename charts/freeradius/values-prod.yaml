@@ -9,10 +9,10 @@
 
 modsEnabled:
   sql:
-    enabled: false
-    server: mariadb.mariadb.svc
+    enabled: true
+    server: mariadb-infra.mariadb-infra.svc
     port: 3306
     login: radius_user
     password: radius
-    radiusdb: radiusdb
+    radiusdb: radiusdb1
 
