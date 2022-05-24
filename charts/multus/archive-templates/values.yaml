@@ -399,7 +399,7 @@ podDisruptionBudget:
   ##
   maxUnavailable: ""
 
-  ## Prometheus exporter configuration
+## Prometheus exporter configuration
 ##
 metrics:
   ## @param metrics.enabled Start a side-car prometheus exporter
