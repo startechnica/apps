@@ -10,7 +10,7 @@
 modsEnabled:
   sql:
     enabled: true
-    server: mariadb-infra.mariadb-infra.svc
+    server: mariadb-infra-mariadb-galera.mariadb-infra.svc
     port: 3306
     login: radius_user
     password: radius
