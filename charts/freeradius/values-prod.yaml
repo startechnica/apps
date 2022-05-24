@@ -16,3 +16,8 @@ modsEnabled:
     password: radius
     radiusdb: radiusdb1
 
+podSecurityContext:
+  enabled: false
+
+containerSecurityContext:
+  enabled: false
