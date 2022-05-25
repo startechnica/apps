@@ -19,8 +19,6 @@ externalDatabase:
   database: radiusdb1
   password: "radius"
 
-# podSecurityContext:
-#   enabled: false
-
-# containerSecurityContext:
-#   enabled: false
+sitesEnabled:
+  coa:
+    enabled: true
