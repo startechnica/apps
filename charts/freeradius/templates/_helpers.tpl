@@ -87,3 +87,88 @@ freeradius: tls.enabled
 {{- end }}
 {{- end -}}
 
+{{/* Return the Database hostname */}}
+{{- define "freeradius.databaseHost" -}}
+{{- if eq .Values.mariadb.architecture "replication" }}
+{{- ternary (include "freeradius.mariadb.fullname" .) .Values.externalDatabase.host .Values.mariadb.enabled -}}-primary
+{{- else -}}
+{{- ternary (include "freeradius.mariadb.fullname" .) .Values.externalDatabase.host .Values.mariadb.enabled -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the Database port */}}
+{{- define "freeradius.databasePort" -}}
+{{- ternary "3306" .Values.externalDatabase.port .Values.mariadb.enabled | quote -}}
+{{- end -}}
+
+{{/* Return the Database database name */}}
+{{- define "freeradius.databaseName" -}}
+{{- if .Values.mariadb.enabled }}
+    {{- if .Values.global.mariadb }}
+        {{- if .Values.global.mariadb.auth }}
+            {{- coalesce .Values.global.mariadb.auth.database .Values.mariadb.auth.database -}}
+        {{- else -}}
+            {{- .Values.mariadb.auth.database -}}
+        {{- end -}}
+    {{- else -}}
+        {{- .Values.mariadb.auth.database -}}
+    {{- end -}}
+{{- else -}}
+    {{- .Values.externalDatabase.database -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the Database user */}}
+{{- define "freeradius.databaseUser" -}}
+{{- if .Values.mariadb.enabled }}
+    {{- if .Values.global.mariadb }}
+        {{- if .Values.global.mariadb.auth }}
+            {{- coalesce .Values.global.mariadb.auth.username .Values.mariadb.auth.username -}}
+        {{- else -}}
+            {{- .Values.mariadb.auth.username -}}
+        {{- end -}}
+    {{- else -}}
+        {{- .Values.mariadb.auth.username -}}
+    {{- end -}}
+{{- else -}}
+    {{- .Values.externalDatabase.user -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the Database encrypted password */}}
+{{- define "freeradius.databaseSecretName" -}}
+{{- if .Values.mariadb.enabled }}
+    {{- if .Values.global.mariadb }}
+        {{- if .Values.global.mariadb.auth }}
+            {{- if .Values.global.mariadb.auth.existingSecret }}
+                {{- tpl .Values.global.mariadb.auth.existingSecret $ -}}
+            {{- else -}}
+                {{- default (include "freeradius.mariadb.fullname" .) (tpl .Values.mariadb.auth.existingSecret $) -}}
+            {{- end -}}
+        {{- else -}}
+            {{- default (include "freeradius.mariadb.fullname" .) (tpl .Values.mariadb.auth.existingSecret $) -}}
+        {{- end -}}
+    {{- else -}}
+        {{- default (include "freeradius.mariadb.fullname" .) (tpl .Values.mariadb.auth.existingSecret $) -}}
+    {{- end -}}
+{{- else -}}
+    {{- default (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) (tpl .Values.externalDatabase.existingSecret $) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Add environment variables to configure database values */}}
+{{- define "freeradius.databaseSecretKey" -}}
+{{- if .Values.mariadb.enabled -}}
+    {{- print "password" -}}
+{{- else -}}
+    {{- if .Values.externalDatabase.existingSecret -}}
+        {{- if .Values.externalDatabase.existingSecretPasswordKey -}}
+            {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
+        {{- else -}}
+            {{- print "password" -}}
+        {{- end -}}
+    {{- else -}}
+        {{- print "password" -}}
+    {{- end -}}
+{{- end -}}
+{{- end -}}

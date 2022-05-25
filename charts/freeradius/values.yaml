@@ -225,6 +225,15 @@ rbac:
   ## @param rbac.create Specify whether RBAC resources should be created and used
   ##
   create: false
+## @param containerPorts.auth FreeRADIUS Auth container port
+## @param containerPorts.acct FreeRADIUS Accounting container port
+## @param containerPorts.status FreeRADIUS Status HTTP container port
+##
+containerPorts:
+  auth: 1812
+  acct: 1813
+  coa: 3799
+  status: 18121
 ## FreeRADIUS secondary Pod security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 ## @param podSecurityContext.enabled Enable security context for FreeRADIUS secondary pods
@@ -486,21 +495,53 @@ podDisruptionBudget:
   ##
   maxUnavailable: ""
 
+
+## MariaDB chart configuration
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
+## @param mariadb.enabled Switch to enable or disable the MariaDB helm chart
+## @param mariadb.auth.username Name for a custom user to create
+## @param mariadb.auth.password Password for the custom user to create
+## @param mariadb.auth.database Name for a custom database to create
+## @param mariadb.auth.existingSecret Name of existing secret to use for MariaDB credentials
+## @param mariadb.architecture MariaDB architecture (`standalone` or `replication`)
+##
+mariadb:
+  enabled: false
+  auth:
+    username: freeradius_user
+    password: ""
+    database: freeradius_db
+    existingSecret: ""
+  architecture: standalone
+## External Database configuration
+## All of these values are only used when mariadb.enabled is set to false
+## @param externalDatabase.host Database host
+## @param externalDatabase.port Database port number
+## @param externalDatabase.user Non-root username for FreeRADIUS
+## @param externalDatabase.password Password for the non-root username for FreeRADIUS
+## @param externalDatabase.database FreeRADIUS database name
+## @param externalDatabase.existingSecret Name of an existing secret resource containing the database credentials
+## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
+##
+externalDatabase:
+  host: ""
+  port: 3306
+  user: freeradius_user
+  database: freeradius_db
+  password: ""
+  existingSecret: ""
+  existingSecretPasswordKey: ""
+
 modsEnabled:
   sql:
     enabled: true
     dialect: mysql
-    server: localhost
-    port: 3306
-    login: radius
-    password: radius
-    radiusdb: radiusdb
     tableClient: nas
     existingTlsSecret: ""
 
 sitesEnabled:
   status:
-    port: 18121
+    enabled: true
     secret: adminsecret
 
 tls:
@@ -513,12 +554,6 @@ tls:
       issuerName: selfsigned-issuer
   secretName: ~
   existingSecret: ""
-
-mariadb:
-  enabled: false
-
-postgresql:
-  enabled: false
 
 ## Prometheus exporter configuration
 ##

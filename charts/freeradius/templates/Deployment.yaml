@@ -83,8 +83,20 @@ spec:
           args: ["-x","-l","/dev/stdout"]
           {{- end }}
           env:
+            {{- if .Values.modsEnabled.sql.enabled }}
+            - name: FREERADIUS_MODS_SQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
+                {{- else }}
+                  name: {{ include "freeradius.databaseSecretName" . }}
+                  key: {{ include "freeradius.databaseSecretKey" . }}
+                {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
             {{- end }}
           envFrom:
             - configMapRef:
@@ -102,13 +114,16 @@ spec:
           {{- end }}
           ports:
             - name: auth
-              containerPort: 1812
+              containerPort: {{ .Values.containerPorts.auth }}
               protocol: UDP
             - name: acct
-              containerPort: 1813
+              containerPort: {{ .Values.containerPorts.acct }}
+              protocol: UDP
+            - name: coa
+              containerPort: {{ .Values.containerPorts.coa }}
               protocol: UDP
             - name: status
-              containerPort: {{ .Values.sitesEnabled.status.port }}
+              containerPort: {{ .Values.containerPorts.status }}
               protocol: UDP
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.startupProbe.enabled }}

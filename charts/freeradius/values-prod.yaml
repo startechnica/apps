@@ -10,14 +10,22 @@
 modsEnabled:
   sql:
     enabled: true
-    server: mariadb-infra-mariadb-galera.mariadb-infra.svc
-    port: 3306
-    login: radius_user
-    password: radius
-    radiusdb: radiusdb1
+    dialect: mysql
+    # server: mariadb-infra-mariadb-galera.mariadb-infra.svc
+    # port: 3306
+    # login: radius_user
+    # password: radius
+    # radiusdb: radiusdb1
 
-podSecurityContext:
-  enabled: false
+externalDatabase:
+  host: mariadb-infra-mariadb-galera.mariadb-infra.svc
+  port: 3306
+  user: radius_user
+  database: radiusdb1
+  password: "radius"
 
-containerSecurityContext:
-  enabled: false
+# podSecurityContext:
+#   enabled: false
+
+# containerSecurityContext:
+#   enabled: false
