@@ -291,6 +291,9 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
+  capabilities:
+    add:
+      - SYS_PTRACE
   runAsUser: 101
   runAsNonRoot: true
 ## FreeRADIUS secondary container's resource requests and limits
@@ -536,7 +539,6 @@ podDisruptionBudget:
   ##
   maxUnavailable: ""
 
-
 ## MariaDB chart configuration
 ## ref: https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
 ## @param mariadb.enabled Switch to enable or disable the MariaDB helm chart
@@ -601,6 +603,11 @@ sitesEnabled:
     listen: 127.0.0.1
     port: 18121
     secret: adminsecret
+  tls:
+    enabled: false
+    listen: 127.0.0.1
+    port: 2083
+    privateKeyPassword: adminsecret
 
 tls:
   enabled: false

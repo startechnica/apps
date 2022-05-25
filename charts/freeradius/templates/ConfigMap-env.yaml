@@ -44,4 +44,8 @@ data:
   FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sitesEnabled.status.listen | quote }}
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
   {{- end }}
+    {{- if .Values.sitesEnabled.tls.enabled }}
+  FREERADIUS_SITES_TLS_LISTEN: {{ .Values.sitesEnabled.tls.listen | quote }}
+  FREERADIUS_SITES_TLS_PORT: {{ .Values.sitesEnabled.tls.port | quote }}
+  {{- end }}
 
