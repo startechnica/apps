@@ -139,7 +139,7 @@ spec:
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}
             - name: status
-              containerPort: {{ .Values.containerPorts.status }}
+              containerPort: {{ .Values.sitesEnabled.status.port }}
               protocol: UDP
             {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
