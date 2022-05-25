@@ -165,16 +165,16 @@ freeradius: tls.enabled
 {{/* Add environment variables to configure database values */}}
 {{- define "freeradius.databaseSecretKey" -}}
 {{- if .Values.mariadb.enabled -}}
-    {{- print "password" -}}
+    {{- print "database-password" -}}
 {{- else -}}
     {{- if .Values.externalDatabase.existingSecret -}}
         {{- if .Values.externalDatabase.existingSecretPasswordKey -}}
             {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
         {{- else -}}
-            {{- print "password" -}}
+            {{- print "database-password" -}}
         {{- end -}}
     {{- else -}}
-        {{- print "password" -}}
+        {{- print "database-password" -}}
     {{- end -}}
 {{- end -}}
 {{- end -}}
