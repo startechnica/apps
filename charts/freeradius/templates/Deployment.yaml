@@ -1,3 +1,4 @@
+{{- $globalSecretName := printf "%s" (tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -95,8 +96,20 @@ spec:
                   key: {{ include "freeradius.databaseSecretKey" . }}
                 {{- end }}
             {{- if .Values.extraEnvVars }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
+            {{- end }}
+            {{- if .Values.sitesEnabled.status.enabled }}
+            - name: FREERADIUS_SITES_STATUS_SECRET
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesStatusSecret "context" $)) $ }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesStatusSecret") }}
+                {{- else }}
+                  name: {{ $globalSecretName }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
+                {{- end }}
             {{- end }}
           envFrom:
             - configMapRef:
