@@ -134,12 +134,17 @@ spec:
               protocol: UDP
             {{- if .Values.sitesEnabled.coa.enabled }}
             - name: coa
-              containerPort: {{ .Values.sitesEnabled.coa.port }}
+              containerPort: {{ .Values.containerPorts.coa }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.tls.enabled }}
+            - name: radsec
+              containerPort: {{ .Values.containerPorts.radsec }}
               protocol: UDP
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}
             - name: status
-              containerPort: {{ .Values.sitesEnabled.status.port }}
+              containerPort: {{ .Values.containerPorts.status }}
               protocol: UDP
             {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
