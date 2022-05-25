@@ -90,11 +90,55 @@ image:
 ##
 architecture: standalone
 
+auth:
+  ## @param auth.createAdminUser Create administrator user on boot
+  ##
+  createAdminUser: true
+  ## @param auth.adminUser FreeRADIUS administrator user
+  ##
+  adminUser: user
+  ## @param auth.adminPassword FreeRADIUS administrator password for the new user
+  ##
+  adminPassword: ""
+  ## @param auth.existingSecret An already existing secret containing auth info
+  ## e.g:
+  ## existingSecret:
+  ##   name: mySecret
+  ##   keyMapping:
+  ##     admin-password: myPasswordKey
+  ##     management-password: myManagementPasswordKey
+  ##
+  existingSecret: ""
+  ## @param auth.existingSecretPerPassword Override `existingSecret` and other secret values
+  ## e.g:
+  ## existingSecretPerPassword:
+  ##   keyMapping:
+  ##     adminPassword: FREERADIUS_ADMIN_PASSWORD
+  ##     managementPassword: FREERADIUS_MANAGEMENT_PASSWORD
+  ##     databasePassword: password
+  ##   adminPassword:
+  ##     name: freeradius-test2.credentials ## release-name
+  ##   managementPassword:
+  ##     name: freeradius-test2.credentials
+  ##   databasePassword:
+  ##     name: freeradius.pocwatt-freeradius-cluster.credentials
+  ##
+  existingSecretPerPassword: {}
 
-
-
-
+## @param configuration FreeRADIUS Configuration. Auto-generated based on other parameters when not specified
+## Specify content for keycloak.conf
+## NOTE: This will override configuring FreeRADIUS based on environment variables (including those set by the chart)
+## The radiusd.conf is auto-generated based on other parameters when this parameter is not specified
+##
+## Example:
+## configuration: |-
+##    foo: bar
+##    baz:
+##
 configuration: ""
+## @param configurationConfigMap ConfigMap with the FreeRADIUS configuration files (Note: Overrides `radiusdConfiguration`). The value is evaluated as a template.
+##
+configurationConfigMap: ""
 ## @param existingConfigmap Name of existing ConfigMap with FreeRADIUS configuration
 ## NOTE: When it's set the configuration parameter is ignored
 ##
@@ -102,8 +146,19 @@ existingConfigmap: ""
 ## @param extraStartupArgs Extra default startup args
 ##
 extraStartupArgs: ""
-
-
+## initdb scripts
+## @param initdbScripts Specify dictionary of scripts to be run at first boot
+## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
+## e.g:
+## initdbScripts:
+##   my_init_script.sh: |
+##      #!/bin/sh
+##      echo "Do something."
+##
+initdbScripts: {}
+## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
+##
+initdbScriptsConfigMap: ""
 ## @param primary.command Override default container command on FreeRADIUS container(s) (useful when using custom images)
 ##
 command: []
@@ -121,35 +176,21 @@ hostAliases: []
 ## ref: https://mysql.com/kb/en/mysql/configuring-mysql-with-mycnf/#example-of-configuration-file
 ##
 
-## @param configurationConfigMap ConfigMap with the MariaDB configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
-##
-configurationConfigMap: ""
-## initdb scripts
-## @param initdbScripts Specify dictionary of scripts to be run at first boot
-## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
-## e.g:
-## initdbScripts:
-##   my_init_script.sh: |
-##      #!/bin/sh
-##      echo "Do something."
-##
-initdbScripts: {}
-## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
-##
-initdbScriptsConfigMap: ""
+## @section FreeRADIUS Deployment parameters
+
 ## @param replicaCount Desired number of cluster nodes
 ##
 replicaCount: 1
-## @param updateStrategy.type updateStrategy for MariaDB Master StatefulSet
+## @param updateStrategy.type updateStrategy for FreeRADIUS Master StatefulSet
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 ##
 updateStrategy:
   type: RollingUpdate
-## @param podLabels Extra labels for MariaDB Galera pods
+## @param podLabels Extra labels for FreeRADIUS pods
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 ##
 podLabels: {}
-## @param podAnnotations Annotations for MariaDB Galera  pods
+## @param podAnnotations Annotations for FreeRADIUS pods
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 ##
 podAnnotations: {}
