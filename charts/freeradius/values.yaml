@@ -577,12 +577,28 @@ modsEnabled:
   sql:
     enabled: true
     dialect: mysql
-    tableClient: nas
+    table:
+      acct1: radacct
+      acct2: radacct
+      authcheck: radcheck
+      authreply: radreply
+      client: nas
+      groupcheck: radgroupcheck
+      groupreply: radgroupreply
+      postauth: radpostauth
+      usergroup: radusergroup
+    tls:
+      enabled: false
     existingTlsSecret: ""
 
 sitesEnabled:
+  coa:
+    enabled: false
+    listen: 127.0.0.1
+    port: 3799
   status:
     enabled: true
+    listen: 127.0.0.1
     secret: adminsecret
 
 tls:

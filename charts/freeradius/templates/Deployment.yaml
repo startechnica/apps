@@ -132,12 +132,16 @@ spec:
             - name: acct
               containerPort: {{ .Values.containerPorts.acct }}
               protocol: UDP
+            {{- if .Values.sitesEnabled.coa.enabled }}
             - name: coa
-              containerPort: {{ .Values.containerPorts.coa }}
+              containerPort: {{ .Values.sitesEnabled.coa.port }}
               protocol: UDP
+            {{- end }}
+            {{- if .Values.sitesEnabled.status.enabled }}
             - name: status
               containerPort: {{ .Values.containerPorts.status }}
               protocol: UDP
+            {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
           {{- if .Values.startupProbe.enabled }}
           startupProbe: {{- omit .Values.startupProbe "enabled" | toYaml | nindent 12 }}

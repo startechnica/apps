@@ -33,7 +33,7 @@ server status {
 		#  ALL other packets are ignored.
 		type = status
 
-		ipaddr = 127.0.0.1
+		ipaddr = $ENV{FREERADIUS_SITES_STATUS_LISTEN}
 		port = $ENV{FREERADIUS_SITES_STATUS_PORT}
 	}
 

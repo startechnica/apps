@@ -14,5 +14,6 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  sql: |-
-{{ tpl (.Files.Get "files/mods-enabled/sql") . | nindent 4 }}
+{{- if .Values.modsEnabled.sql.enabled }}
+{{ (.Files.Glob "files/mods-available/sql").AsConfig | indent 2 }}
+{{- end }}

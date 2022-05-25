@@ -14,7 +14,10 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  default: |-
-{{ tpl (.Files.Get "files/sites-enabled/default") . | nindent 4 }}
-  status: |-
-{{ tpl (.Files.Get "files/sites-enabled/status") . | nindent 4 }}
+{{ (.Files.Glob "files/sites-available/default").AsConfig | indent 2 }}
+{{- if .Values.sitesEnabled.coa.enabled }}
+{{ (.Files.Glob "files/sites-available/sql").AsConfig | indent 2 }}
+{{- end }}
+{{- if .Values.sitesEnabled.status.enabled }}
+{{ (.Files.Glob "files/sites-available/status").AsConfig | indent 2 }}
+{{- end }}
