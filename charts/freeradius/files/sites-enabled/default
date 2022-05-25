@@ -248,7 +248,7 @@ listen {
 	ipv6addr = ::	# any.  ::1 == localhost
 	port = $ENV{FREERADIUS_SITES_DEFAULT_AUTH_PORT}
 #	interface = eth0
-	clients = per_socket_clients
+#	clients = per_socket_clients
 	limit {
 	      max_connections = 16
 	      lifetime = 0
@@ -261,7 +261,7 @@ listen {
 	port = $ENV{FREERADIUS_SITES_DEFAULT_ACCT_PORT}
 	type = acct
 #	interface = eth0
-	clients = per_socket_clients
+#	clients = per_socket_clients
 	limit {
 		max_pps = 0
 		idle_timeout = 0
