@@ -29,4 +29,4 @@ data:
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
   FREERADIUS_SITES_STATUS_SECRET: {{ .Values.sitesEnabled.status.secret | quote }}
 
-  FREERADIUS_SITES_DEFAULT_PORT: {{ .Values.containerPorts.acct | quote }}
+  FREERADIUS_SITES_DEFAULT_PORT: {{ .Values.containerPorts.auth | quote }}
