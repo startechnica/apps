@@ -462,6 +462,7 @@ service:
   ports:
     auth: 1812
     acct: 1813
+    radsec: 2083
     status: 18121
   ## @param service.nodePorts.mysql FreeRADIUS Kubernetes service node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
