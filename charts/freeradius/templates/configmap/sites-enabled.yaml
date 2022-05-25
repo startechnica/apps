@@ -16,7 +16,7 @@ metadata:
 data:
 {{ (.Files.Glob "files/sites-available/default").AsConfig | indent 2 }}
 {{- if .Values.sitesEnabled.coa.enabled }}
-{{ (.Files.Glob "files/sites-available/sql").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/sites-available/coa").AsConfig | indent 2 }}
 {{- end }}
 {{- if .Values.sitesEnabled.status.enabled }}
 {{ (.Files.Glob "files/sites-available/status").AsConfig | indent 2 }}
