@@ -17,10 +17,6 @@ dependencies:
     condition: mariadb.enabled
     repository: https://charts.bitnami.com/bitnami
     version: 11.x.x
-  - name: postgresql
-    condition: postgresql.enabled
-    repository: https://charts.bitnami.com/bitnami
-    version: 11.x.x
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
   distributed under the GNU General Public License, version 2, and is free for download and use.
 home: https://github.com/startechnica/apps/tree/main/charts/freeradius
