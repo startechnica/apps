@@ -42,6 +42,50 @@ entries:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.0.25
+    created: "2022-05-27T14:01:10.286130391Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.x.x
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    digest: 65ff9f216e52de78302f2c298b5bac644a214733493c62a5802fd164c04c3196
+    home: https://github.com/startechnica/apps/tree/main/charts/freeradius
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - mysql
+    - postgresql
+    - ldap
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-0.1.5/freeradius-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/freeradius
+        - name: Upstream Project
+          url: https://github.com/FreeRADIUS/freeradius-server
+      category: AccessManagement
+    apiVersion: v2
+    appVersion: 3.0.25
     created: "2022-05-27T13:22:36.93035997Z"
     dependencies:
     - name: common
@@ -292,4 +336,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-05-27T13:22:36.930413771Z"
+generated: "2022-05-27T14:01:10.286179593Z"
