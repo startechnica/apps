@@ -522,7 +522,7 @@ home_server tls {
 		#       hostname = "example.com"
 
 				private_key_password = whatever
-		private_key_file = /startechnica/freeradius/certs/tls.key
+				private_key_file = /startechnica/freeradius/certs/tls.key
 
 				#  If Private key & Certificate are located in
 				#  the same file, then private_key_file &
@@ -534,7 +534,7 @@ home_server tls {
 				#  only the server certificate, but ALSO all
 				#  of the CA certificates used to sign the
 				#  server certificate.
-		certificate_file = /startechnica/freeradius/certs/tls.crt
+				certificate_file = /startechnica/freeradius/certs/tls.crt
 
 				#  Trusted Root CA list
 				#
@@ -551,7 +551,7 @@ home_server tls {
 				#  not use client certificates, and you do not want
 				#  to permit EAP-TLS authentication, then delete
 				#  this configuration item.
-		ca_file = /startechnica/freeradius/certs/ca.crt
+				ca_file = /startechnica/freeradius/certs/ca.crt
 
 				#
 				#  For TLS-PSK, the key should be specified
@@ -615,7 +615,7 @@ home_server tls {
 			   #  TLS-Client-Cert-Issuer attribute.  This check
 			   #  can be done via any mechanism you choose.
 			   #
-		#       check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
+		#		check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
 
 			   #
 			   #  If check_cert_cn is set, the value will
