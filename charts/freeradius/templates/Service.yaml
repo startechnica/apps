@@ -72,9 +72,9 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Values.tls.enabled }}
-    - name: udp-radsec
+    - name: tcp-radsec
       port: {{ .Values.service.ports.radsec }}
-      protocol: UDP
+      protocol: TCP
       targetPort: {{ .Values.containerPorts.radsec }}
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.radsec) }}
       nodePort: {{ .Values.service.nodePorts.radsec }}

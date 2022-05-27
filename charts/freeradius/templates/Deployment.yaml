@@ -143,7 +143,7 @@ spec:
             {{- if .Values.tls.enabled }}
             - name: radsec
               containerPort: {{ .Values.containerPorts.radsec }}
-              protocol: UDP
+              protocol: TCP
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}
             - name: status
@@ -194,6 +194,9 @@ spec:
               {{- end }}
             {{- end }}
             {{- if .Values.tls.enabled }}
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/tls
+              subPath: tls
             - name: freeradius-tls
               mountPath: /startechnica/freeradius/certs
               readOnly: true
