@@ -4,11 +4,23 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: freeradius-sites
+  name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
   namespace: {{ .Release.Namespace | quote }}
-{{- $Global := . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 data:
-  default: |-
-{{ tpl (.Files.Get "files/sites-enabled/default") . | nindent 4 }}
-  status: |-
-{{ tpl (.Files.Get "files/sites-enabled/status") . | nindent 4 }}
+{{ (.Files.Glob "files/sites-available/default").AsConfig | indent 2 }}
+{{- if .Values.sitesEnabled.coa.enabled }}
+{{ (.Files.Glob "files/sites-available/coa").AsConfig | indent 2 }}
+{{- end }}
+{{- if .Values.sitesEnabled.status.enabled }}
+{{ (.Files.Glob "files/sites-available/status").AsConfig | indent 2 }}
+{{- end }}
+{{- if .Values.tls.enabled }}
+{{ (.Files.Glob "files/sites-available/tls").AsConfig | indent 2 }}
+{{- end }}

@@ -38,7 +38,7 @@ sql {
 	#	mongo
 	#
 #	dialect = "sqlite"
-	dialect = "mysql"
+	dialect = $ENV{FREERADIUS_MODS_SQL_DIALECT}
 
 	#
 	#  The driver module used to execute the queries.  Since we
@@ -194,22 +194,22 @@ sql {
 	# same SQL table, leave this as is.  If you want them in
 	# different tables, put the start table in acct_table1
 	# and stop table in acct_table2
-	acct_table1 = "radacct"
-	acct_table2 = "radacct"
+	acct_table1 = $ENV{FREERADIUS_MODS_SQL_TABLE_ACCT1}
+	acct_table2 = $ENV{FREERADIUS_MODS_SQL_TABLE_ACCT2}
 
 	# Allow for storing data after authentication
-	postauth_table = "radpostauth"
+	postauth_table = $ENV{FREERADIUS_MODS_SQL_TABLE_POSTAUTH}
 
 	# Tables containing 'check' items
-	authcheck_table = "radcheck"
-	groupcheck_table = "radgroupcheck"
+	authcheck_table = $ENV{FREERADIUS_MODS_SQL_TABLE_AUTHCHECK}
+	groupcheck_table = $ENV{FREERADIUS_MODS_SQL_TABLE_GROUPCHECK}
 
 	# Tables containing 'reply' items
-	authreply_table = "radreply"
-	groupreply_table = "radgroupreply"
+	authreply_table = $ENV{FREERADIUS_MODS_SQL_TABLE_AUTHREPLY}
+	groupreply_table = $ENV{FREERADIUS_MODS_SQL_TABLE_GROUPREPLY}
 
 	# Table to keep group info
-	usergroup_table = "radusergroup"
+	usergroup_table = $ENV{FREERADIUS_MODS_SQL_TABLE_USERGROUP}
 
 	# If set to 'yes' (default) we read the group tables unless Fall-Through = no in the reply table.
 	# If set to 'no' we do not read the group tables unless Fall-Through = yes in the reply table.
@@ -365,5 +365,4 @@ sql {
 
 	# Read database-specific queries
 	$INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
-#	$INCLUDE ${modconfdir}/sql/main/mysql/queries.conf
 }

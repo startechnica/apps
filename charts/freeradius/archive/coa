@@ -1,0 +1,73 @@
+#  -*- text -*-
+######################################################################
+#
+#  Sample virtual server for receiving a CoA or Disconnect-Request packet.
+#
+server coa {
+	namespace = radius
+
+	#  Listen on the CoA port.
+	#
+	#  This uses the normal set of clients, with the same secret as for
+	#  authentication and accounting.
+	#
+	listen {
+		type = CoA-Request
+		type = Disconnect-Request
+
+		transport = udp
+
+		udp {
+			ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
+			port = $ENV{FREERADIUS_SITES_COA_PORT}
+		}
+	}
+
+	#
+	#  Receive a CoA request
+	#
+	recv CoA-Request {
+		#  Insert your own policies here.
+		ok
+	}
+
+	#
+	#  Send a CoA ACK
+	#
+	send CoA-ACK {
+		#  Sample module.
+		ok
+	}
+
+	#
+	#  Send a CoA NAK
+	#
+	send CoA-NAK {
+		#  Sample module.
+		ok
+	}
+
+	#
+	#  Receive a Disconnect request
+	#
+	recv Disconnect-Request {
+		#  Insert your own policies here.
+		ok
+	}
+
+	#
+	#  Send a Disconnect ACK
+	#
+	send Disconnect-ACK {
+		#  Sample module.
+		ok
+	}
+
+	#
+	#  Send a Disconnect NAK
+	#
+	send Disconnect-NAK {
+		#  Sample module.
+		ok
+	}
+}

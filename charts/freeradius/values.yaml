@@ -27,10 +27,6 @@ nameOverride: ""
 ## @param fullnameOverride String to fully override adminer.fullname
 ##
 fullnameOverride: ""
-## @param hostAliases Add deployment host aliases
-## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
-##
-hostAliases: []
 ## @param commonLabels Labels to add to all deployed objects
 ##
 commonLabels: {}
@@ -94,7 +90,55 @@ image:
 ##
 architecture: standalone
 
+auth:
+  ## @param auth.createAdminUser Create administrator user on boot
+  ##
+  createAdminUser: true
+  ## @param auth.adminUser FreeRADIUS administrator user
+  ##
+  adminUser: user
+  ## @param auth.adminPassword FreeRADIUS administrator password for the new user
+  ##
+  adminPassword: ""
+  ## @param auth.existingSecret An already existing secret containing auth info
+  ## e.g:
+  ## existingSecret:
+  ##   name: mySecret
+  ##   keyMapping:
+  ##     admin-password: myPasswordKey
+  ##     management-password: myManagementPasswordKey
+  ##
+  existingSecret: ""
+  ## @param auth.existingSecretPerPassword Override `existingSecret` and other secret values
+  ## e.g:
+  ## existingSecretPerPassword:
+  ##   keyMapping:
+  ##     adminPassword: FREERADIUS_ADMIN_PASSWORD
+  ##     managementPassword: FREERADIUS_MANAGEMENT_PASSWORD
+  ##     databasePassword: password
+  ##   adminPassword:
+  ##     name: freeradius-test2.credentials ## release-name
+  ##   managementPassword:
+  ##     name: freeradius-test2.credentials
+  ##   databasePassword:
+  ##     name: freeradius.pocwatt-freeradius-cluster.credentials
+  ##
+  existingSecretPerPassword: {}
+
+## @param configuration FreeRADIUS Configuration. Auto-generated based on other parameters when not specified
+## Specify content for keycloak.conf
+## NOTE: This will override configuring FreeRADIUS based on environment variables (including those set by the chart)
+## The radiusd.conf is auto-generated based on other parameters when this parameter is not specified
+##
+## Example:
+## configuration: |-
+##    foo: bar
+##    baz:
+##
 configuration: ""
+## @param configurationConfigMap ConfigMap with the FreeRADIUS configuration files (Note: Overrides `radiusdConfiguration`). The value is evaluated as a template.
+##
+configurationConfigMap: ""
 ## @param existingConfigmap Name of existing ConfigMap with FreeRADIUS configuration
 ## NOTE: When it's set the configuration parameter is ignored
 ##
@@ -102,22 +146,19 @@ existingConfigmap: ""
 ## @param extraStartupArgs Extra default startup args
 ##
 extraStartupArgs: ""
-## @param initdbScripts Dictionary of initdb scripts
-## Specify dictionary of scripts to be run at first boot
-## ref: https://github.com/bitnami/bitnami-docker-FreeRADIUS#initializing-a-new-instance
-## Example:
+## initdb scripts
+## @param initdbScripts Specify dictionary of scripts to be run at first boot
+## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
+## e.g:
 ## initdbScripts:
 ##   my_init_script.sh: |
-##      #!/bin/bash
+##      #!/bin/sh
 ##      echo "Do something."
 ##
 initdbScripts: {}
 ## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
 ##
 initdbScriptsConfigMap: ""
-
-replicaCount: 1
-
 ## @param primary.command Override default container command on FreeRADIUS container(s) (useful when using custom images)
 ##
 command: []
@@ -127,9 +168,59 @@ args: []
 ## @param primary.lifecycleHooks for the FreeRADIUS container(s) to automate configuration before or after startup
 ##
 lifecycleHooks: {}
+## @param primary.hostAliases Add deployment host aliases
+## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+##
+hostAliases: []
 ## @param primary.configuration [string] FreeRADIUS configuration to be injected as ConfigMap
 ## ref: https://mysql.com/kb/en/mysql/configuring-mysql-with-mycnf/#example-of-configuration-file
 ##
+
+## @section FreeRADIUS Deployment parameters
+
+## @param replicaCount Desired number of cluster nodes
+##
+replicaCount: 1
+## @param updateStrategy.type updateStrategy for FreeRADIUS Master StatefulSet
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+##
+updateStrategy:
+  type: RollingUpdate
+## @param podLabels Extra labels for FreeRADIUS pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+##
+podLabels: {}
+## @param podAnnotations Annotations for FreeRADIUS pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+##
+podAnnotations: {}
+## @param podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAffinityPreset: ""
+## @param podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAntiAffinityPreset: soft
+## Node affinity preset
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+##
+nodeAffinityPreset:
+  ## @param nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ##
+  type: ""
+  ## @param nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
+  ## E.g.
+  ## key: "kubernetes.io/e2e-az-name"
+  ##
+  key: ""
+  ## @param nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+  ## E.g.
+  ## values:
+  ##   - e2e-az1
+  ##   - e2e-az2
+  ##
+  values: []
 
 ## @param affinity Affinity for FreeRADIUS secondary pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
@@ -153,6 +244,7 @@ tolerations: []
 ##     whenUnsatisfiable: DoNotSchedule
 ##
 topologySpreadConstraints: {}
+
 ## @param priorityClassName Priority class for FreeRADIUS secondary pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
 ##
@@ -165,6 +257,25 @@ schedulerName: ""
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
 ##
 podManagementPolicy: ""
+
+
+## Role Based Access
+## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+##
+rbac:
+  ## @param rbac.create Specify whether RBAC resources should be created and used
+  ##
+  create: false
+## @param containerPorts.auth FreeRADIUS Auth container port
+## @param containerPorts.acct FreeRADIUS Accounting container port
+## @param containerPorts.status FreeRADIUS Status HTTP container port
+##
+containerPorts:
+  auth: 1812
+  acct: 1813
+  coa: 3799
+  radsec: 2083
+  status: 18121
 ## FreeRADIUS secondary Pod security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 ## @param podSecurityContext.enabled Enable security context for FreeRADIUS secondary pods
@@ -172,7 +283,8 @@ podManagementPolicy: ""
 ##
 podSecurityContext:
   enabled: true
-  fsGroup: 1001
+  fsGroup: 101
+  runAsUser: 101
 ## FreeRADIUS secondary container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
 ## @param containerSecurityContext.enabled FreeRADIUS secondary container securityContext
@@ -181,7 +293,10 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
-  runAsUser: 1001
+  capabilities:
+    add:
+      - SYS_PTRACE
+  runAsUser: 101
   runAsNonRoot: true
 ## FreeRADIUS secondary container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
@@ -348,6 +463,8 @@ service:
   ports:
     auth: 1812
     acct: 1813
+    coa: 3799
+    radsec: 2083
     status: 18121
   ## @param service.nodePorts.mysql FreeRADIUS Kubernetes service node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
@@ -355,10 +472,15 @@ service:
   nodePorts:
     auth: ""
     acct: ""
+    coa: ""
+    radsec: ""
     status: ""
   ## @param service.clusterIP FreeRADIUS Kubernetes service clusterIP IP
   ##
   clusterIP: ""
+  ## @param service.ipFamilyPolicy FreeRADIUS Kubernetes service ipFamilyPolicy policy
+  ##
+  ipFamilyPolicy: SingleStack
   ## @param service.loadBalancerIP FreeRADIUS loadBalancerIP if service type is `LoadBalancer`
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
   ##
@@ -410,24 +532,162 @@ serviceAccount:
   ##
   automountServiceAccountToken: false
 
+## Pod disruption budget configuration
+##
+podDisruptionBudget:
+  ## @param podDisruptionBudget.create Specifies whether a Pod disruption budget should be created
+  ##
+  create: false
+  ## @param podDisruptionBudget.minAvailable Minimum number / percentage of pods that should remain scheduled
+  ##
+  minAvailable: 1
+  ## @param podDisruptionBudget.maxUnavailable Maximum number / percentage of pods that may be made unavailable
+  ##
+  maxUnavailable: ""
+
+## MariaDB chart configuration
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
+## @param mariadb.enabled Switch to enable or disable the MariaDB helm chart
+## @param mariadb.auth.username Name for a custom user to create
+## @param mariadb.auth.password Password for the custom user to create
+## @param mariadb.auth.database Name for a custom database to create
+## @param mariadb.auth.existingSecret Name of existing secret to use for MariaDB credentials
+## @param mariadb.architecture MariaDB architecture (`standalone` or `replication`)
+##
+mariadb:
+  enabled: false
+  auth:
+    username: freeradius_user
+    password: ""
+    database: freeradius_db
+    existingSecret: ""
+  architecture: standalone
+## External Database configuration
+## All of these values are only used when mariadb.enabled is set to false
+## @param externalDatabase.host Database host
+## @param externalDatabase.port Database port number
+## @param externalDatabase.user Non-root username for FreeRADIUS
+## @param externalDatabase.password Password for the non-root username for FreeRADIUS
+## @param externalDatabase.database FreeRADIUS database name
+## @param externalDatabase.existingSecret Name of an existing secret resource containing the database credentials
+## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
+##
+externalDatabase:
+  host: ""
+  port: 3306
+  user: freeradius_user
+  database: freeradius_db
+  password: ""
+  existingSecret: ""
+  existingSecretPasswordKey: ""
+
 modsEnabled:
   sql:
     enabled: true
     dialect: mysql
-    server: localhost
-    port: 3306
-    login: radius
-    password: radius
-    radiusdb: radiusdb
-    tableClient: nas
+    table:
+      acct1: radacct
+      acct2: radacct
+      authcheck: radcheck
+      authreply: radreply
+      client: nas
+      groupcheck: radgroupcheck
+      groupreply: radgroupreply
+      postauth: radpostauth
+      usergroup: radusergroup
+    tls:
+      enabled: false
+    existingTlsSecret: ""
 
 sitesEnabled:
+  coa:
+    enabled: false
+    listen: "*"
   status:
-    port: 18121
+    enabled: true
+    listen: 127.0.0.1
     secret: adminsecret
+  tls:
+    listen: "*"
+    privateKeyPassword: adminsecret
 
-mariadb:
+tls:
+  ## @param tls.enabled Enable TLS support for radsec traffic
+  ##
   enabled: false
+  ## @param tls.autoGenerated Generate automatically self-signed TLS certificates
+  ##
+  autoGenerated: true
+  autoGenerator:
+    certmanager:
+      enabled: false
+      issuerKind: ClusterIssuer
+      issuerName: selfsigned-issuer
+  ## @param tls.certificatesSecret Name of the secret that contains the certificates
+  ##
+  certificatesSecret: ""
+  ## @param tls.certFilename Certificate filename
+  ##
+  certFilename: ""
+  ## @param tls.certKeyFilename Certificate key filename
+  ##
+  certKeyFilename: ""
+  ## @param tls.certCAFilename CA Certificate filename
+  ##
+  certCAFilename: ""
 
-postgresql:
+  secretName: ~
+  existingSecret: ""
+
+## Prometheus exporter configuration
+##
+metrics:
+  ## @param metrics.enabled Start a side-car prometheus exporter
+  ##
   enabled: false
+  ## Bitnami FreeRADIUS Prometheus exporter image
+  ## ref: 
+  ## @param metrics.image.registry FreeRADIUS Prometheus exporter image registry
+  ## @param metrics.image.repository FreeRADIUS Prometheus exporter image repository
+  ## @param metrics.image.tag FreeRADIUS Prometheus exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy FreeRADIUS Prometheus exporter image pull policy
+  ## @param metrics.image.pullSecrets FreeRADIUS Prometheus exporter image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: 
+    tag: 
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRules:
+    ## @param metrics.prometheusRules.enabled if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRules.additionalLabels [object] Additional labels to add to the PrometheusRule so it is picked up by the operator
+    ## If using the [Helm Chart](https://github.com/helm/charts/tree/master/stable/prometheus-operator) this is the name of the Helm release and 'app: prometheus-operator'
+    ##
+    additionalLabels:
+      app: prometheus-operator
+      release: prometheus
+    ## @param metrics.prometheusRules.rules PrometheusRule rules to configure
+    ## e.g:
+    ##  - alert: FreeRADIUS-Down
+    ##    annotations:
+    ##      message: 'FreeRADIUS instance {{ $labels.instance }} is down'
+    ##      summary: FreeRADIUS instance is down
+    ##    expr: absent(up{job="freeradius"} == 1)
+    ##    labels:
+    ##      severity: warning
+    ##      service: freeradius
+    ##    for: 5m
+    ##
+    rules: {}
