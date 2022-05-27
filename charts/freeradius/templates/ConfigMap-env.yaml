@@ -38,7 +38,7 @@ data:
   FREERADIUS_SITES_DEFAULT_ACCT_PORT: {{ .Values.containerPorts.acct | quote }}
   {{- if .Values.sitesEnabled.coa.enabled }}
   FREERADIUS_SITES_COA_LISTEN: {{ .Values.sitesEnabled.coa.listen | quote }}
-  FREERADIUS_SITES_COA_PORT: {{ .Values.sitesEnabled.coa.port | quote }}
+  FREERADIUS_SITES_COA_PORT: {{ .Values.containerPorts.coa | quote }}
   {{- end }}
   {{- if .Values.sitesEnabled.status.enabled }}
   FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sitesEnabled.status.listen | quote }}
