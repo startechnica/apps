@@ -35,7 +35,6 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
-
 {{/* Common labels */}}
 {{- define "multus.labels" -}}
 helm.sh/chart: {{ include "multus.chart" . }}
@@ -61,7 +60,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
-{{/* Return the proper Multus Galera image name */}}
+{{/* Return the proper Multus image name */}}
 {{- define "multus.image" -}}
 {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
