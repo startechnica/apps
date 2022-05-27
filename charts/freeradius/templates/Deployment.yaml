@@ -201,12 +201,19 @@ spec:
               mountPath: /startechnica/freeradius/certs
               readOnly: true
             - name: shared-certs
-              mountPath: /startechnica/freeradius/certs
+              mountPath: /startechnica/freeradius/shared-certs
               readOnly: true
             {{- end }}
+            {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
               mountPath: /etc/freeradius/mods-enabled/sql
               subPath: sql
+            {{- end }}
+            {{- if .Values.modsEnabled.coa.enabled }}
+            - name: freeradius-mods
+              mountPath: /etc/freeradius/mods-enabled/coa
+              subPath: coa
+            {{- end }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/default
               subPath: default
