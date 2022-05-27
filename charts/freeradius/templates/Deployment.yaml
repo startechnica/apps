@@ -193,9 +193,9 @@ spec:
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
             {{- end }}
-            {{- if and .Values.tls.enabled }}
+            {{- if .Values.tls.enabled }}
             - name: freeradius-tls
-              mountPath: "/etc/freeradius/certs/tls"
+              mountPath: "/startechnica/freeradius/certs"
               readOnly: true
             {{- end }}
             - name: freeradius-mods
@@ -225,10 +225,13 @@ spec:
           persistentVolumeClaim:
             claimName: {{ tpl .Values.persistence.existingClaim . }}
         {{- end }}
-        {{- if and .Values.tls.enabled }}
+        {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
-            secretName: {{ include "tlsSecretName" . }}
+            secretName: {{ include "freeradius.tlsSecretName" . }}
+            # defaultMode: 420
+        - name: shared-certs
+          emptyDir: {}
         {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
