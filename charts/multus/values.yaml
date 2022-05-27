@@ -316,7 +316,8 @@ extraVolumes: []
 ##   readOnly: true
 ##
 extraVolumeMounts: []
-## MariaDB Galera containers' resource requests and limits
+
+## Multus CNI containers' resource requests and limits
 ## We usually recommend not to specify default resources and to leave this as a conscious
 ## choice for the user. This also increases chances charts run on environments with little
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -339,7 +340,7 @@ resources:
   requests:
     cpu: "100m"
     memory: "50Mi"
-## MariaDB Galera containers' liveness probe
+## Multus CNI containers' liveness probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param livenessProbe.enabled Turn on and off liveness probe
 ## @param livenessProbe.initialDelaySeconds Delay before liveness probe is initiated
@@ -357,7 +358,7 @@ livenessProbe:
   timeoutSeconds: 1
   successThreshold: 1
   failureThreshold: 3
-## MariaDB Galera containers' readiness probe
+## Multus CNI containers' readiness probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param readinessProbe.enabled Turn on and off readiness probe
 ## @param readinessProbe.initialDelaySeconds Delay before readiness probe is initiated
@@ -373,7 +374,7 @@ readinessProbe:
   timeoutSeconds: 1
   successThreshold: 1
   failureThreshold: 3
-## MariaDB Galera containers' startup probe
+## Multus CNI containers' startup probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param startupProbe.enabled Turn on and off startup probe
 ## @param startupProbe.initialDelaySeconds Delay before startup probe is initiated
@@ -421,18 +422,18 @@ metrics:
   ## @param metrics.enabled Start a side-car prometheus exporter
   ##
   enabled: false
-  ## Bitnami MySQL Prometheus exporter image
+  ## Multus CNI Prometheus exporter image
   ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
-  ## @param metrics.image.registry MariaDB Prometheus exporter image registry
-  ## @param metrics.image.repository MariaDB Prometheus exporter image repository
-  ## @param metrics.image.tag MariaDB Prometheus exporter image tag (immutable tags are recommended)
-  ## @param metrics.image.pullPolicy MariaDB Prometheus exporter image pull policy
-  ## @param metrics.image.pullSecrets MariaDB Prometheus exporter image pull secrets
+  ## @param metrics.image.registry Multus Prometheus exporter image registry
+  ## @param metrics.image.repository Multus Prometheus exporter image repository
+  ## @param metrics.image.tag Multus Prometheus exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy Multus Prometheus exporter image pull policy
+  ## @param metrics.image.pullSecrets Multus Prometheus exporter image pull secrets
   ##
   image:
     registry: docker.io
-    repository: bitnami/mysqld-exporter
-    tag: 0.14.0-debian-10-r45
+    repository: ""
+    tag: ""
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
@@ -456,14 +457,14 @@ metrics:
       release: prometheus
     ## @param metrics.prometheusRules.rules PrometheusRule rules to configure
     ## e.g:
-    ##  - alert: MariaDB-Down
+    ##  - alert: Multus-Down
     ##    annotations:
-    ##      message: 'MariaDB instance {{ $labels.instance }} is down'
-    ##      summary: MariaDB instance is down
-    ##    expr: absent(up{job="mariadb-galera"} == 1)
+    ##      message: 'Multus instance {{ $labels.instance }} is down'
+    ##      summary: Multus instance is down
+    ##    expr: absent(up{job="multus-cni"} == 1)
     ##    labels:
     ##      severity: warning
-    ##      service: mariadb-galera
+    ##      service: multus-cni
     ##    for: 5m
     ##
     rules: {}
