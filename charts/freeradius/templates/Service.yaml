@@ -32,7 +32,7 @@ spec:
   {{- if (and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP))) }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
-  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerSourceRanges }}
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
   loadBalancerSourceRanges: {{ .Values.service.loadBalancerSourceRanges }}
   {{ end }}
   {{- if .Values.service.sessionAffinity }}
@@ -60,6 +60,17 @@ spec:
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    {{- if .Values.sitesEnabled.coa.enabled }}
+    - name: udp-coa
+      port: {{ .Values.service.ports.coa }}
+      protocol: UDP
+      targetPort: {{ .Values.containerPorts.coa }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.coa) }}
+      nodePort: {{ .Values.service.nodePorts.coa }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- end }}
     {{- if .Values.tls.enabled }}
     - name: udp-radsec
       port: {{ .Values.service.ports.radsec }}

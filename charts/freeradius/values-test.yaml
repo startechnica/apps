@@ -8,6 +8,7 @@ service:
   externalTrafficPolicy: Local
   annotations:
     metallb.universe.tf/address-pool: freeradius
+  ipFamilyPolicy: PreferDualStack
 
 modsEnabled:
   sql:

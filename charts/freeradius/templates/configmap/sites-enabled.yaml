@@ -21,6 +21,6 @@ data:
 {{- if .Values.sitesEnabled.status.enabled }}
 {{ (.Files.Glob "files/sites-available/status").AsConfig | indent 2 }}
 {{- end }}
-{{- if .Values.sitesEnabled.tls.enabled }}
+{{- if .Values.tls.enabled }}
 {{ (.Files.Glob "files/sites-available/tls").AsConfig | indent 2 }}
 {{- end }}

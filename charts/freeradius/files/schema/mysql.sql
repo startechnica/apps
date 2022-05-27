@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS radcheck (
   value varchar(253) NOT NULL default '',
   PRIMARY KEY  (id),
   KEY username (username(32))
-);
+) ENGINE = INNODB;
 
 #
 # Table structure for table 'radgroupcheck'
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS radgroupcheck (
   value varchar(253)  NOT NULL default '',
   PRIMARY KEY  (id),
   KEY groupname (groupname(32))
-);
+) ENGINE = INNODB;
 
 #
 # Table structure for table 'radgroupreply'
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS radgroupreply (
   value varchar(253)  NOT NULL default '',
   PRIMARY KEY  (id),
   KEY groupname (groupname(32))
-);
+) ENGINE = INNODB;
 
 #
 # Table structure for table 'radreply'
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS radreply (
   value varchar(253) NOT NULL default '',
   PRIMARY KEY  (id),
   KEY username (username(32))
-);
+) ENGINE = INNODB;
 
 
 #
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS `radusergroup` (
   priority int(11) NOT NULL default '1',
   PRIMARY KEY  (id),
   KEY username (username(32))
-);
+) ENGINE = INNODB;
 
 #
 # Table structure for table 'radpostauth'
@@ -162,4 +162,4 @@ CREATE TABLE IF NOT EXISTS nas (
   description varchar(200) DEFAULT 'RADIUS Client',
   PRIMARY KEY (id),
   KEY nasname (nasname)
-);
+) ENGINE = INNODB;
