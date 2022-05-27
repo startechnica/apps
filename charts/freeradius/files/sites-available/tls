@@ -161,8 +161,8 @@ listen {
 		#  to refer to the "site1" sub-section of the "tls" section.
 		#
 		tls {
-				private_key_password = whatever
-				private_key_file = /startechnica/freeradius/certs/tls.key
+				private_key_password = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD}
+				private_key_file = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_FILE}
 
 				# Accept an expired Certificate Revocation List
 				#
@@ -178,7 +178,7 @@ listen {
 				#  only the server certificate, but ALSO all
 				#  of the CA certificates used to sign the
 				#  server certificate.
-				certificate_file = /startechnica/freeradius/certs/tls.crt
+				certificate_file = $ENV{FREERADIUS_SITES_TLS_CERTIFICATE_FILE}
 
 
 				#  Trusted Root CA list
@@ -196,7 +196,7 @@ listen {
 				#  not use client certificates, and you do not want
 				#  to permit EAP-TLS authentication, then delete
 				#  this configuration item.
-				ca_file = /startechnica/freeradius/certs/ca.crt
+				ca_file = $ENV{FREERADIUS_SITES_TLS_CA_FILE}
 
 				#
 				#  For DH cipher suites to work, you have to

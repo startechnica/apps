@@ -44,8 +44,12 @@ data:
   FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sitesEnabled.status.listen | quote }}
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
   {{- end }}
-    {{- if .Values.sitesEnabled.tls.enabled }}
+    {{- if .Values.tls.enabled }}
   FREERADIUS_SITES_TLS_LISTEN: {{ .Values.sitesEnabled.tls.listen | quote }}
-  FREERADIUS_SITES_TLS_PORT: {{ .Values.sitesEnabled.tls.port | quote }}
+  FREERADIUS_SITES_TLS_PORT: {{ .Values.containerPorts.radsec | quote }}
+  FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD: whatever
+  FREERADIUS_SITES_TLS_PRIVKEY_FILE: {{ include "freeradius.tlsCertKey" . | quote }}
+  FREERADIUS_SITES_TLS_CERTIFICATE_FILE: {{ include "freeradius.tlsCert" . | quote }}
+  FREERADIUS_SITES_TLS_CA_FILE: {{ include "freeradius.tlsCACert" . | quote }}
   {{- end }}
 
