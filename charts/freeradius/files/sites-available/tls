@@ -49,7 +49,8 @@ server radsec {
 			}
 
 			private_key_password = whatever
-			private_key_file = ${certdir}/server.pem
+			# private_key_file = ${certdir}/server.pem
+			private_key_file = ${certdir}/tls.key
 
 			#  If Private key & Certificate are located in
 			#  the same file, then private_key_file &
@@ -61,7 +62,8 @@ server radsec {
 			#  only the server certificate, but ALSO all
 			#  of the CA certificates used to sign the
 			#  server certificate.
-			certificate_file = ${certdir}/server.pem
+			# certificate_file = ${certdir}/server.pem
+			certificate_file = ${certdir}/tls.crt
 
 			#  Trusted Root CA list
 			#
@@ -78,7 +80,7 @@ server radsec {
 			#  not use client certificates, and you do not want
 			#  to permit EAP-TLS authentication, then delete
 			#  this configuration item.
-			ca_file = ${cadir}/ca.pem
+			ca_file = ${cadir}/ca.crt
 
 			#
 			#  For DH cipher suites to work, you have to

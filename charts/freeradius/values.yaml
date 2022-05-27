@@ -284,6 +284,7 @@ containerPorts:
 podSecurityContext:
   enabled: true
   fsGroup: 101
+  runAsUser: 101
 ## FreeRADIUS secondary container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
 ## @param containerSecurityContext.enabled FreeRADIUS secondary container securityContext

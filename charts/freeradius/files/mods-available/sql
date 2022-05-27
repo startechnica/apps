@@ -365,5 +365,4 @@ sql {
 
 	# Read database-specific queries
 	$INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
-#	$INCLUDE ${modconfdir}/sql/main/mysql/queries.conf
 }
