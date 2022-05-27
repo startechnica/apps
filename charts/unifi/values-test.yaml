@@ -1,0 +1,17 @@
+
+auth:
+  unifiUser: unifiuser
+  unifiPassword: unifipassword
+
+persistence:
+  enabled: true
+
+metrics:
+  enabled: true
+  # liveness: false
+
+mongodb:
+  enabled: true
+
+influxdb:
+  enabled: false
