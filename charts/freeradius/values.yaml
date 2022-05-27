@@ -463,6 +463,7 @@ service:
   ports:
     auth: 1812
     acct: 1813
+    coa: 3799
     radsec: 2083
     status: 18121
   ## @param service.nodePorts.mysql FreeRADIUS Kubernetes service node port
@@ -471,6 +472,8 @@ service:
   nodePorts:
     auth: ""
     acct: ""
+    coa: ""
+    radsec: ""
     status: ""
   ## @param service.clusterIP FreeRADIUS Kubernetes service clusterIP IP
   ##
