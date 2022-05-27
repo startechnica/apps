@@ -19,7 +19,7 @@ externalDatabase:
   host: mariadb-infra-mariadb-galera.mariadb-infra.svc
   port: 3306
   user: radius_user
-  database: bcradiusdb
+  database: radiusdb
   password: "radius"
 
 sitesEnabled:
