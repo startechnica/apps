@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ printf "%s-env" (include "common.names.fullname" .) }}
-  namespace: {{ .Release.Namespace | quote }}
+  namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
@@ -32,6 +32,10 @@ data:
   FREERADIUS_MODS_SQL_TABLE_POSTAUTH: {{ .Values.modsEnabled.sql.table.postauth }}
   FREERADIUS_MODS_SQL_TABLE_USERGROUP: {{ .Values.modsEnabled.sql.table.usergroup }}
   FREERADIUS_MODS_SQL_TLS_ENABLE: {{ ternary "yes" "no" .Values.modsEnabled.sql.tls.enabled | quote }}
+  FREERADIUS_MODS_SQL_TLS_CACERT: ""
+  FREERADIUS_MODS_SQL_TLS_CERTIFICATE: ""
+  FREERADIUS_MODS_SQL_TLS_PRIVATEKEY: ""
+  FREERADIUS_MODS_SQL_TLS_PRIVATEKEY_PASSWORD: whatever
   {{- end }}
 
   FREERADIUS_SITES_DEFAULT_AUTH_PORT: {{ .Values.containerPorts.auth | quote }}
@@ -44,7 +48,7 @@ data:
   FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sitesEnabled.status.listen | quote }}
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
   {{- end }}
-    {{- if .Values.tls.enabled }}
+  {{- if .Values.tls.enabled }}
   FREERADIUS_SITES_TLS_LISTEN: {{ .Values.sitesEnabled.tls.listen | quote }}
   FREERADIUS_SITES_TLS_PORT: {{ .Values.containerPorts.radsec | quote }}
   FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD: whatever
