@@ -1,7 +1,12 @@
 annotations:
   category: NetworkManagement
+  artifacthub.io/links: |
+    - name: Chart Source
+      url: https://github.com/startechnica/apps/tree/main/charts/unifi
+    - name: Upstream Project
+      url: https://github.com/jacobalberty/unifi-docker
 apiVersion: v2
-appVersion: v6.5.55
+appVersion: v7.1.65
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
@@ -16,7 +21,7 @@ dependencies:
     condition: mongodb.enabled
     repository: https://charts.bitnami.com/bitnami
     version: 10.x.x
-description: UniFi Network Application to manager UniFi devices 
+description: UniFi Network Application to manage UniFi devices 
 home: https://github.com/startechnica/apps/tree/main/charts/unifi
 icon: https://prd-www-cdn.ubnt.com/static/favicon-152.png
 keywords:
@@ -34,4 +39,4 @@ sources:
   - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
   - https://unpoller.com/
   - https://github.com/unifi-poller/unifi-poller
-version: 0.1.0
+version: 0.1.2
