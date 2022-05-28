@@ -551,7 +551,7 @@ home_server tls {
 				#  not use client certificates, and you do not want
 				#  to permit EAP-TLS authentication, then delete
 				#  this configuration item.
-				ca_file = /startechnica/freeradius/certs/ca.crt
+				ca_file = $ENV{FREERADIUS_SITES_TLS_CA_FILE}
 
 				#
 				#  For TLS-PSK, the key should be specified

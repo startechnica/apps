@@ -70,7 +70,7 @@ sql {
 	#
 	sqlite {
 		# Path to the sqlite database
-		filename = "/tmp/freeradius.db"
+		filename = "/startechnica/freeradius/freeradius.db"
 
 		# How long to wait for write locks on the database to be
 		# released (in ms) before giving up.
@@ -85,14 +85,13 @@ sql {
 	mysql {
 		# If any of the files below are set, TLS encryption is enabled
 		tls {
-#			ca_file = "/etc/freeradius/certs/tls/my_ca.crt"
-#			ca_path = "/etc/freeradius/certs/tls/"
-#			certificate_file = "/etc/freeradius/certs/tls/tls.crt"
-#			private_key_file = "/etc/freeradius/certs/tls/client.key"
+#			ca_file = $ENV{FREERADIUS_MODS_SQL_TLS_CACERT}
+#			ca_path = "/startechnica/freeradius/certs-sql/"
+#			certificate_file = $ENV{FREERADIUS_MODS_SQL_TLS_CERTIFICATE}
+#			private_key_file = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
 #			cipher = "DHE-RSA-AES256-SHA:AES128-SHA"
 
-#			tls_required = yes
-			tls_required = no
+			tls_required = $ENV{FREERADIUS_MODS_SQL_TLS_ENABLE}
 			tls_check_cert = no
 			tls_check_cert_cn = no
 		}
@@ -148,10 +147,10 @@ sql {
 		#  The TLS parameters here map directly to the Mongo TLS configuration
 		#
 		tls {
-			certificate_file = /path/to/file
-			certificate_password = "password"
-			ca_file = /path/to/file
-			ca_dir = /path/to/directory
+			certificate_file = $ENV{FREERADIUS_MODS_SQL_TLS_CERTIFICATE}
+			certificate_password = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
+			ca_file = $ENV{FREERADIUS_MODS_SQL_TLS_CACERT}
+			ca_dir = /startechnica/freeradius/certs-sql/
 			crl_file = /path/to/file
 			weak_cert_validation = false
 			allow_invalid_hostname = false
@@ -184,7 +183,7 @@ sql {
 #	radius_db = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SID=your_sid)))"
 
 	# If you're using postgresql this can also be used instead of the connection info parameters
-#	radius_db = "dbname=radius host=localhost user=radius password=raddpass"
+#	radius_db = "dbname=$ENV{FREERADIUS_MODS_SQL_DB} host=$ENV{FREERADIUS_MODS_SQL_SERVER} port=$ENV{FREERADIUS_MODS_SQL_PORT} user=$ENV{FREERADIUS_MODS_SQL_LOGIN} password=$ENV{FREERADIUS_MODS_SQL_PASSWORD}"
 
     # Postgreql doesn't take tls{} options in its module config like mysql does - if you want to
     # use SSL connections then use this form of connection info parameter
