@@ -12,7 +12,7 @@ entries:
       MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
     digest: be7b263ac4b0e8b299810cce682071d26a16d914ad25bdc658408b1d4e9f5f0d
     home: https://github.com/startechnica/apps/tree/main/charts/adminer
-    icon: https://raw.githubusercontent.com/Kong/docker-official-docs/master/adminer/logo.png
+    icon: https://www.adminer.org/static/images/logo.png
     keywords:
     - adminer
     - postgres
