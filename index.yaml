@@ -165,6 +165,52 @@ entries:
     version: 0.1.0
   unifi:
   - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/unifi
+        - name: Upstream Project
+          url: https://github.com/jacobalberty/unifi-docker
+      category: NetworkManagement
+    apiVersion: v2
+    appVersion: v7.1.65
+    created: "2022-05-28T05:49:34.067188175Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    - condition: influxdb.enabled
+      name: influxdb
+      repository: https://helm.influxdata.com
+      version: 4.x.x
+    - condition: mongodb.enabled
+      name: mongodb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    description: UniFi Network Application to manage UniFi devices
+    digest: 05dff9aa3f3f60d386fecda7867234e539e485893ba41e55c17832f5ea1717d8
+    home: https://github.com/startechnica/apps/tree/main/charts/unifi
+    icon: https://prd-www-cdn.ubnt.com/static/favicon-152.png
+    keywords:
+    - ubiquiti
+    - unifi
+    - unifi-poller
+    kubeVersion: '>=1.16.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: unifi
+    sources:
+    - https://www.ui.com
+    - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
+    - https://unpoller.com/
+    - https://github.com/unifi-poller/unifi-poller
+    urls:
+    - https://github.com/startechnica/apps/releases/download/unifi-0.1.2/unifi-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
       category: NetworkManagement
     apiVersion: v2
     appVersion: v6.5.55
@@ -205,4 +251,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-05-27T14:01:10.286179593Z"
+generated: "2022-05-28T05:49:34.067204675Z"
