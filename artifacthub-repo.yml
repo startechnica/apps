@@ -1,0 +1,8 @@
+repositoryID: 6d2ed4c0-237f-4d56-a9a5-7a09ca8f3d9b
+owners:
+  - name: Firmansyah Nainggolan
+    email: firmansyah@nainggolan.id
+ignore:
+  # These charts are related to the common library
+  - name: common
+  - name: common-test
