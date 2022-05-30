@@ -227,3 +227,22 @@ topologySpreadConstraints: {}
 ## @param lifecycleHooks for the galera container(s) to automate configuration before or after startup
 ##
 lifecycleHooks: {}
+
+## @param revisionHistoryLimit Maximum number of revisions that will be maintained in the Deployment
+##
+revisionHistoryLimit: 3
+
+## @section RBAC parameter
+## Specifies whether a ServiceAccount should be created
+##
+serviceAccount:
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for FreeRADIUS pods
+  ##
+  create: true
+  ## @param serviceAccount.name Name of the created ServiceAccount
+  ## If not set and create is true, a name is generated using the fullname template
+  ##
+  name: ""
+  ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+  ##
+  automountServiceAccountToken: false
