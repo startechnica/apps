@@ -1,0 +1,27 @@
+annotations:
+  category: Monitoring
+apiVersion: v2
+appVersion: v12.0.0
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    tags:
+      - bitnami-common
+    version: 1.x.x
+description: The open-vm-tools project is an open source implementation of VMware Tools. It
+  is a suite of open source virtualization utilities and drivers to improve the
+  functionality, user experience and administration of VMware virtual machines.
+home: https://github.com/startechnica/apps/tree/main/charts/open-vm-tools
+icon: https://toppng.com//public/uploads/preview/management-through-vmware-vcenter-115690387596nbmsbgrgp.png
+keywords:
+  - open-vm-tools
+  - vmware
+kubeVersion: ">=1.19.0-0"
+maintainers:
+  - name: Firmansyah Nainggolan
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
+name: open-vm-tools
+sources:
+  - https://github.com/arnegroskurth/open-vm-tools
+version: 0.1.0
