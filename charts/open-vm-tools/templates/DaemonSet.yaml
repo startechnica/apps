@@ -1,64 +1,76 @@
+{{- $globalSecretName := printf "%s" (tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  labels:
-    app.kubernetes.io/instance: open-vm-tools
-    app.kubernetes.io/name: open-vm-tools
-  name: open-vm-tools
-  namespace: open-vm-tools
+  name: {{ template "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: open-vm-tools
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 spec:
   selector:
-    matchLabels:
-      app.kubernetes.io/instance: open-vm-tools
-      app.kubernetes.io/name: open-vm-tools
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: open-vm-tools
+  {{- if .Values.updateStrategy }}
+  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
   template:
     metadata:
-      labels:
-        app.kubernetes.io/instance: open-vm-tools
-        app.kubernetes.io/name: open-vm-tools
+      {{- if .Values.podAnnotations }}
+      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.matchLabels" . | nindent 8 }}
+        app.kubernetes.io/component: open-vm-tools
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
     spec:
-      affinity:
-        nodeAffinity: null
-        podAffinity: null
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/instance: open-vm-tools
-                    app.kubernetes.io/name: open-vm-tools
-                namespaces:
-                  - open-vm-tools
-                topologyKey: kubernetes.io/hostname
-              weight: 1
       containers:
-        - image: 'docker.io/arnegroskurth/open-vm-tools:sha-fa19579'
-          imagePullPolicy: IfNotPresent
-          name: open-vm-tools
-          resources:
-            limits:
-              cpu: 100m
-              memory: 50Mi
-            requests:
-              cpu: 100m
-              memory: 50Mi
-          securityContext:
-            privileged: true
+        - name: open-vm-tools
+          image: {{ template "open-vm-tools.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: CLOUD_AGENT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $globalSecretName }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "cloud-agent-password") }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vmware-tools/tools.conf
+              subPath: tools.conf
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
       hostIPC: true
       hostNetwork: true
       hostPID: true
-      nodeName: rachel-lin-k8w.jkt2.mci.net.id
-      nodeSelector:
-        kubernetes.io/arch: amd64
-      priorityClassName: system-node-critical
-      restartPolicy: Always
-      serviceAccountName: default
-      tolerations:
-        - effect: NoExecute
-          operator: Exists
-        - effect: NoSchedule
-          operator: Exists
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "open-vm-tools.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ printf "%s-config" (include "common.names.fullname" .) }}
   updateStrategy:
+    type: {{ .Values.updateStrategy.type }}
+    {{- if (eq "Recreate" .Values.updateStrategy.type) }}
+    rollingUpdate: null
+    {{- else }}
     rollingUpdate:
       maxUnavailable: 1
-    type: RollingUpdate
+    {{- end }}
+
