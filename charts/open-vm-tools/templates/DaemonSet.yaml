@@ -46,6 +46,14 @@ spec:
             - name: config
               mountPath: /etc/vmware-tools/tools.conf
               subPath: tools.conf
+            - name: sysroot
+              mountPath: /sysroot
+              readOnly: true
+            - name: nsswitch-conf
+              mountPath: /etc/nsswitch.conf
+            - name: var-lib-sss-pipes
+              mountPath: /var/lib/sss/pipes
+              readOnly: true
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -65,6 +73,16 @@ spec:
         - name: config
           configMap:
             name: {{ printf "%s-config" (include "common.names.fullname" .) }}
+        - name: sysroot
+          hostPath:
+            path: /sysroot
+        - name: nsswitch-conf
+          hostPath:
+            path: /etc/nsswitch.conf
+            type: FileOrCreate
+        - name: var-lib-sss-pipes
+          hostPath:
+            path: /var/lib/sss/pipes
   updateStrategy:
     type: {{ .Values.updateStrategy.type }}
     {{- if (eq "Recreate" .Values.updateStrategy.type) }}
