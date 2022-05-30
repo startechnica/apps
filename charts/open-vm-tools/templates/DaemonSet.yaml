@@ -46,6 +46,9 @@ spec:
             - name: config
               mountPath: /etc/vmware-tools/tools.conf
               subPath: tools.conf
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
             - name: sysroot
               mountPath: /sysroot
               readOnly: true
@@ -53,7 +56,6 @@ spec:
               mountPath: /etc/nsswitch.conf
             - name: var-lib-sss-pipes
               mountPath: /var/lib/sss/pipes
-              readOnly: true
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -73,6 +75,9 @@ spec:
         - name: config
           configMap:
             name: {{ printf "%s-config" (include "common.names.fullname" .) }}
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
         - name: sysroot
           hostPath:
             path: /sysroot
