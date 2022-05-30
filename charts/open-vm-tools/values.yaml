@@ -59,13 +59,13 @@ diagnosticMode:
   args:
     - infinity
 
-## @section Multus common parameters
+## @section open-vm-tools common parameters
 
-## Multus image
-## @param image.registry Multus image registry
-## @param image.repository Multus image repository
-## @param image.tag Multus image tag (immutable tags are recommended)
-## @param image.pullPolicy Multus image pull policy
+## open-vm-tools image
+## @param image.registry open-vm-tools image registry
+## @param image.repository open-vm-tools image repository
+## @param image.tag open-vm-tools image tag (immutable tags are recommended)
+## @param image.pullPolicy open-vm-tools image pull policy
 ## @param image.pullSecrets Specify docker-registry secret names as an array
 ## @param image.debug Specify if debug logs should be enabled
 ##
@@ -129,7 +129,7 @@ containerSecurityContext:
   # runAsNonRoot: true
   privileged: true
 
-## @param configurationConfigMap ConfigMap with the Multus configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
+## @param configurationConfigMap ConfigMap with the open-vm-tools configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
 ##
 configurationConfigMap: ""
 ## initdb scripts
@@ -145,22 +145,22 @@ initdbScripts: {}
 ## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
 ##
 initdbScriptsConfigMap: ""
-## @param extraFlags Multus additional command line flags
+## @param extraFlags open-vm-tools additional command line flags
 ## Can be used to specify command line flags, for example:
 ## e.g:
 ## extraFlags: "--max-connect-errors=1000 --max_connections=155"
 ##
 extraFlags: ""
-## @param updateStrategy.type updateStrategy for Multus Master StatefulSet
+## @param updateStrategy.type updateStrategy for open-vm-tools Master StatefulSet
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 ##
 updateStrategy:
   type: RollingUpdate
-## @param podLabels Extra labels for Multus pods
+## @param podLabels Extra labels for open-vm-tools pods
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 ##
 podLabels: {}
-## @param podAnnotations Annotations for Multus pods
+## @param podAnnotations Annotations for open-vm-tools pods
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 ##
 podAnnotations: {}
@@ -246,3 +246,58 @@ serviceAccount:
   ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
   ##
   automountServiceAccountToken: false
+
+
+
+## Prometheus exporter configuration
+##
+metrics:
+  ## @param metrics.enabled Start a side-car prometheus exporter
+  ##
+  enabled: false
+  ## Open VM Tools Prometheus exporter image
+  ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
+  ## @param metrics.image.registry open-vm-tools Prometheus exporter image registry
+  ## @param metrics.image.repository open-vm-tools Prometheus exporter image repository
+  ## @param metrics.image.tag open-vm-tools Prometheus exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy open-vm-tools Prometheus exporter image pull policy
+  ## @param metrics.image.pullSecrets open-vm-tools Prometheus exporter image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRules:
+    ## @param metrics.prometheusRules.enabled if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRules.additionalLabels [object] Additional labels to add to the PrometheusRule so it is picked up by the operator
+    ## If using the [Helm Chart](https://github.com/helm/charts/tree/master/stable/prometheus-operator) this is the name of the Helm release and 'app: prometheus-operator'
+    ##
+    additionalLabels:
+      app: prometheus-operator
+      release: prometheus
+    ## @param metrics.prometheusRules.rules PrometheusRule rules to configure
+    ## e.g:
+    ##  - alert: open-vm-tools-Down
+    ##    annotations:
+    ##      message: 'open-vm-tools instance {{ $labels.instance }} is down'
+    ##      summary: open-vm-tools instance is down
+    ##    expr: absent(up{job="open-vm-tools-cni"} == 1)
+    ##    labels:
+    ##      severity: warning
+    ##      service: open-vm-tools-cni
+    ##    for: 5m
+    ##
+    rules: {}
