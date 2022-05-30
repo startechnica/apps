@@ -1,7 +1,12 @@
 {{/* Expand the name of the chart. */}}
 {{- define "multus.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/* Create chart name and version as used by the chart label. */}}
+{{- define "multus.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
 Create a default fully qualified app name.
@@ -19,12 +24,16 @@ If release name contains chart name it will be used as a full name.
     {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
   {{- end }}
 {{- end }}
-{{- end }}
+{{- end -}}
 
-{{/* Create chart name and version as used by the chart label. */}}
-{{- define "multus.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{/* Allow the release namespace to be overridden for multi-namespace deployments in combined charts. */}}
+{{- define "multus.namespace" -}}
+{{- if .Values.namespaceOverride -}}
+  {{- .Values.namespaceOverride -}}
+{{- else -}}
+  {{- default "kube-system" .Release.Namespace }}
+{{- end -}}
+{{- end -}}
 
 {{/* Common labels */}}
 {{- define "multus.labels" -}}
@@ -34,13 +43,13 @@ helm.sh/chart: {{ include "multus.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end }}
+{{- end -}}
 
 {{/* Selector labels */}}
 {{- define "multus.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "multus.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
+{{- end -}}
 
 {{/* Create the name of the service account to use */}}
 {{- define "multus.serviceAccountName" -}}
@@ -51,7 +60,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
-{{/* Return the proper Multus Galera image name */}}
+{{/* Return the proper Multus image name */}}
 {{- define "multus.image" -}}
 {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}

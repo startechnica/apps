@@ -13,16 +13,15 @@
 # limitations under the License.
 {{- if and .Values.serviceAccount.create .Values.rbac.create }}
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
-kind: Role
+kind: ClusterRole
 metadata:
   name: {{ template "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-  {{- if .Values.commonLabels }}
-  {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-  {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
 rules:
   - apiGroups: ["k8s.cni.cncf.io"]
@@ -40,8 +39,11 @@ rules:
       - update
   - apiGroups:
       - ""
+      - events.k8s.io
     resources:
       - events
     verbs:
       - create
+      - patch
+      - update
 {{- end }}

@@ -15,14 +15,14 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ template "common.names.fullname" . }}-node
-  namespace: {{ include "multus.namespace" . | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
 spec:
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
@@ -42,7 +42,7 @@ spec:
       {{- end }}
       labels: {{- include "common.labels.matchLabels" . | nindent 8 }}
         {{- if .Values.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
       {{- if .Values.affinity }}
@@ -53,22 +53,24 @@ spec:
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-        {{- include "multus.imagePullSecrets" . | nindent 6 }}
+      {{- include "multus.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
       hostNetwork: true
+      priorityClassName: {{ .Values.priorityClassName }}
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
-      priorityClassName: {{ .Values.priorityClassName }}
       {{- if .Values.schedulerName }}
       schedulerName: {{ .Values.schedulerName | quote }}
       {{- end }}
-      {{- if .Values.podSecurityContext.enabled }}
-      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
-      {{- end }}
       serviceAccountName: {{ include "multus.serviceAccountName" . }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.podSecurityContext.fsGroup }}
+        runAsUser: {{ .Values.podSecurityContext.runAsUser }}
+      {{- end }}
       {{- if .Values.tolerations }}
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
       {{- end }}
@@ -77,20 +79,23 @@ spec:
           image: {{ template "multus.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.command }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
           {{- else }}
-          command: ["/entrypoint.sh"]
-          {{- end }}
-          {{- if .Values.diagnosticMode.enabled }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
-          {{- else if .Values.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
-          {{- else }}
-          args:
-            - "--multus-conf-file=auto"
-            - "--cni-version=0.3.1"
+          command:
+            - /bin/bash
+            - -cex
+            - |
+              #!/bin/bash
+              sed "s|__KUBERNETES_NODE_NAME__|${KUBERNETES_NODE_NAME}|g" /tmp/multus-conf/00-multus.conf.template > /tmp/multus-conf/00-multus.conf
+              /entrypoint.sh \
+                --multus-conf-file=/tmp/multus-conf/00-multus.conf
           {{- end }}
           env:
             - name: KUBERNETES_NODE_NAME
@@ -98,7 +103,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             {{- if .Values.extraEnvVars }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
           envFrom:
@@ -123,9 +128,10 @@ spec:
             - name: cnibin
               mountPath: /host/opt/cni/bin
             - name: multus-cfg
-              mountPath: /tmp/multus-conf
+              mountPath: /tmp/multus-conf/00-multus.conf.template
+              subPath: "cni-conf.json"
             {{- if .Values.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
             {{- end }}
         {{- if .Values.metrics.enabled }}
         - name: metrics
@@ -133,25 +139,8 @@ spec:
           imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
         {{- end }}
         {{- if .Values.sidecars }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.sidecars "context" $) | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
-      initContainers:
-        - name: install-multus-binary
-          image: {{ template "multus.image" . }}
-          command:
-            - "cp"
-            - "/usr/src/multus-cni/bin/multus"
-            - "/host/opt/cni/bin/multus"
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "15Mi"
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - name: cnibin
-              mountPath: /host/opt/cni/bin
-              mountPropagation: Bidirectional
       volumes:
         - name: cni
           hostPath:
@@ -162,9 +151,6 @@ spec:
         - name: multus-cfg
           configMap:
             name: multus-cni-config
-            items:
-            - key: cni-conf.json
-              path: 70-multus.conf
         {{- if .Values.extraVolumes }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}

@@ -149,37 +149,25 @@ containerSecurityContext:
   # runAsNonRoot: true
   privileged: true
 
-multusConfiguration: |-
-  {
-    "name": "multus-cni-network",
-    "type": "multus",
-    "capabilities": {
-      "portMappings": true
-    },
-    "delegates": [
-      {
-        "cniVersion": "0.3.1",
-        "name": "default-cni-network",
-        "plugins": [
-          {
-            "type": "flannel",
-            "name": "flannel.1",
-              "delegate": {
-                "isDefaultGateway": true,
-                "hairpinMode": true
-              }
-            },
-            {
-              "type": "portmap",
-              "capabilities": {
-                "portMappings": true
-              }
-            }
-        ]
-      }
-    ],
-    "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"
-  }
+multusConfiguration:
+  cni_conf:
+    name: multus-cni-network
+    type: multus
+    kubeconfig: /etc/cni/net.d/multus.d/multus.kubeconfig
+    cniVersion: 0.3.1
+    confDir: /etc/cni/net.d
+    cniDir: /var/lib/cni/multus
+    binDir: /opt/cni/bin
+    logFile: /var/log/multus.log
+    logLevel: panic
+    capabilities:
+      portMappings: true
+    readinessindicatorfile: ""
+    namespaceIsolation: false
+    clusterNetwork: k8s-pod-network
+    defaultNetwork: []
+    delegates: []
+    systemNamespaces: ["kube-system"]
 
 ## @param configurationConfigMap ConfigMap with the Multus configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
 ##
@@ -316,8 +304,7 @@ extraVolumes: []
 ##   readOnly: true
 ##
 extraVolumeMounts: []
-
-## Multus CNI containers' resource requests and limits
+## MariaDB Galera containers' resource requests and limits
 ## We usually recommend not to specify default resources and to leave this as a conscious
 ## choice for the user. This also increases chances charts run on environments with little
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -330,17 +317,13 @@ resources:
   ## limits:
   ##    cpu: 0.5
   ##    memory: 256Mi
-  limits:
-    cpu: "100m"
-    memory: "50Mi"
+  limits: {}
   ## Examples:
   ## requests:
   ##    cpu: 0.5
   ##    memory: 256Mi
-  requests:
-    cpu: "100m"
-    memory: "50Mi"
-## Multus CNI containers' liveness probe
+  requests: {}
+## MariaDB Galera containers' liveness probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param livenessProbe.enabled Turn on and off liveness probe
 ## @param livenessProbe.initialDelaySeconds Delay before liveness probe is initiated
@@ -358,7 +341,7 @@ livenessProbe:
   timeoutSeconds: 1
   successThreshold: 1
   failureThreshold: 3
-## Multus CNI containers' readiness probe
+## MariaDB Galera containers' readiness probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param readinessProbe.enabled Turn on and off readiness probe
 ## @param readinessProbe.initialDelaySeconds Delay before readiness probe is initiated
@@ -374,7 +357,7 @@ readinessProbe:
   timeoutSeconds: 1
   successThreshold: 1
   failureThreshold: 3
-## Multus CNI containers' startup probe
+## MariaDB Galera containers' startup probe
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 ## @param startupProbe.enabled Turn on and off startup probe
 ## @param startupProbe.initialDelaySeconds Delay before startup probe is initiated
@@ -416,24 +399,24 @@ podDisruptionBudget:
   ##
   maxUnavailable: ""
 
-  ## Prometheus exporter configuration
+## Prometheus exporter configuration
 ##
 metrics:
   ## @param metrics.enabled Start a side-car prometheus exporter
   ##
   enabled: false
-  ## Multus CNI Prometheus exporter image
+  ## Bitnami MySQL Prometheus exporter image
   ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
-  ## @param metrics.image.registry Multus Prometheus exporter image registry
-  ## @param metrics.image.repository Multus Prometheus exporter image repository
-  ## @param metrics.image.tag Multus Prometheus exporter image tag (immutable tags are recommended)
-  ## @param metrics.image.pullPolicy Multus Prometheus exporter image pull policy
-  ## @param metrics.image.pullSecrets Multus Prometheus exporter image pull secrets
+  ## @param metrics.image.registry MariaDB Prometheus exporter image registry
+  ## @param metrics.image.repository MariaDB Prometheus exporter image repository
+  ## @param metrics.image.tag MariaDB Prometheus exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy MariaDB Prometheus exporter image pull policy
+  ## @param metrics.image.pullSecrets MariaDB Prometheus exporter image pull secrets
   ##
   image:
     registry: docker.io
-    repository: ""
-    tag: ""
+    repository: bitnami/mysqld-exporter
+    tag: 0.14.0-debian-10-r45
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
@@ -457,14 +440,14 @@ metrics:
       release: prometheus
     ## @param metrics.prometheusRules.rules PrometheusRule rules to configure
     ## e.g:
-    ##  - alert: Multus-Down
+    ##  - alert: MariaDB-Down
     ##    annotations:
-    ##      message: 'Multus instance {{ $labels.instance }} is down'
-    ##      summary: Multus instance is down
-    ##    expr: absent(up{job="multus-cni"} == 1)
+    ##      message: 'MariaDB instance {{ $labels.instance }} is down'
+    ##      summary: MariaDB instance is down
+    ##    expr: absent(up{job="mariadb-galera"} == 1)
     ##    labels:
     ##      severity: warning
-    ##      service: multus-cni
+    ##      service: mariadb-galera
     ##    for: 5m
     ##
     rules: {}

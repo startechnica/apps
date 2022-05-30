@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.multusConfiguration.cni_conf) (not .Values.configurationConfigMap) }}
+{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.multusConfiguration) (not .Values.configurationConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: multus-cni-config
-  namespace: {{ .Release.Namespace | quote }}
+  namespace: {{ include "multus.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
@@ -29,6 +29,6 @@ data:
   {{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
 {{- else if .Values.multusConfiguration }}
   cni-conf.json: |-
-{{ toJson .Values.multusConfiguration.cni_conf | indent 4 }}
+{{ .Values.multusConfiguration | indent 4 }}
 {{- end }}
 {{- end }}
