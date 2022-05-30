@@ -16,9 +16,6 @@ spec:
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: open-vm-tools
-  {{- if .Values.updateStrategy }}
-  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
-  {{- end }}
   template:
     metadata:
       {{- if .Values.podAnnotations }}
@@ -53,6 +50,7 @@ spec:
       hostIPC: true
       hostNetwork: true
       hostPID: true
+      {{- include "open-vm-tools.imagePullSecrets" . | nindent 6 }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
