@@ -3,7 +3,7 @@ kind: DaemonSet
 metadata:
   labels:
     app.kubernetes.io/instance: open-vm-tools
-      app.kubernetes.io/name: open-vm-tools
+    app.kubernetes.io/name: open-vm-tools
   name: open-vm-tools
   namespace: open-vm-tools
 spec:
