@@ -597,6 +597,10 @@ modsEnabled:
       usergroup: radusergroup
     tls:
       enabled: false
+      certificatesSecret: ""
+      certFilename: ""
+      certKeyFilename: ""
+      certCAFilename: ""
     existingTlsSecret: ""
 
 sitesEnabled:

@@ -1,11 +1,8 @@
-#####################################
-## FreeRADIUS ConfigMap mods-enabled
-#####################################
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
-  namespace: {{ .Release.Namespace | quote }}
+  namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
