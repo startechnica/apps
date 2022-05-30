@@ -1,7 +1,7 @@
 annotations:
   category: Monitoring
 apiVersion: v2
-appVersion: v12.0.0
+appVersion: v11.3.0
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
