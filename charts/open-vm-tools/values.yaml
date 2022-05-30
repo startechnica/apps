@@ -203,7 +203,7 @@ affinity: {}
 nodeSelector:
   kubernetes.io/arch: amd64
   kubernetes.io/os: linux
-  node-role.kubernetes.io/worker:
+  node-role.kubernetes.io/worker: ""
 ## @param tolerations Tolerations for pod assignment
 ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 ##
