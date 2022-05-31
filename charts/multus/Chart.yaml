@@ -1,5 +1,10 @@
 annotations:
-  category: NetworkPlumbing
+  category: Networking
+  artifacthub.io/links: |
+    - name: Chart Source
+      url: https://github.com/startechnica/apps/tree/main/charts/multus
+    - name: Upstream Project
+      url: https://github.com/k8snetworkplumbingwg/multus-cni
 apiVersion: v2
 appVersion: v3.8
 dependencies:
@@ -14,7 +19,8 @@ home: https://github.com/startechnica/apps/tree/main/charts/multus
 icon: https://github.com/k8snetworkplumbingwg/multus-cni/raw/master/docs/images/Multus.png
 keywords:
   - multus
-kubeVersion: ">=1.16.0-0"
+  - networkplumbing
+kubeVersion: ">=1.19.0-0"
 maintainers:
   - name: Firmansyah Nainggolan
     email: firmansyah@nainggolan.id
@@ -22,5 +28,4 @@ maintainers:
 name: multus
 sources:
   - https://github.com/k8snetworkplumbingwg/multus-cni
-  - https://npwg-team.slack.com
-version: 0.1.1
+version: 0.1.2
