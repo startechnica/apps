@@ -53,7 +53,7 @@ spec:
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-        {{- include "multus.imagePullSecrets" . | nindent 6 }}
+      {{- include "multus.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
