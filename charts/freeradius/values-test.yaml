@@ -1,13 +1,11 @@
-# image:
+image:
 #   registry: tccr.io
 #   repository: truecharts/freeradius
-#   tag: v3.0.25@sha256:071d2533ecfe74993de840359c939cf6fd25d4ea34322bf6211055e0e5e9d96f
+  tag: "3.2.0"
 
 service:
   type: LoadBalancer
   externalTrafficPolicy: Local
-  annotations:
-    metallb.universe.tf/address-pool: freeradius
   ipFamilyPolicy: PreferDualStack
 
 modsEnabled:

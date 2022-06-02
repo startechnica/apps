@@ -16,6 +16,8 @@ metadata:
 data:
   FREERADIUS_ENABLE_TLS: {{ ternary "true" "false" .Values.tls.enabled | quote }}
 
+  FREERADIUS_CLIENTS_NAME: ""
+
   {{- if .Values.modsEnabled.sql.enabled }}
   FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modsEnabled.sql.dialect }}
   FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.databaseHost" . | quote }}
@@ -37,6 +39,8 @@ data:
   FREERADIUS_MODS_SQL_TLS_PRIVATEKEY: ""
   FREERADIUS_MODS_SQL_TLS_PRIVATEKEY_PASSWORD: whatever
   {{- end }}
+
+  FREERADIUS_SITES_NAMESPACE: radius
 
   FREERADIUS_SITES_DEFAULT_AUTH_PORT: {{ .Values.containerPorts.auth | quote }}
   FREERADIUS_SITES_DEFAULT_ACCT_PORT: {{ .Values.containerPorts.acct | quote }}
