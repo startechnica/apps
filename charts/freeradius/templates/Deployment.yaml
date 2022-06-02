@@ -83,7 +83,6 @@ spec:
           volumeMounts:
             - name: freeradius-mods
               mountPath: /etc/freeradius/mods-enabled
-              subPath: mods-enabled
               readOnly: false
       containers:
         - name: freeradius
