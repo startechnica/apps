@@ -82,7 +82,8 @@ spec:
             privileged: true
           volumeMounts:
             - name: freeradius-mods
-              mountPath: /etc/freeradius/mods-enabled/
+              mountPath: /etc/freeradius/mods-enabled
+              subPath: mods-enabled
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
