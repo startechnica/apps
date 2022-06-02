@@ -72,11 +72,8 @@ spec:
       {{- end }}
       initContainers:
         - name: take-data-dir-ownership
-          image: alpine:latest
-          command:
-            - chmod
-            - "2751"
-            - /etc/freeradius/mods-enabled
+          image: busybox:latest
+          command: ['sh', '-c', "ls -liah /etc/freeradius; chmod 0755 /etc/freeradius/mods-enabled; sleep 2"]
           volumeMounts:
             - name: freeradius-mods
               mountPath: /etc/freeradius/mods-enabled
