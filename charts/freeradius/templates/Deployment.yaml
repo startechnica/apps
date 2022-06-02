@@ -193,35 +193,20 @@ spec:
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
             {{- end }}
-            {{- if .Values.tls.enabled }}
+            - name: freeradius-mods
+              mountPath: /etc/freeradius/mods-enabled
             - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/tls
-              subPath: tls
+              mountPath: /etc/freeradius/sites-enabled
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
+            {{- if .Values.tls.enabled }}
             - name: freeradius-tls
               mountPath: /startechnica/freeradius/certs
               readOnly: true
             - name: shared-certs
               mountPath: /startechnica/freeradius/shared-certs
               readOnly: true
-            - name: temp
-              mountPath: /startechnica/freeradius/tmp
             {{- end }}
-            {{- if .Values.modsEnabled.sql.enabled }}
-            - name: freeradius-mods
-              mountPath: /etc/freeradius/mods-enabled/sql
-              subPath: sql
-            {{- end }}
-            {{- if .Values.sitesEnabled.coa.enabled }}
-            - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/coa
-              subPath: coa
-            {{- end }}
-            - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/default
-              subPath: default
-            - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/status
-              subPath: status
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -229,14 +214,14 @@ spec:
           {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes:
-        - name: temp
-          emptyDir: {}
         - name: freeradius-mods
           configMap:
             name: {{ printf "%s-mods" (include "common.names.fullname" .) }}
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
+        - name: temp
+          emptyDir: {}
         {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
         - name: data
           persistentVolumeClaim:

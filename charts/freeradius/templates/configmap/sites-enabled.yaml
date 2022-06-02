@@ -12,6 +12,7 @@ metadata:
   {{- end }}
 data:
 {{ (.Files.Glob "files/sites-available/default").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/sites-available/inner-tunnel").AsConfig | indent 2 }}
 {{- if .Values.sitesEnabled.coa.enabled }}
 {{ (.Files.Glob "files/sites-available/coa").AsConfig | indent 2 }}
 {{- end }}

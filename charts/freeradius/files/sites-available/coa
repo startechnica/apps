@@ -2,6 +2,7 @@
 #
 #  This uses the normal set of clients, with the same secret as for authentication and accounting.
 #
+
 listen {
 	type = coa
 	ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
