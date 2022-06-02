@@ -203,6 +203,8 @@ spec:
             - name: shared-certs
               mountPath: /startechnica/freeradius/shared-certs
               readOnly: true
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
             {{- end }}
             {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
@@ -227,6 +229,8 @@ spec:
           {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes:
+        - name: temp
+          emptyDir: {}
         - name: freeradius-mods
           configMap:
             name: {{ printf "%s-mods" (include "common.names.fullname" .) }}
