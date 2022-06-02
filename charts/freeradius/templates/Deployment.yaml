@@ -74,13 +74,12 @@ spec:
         - name: take-data-dir-ownership
           image: alpine:latest
           command:
-          - chmod
-          - 2751
-          - /etc/freeradius/mods-enabled
-          - /etc/freeradius/sites-enabled
+            - chmod
+            - "2751"
+            - /etc/freeradius/mods-enabled
           volumeMounts:
-          - name: data
-            mountPath: /var/lib/grafana
+            - name: freeradius-mods
+              mountPath: /etc/freeradius/mods-enabled
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
