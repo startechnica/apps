@@ -231,6 +231,7 @@ spec:
         - name: freeradius-mods
           configMap:
             name: {{ printf "%s-mods" (include "common.names.fullname" .) }}
+            defaultMode: 420
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
