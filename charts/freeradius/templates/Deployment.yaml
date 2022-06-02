@@ -74,6 +74,12 @@ spec:
         - name: take-data-dir-ownership
           image: busybox:latest
           command: ['sh', '-c', "ls -liah /etc/freeradius; chmod 0755 /etc/freeradius/mods-enabled; sleep 2"]
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "15Mi"
+          securityContext:
+            privileged: true
           volumeMounts:
             - name: freeradius-mods
               mountPath: /etc/freeradius/mods-enabled
