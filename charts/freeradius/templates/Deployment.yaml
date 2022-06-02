@@ -70,20 +70,6 @@ spec:
       {{- if .Values.initContainers }}
       initContainers: {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
       {{- end }}
-      initContainers:
-        - name: take-data-dir-ownership
-          image: busybox:latest
-          command: ['sh', '-c', "whoami; ls -liah /etc/freeradius; ls -liah /etc/freeradius/mods-enabled; chmod 0755 /etc/freeradius/mods-enabled; sleep 2"]
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "15Mi"
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - name: freeradius-mods
-              mountPath: /etc/freeradius/mods-enabled
-              readOnly: false
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
@@ -207,9 +193,11 @@ spec:
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
             {{- end }}
+            {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
-              mountPath: /etc/freeradius/mods-enabled
-              readOnly: false
+              mountPath: /etc/freeradius/mods-enabled/sql
+              subPath: sql
+            {{- end }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled
             - name: temp
@@ -232,7 +220,6 @@ spec:
         - name: freeradius-mods
           configMap:
             name: {{ printf "%s-mods" (include "common.names.fullname" .) }}
-            defaultMode: 420
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
