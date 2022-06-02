@@ -1,49 +1,55 @@
-# -*- text -*-
+#  -*- text -*-
 ######################################################################
 #
 #  Sample virtual server for receiving a CoA or Disconnect-Request packet.
 #
-
-#  Listen on the CoA port.
-#
-#  This uses the normal set of clients, with the same secret as for
-#  authentication and accounting.
-#
-listen {
-		type = coa
-		ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
-		port = $ENV{FREERADIUS_SITES_COA_PORT}
-		virtual_server = coa
-}
-
 server coa {
-		#  When a packet is received, it is processed through the
-		#  recv-coa section.  This applies to *both* CoA-Request and
-		#  Disconnect-Request packets.
-		recv-coa {
-				#  CoA && Disconnect packets can be proxied in the same
-				#  way as authentication or accounting packets.
-				#  Just set Proxy-To-Realm, or Home-Server-Pool, and the
-				#  packets will be proxied.
+	namespace = $ENV{FREERADIUS_SITES_NAMESPACE}
+	
+	#  Listen on the CoA port.
+	#
+	#  This uses the normal set of clients, with the same secret as for
+	#  authentication and accounting.
+	#
+	listen {
+		type = CoA-Request
+		type = Disconnect-Request
 
-				#  Do proxying based on realms here.  You don't need
-				#  "IPASS" or "ntdomain", as the proxying is based on
-				#  the Operator-Name attribute.  It contains the realm,
-				#  and ONLY the realm (prefixed by a '1')
-				suffix
+		transport = udp
 
-				#  Insert your own policies here.
-				ok
+		udp {
+			ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
+			port = $ENV{FREERADIUS_SITES_COA_PORT}
 		}
+	}
 
-		#  When a packet is sent, it is processed through the
-		#  send-coa section.  This applies to *both* CoA-Request and
-		#  Disconnect-Request packets.
-		send-coa {
-				#  Sample module.
-				ok
-		}
+	#  Receive a CoA request
+	recv CoA-Request {
+		ok
+	}
 
-		#  You can use pre-proxy and post-proxy sections here, too.
-		#  They will be processed for sending && receiving proxy packets.
+	#  Send a CoA ACK
+	send CoA-ACK {
+		ok
+	}
+
+	#  Send a CoA NAK
+	send CoA-NAK {
+		ok
+	}
+
+	#  Receive a Disconnect request
+	recv Disconnect-Request {
+		ok
+	}
+
+	#  Send a Disconnect ACK
+	send Disconnect-ACK {
+		ok
+	}
+
+	#  Send a Disconnect NAK
+	send Disconnect-NAK {
+		ok
+	}
 }
