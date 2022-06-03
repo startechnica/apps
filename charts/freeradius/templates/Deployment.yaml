@@ -79,15 +79,15 @@ spec:
             - |-
               whoami
               ls -liah /etc
-              chmod 2775 /etc/freeradius
-              chown 101:101 /etc/freeradius
+              chmod 2775 /etc/freeradius/sites-config
+              chown 101:101 /etc/freeradius/sites-config
               ls -liah /etc
               sleep 2
           securityContext:
             privileged: true
           volumeMounts:
-            - name: raddb
-              mountPath: /etc/freeradius
+            - name: test-vol
+              mountPath: /etc/freeradius/sites-config
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
@@ -204,9 +204,9 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: raddb
-              mountPath: /etc/raddb
             {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+            - name: raddb
+              mountPath: /etc/freeradius
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
@@ -243,6 +243,8 @@ spec:
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
+            - name: test-vol
+              mountPath: /etc/freeradius/sites-config
         {{- if .Values.sidecars }}
           {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
@@ -274,4 +276,6 @@ spec:
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
+        - name: test-vol
+          emptyDir: {}
 ---
