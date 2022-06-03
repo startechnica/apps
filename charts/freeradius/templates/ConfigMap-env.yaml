@@ -1,6 +1,3 @@
-#####################################
-## FreeRADIUS ConfigMap config
-#####################################
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -63,4 +60,3 @@ data:
   FREERADIUS_SITES_TLS_CERTIFICATE_FILE: {{ include "freeradius.tlsCert" . | quote }}
   FREERADIUS_SITES_TLS_CA_FILE: {{ include "freeradius.tlsCACert" . | quote }}
   {{- end }}
-
