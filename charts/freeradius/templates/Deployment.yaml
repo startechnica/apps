@@ -186,9 +186,9 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-            - name: data
+            - name: raddb
               mountPath: /etc/freeradius
+            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
@@ -226,9 +226,12 @@ spec:
         - name: temp
           emptyDir: {}
         {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-        - name: data
+        - name: raddb
           persistentVolumeClaim:
             claimName: {{ tpl .Values.persistence.existingClaim . }}
+        {{- else }}
+        - name: raddb
+          emptyDir: {}
         {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
