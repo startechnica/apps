@@ -69,7 +69,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: freeradius/freeradius-server
-  tag: "3.0.25"
+  tag: "3.2.0"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -86,6 +86,7 @@ image:
   ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
+
 ## @param architecture FreeRADIUS architecture (`standalone` or `replication`)
 ##
 architecture: standalone
@@ -105,20 +106,15 @@ auth:
   ## existingSecret:
   ##   name: mySecret
   ##   keyMapping:
-  ##     client-password: myPasswordKey
+  ##     client-user-password: myPasswordKey
   ##
   existingSecret: ""
   ## @param auth.existingSecretPerPassword Override `existingSecret` and other secret values
   ## e.g:
   ## existingSecretPerPassword:
   ##   keyMapping:
-  ##     adminPassword: FREERADIUS_ADMIN_PASSWORD
-  ##     managementPassword: FREERADIUS_MANAGEMENT_PASSWORD
+  ##     clientUserPassword: FREERADIUS_ADMIN_PASSWORD
   ##     databasePassword: password
-  ##   clientPassword:
-  ##     name: freeradius-test2.credentials ## release-name
-  ##   managementPassword:
-  ##     name: freeradius-test2.credentials
   ##   databasePassword:
   ##     name: freeradius.pocwatt-freeradius-cluster.credentials
   ##
