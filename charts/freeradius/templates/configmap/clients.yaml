@@ -1,3 +1,4 @@
+{{- $client := index .Values "clients" "localhost" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,5 +11,6 @@ metadata:
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
-data: |-
-{{- $client := index .Values "clients" "localhost" }}
+data:
+  clients.conf: |-
+    client
