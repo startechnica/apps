@@ -47,8 +47,7 @@ listen {
 		port = $ENV{FREERADIUS_SITES_TLS_PORT}
 
 		#
-		#  TCP and TLS sockets can accept Access-Request and
-		#  Accounting-Request on the same socket.
+		#  TCP and TLS sockets can accept Access-Request and Accounting-Request on the same socket.
 		#
 		#       auth      = only Access-Request
 		#       acct      = only Accounting-Request
@@ -65,32 +64,22 @@ listen {
 
 		clients = radsec
 
-		#
 		#  Use the haproxy "PROXY protocol".
 		#
-		#  This configuration allows for many FreeRADIUS servers to be
-		#  behind a haproxy server.  The "PROXY protocol" allows
-		#  haproxy to send the actual client IP to FreeRADIUS.
+		#  This configuration allows for many FreeRADIUS servers to be behind a haproxy server.  The "PROXY protocol" allows haproxy to send the actual client IP to FreeRADIUS.
 		#
-		#  This will work ONLY for RadSec (TLS).  Both the haproxy AND
-		#  the RadSec client MUST be listed as allowed RADIUS clients.
+		#  This will work ONLY for RadSec (TLS).  Both the haproxy AND the RadSec client MUST be listed as allowed RADIUS clients.
 		#
-		#  haproxy needs to have "send-proxy" configured for this server.
-		#  Health checks should be turned off, as haproxy does not
-		#  support RADIUS health checks.
+		#  haproxy needs to have "send-proxy" configured for this server. Health checks should be turned off, as haproxy does not support RADIUS health checks.
 		#
-		#  The main use of this feature is for scalability.  There is no
-		#  longer any need to have a RADIUS proxy as a load balancer.
+		#  The main use of this feature is for scalability. There is no longer any need to have a RADIUS proxy as a load balancer.
 		#  haproxy is fast, stable, and supports dynamic reloads!
 		#
-		#  The only problem is that many RADIUS clients do not support
-		#  RadSec.  That situation will hopefully change over time.
+		#  The only problem is that many RADIUS clients do not support RadSec.  That situation will hopefully change over time.
 		#
 #       proxy_protocol = no
 
-		#
-		#  When this is set to "yes", new TLS connections
-		#  are processed through a section called
+		#  When this is set to "yes", new TLS connections are processed through a section called
 		#
 		#       Autz-Type New-TLS-Connection {
 		#                 ...
@@ -110,7 +99,6 @@ listen {
 		#  Connection limiting for sockets with "proto = tcp".
 		#
 		limit {
-			  #
 			  #  Limit the number of simultaneous TCP connections to the socket
 			  #
 			  #  The default is 16.
@@ -119,20 +107,14 @@ listen {
 
 			  #  The per-socket "max_requests" option does not exist.
 
-			  #
-			  #  The lifetime, in seconds, of a TCP connection.  After
-			  #  this lifetime, the connection will be closed.
+			  #  The lifetime, in seconds, of a TCP connection.  After this lifetime, the connection will be closed.
 			  #
 			  #  Setting this to 0 means "forever".
 			  lifetime = 0
 
-			  #
-			  #  The idle timeout, in seconds, of a TCP connection.
-			  #  If no packets have been received over the connection for
-			  #  this time, the connection will be closed.
+			  #  The idle timeout, in seconds, of a TCP connection. If no packets have been received over the connection for this time, the connection will be closed.
 			  #
 			  #  Setting this to 0 means "no timeout".
-			  #
 			  #  We STRONGLY RECOMMEND that you set an idle timeout.
 			  #
 			  idle_timeout = 30
@@ -165,7 +147,6 @@ listen {
 				private_key_file = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_FILE}
 
 				# Accept an expired Certificate Revocation List
-				#
 		#       allow_expired_crl = no
 
 				#  If Private key & Certificate are located in
@@ -183,24 +164,16 @@ listen {
 
 				#  Trusted Root CA list
 				#
-				#  ALL of the CA's in this list will be trusted
-				#  to issue client certificates for authentication.
+				#  ALL of the CA's in this list will be trusted to issue client certificates for authentication.
 				#
-				#  In general, you should use self-signed
-				#  certificates for 802.1x (EAP) authentication.
-				#  In that case, this CA file should contain
-				#  *one* CA certificate.
+				#  In general, you should use self-signed certificates for 802.1x (EAP) authentication.
+				#  In that case, this CA file should contain *one* CA certificate.
 				#
-				#  This parameter is used only for EAP-TLS,
-				#  when you issue client certificates.  If you do
-				#  not use client certificates, and you do not want
-				#  to permit EAP-TLS authentication, then delete
-				#  this configuration item.
+				#  This parameter is used only for EAP-TLS, when you issue client certificates.  If you do not use client certificates, and you do not want
+				#  to permit EAP-TLS authentication, then delete this configuration item.
 				ca_file = $ENV{FREERADIUS_SITES_TLS_CA_FILE}
 
-				#
-				#  For DH cipher suites to work, you have to
-				#  run OpenSSL to create the DH file first:
+				#  For DH cipher suites to work, you have to run OpenSSL to create the DH file first:
 				#
 				#       openssl dhparam -out certs/dh 1024
 				#
@@ -474,9 +447,7 @@ clients radsec {
 		}
 }
 
-#
-#  When a request is proxied to a TLS-enabled home server,
-#  the TLS parameters are available via the expansion:
+#  When a request is proxied to a TLS-enabled home server, the TLS parameters are available via the expansion:
 #
 #       %{proxy_listen: ... }
 #
@@ -522,7 +493,7 @@ home_server tls {
 		#       hostname = "example.com"
 
 				private_key_password = whatever
-				private_key_file = /startechnica/freeradius/certs/tls.key
+				private_key_file = ${certdir}/client.pem
 
 				#  If Private key & Certificate are located in
 				#  the same file, then private_key_file &
@@ -534,17 +505,14 @@ home_server tls {
 				#  only the server certificate, but ALSO all
 				#  of the CA certificates used to sign the
 				#  server certificate.
-				certificate_file = /startechnica/freeradius/certs/tls.crt
+				certificate_file = ${certdir}/client.pem
 
 				#  Trusted Root CA list
 				#
-				#  ALL of the CA's in this list will be trusted
-				#  to issue client certificates for authentication.
+				#  ALL of the CA's in this list will be trusted to issue client certificates for authentication.
 				#
-				#  In general, you should use self-signed
-				#  certificates for 802.1x (EAP) authentication.
-				#  In that case, this CA file should contain
-				#  *one* CA certificate.
+				#  In general, you should use self-signed certificates for 802.1x (EAP) authentication.
+				#  In that case, this CA file should contain *one* CA certificate.
 				#
 				#  This parameter is used only for EAP-TLS,
 				#  when you issue client certificates.  If you do
@@ -554,9 +522,7 @@ home_server tls {
 				ca_file = $ENV{FREERADIUS_SITES_TLS_CA_FILE}
 
 				#
-				#  For TLS-PSK, the key should be specified
-				#  dynamically, instead of using a hard-coded
-				#  psk_identity and psk_hexphrase.
+				#  For TLS-PSK, the key should be specified dynamically, instead of using a hard-coded psk_identity and psk_hexphrase.
 				#
 				#  The input to the dynamic expansion will be the PSK
 				#  identity supplied by the client, in the
@@ -567,9 +533,7 @@ home_server tls {
 				#
 		#       psk_query = "%{psksql:select hex(key) from psk_keys where keyid = '%{TLS-PSK-Identity}'}"
 
-				#
-				#  For DH cipher suites to work, you have to
-				#  run OpenSSL to create the DH file first:
+				#  For DH cipher suites to work, you have to run OpenSSL to create the DH file first:
 				#
 				#       openssl dhparam -out certs/dh 1024
 				#
@@ -635,9 +599,7 @@ home_server tls {
 			   #
 		#       check_cert_cn = %{User-Name}
 		#
-				# Set this option to specify the allowed
-				# TLS cipher suites.  The format is listed
-				# in "man 1 ciphers".
+				# Set this option to specify the allowed TLS cipher suites.  The format is listed in "man 1 ciphers".
 				cipher_list = "DEFAULT"
 		}
 

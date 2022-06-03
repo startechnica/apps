@@ -55,7 +55,6 @@ server status {
 		secret = $ENV{FREERADIUS_SITES_STATUS_SECRET}
 	}
 
-	#
 	#  Simple authorize section.  The "Autz-Type Status-Server"
 	#  section will work here, too.  See "raddb/sites-available/default".
 	authorize {

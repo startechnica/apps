@@ -67,8 +67,24 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: take-data-dir-ownership
+          image: busybox:latest
+          command: 
+            - sh
+            - -c
+            - |-
+              whoami
+              ls -liah /startechnica/freeradius/mods-enabled
+              ls -liah /startechnica/freeradius/sites-enabled
+              sleep 2
+          volumeMounts:
+            - name: freeradius-mods
+              mountPath: /startechnica/freeradius/mods-enabled
+            - name: freeradius-sites
+              mountPath: /startechnica/freeradius/sites-enabled
       {{- if .Values.initContainers }}
-      initContainers: {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
       {{- end }}
       containers:
         - name: freeradius
@@ -187,12 +203,30 @@ spec:
           {{- end }}
           volumeMounts:
             {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-            - name: data
-              mountPath: /etc/raddb
+            - name: raddb
+              mountPath: /etc/freeradius
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
             {{- end }}
+            {{- if .Values.modsEnabled.sql.enabled }}
+            - name: freeradius-mods
+              mountPath: /etc/freeradius/mods-enabled/sql
+              subPath: sql
+            {{- end }}
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/default
+              subPath: default
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/status
+              subPath: status
+            {{- if .Values.sitesEnabled.coa.enabled }}
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/coa
+              subPath: coa
+            {{- end }}
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.tls.enabled }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/tls
@@ -204,22 +238,6 @@ spec:
               mountPath: /startechnica/freeradius/shared-certs
               readOnly: true
             {{- end }}
-            {{- if .Values.modsEnabled.sql.enabled }}
-            - name: freeradius-mods
-              mountPath: /etc/freeradius/mods-enabled/sql
-              subPath: sql
-            {{- end }}
-            {{- if .Values.sitesEnabled.coa.enabled }}
-            - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/coa
-              subPath: coa
-            {{- end }}
-            - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/default
-              subPath: default
-            - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled/status
-              subPath: status
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -233,8 +251,10 @@ spec:
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
+        - name: temp
+          emptyDir: {}
         {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-        - name: data
+        - name: raddb
           persistentVolumeClaim:
             claimName: {{ tpl .Values.persistence.existingClaim . }}
         {{- end }}

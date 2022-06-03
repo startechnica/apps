@@ -69,7 +69,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: freeradius/freeradius-server
-  tag: "3.0.25"
+  tag: "3.2.0"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -86,40 +86,35 @@ image:
   ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
+
 ## @param architecture FreeRADIUS architecture (`standalone` or `replication`)
 ##
 architecture: standalone
 
 auth:
-  ## @param auth.createAdminUser Create administrator user on boot
+  ## @param auth.createClientUser Create client user on boot
   ##
-  createAdminUser: true
-  ## @param auth.adminUser FreeRADIUS administrator user
+  createClientUser: true
+  ## @param auth.clientUser FreeRADIUS administrator user
   ##
-  adminUser: user
-  ## @param auth.adminPassword FreeRADIUS administrator password for the new user
+  clientUser: user
+  ## @param auth.clientPassword FreeRADIUS administrator password for the new user
   ##
-  adminPassword: ""
+  clientUserPassword: ""
   ## @param auth.existingSecret An already existing secret containing auth info
   ## e.g:
   ## existingSecret:
   ##   name: mySecret
   ##   keyMapping:
-  ##     admin-password: myPasswordKey
-  ##     management-password: myManagementPasswordKey
+  ##     client-user-password: myPasswordKey
   ##
   existingSecret: ""
   ## @param auth.existingSecretPerPassword Override `existingSecret` and other secret values
   ## e.g:
   ## existingSecretPerPassword:
   ##   keyMapping:
-  ##     adminPassword: FREERADIUS_ADMIN_PASSWORD
-  ##     managementPassword: FREERADIUS_MANAGEMENT_PASSWORD
+  ##     clientUserPassword: FREERADIUS_ADMIN_PASSWORD
   ##     databasePassword: password
-  ##   adminPassword:
-  ##     name: freeradius-test2.credentials ## release-name
-  ##   managementPassword:
-  ##     name: freeradius-test2.credentials
   ##   databasePassword:
   ##     name: freeradius.pocwatt-freeradius-cluster.credentials
   ##
@@ -282,7 +277,7 @@ containerPorts:
 ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
 ##
 podSecurityContext:
-  enabled: true
+  enabled: false
   fsGroup: 101
   runAsUser: 101
 ## FreeRADIUS secondary container security context
@@ -293,11 +288,14 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
+  allowPrivilegeEscalation: true
   capabilities:
     add:
       - SYS_PTRACE
   runAsUser: 101
   runAsNonRoot: true
+  privileged: true
+
 ## FreeRADIUS secondary container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
 ## We usually recommend not to specify default resources and to leave this as a conscious
@@ -478,17 +476,21 @@ service:
   ## @param service.clusterIP FreeRADIUS Kubernetes service clusterIP IP
   ##
   clusterIP: ""
-  ## @param service.ipFamilyPolicy FreeRADIUS Kubernetes service ipFamilyPolicy policy
-  ##
-  ipFamilyPolicy: SingleStack
   ## @param service.loadBalancerIP FreeRADIUS loadBalancerIP if service type is `LoadBalancer`
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
   ##
   loadBalancerIP: ""
+  ## @param service.ipFamilyPolicy FreeRADIUS Kubernetes service ipFamilyPolicy policy
+  ##
+  ipFamilyPolicy: SingleStack
   ## @param service.externalTrafficPolicy Enable client source IP preservation
   ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
   ##
   externalTrafficPolicy: Cluster
+  ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+  ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+  ##
+  loadBalancerClass: ""
   ## @param service.loadBalancerSourceRanges Address that are allowed when FreeRADIUS service is LoadBalancer
   ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
   ## E.g.
@@ -597,6 +599,10 @@ modsEnabled:
       usergroup: radusergroup
     tls:
       enabled: false
+      certificatesSecret: ""
+      certFilename: ""
+      certKeyFilename: ""
+      certCAFilename: ""
     existingTlsSecret: ""
 
 sitesEnabled:
@@ -610,6 +616,20 @@ sitesEnabled:
   tls:
     listen: "*"
     privateKeyPassword: adminsecret
+
+clients:
+  localhost:
+    ipv4addr: "127.0.0.1"
+    ipv6addr: ""
+    proto: udp
+    secret: password
+    nasType: other
+    virtualServer: default
+    coaServer: coa
+    limit:
+      maxConnections: 16
+      lifetime: 0
+      idleTimeout: 30
 
 tls:
   ## @param tls.enabled Enable TLS support for radsec traffic

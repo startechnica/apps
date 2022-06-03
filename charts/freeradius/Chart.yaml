@@ -6,7 +6,7 @@ annotations:
     - name: Upstream Project
       url: https://github.com/FreeRADIUS/freeradius-server
 apiVersion: v2
-appVersion: 3.0.25
+appVersion: 3.2.0
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
@@ -27,13 +27,13 @@ keywords:
   - mysql
   - postgresql
   - ldap
-kubeVersion: ">=1.16.0-0"
+kubeVersion: ">=1.19.0-0"
 maintainers:
-  - name: Firmansyah Nainggolan
+  - name: firmansyahn
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
 name: freeradius
 sources:
   - https://freeradius.org/
 type: application
-version: 0.1.5
+version: 0.1.6

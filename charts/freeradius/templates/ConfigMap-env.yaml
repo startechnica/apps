@@ -1,6 +1,3 @@
-#####################################
-## FreeRADIUS ConfigMap config
-#####################################
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,13 +5,18 @@ metadata:
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
   FREERADIUS_ENABLE_TLS: {{ ternary "true" "false" .Values.tls.enabled | quote }}
+
+  FREERADIUS_CLIENTS_SHORTNAME: ""
+  FREERADIUS_CLIENTS_IPV4ADDR: ""
+  FREERADIUS_CLIENTS_IPV6ADDR: ""
+  FREERADIUS_CLIENTS_SECRET: ""
 
   {{- if .Values.modsEnabled.sql.enabled }}
   FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modsEnabled.sql.dialect }}
@@ -38,6 +40,8 @@ data:
   FREERADIUS_MODS_SQL_TLS_PRIVATEKEY_PASSWORD: whatever
   {{- end }}
 
+  FREERADIUS_SITES_NAMESPACE: radius
+
   FREERADIUS_SITES_DEFAULT_AUTH_PORT: {{ .Values.containerPorts.auth | quote }}
   FREERADIUS_SITES_DEFAULT_ACCT_PORT: {{ .Values.containerPorts.acct | quote }}
   {{- if .Values.sitesEnabled.coa.enabled }}
@@ -56,4 +60,3 @@ data:
   FREERADIUS_SITES_TLS_CERTIFICATE_FILE: {{ include "freeradius.tlsCert" . | quote }}
   FREERADIUS_SITES_TLS_CA_FILE: {{ include "freeradius.tlsCACert" . | quote }}
   {{- end }}
-

@@ -68,20 +68,20 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### FreeRADIUS parameters
 
-| Name                 | Description                                                          | Value                     |
-| -------------------- | -------------------------------------------------------------------- | ------------------------- |
-| `image.registry`     | FreeRADIUS image registry                                            | `docker.io`               |
-| `image.repository`   | FreeRADIUS image repository                                          | `startechnica/freeradius` |
-| `image.tag`          | FreeRADIUS image tag (immutable tags are recommended)                | `1.21.5-debian-10-r3`     |
-| `image.pullPolicy`   | FreeRADIUS image pull policy                                         | `IfNotPresent`            |
-| `image.pullSecrets`  | Specify docker-registry secret names as an array                     | `[]`                      |
-| `image.debug`        | Set to true if you would like to see extra information on logs       | `false`                   |
-| `hostAliases`        | Deployment pod host aliases                                          | `[]`                      |
-| `command`            | Override default container command (useful when using custom images) | `[]`                      |
-| `args`               | Override default container args (useful when using custom images)    | `[]`                      |
-| `extraEnvVars`       | Extra environment variables to be set on FreeRADIUS containers       | `[]`                      |
-| `extraEnvVarsCM`     | ConfigMap with extra environment variables                           | `""`                      |
-| `extraEnvVarsSecret` | Secret with extra environment variables                              | `""`                      |
+| Name                 | Description                                                          | Value                          |
+| -------------------- | -------------------------------------------------------------------- | -------------------------      |
+| `image.registry`     | FreeRADIUS image registry                                            | `docker.io`                    |
+| `image.repository`   | FreeRADIUS image repository                                          | `freeradius/freeradius-server` |
+| `image.tag`          | FreeRADIUS image tag (immutable tags are recommended)                | `3.2.0`                        |
+| `image.pullPolicy`   | FreeRADIUS image pull policy                                         | `IfNotPresent`                 |
+| `image.pullSecrets`  | Specify docker-registry secret names as an array                     | `[]`                           |
+| `image.debug`        | Set to true if you would like to see extra information on logs       | `false`                        |
+| `hostAliases`        | Deployment pod host aliases                                          | `[]`                           |
+| `command`            | Override default container command (useful when using custom images) | `[]`                           |
+| `args`               | Override default container args (useful when using custom images)    | `[]`                           |
+| `extraEnvVars`       | Extra environment variables to be set on FreeRADIUS containers       | `[]`                           |
+| `extraEnvVarsCM`     | ConfigMap with extra environment variables                           | `""`                           |
+| `extraEnvVarsSecret` | Secret with extra environment variables                              | `""`                           |
 
 
 ### FreeRADIUS deployment parameters
@@ -101,13 +101,16 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tolerations`                           | Tolerations for pod assignment. Evaluated as a template.                                  | `{}`    |
 | `priorityClassName`                     | Priority class name                                                                       | `""`    |
 | `podSecurityContext.enabled`            | Enabled FreeRADIUS pods' Security Context                                                 | `false` |
-| `podSecurityContext.fsGroup`            | Set FreeRADIUS pod's Security Context fsGroup                                             | `1001`  |
+| `podSecurityContext.fsGroup`            | Set FreeRADIUS pod's Security Context fsGroup                                             | `101`   |
 | `podSecurityContext.sysctls`            | sysctl settings of the FreeRADIUS pods                                                    | `[]`    |
 | `containerSecurityContext.enabled`      | Enabled FreeRADIUS containers' Security Context                                           | `false` |
 | `containerSecurityContext.runAsUser`    | Set FreeRADIUS container's Security Context runAsUser                                     | `1001`  |
 | `containerSecurityContext.runAsNonRoot` | Set FreeRADIUS container's Security Context runAsNonRoot                                  | `true`  |
-| `containerPorts.http`                   | Sets http port inside FreeRADIUS container                                                | `8080`  |
-| `containerPorts.https`                  | Sets https port inside FreeRADIUS container                                               | `""`    |
+| `containerPorts.auth`                   | Sets auth port inside FreeRADIUS container                                                | `1812`  |
+| `containerPorts.acct`                   | Sets acct port inside FreeRADIUS container                                                | `1813`  |
+| `containerPorts.coa`                    | Sets coa port inside FreeRADIUS container                                                 | `3799`  |
+| `containerPorts.radsec`                 | Sets radsec port inside FreeRADIUS container                                              | `2083`  |
+| `containerPorts.status`                 | Sets status port inside FreeRADIUS container                                              | `18121` |
 | `resources.limits`                      | The resources limits for the FreeRADIUS container                                         | `{}`    |
 | `resources.requests`                    | The requested resources for the FreeRADIUS container                                      | `{}`    |
 | `livenessProbe.enabled`                 | Enable livenessProbe                                                                      | `true`  |
@@ -145,10 +148,10 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Custom FreeRADIUS application parameters
 
-| Name                                       | Description                                                                                       | Value                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------- |
-| `modsEnabled.enabled`                      | Get the server static content from a Git repository                                               | `true`                 |
-| `sitesEnabled.status.port`                 | Git image registry                                                                                | `18121`            |
+| Name                                       | Description                                                                                       | Value             |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------- |
+| `modsEnabled.sql.enabled`                  |                                                                                                   | `false`            |
+| `sitesEnabled.status.port`                 | Git image registry                                                                                | `18121`           |
 | `sitesEnabled.status.secret`               | Git image repository                                                                              | `adminsecret`     |
 
 
