@@ -73,7 +73,7 @@ spec:
       initContainers:
         - name: take-data-dir-ownership
           image: busybox:latest
-          command: ['sh', '-c', "whoami; ls -liah /etc/freeradius; ls -liah /etc/freeradius/mods-enabled; chmod 0755 /etc/freeradius; sleep 2"]
+          command: ['sh', '-c', "whoami; ls -liah /etc; ls -liah /etc/freeradius; chmod 0755 /etc/freeradius; chown 101:101 /etc/freeradius; sleep 2"]
           resources:
             requests:
               cpu: "10m"
@@ -83,7 +83,6 @@ spec:
           volumeMounts:
             - name: raddb
               mountPath: /etc/freeradius
-              readOnly: false
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
