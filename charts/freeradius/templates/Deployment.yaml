@@ -204,9 +204,9 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
+            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
             - name: raddb
               mountPath: /etc/freeradius
-            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
