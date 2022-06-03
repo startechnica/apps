@@ -79,10 +79,12 @@ spec:
             - |-
               whoami
               ls -liah /etc
-              chmod 0755 /etc/freeradius
+              chmod 0775 /etc/freeradius
               chown 101:101 /etc/freeradius
               ls -liah /etc
               sleep 2
+          securityContext:
+            privileged: true
           volumeMounts:
             - name: raddb
               mountPath: /etc/freeradius
