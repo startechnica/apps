@@ -79,7 +79,7 @@ spec:
             - |-
               whoami
               ls -liah /etc
-              chmod 0775 /etc/freeradius
+              chmod 2775 /etc/freeradius
               chown 101:101 /etc/freeradius
               ls -liah /etc
               sleep 2
