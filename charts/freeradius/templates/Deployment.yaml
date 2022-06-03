@@ -78,9 +78,8 @@ spec:
             - -c
             - |-
               whoami
-              ls -liah /etc/freeradius/mods-enabled
-              ls -liah /etc/freeradius/sites-enabled
-              chmod 2755 /etc/freeradius/mods-enabled
+              ls -liah /startechnica/freeradius/mods-enabled
+              ls -liah /startechnica/freeradius/sites-enabled
               sleep 2
           securityContext:
             privileged: true
