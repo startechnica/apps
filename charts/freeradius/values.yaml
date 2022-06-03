@@ -297,7 +297,9 @@ containerSecurityContext:
     add:
       - SYS_PTRACE
   runAsUser: 101
-  runAsNonRoot: true
+  #runAsNonRoot: true
+  privileged: true
+
 ## FreeRADIUS secondary container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
 ## We usually recommend not to specify default resources and to leave this as a conscious
