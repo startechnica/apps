@@ -282,8 +282,8 @@ containerPorts:
 ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
 ##
 podSecurityContext:
-  enabled: false
-  # fsGroup: 101
+  enabled: true
+  fsGroup: 101
   runAsUser: 101
 ## FreeRADIUS secondary container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
