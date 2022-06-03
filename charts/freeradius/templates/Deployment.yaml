@@ -78,18 +78,17 @@ spec:
             - -c
             - |-
               whoami
-              ls -liah /etc/freeradius
-              chmod 2755 /etc/freeradius/mods-enabled
-              chown 101:101 /etc/freeradius/mods-enabled
               ls -liah /etc/freeradius/mods-enabled
+              ls -liah /etc/freeradius/sites-enabled
+              chmod 2755 /etc/freeradius/mods-enabled
               sleep 2
           securityContext:
             privileged: true
           volumeMounts:
-            - name: test-vol
-              mountPath: /etc/freeradius/sites-config
             - name: freeradius-mods
-              mountPath: /etc/freeradius/mods-enabled
+              mountPath: /startechnica/freeradius/mods-enabled
+            - name: freeradius-sites
+              mountPath: /startechnica/freeradius/sites-enabled
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
