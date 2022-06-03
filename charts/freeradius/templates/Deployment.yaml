@@ -73,13 +73,16 @@ spec:
       initContainers:
         - name: take-data-dir-ownership
           image: busybox:latest
-          command: ['sh', '-c', "whoami; ls -liah /etc; chmod 0755 /etc/freeradius; chown 101:101 /etc/freeradius; ls -liah /etc; sleep 2"]
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "15Mi"
-          securityContext:
-            privileged: true
+          command: 
+            - sh
+            - -c
+            - |-
+              whoami
+              ls -liah /etc
+              chmod 0755 /etc/freeradius
+              chown 101:101 /etc/freeradius
+              ls -liah /etc
+              sleep 2
           volumeMounts:
             - name: raddb
               mountPath: /etc/freeradius
