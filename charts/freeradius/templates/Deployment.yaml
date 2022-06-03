@@ -217,10 +217,22 @@ spec:
               subPath: sql
             {{- end }}
             - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled
+              mountPath: /etc/freeradius/sites-enabled/default
+              subPath: default
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/status
+              subPath: status
+            {{- if .Values.sitesEnabled.coa.enabled }}
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/coa
+              subPath: coa
+            {{- end }}
             - name: temp
               mountPath: /startechnica/freeradius/tmp
             {{- if .Values.tls.enabled }}
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled/tls
+              subPath: tls
             - name: freeradius-tls
               mountPath: /startechnica/freeradius/certs
               readOnly: true
