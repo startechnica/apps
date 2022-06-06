@@ -21,3 +21,7 @@ gateways:
       targetPort: 8443
       name: https
       protocol: TCP
+
+  istio-ingressgateway:
+    serviceAnnotations:
+      metallb.universe.tf/address-pool: istio-ingress-default
