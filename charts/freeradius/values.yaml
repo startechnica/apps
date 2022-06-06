@@ -293,6 +293,7 @@ containerPorts:
   auth: 1812
   acct: 1813
   coa: 3799
+  metrics: 9990
   radsec: 2083
   status: 18121
 ## FreeRADIUS secondary Pod security context
