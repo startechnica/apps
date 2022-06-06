@@ -283,8 +283,6 @@ schedulerName: ""
 ##
 podManagementPolicy: ""
 
-
-
 ## @param containerPorts.auth FreeRADIUS Auth container port
 ## @param containerPorts.acct FreeRADIUS Accounting container port
 ## @param containerPorts.status FreeRADIUS Status HTTP container port
@@ -313,13 +311,12 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
-  allowPrivilegeEscalation: true
+  # allowPrivilegeEscalation: true
   capabilities:
     add:
       - SYS_PTRACE
   runAsUser: 101
   runAsNonRoot: true
-  privileged: true
 
 ## FreeRADIUS secondary container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
