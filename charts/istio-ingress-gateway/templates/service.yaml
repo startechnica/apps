@@ -1,4 +1,4 @@
-{{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
+{{ $gateway := index .Values "gateways" | default "istio-ingressgateway" }}
 {{- if not $gateway.customService }}
 apiVersion: v1
 kind: Service
