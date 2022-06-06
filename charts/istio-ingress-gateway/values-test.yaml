@@ -25,3 +25,6 @@ gateways:
   istio-ingressgateway:
     serviceAnnotations:
       metallb.universe.tf/address-pool: istio-ingress-default
+
+global:
+  autoscalingv2API: false
