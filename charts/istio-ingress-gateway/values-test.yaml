@@ -18,5 +18,7 @@ gateways:
       name: https
       protocol: TCP
 
+    serviceAnnotations: {}
+
 global:
   autoscalingv2API: false
