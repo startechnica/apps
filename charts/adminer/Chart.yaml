@@ -2,6 +2,12 @@ annotations:
   category: DatabaseManagement
 apiVersion: v2
 appVersion: 4.8.1
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    tags:
+      - bitnami-common
+    version: 1.x.x
 description: Adminer is a full-featured database management tool written in PHP. Conversely
   to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer
   is available for MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB,
@@ -18,10 +24,11 @@ keywords:
   - database
   - sql
 maintainers:
-  - name: Firmansyah Nainggolan
+  - name: firmansyahn
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
 name: adminer
 sources:
   - https://www.adminer.org
-version: 0.1.1
+type: application
+version: 0.1.2

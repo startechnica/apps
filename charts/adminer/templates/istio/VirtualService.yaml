@@ -1,0 +1,32 @@
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" }}
+{{- if and .Values.istio.enabled .Values.istio.virtualService.enabled (not .Values.istio.virtualService.existingVirtualService) }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  gateways:
+    - {{ include "common.names.fullname" . }}
+  {{- if .Values.ingress.hostname }}
+  hosts:
+    - {{ .Values.ingress.hostname | quote }}
+    {{- range $.Values.ingress.extraHosts }}
+    - {{ .name | quote }}
+    {{- end }}
+  http:
+    - route:
+        - destination:
+            host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" $) (include "common.names.namespace" $) .Values.istio.clusterName }}
+            port:
+              number: {{ .Values.service.ports.http }}
+  {{- end }}
+{{- end }}
+{{- end }}

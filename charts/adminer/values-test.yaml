@@ -7,12 +7,23 @@ affinity:
         - key: node-role.kubernetes.io/worker
           operator: Exists
 
+ingress:
+  enabled: true
+  hostname: adminer.dxm.nainggolan.id
+  extraHosts:
+    - name: macam.macam.com
+    - name: macam.macam.id
+  tls: true
+  selfSigned: true
+
 istio:
   enabled: true
-  hosts:
-    - "adminer.app.tazbiya.com"
+  ingressGateway: ingress-app
 
 tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
     operator: Exists
