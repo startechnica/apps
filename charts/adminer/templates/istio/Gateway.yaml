@@ -19,7 +19,7 @@ spec:
     {{- range .Values.istio.gateway.servers }}
     - port:
         name: {{ .name }}
-        number: {{ .number }}
+        number: {{ .port }}
         protocol: {{ .protocol }}
       hosts:
         {{- range $.Values.ingress.extraHosts }}
