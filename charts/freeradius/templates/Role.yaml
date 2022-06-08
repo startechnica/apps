@@ -18,4 +18,5 @@ rules:
       - endpoints
     verbs:
       - get
+      - list
 {{- end }}

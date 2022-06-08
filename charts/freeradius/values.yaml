@@ -217,20 +217,20 @@ nodeAffinityPreset:
   ##
   values: []
 
-## @param affinity Affinity for FreeRADIUS secondary pods assignment
+## @param affinity Affinity for FreeRADIUS pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
 ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
 ##
 affinity: {}
-## @param nodeSelector Node labels for FreeRADIUS secondary pods assignment
+## @param nodeSelector Node labels for FreeRADIUS pods assignment
 ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
 ##
 nodeSelector: {}
-## @param tolerations Tolerations for FreeRADIUS secondary pods assignment
+## @param tolerations Tolerations for FreeRADIUS pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 ##
 tolerations: []
-## @param topologySpreadConstraints Topology Spread Constraints for FreeRADIUS secondary pods assignment
+## @param topologySpreadConstraints Topology Spread Constraints for FreeRADIUS pods assignment
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
 ## E.g.
 ## topologySpreadConstraints:
@@ -240,7 +240,7 @@ tolerations: []
 ##
 topologySpreadConstraints: {}
 
-## @param priorityClassName Priority class for FreeRADIUS secondary pods assignment
+## @param priorityClassName Priority class for FreeRADIUS pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
 ##
 priorityClassName: ""
@@ -248,7 +248,7 @@ priorityClassName: ""
 ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
 ##
 schedulerName: ""
-## @param podManagementPolicy podManagementPolicy to manage scaling operation of FreeRADIUS secondary pods
+## @param podManagementPolicy podManagementPolicy to manage scaling operation of FreeRADIUS pods
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
 ##
 podManagementPolicy: ""
@@ -271,19 +271,19 @@ containerPorts:
   coa: 3799
   radsec: 2083
   status: 18121
-## FreeRADIUS secondary Pod security context
+## FreeRADIUS Pod security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-## @param podSecurityContext.enabled Enable security context for FreeRADIUS secondary pods
+## @param podSecurityContext.enabled Enable security context for FreeRADIUS pods
 ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
 ##
 podSecurityContext:
   enabled: false
   fsGroup: 101
   runAsUser: 101
-## FreeRADIUS secondary container security context
+## FreeRADIUS container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-## @param containerSecurityContext.enabled FreeRADIUS secondary container securityContext
-## @param containerSecurityContext.runAsUser User ID for the FreeRADIUS secondary container
+## @param containerSecurityContext.enabled FreeRADIUS container securityContext
+## @param containerSecurityContext.runAsUser User ID for the FreeRADIUS container
 ## @param containerSecurityContext.runAsNonRoot Set Controller container's Security Context runAsNonRoot
 ##
 containerSecurityContext:
@@ -296,14 +296,14 @@ containerSecurityContext:
   runAsNonRoot: true
   privileged: true
 
-## FreeRADIUS secondary container's resource requests and limits
+## FreeRADIUS container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
 ## We usually recommend not to specify default resources and to leave this as a conscious
 ## choice for the user. This also increases chances charts run on environments with little
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
 ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-## @param resources.limits The resources limits for FreeRADIUS secondary containers
-## @param resources.requests The requested resources for FreeRADIUS secondary containers
+## @param resources.limits The resources limits for FreeRADIUS containers
+## @param resources.requests The requested resources for FreeRADIUS containers
 ##
 resources:
   ## Example:
@@ -316,7 +316,7 @@ resources:
   ##    cpu: 100m
   ##    memory: 256Mi
   requests: {}
-## Configure extra options for FreeRADIUS Secondary containers' liveness, readiness and startup probes
+## Configure extra options for FreeRADIUS containers' liveness, readiness and startup probes
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
 ## @param startupProbe.enabled Enable startupProbe
 ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
@@ -362,16 +362,16 @@ readinessProbe:
   timeoutSeconds: 1
   failureThreshold: 3
   successThreshold: 1
-## @param customStartupProbe Override default startup probe for FreeRADIUS secondary containers
+## @param customStartupProbe Override default startup probe for FreeRADIUS containers
 ##
 customStartupProbe: {}
-## @param customLivenessProbe Override default liveness probe for FreeRADIUS secondary containers
+## @param customLivenessProbe Override default liveness probe for FreeRADIUS containers
 ##
 customLivenessProbe: {}
-## @param customReadinessProbe Override default readiness probe for FreeRADIUS secondary containers
+## @param customReadinessProbe Override default readiness probe for FreeRADIUS containers
 ##
 customReadinessProbe: {}
-## @param startupWaitOptions Override default builtin startup wait check options for FreeRADIUS secondary containers
+## @param startupWaitOptions Override default builtin startup wait check options for FreeRADIUS containers
 ## `bitnami/mariadb` Docker image has built-in startup check mechanism,
 ## which periodically checks if FreeRADIUS service has started up and stops it
 ## if all checks have failed after X tries. Use these to control these checks.
@@ -382,30 +382,33 @@ customReadinessProbe: {}
 ##   waitTime: 2
 ##
 startupWaitOptions: {}
-## @param extraFlags FreeRADIUS secondary additional command line flags
+## @param extraFlags FreeRADIUS additional command line flags
 ## Can be used to specify command line flags, for example:
 ## E.g.
 ## extraFlags: "--max-connect-errors=1000 --max_connections=155"
 ##
 extraFlags: ""
-## @param extraEnvVars Extra environment variables to be set on FreeRADIUS secondary containers
+## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
 ## E.g.
 ## extraEnvVars:
 ##  - name: TZ
 ##    value: "Europe/Paris"
 ##
 extraEnvVars: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS secondary containers
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
 ##
 extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS secondary containers
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
 ##
 extraEnvVarsSecret: ""
-## Enable persistence using Persistent Volume Claims
+
+## @section Persistence Parameters
+
+## Persistence Parameters
 ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
 persistence:
-  ## @param persistence.enabled Enable persistence on FreeRADIUS secondary replicas using a `PersistentVolumeClaim`
+  ## @param persistence.enabled Enable persistence on FreeRADIUS replicas using a `PersistentVolumeClaim`
   ##
   enabled: false
     ## @param persistence.existingClaim Name of an existing `PersistentVolumeClaim` for FreeRADIUS primary replicas
@@ -415,7 +418,7 @@ persistence:
   ## @param persistence.subPath Subdirectory of the volume to mount at
   ##
   subPath: ""
-  ## @param persistence.storageClass FreeRADIUS secondary persistent volume storage Class
+  ## @param persistence.storageClass FreeRADIUS persistent volume storage Class
   ## If defined, storageClassName: <storageClass>
   ## If set to "-", storageClassName: "", which disables dynamic provisioning
   ## If undefined (the default) or set to null, no storageClassName spec is
@@ -423,14 +426,14 @@ persistence:
   ##   GKE, AWS & OpenStack)
   ##
   storageClass: ""
-  ## @param persistence.annotations FreeRADIUS secondary persistent volume claim annotations
+  ## @param persistence.annotations FreeRADIUS persistent volume claim annotations
   ##
   annotations: {}
-  ## @param persistence.accessModes FreeRADIUS secondary persistent volume access Modes
+  ## @param persistence.accessModes FreeRADIUS persistent volume access Modes
   ##
   accessModes:
     - ReadWriteOnce
-  ## @param persistence.size FreeRADIUS secondary persistent volume size
+  ## @param persistence.size FreeRADIUS persistent volume size
   ##
   size: 8Gi
   ## @param persistence.selector Selector to match an existing Persistent Volume
@@ -439,19 +442,70 @@ persistence:
   ##     app: my-app
   ##
   selector: {}
-## @param extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS secondary pod(s)
+## 'volumePermissions' init container parameters
+## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
+##   based on the podSecurityContext/containerSecurityContext parameters
+##
+volumePermissions:
+  ## @param volumePermissions.enabled Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
+  ##
+  enabled: false
+  ## Bitnami Shell image
+  ## ref: https://hub.docker.com/r/bitnami/bitnami-shell/tags/
+  ## @param volumePermissions.image.registry Bitnami Shell image registry
+  ## @param volumePermissions.image.repository Bitnami Shell image repository
+  ## @param volumePermissions.image.tag Bitnami Shell image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.pullPolicy Bitnami Shell image pull policy
+  ## @param volumePermissions.image.pullSecrets Bitnami Shell image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/bitnami-shell
+    tag: 11-debian-11-r0
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Init container's resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param volumePermissions.resources.limits The resources limits for the init container
+  ## @param volumePermissions.resources.requests The requested resources for the init container
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Init container Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
+  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
+  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
+  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
+  ##
+  securityContext:
+    runAsUser: 0
+
+## @param extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS pod(s)
 ##
 extraVolumes: []
-## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS secondary container(s)
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS container(s)
 ##
 extraVolumeMounts: []
-## @param initContainers Add additional init containers for the FreeRADIUS secondary pod(s)
+## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
 ##
 initContainers: []
-## @param sidecars Add additional sidecar containers for the FreeRADIUS secondary pod(s)
+## @param sidecars Add additional sidecar containers for the FreeRADIUS pod(s)
 ##
 sidecars: []
 
+## @section Traffic Exposure Parameters
+
+## FreeRADIUS service parameters
+##
 service:
   ## @param service.type FreeRADIUS Kubernetes service type
   ##
@@ -514,6 +568,117 @@ service:
   ##   clientIP:
   ##     timeoutSeconds: 300
   sessionAffinityConfig: {}
+## Configure the ingress resource that allows you to access the FreeRADIUS installation
+## ref: https://kubernetes.io/docs/user-guide/ingress/
+##
+ingress:
+  ## @param ingress.enabled Enable ingress record generation for FreeRADIUS
+  ##
+  enabled: false
+  ## @param ingress.pathType Ingress path type
+  ##
+  pathType: ImplementationSpecific
+  ## @param ingress.apiVersion Force Ingress API version (automatically detected if not set)
+  ##
+  apiVersion: ""
+  ## @param ingress.hostname Default host for the ingress record
+  ##
+  hostname: freeradius.local
+  ## @param ingress.path Default path for the ingress record
+  ## NOTE: You may need to set this to '/*' in order to use this with ALB ingress controllers
+  ##
+  path: /
+  ## @param ingress.annotations Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.
+  ## For a full list of possible ingress annotations, please see
+  ## ref: https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md
+  ## Use this parameter to set the required annotations for cert-manager, see
+  ## ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
+  ##
+  ## e.g:
+  ## annotations:
+  ##   kubernetes.io/ingress.class: nginx
+  ##   cert-manager.io/cluster-issuer: cluster-issuer-name
+  ##
+  annotations: {}
+  ## @param ingress.tls Enable TLS configuration for the host defined at `ingress.hostname` parameter
+  ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.ingress.hostname }}`
+  ## You can:
+  ##   - Use the `ingress.secrets` parameter to create this TLS secret
+  ##   - Rely on cert-manager to create it by setting the corresponding annotations
+  ##   - Rely on Helm to create self-signed certificates by setting `ingress.selfSigned=true`
+  ##
+  tls: false
+  ## DEPRECATED: Use ingress.annotations instead of ingress.certManager
+  ## certManager: false
+  ##
+
+  ## @param ingress.selfSigned Create a TLS secret for this ingress record using self-signed certificates generated by Helm
+  ##
+  selfSigned: false
+  ## @param ingress.extraHosts An array with additional hostname(s) to be covered with the ingress record
+  ## e.g:
+  ## extraHosts:
+  ##   - name: freeradius.local
+  ##     path: /
+  ##
+  extraHosts: []
+  ## @param ingress.extraPaths An array with additional arbitrary paths that may need to be added to the ingress under the main host
+  ## e.g:
+  ## extraPaths:
+  ## - path: /*
+  ##   backend:
+  ##     serviceName: ssl-redirect
+  ##     servicePort: use-annotation
+  ##
+  extraPaths: []
+  ## @param ingress.extraTls TLS configuration for additional hostname(s) to be covered with this ingress record
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+  ## e.g:
+  ## extraTls:
+  ## - hosts:
+  ##     - freeradius.local
+  ##   secretName: freeradius.local-tls
+  ##
+  extraTls: []
+  ## @param ingress.secrets Custom TLS certificates as secrets
+  ## NOTE: 'key' and 'certificate' are expected in PEM format
+  ## NOTE: 'name' should line up with a 'secretName' set further up
+  ## If it is not set and you're using cert-manager, this is unneeded, as it will create a secret for you with valid certificates
+  ## If it is not set and you're NOT using cert-manager either, self-signed certificates will be created valid for 365 days
+  ## It is also possible to create and manage the certificates outside of this helm chart
+  ## Please see README.md for more information
+  ## e.g:
+  ## secrets:
+  ##   - name: freeradius.local-tls
+  ##     key: |-
+  ##       -----BEGIN RSA PRIVATE KEY-----
+  ##       ...
+  ##       -----END RSA PRIVATE KEY-----
+  ##     certificate: |-
+  ##       -----BEGIN CERTIFICATE-----
+  ##       ...
+  ##       -----END CERTIFICATE-----
+  ##
+  secrets: []
+  ## @param ingress.ingressClassName IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)
+  ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
+  ## ref: https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/
+  ##
+  ingressClassName: ""
+  ## @param ingress.extraRules Additional rules to be covered with this ingress record
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-rules
+  ## e.g:
+  ## extraRules:
+  ## - host: example.local
+  ##     http:
+  ##       path: /
+  ##       backend:
+  ##         service:
+  ##           name: example-svc
+  ##           port:
+  ##             name: http
+  ##
+  extraRules: []
 
 ## @param revisionHistoryLimit Maximum number of revisions that will be maintained in the Deployment
 ##
