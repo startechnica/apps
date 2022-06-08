@@ -9,8 +9,7 @@ affinity:
 
 ingress:
   enabled: true
-  hosts:
-    - adminer.dxm.nainggolan.id
+  hostname: adminer.dxm.nainggolan.id
 
 istio:
   enabled: true
