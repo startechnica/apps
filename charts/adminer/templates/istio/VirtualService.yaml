@@ -1,7 +1,6 @@
 {{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" }}
 {{- if and .Values.istio.enabled .Values.istio.virtualService.enabled }}
 {{- $gateway := printf "%s" (include "common.names.fullname" $) }}
-{{- $destHost := printf "%s.%s.svc.%s" (include "common.names.fullname" $) (include "common.names.namespace" $) .Values.istio.clusterName }}
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -16,7 +15,7 @@ metadata:
   {{- end }}
 spec:
   gateways:
-    - {{ $gateway }}
+    - {{ include "common.names.fullname" . }}
   {{- if .Values.ingress.hostname }}
   hosts:
     - {{ .Values.ingress.hostname | quote }}
@@ -26,7 +25,7 @@ spec:
   http:
     - route:
         - destination:
-            host: {{ $destHost }}
+            host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" $) (include "common.names.namespace" $) .Values.istio.clusterName }}
             port:
               number: {{ .Values.service.ports.http }}
   {{- end }}
