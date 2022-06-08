@@ -508,4 +508,4 @@ istio:
     enabled: true
     existingVirtualService: ~
 
-organization: Adminer
+organization: Startechnica
