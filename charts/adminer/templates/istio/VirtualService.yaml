@@ -19,7 +19,7 @@ spec:
     - {{- $gateway }}
   {{- if .Values.ingress.hostname }}
   hosts:
-    - {{ .Values.ingress.hostname }}
+    - sedap.sekejap.com
   http:
     - route:
         - destination:
