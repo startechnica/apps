@@ -90,9 +90,26 @@ image:
   ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
-## @param architecture Adminer architecture (`standalone` or `replication`)
-##
-architecture: standalone
+
+auth:
+  ## @param auth.existingSecret An already existing secret containing auth info
+  ## e.g:
+  ## existingSecret:
+  ##   name: mySecret
+  ##   keyMapping:
+  ##     client-user-password: myPasswordKey
+  ##
+  existingSecret: ""
+  ## @param auth.existingSecretPerPassword Override `existingSecret` and other secret values
+  ## e.g:
+  ## existingSecretPerPassword:
+  ##   keyMapping:
+  ##     clientUserPassword: ADMINER_ADMIN_PASSWORD
+  ##     databasePassword: password
+  ##   databasePassword:
+  ##     name: adminer.pocwatt-adminer-cluster.credentials
+  ##
+  existingSecretPerPassword: {}
 
 configuration: ""
 ## @param existingConfigmap Name of existing ConfigMap with Adminer configuration
@@ -122,7 +139,6 @@ config:
   plugins: ""
   design: "pepa-linha"
   externalserver: ""
-  port: 8080
   base_url: ""
 
 service:
