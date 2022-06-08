@@ -23,7 +23,7 @@ spec:
   http:
     - route:
         - destination:
-            host: {{- $destHost }}
+            host: adminer-test.adminer-test.svc.cluster.local
             port:
               number: 8080
   {{- end }}
