@@ -501,8 +501,10 @@ istio:
       - name: https-adminer
         port: 443
         protocol: HTTPS
+    existingGateway: ~
 
   virtualService:
     enabled: true
+    existingVirtualService: ~
 
 organization: Adminer
