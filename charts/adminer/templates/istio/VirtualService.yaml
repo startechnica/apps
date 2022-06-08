@@ -25,7 +25,7 @@ spec:
         - destination:
             host: adminer-test.adminer-test.svc.cluster.local
             port:
-              number: 8080
+              number: {{- include "common.ingress.backend" (dict "serviceName" (include "common.names.fullname" $) "servicePort" "http" "context" $) | nindent 14 }}
   {{- end }}
 {{- end }}
 {{- end }}
