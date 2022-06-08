@@ -264,12 +264,12 @@ affinity: {}
 
 istio:
   enabled: false
-  namespace: istio-system
-  hosts:
-    - "adminer.app.example.id"
+  clusterName: cluster.local
+  ingressGateway: ingressgateway
+  ingressNamespace: istio-ingress
 
   certificate:
-    create: true
+    create: false
     issuerRef:
       group: cert-manager.io
       kind: ClusterIssuer
@@ -278,18 +278,13 @@ istio:
 
   gateway:
     enabled: true
-    ingressGateway: ingressgateway
     servers:
-      - port:
-          number: 80
-          name: http-adminer
-          protocol: HTTP
-      - port:
-          number: 443
-          name: https-adminer
-          protocol: HTTPS
-        tls:
-          mode: SIMPLE
+      - name: http-adminer
+        port: 80
+        protocol: HTTP
+      - name: https-adminer
+        port: 443
+        protocol: HTTPS
 
   virtualService:
     enabled: true

@@ -13,7 +13,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  secretName: {{ include "istioCertificateSecret" . }}
+  secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
   issuerRef:
     group: {{ .Values.istio.certificate.issuerRef.group }}
     kind: {{ .Values.istio.certificate.issuerRef.kind }}
@@ -35,9 +35,10 @@ spec:
     provinces:
       - Yggdrasil
   dnsNames:
-  {{- if .Values.istio.hosts }}
-    {{- toYaml .Values.istio.hosts | nindent 4 }}
-  {{- end }}
+    - {{ .Values.ingress.hostname | quote }}
+    {{- range $.Values.ingress.extraHosts }}
+    - {{ .name | quote }}
+    {{- end }}
 {{- end }}
 {{- end }}
 ---

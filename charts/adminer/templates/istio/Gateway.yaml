@@ -14,26 +14,22 @@ metadata:
   {{- end }}
 spec:
   selector:
-    istio: {{ .Values.istio.gateway.ingressGateway }}
+    istio: {{ .Values.istio.ingressGateway }}
   servers:
-  {{- range .Values.istio.gateway.servers }}
+    {{- range .Values.istio.gateway.servers }}
     - port:
-        {{- with .port }}
-        number: {{ .number }}
         name: {{ .name }}
+        number: {{ .number }}
         protocol: {{ .protocol }}
-        {{- end }}
       hosts:
-        {{- range $.Values.istio.hosts }}
-        - {{ . | quote }}
-        {{- end }}    
-      {{- if .tls }}
-      tls:
-        {{- with .tls }}
-        credentialName: {{ include "istioCertificateSecret" $ }}
-        mode: {{ .mode }}
+        {{- range $.Values.ingress.extraHosts }}
+        - {{ .name | quote }}
         {{- end }}
+      {{- if and (eq .protocol "HTTPS") (or $.Values.ingress.tls $.Values.ingress.extraTls) }}
+      tls:
+        credentialName: {{ printf "%s-tls" $.Values.ingress.hostname }}
+        mode: SIMPLE
       {{- end }}
-  {{- end }}
+    {{- end }}
 {{- end }}
 {{- end }}
