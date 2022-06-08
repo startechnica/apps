@@ -8,9 +8,9 @@ metadata:
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
-  {{- if or .Values.ingress.annotations .Values.commonAnnotations .Values.ingress.certManager }}
+  {{- if or .Values.ingress.annotations .Values.commonAnnotations .Values.ingress.certManager.create }}
   annotations:
-    {{- if .Values.ingress.certManager }}
+    {{- if .Values.ingress.certManager.tlsAcme }}
     kubernetes.io/tls-acme: "true"
     {{- end }}
     {{- if .Values.ingress.annotations }}

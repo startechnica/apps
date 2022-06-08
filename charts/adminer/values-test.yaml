@@ -13,11 +13,12 @@ ingress:
   extraHosts:
     - name: macam.macam.com
     - name: macam.macam.id
+  tls: true
+  selfSigned: true
 
 istio:
   enabled: true
   ingressGateway: ingress-app
-
 
 tolerations:
   - effect: NoSchedule
