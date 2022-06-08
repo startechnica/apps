@@ -205,43 +205,6 @@ ingress:
   hosts: []
   path: /
 
-# kubectl create secret generic ca --from-file=ca.pem
-# cat > login-ssl.php << EOF
-# <?php
-# require_once('plugins/login-ssl.php');
-# return new AdminerLoginSsl(array("ca" => "/secrets/ca.pem"));
-# EOF
-# kubectl create configmap plugins-enabled --from-file=login-ssl.php
-# volumeMounts:
-#   - name: ca
-#     mountPath: "/secrets/"
-#     readOnly: true
-#   - name: plugins-enabled
-#     mountPath: "/var/www/html/plugins-enabled/"
-#     readOnly: true
-
-# volumes:
-#   - name: ca
-#     secret:
-#       secretName: ca
-#   - name: plugins-enabled
-#     configMap:
-#       name: plugins-enabled
-
-# If the adminer stops heartbeating for 5 minutes (30*20s) kill the
-# adminer and let Kubernetes restart it
-livenessProbe:
-  initialDelaySeconds: 15
-  timeoutSeconds: 30
-  failureThreshold: 20
-  periodSeconds: 30
-
-readinessProbe:
-  initialDelaySeconds: 15
-  timeoutSeconds: 30
-  failureThreshold: 20
-  periodSeconds: 30
-
 ## @param containerPorts.http Adminer HTTP container port
 ##
 containerPorts:
@@ -267,13 +230,6 @@ containerSecurityContext:
   runAsUser: 101
   runAsNonRoot: true
 
-resources:
-  limits:
-    cpu: 2000m
-    memory: 1Gi
-  requests:
-    cpu: 50m
-    memory: 64Mi
 #resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -285,6 +241,99 @@ resources:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+resources:
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+## Configure extra options for FreeRADIUS containers' liveness, readiness and startup probes
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
+## @param startupProbe.enabled Enable startupProbe
+## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+## @param startupProbe.periodSeconds Period seconds for startupProbe
+## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
+## @param startupProbe.failureThreshold Failure threshold for startupProbe
+## @param startupProbe.successThreshold Success threshold for startupProbe
+##
+startupProbe:
+  enabled: false
+  initialDelaySeconds: 120
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+## Configure extra options for liveness probe
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+## @param livenessProbe.enabled Enable livenessProbe
+## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+## @param livenessProbe.periodSeconds Period seconds for livenessProbe
+## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
+## @param livenessProbe.successThreshold Success threshold for livenessProbe
+##
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 120
+  periodSeconds: 60
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+## @param readinessProbe.enabled Enable readinessProbe
+## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+## @param readinessProbe.periodSeconds Period seconds for readinessProbe
+## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
+## @param readinessProbe.successThreshold Success threshold for readinessProbe
+##
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+## @param customStartupProbe Override default startup probe for FreeRADIUS containers
+##
+customStartupProbe: {}
+## @param customLivenessProbe Override default liveness probe for FreeRADIUS containers
+##
+customLivenessProbe: {}
+## @param customReadinessProbe Override default readiness probe for FreeRADIUS containers
+##
+customReadinessProbe: {}
+## @param startupWaitOptions Override default builtin startup wait check options for FreeRADIUS containers
+## `bitnami/mariadb` Docker image has built-in startup check mechanism,
+## which periodically checks if FreeRADIUS service has started up and stops it
+## if all checks have failed after X tries. Use these to control these checks.
+## ref: https://github.com/bitnami/bitnami-docker-mariadb/pull/240
+## Example (with default options):
+## startupWaitOptions:
+##   retries: 300
+##   waitTime: 2
+##
+startupWaitOptions: {}
+## @param extraFlags FreeRADIUS additional command line flags
+## Can be used to specify command line flags, for example:
+## E.g.
+## extraFlags: "--max-connect-errors=1000 --max_connections=155"
+##
+extraFlags: ""
+## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
+## E.g.
+## extraEnvVars:
+##  - name: TZ
+##    value: "Europe/Paris"
+##
+extraEnvVars: []
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
+##
+extraEnvVarsCM: ""
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
+##
+extraEnvVarsSecret: ""
+
 
 ## @section RBAC parameter
 #
