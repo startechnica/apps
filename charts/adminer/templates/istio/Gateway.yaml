@@ -22,7 +22,7 @@ spec:
         number: {{ .port }}
         protocol: {{ .protocol }}
       hosts:
-        - {{ .Values.ingress.hostname | quote }}
+        - {{ $.Values.ingress.hostname | quote }}
         {{- range $.Values.ingress.extraHosts }}
         - {{ .name | quote }}
         {{- end }}
