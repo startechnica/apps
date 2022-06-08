@@ -23,9 +23,9 @@ spec:
   http:
     - route:
         - destination:
-            host: adminer-test.adminer-test.svc.cluster.local
+            host: {{ $destHost }}
             port:
-              number: {{- include "common.ingress.backend" (dict "serviceName" (include "common.names.fullname" $) "servicePort" "http" "context" $) | nindent 14 }}
+              number: {{ .Values.service.ports.http }}
   {{- end }}
 {{- end }}
 {{- end }}
