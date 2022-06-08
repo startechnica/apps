@@ -11,8 +11,8 @@ ingress:
   enabled: true
   hostname: adminer.dxm.nainggolan.id
   extraHosts:
-    - macam.macam.com
-    - macam.macam.id
+    - name: macam.macam.com
+    - name: macam.macam.id
 
 istio:
   enabled: true
