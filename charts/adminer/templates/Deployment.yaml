@@ -120,7 +120,7 @@ spec:
           livenessProbe:
             httpGet:
               path: {{ if .Values.config.base_url }}{{- with urlParse (tpl .Values.config.base_url .) }}{{ .path }}{{ end }}{{ end }}/health
-              port: {{ .Values.config.port }}
+              port: {{ .Values.containerPorts.http }}
               {{- if .Values.config.base_url}}
               httpHeaders:
                 - name: Host
@@ -138,7 +138,7 @@ spec:
           readinessProbe:
             httpGet:
               path: {{ if .Values.config.base_url }}{{- with urlParse (tpl .Values.config.base_url .) }}{{ .path }}{{ end }}{{ end }}/health
-              port: {{ .Values.config.port }}
+              port: {{ .Values.containerPorts.http }}
               {{- if .Values.config.base_url}}
               httpHeaders:
                 - name: Host
