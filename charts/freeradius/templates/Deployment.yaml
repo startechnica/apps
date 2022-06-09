@@ -215,6 +215,9 @@ spec:
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
+            {{- else }}
+            - name: raddb
+              mountPath: /etc/freeradius
             {{- end }}
             {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
@@ -264,6 +267,9 @@ spec:
         - name: raddb
           persistentVolumeClaim:
             claimName: {{ tpl .Values.persistence.existingClaim . }}
+        {{- else }}
+        - name: raddb
+          emptyDir: {}
         {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
