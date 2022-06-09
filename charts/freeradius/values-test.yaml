@@ -18,7 +18,8 @@ modsEnabled:
     dialect: mysql
 
 externalDatabase:
-  host: mariadb-infra-mariadb-galera.mariadb-infra.svc
+  # host: mariadb-infra-mariadb-galera.mariadb-infra.svc
+  host: mariadb.mariadb.svc
   port: 3306
   user: radius_user
   database: radiusdb
