@@ -209,3 +209,12 @@ freeradius: tls.enabled
     {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/* Return the FreeRADIUS PVC name. */}}
+{{- define "freeradius.claimName" -}}
+{{- if .Values.persistence.existingClaim }}
+  {{- printf "%s" (tpl .Values.persistence.existingClaim $) -}}
+{{- else -}}
+  {{- printf "%s" (include "common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
