@@ -141,6 +141,10 @@ config:
   externalserver: ""
   base_url: ""
 
+## @section Traffic Exposure Parameters
+
+## Adminer service parameters
+##
 service:
   ## @param service.type Adminer Kubernetes service type
   ##
@@ -350,12 +354,12 @@ containerSecurityContext:
   #   memory: 128Mi
 resources:
   limits:
-    cpu: 2000m
+    cpu: 1000m
     memory: 1Gi
   requests:
     cpu: 50m
     memory: 64Mi
-## Configure extra options for FreeRADIUS containers' liveness, readiness and startup probes
+## Configure extra options for Adminer containers' liveness, readiness and startup probes
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
 ## @param startupProbe.enabled Enable startupProbe
 ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
@@ -401,18 +405,18 @@ readinessProbe:
   timeoutSeconds: 1
   failureThreshold: 3
   successThreshold: 1
-## @param customStartupProbe Override default startup probe for FreeRADIUS containers
+## @param customStartupProbe Override default startup probe for Adminer containers
 ##
 customStartupProbe: {}
-## @param customLivenessProbe Override default liveness probe for FreeRADIUS containers
+## @param customLivenessProbe Override default liveness probe for Adminer containers
 ##
 customLivenessProbe: {}
-## @param customReadinessProbe Override default readiness probe for FreeRADIUS containers
+## @param customReadinessProbe Override default readiness probe for Adminer containers
 ##
 customReadinessProbe: {}
-## @param startupWaitOptions Override default builtin startup wait check options for FreeRADIUS containers
+## @param startupWaitOptions Override default builtin startup wait check options for Adminer containers
 ## `bitnami/mariadb` Docker image has built-in startup check mechanism,
-## which periodically checks if FreeRADIUS service has started up and stops it
+## which periodically checks if Adminer service has started up and stops it
 ## if all checks have failed after X tries. Use these to control these checks.
 ## ref: https://github.com/bitnami/bitnami-docker-mariadb/pull/240
 ## Example (with default options):
@@ -421,26 +425,48 @@ customReadinessProbe: {}
 ##   waitTime: 2
 ##
 startupWaitOptions: {}
-## @param extraFlags FreeRADIUS additional command line flags
+## @param extraFlags Adminer additional command line flags
 ## Can be used to specify command line flags, for example:
 ## E.g.
 ## extraFlags: "--max-connect-errors=1000 --max_connections=155"
 ##
 extraFlags: ""
-## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
+## @param extraEnvVars Extra environment variables to be set on Adminer containers
 ## E.g.
 ## extraEnvVars:
 ##  - name: TZ
 ##    value: "Europe/Paris"
 ##
 extraEnvVars: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Adminer containers
 ##
 extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Adminer containers
 ##
 extraEnvVarsSecret: ""
 
+## @param affinity Affinity for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+##
+affinity: {}
+## @param nodeSelector Node labels for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+## @param tolerations Tolerations for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+## @param topologySpreadConstraints Topology Spread Constraints for Adminer pods assignment
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+## E.g.
+## topologySpreadConstraints:
+##   - maxSkew: 1
+##     topologyKey: topology.kubernetes.io/zone
+##     whenUnsatisfiable: DoNotSchedule
+##
+topologySpreadConstraints: {}
 
 ## @section RBAC parameter
 #
@@ -481,12 +507,6 @@ rbac:
   ##
   rules: []
 
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
-
 istio:
   enabled: false
   clusterName: cluster.local
@@ -508,4 +528,4 @@ istio:
     enabled: true
     existingVirtualService: ~
 
-organization: Adminer
+organization: Startechnica

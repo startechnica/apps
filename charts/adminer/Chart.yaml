@@ -13,7 +13,7 @@ description: Adminer is a full-featured database management tool written in PHP.
   is available for MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB,
   Elasticsearch and MongoDB
 home: https://github.com/startechnica/apps/tree/main/charts/adminer
-icon: https://raw.githubusercontent.com/Kong/docker-official-docs/master/adminer/logo.png
+icon: https://www.adminer.org/static/images/logo.png
 keywords:
   - adminer
   - postgres
@@ -31,4 +31,4 @@ name: adminer
 sources:
   - https://www.adminer.org
 type: application
-version: 0.1.2
+version: 0.1.3
