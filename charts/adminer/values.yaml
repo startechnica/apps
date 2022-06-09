@@ -354,7 +354,7 @@ containerSecurityContext:
   #   memory: 128Mi
 resources:
   limits:
-    cpu: 2000m
+    cpu: 1000m
     memory: 1Gi
   requests:
     cpu: 50m
@@ -445,6 +445,29 @@ extraEnvVarsCM: ""
 ##
 extraEnvVarsSecret: ""
 
+## @param affinity Affinity for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+##
+affinity: {}
+## @param nodeSelector Node labels for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+## @param tolerations Tolerations for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+## @param topologySpreadConstraints Topology Spread Constraints for Adminer pods assignment
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+## E.g.
+## topologySpreadConstraints:
+##   - maxSkew: 1
+##     topologyKey: topology.kubernetes.io/zone
+##     whenUnsatisfiable: DoNotSchedule
+##
+topologySpreadConstraints: {}
+
 ## @section RBAC parameter
 #
 
@@ -483,12 +506,6 @@ rbac:
   ##       - list
   ##
   rules: []
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
 
 istio:
   enabled: false
