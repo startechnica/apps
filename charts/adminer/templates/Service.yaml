@@ -47,7 +47,7 @@ spec:
   ports:
     - name: http
       port: {{ .Values.service.ports.http }}
-      protocol: UDP
+      protocol: TCP
       targetPort: {{ .Values.containerPorts.http }}
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (coalesce .Values.service.nodePorts.http .Values.service.nodePort)) }}
       nodePort: {{ coalesce .Values.service.nodePorts.http .Values.service.nodePort }}
