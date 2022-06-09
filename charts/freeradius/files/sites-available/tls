@@ -177,7 +177,7 @@ listen {
 				#
 				#       openssl dhparam -out certs/dh 1024
 				#
-				dh_file = ${certdir}/dh
+				# dh_file = ${certdir}/dh
 
 				#
 				#  If your system doesn't have /dev/urandom,
@@ -188,7 +188,7 @@ listen {
 				#  write to files in its configuration
 				#  directory.
 				#
-#               random_file = /dev/urandom
+				# random_file = /dev/urandom
 
 				#
 				#  The default fragment size is 1K.
@@ -282,8 +282,7 @@ listen {
 				tls_max_version = "1.3"
 
 				#
-				#  Session resumption / fast reauthentication
-				#  cache.
+				#  Session resumption / fast reauthentication cache.
 				#
 				#  The cache contains the following information:
 				#
@@ -304,8 +303,7 @@ listen {
 				#  copied from the cache, and placed into the
 				#  reply list.
 				#
-				#  You probably also want "use_tunneled_reply = yes"
-				#  when using fast session resumption.
+				#  You probably also want "use_tunneled_reply = yes" when using fast session resumption.
 				#
 				cache {
 					  #
@@ -420,30 +418,20 @@ clients radsec {
 		client 127.0.0.1 {
 				ipaddr = 127.0.0.1
 
-				#
 				#  Ensure that this client is TLS *only*.
-				#
 				proto = tls
 
-				#
 				#  TCP clients can have any shared secret.
-				#
-				#  TLS clients MUST have the shared secret
-				#  set to "radsec".  Or, for "proto = tls",
-				#  you can omit the secret, and it will
+				#  TLS clients MUST have the shared secret set to "radsec".  Or, for "proto = tls", you can omit the secret, and it will
 				#  automatically be set to "radsec".
-				#
-				secret = radsec
+				# secret = radsec
+				secret = $ENV{FREERADIUS_CLIENTS_SECRET}
 
-				#
 				#  You can also use a "limit" section here.
 				#  See raddb/clients.conf for examples.
 				#
-				#  Note that BOTH limits are applied.  You
-				#  should therefore set the "listen" limits
-				#  higher than the ones for each individual
+				#  Note that BOTH limits are applied.  You should therefore set the "listen" limits higher than the ones for each individual
 				#  client.
-				#
 		}
 }
 
@@ -451,14 +439,10 @@ clients radsec {
 #
 #       %{proxy_listen: ... }
 #
-#  The contents of the expansion are the same as described
-#  above with the %{listen: ... } expansion, and have similar
-#  meanings.  "client" in this case is the proxy (this system)
+#  The contents of the expansion are the same as described above with the %{listen: ... } expansion, and have similar meanings.  "client" in this case is the proxy (this system)
 #  and "server" is the remote system (home server).
 #
-#  Note that the %{proxy_listen: ... } parameters are available
-#  only AFTER the connection has been made to the home server.
-#
+#  Note that the %{proxy_listen: ... } parameters are available only AFTER the connection has been made to the home server.
 home_server tls {
 		ipaddr = 127.0.0.1
 		port = $ENV{FREERADIUS_SITES_TLS_PORT}
