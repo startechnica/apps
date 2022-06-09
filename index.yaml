@@ -5,6 +5,44 @@ entries:
       category: DatabaseManagement
     apiVersion: v2
     appVersion: 4.8.1
+    created: "2022-06-09T08:23:07.020937296Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    description: Adminer is a full-featured database management tool written in PHP.
+      Conversely to phpMyAdmin, it consist of a single file ready to deploy to the
+      target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite,
+      MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
+    digest: 821c5b5ec8cd064b064d530bd3d38cc762b4c924c6d38920a25ad59a3bdeb877
+    home: https://github.com/startechnica/apps/tree/main/charts/adminer
+    icon: https://www.adminer.org/static/images/logo.png
+    keywords:
+    - adminer
+    - postgres
+    - mysql
+    - sqlite
+    - elasticsearch
+    - mongodb
+    - database
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: adminer
+    sources:
+    - https://www.adminer.org
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/adminer-0.1.3/adminer-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      category: DatabaseManagement
+    apiVersion: v2
+    appVersion: 4.8.1
     created: "2022-06-08T12:07:50.735583034Z"
     dependencies:
     - name: common
@@ -407,4 +445,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-08T12:07:50.855650431Z"
+generated: "2022-06-09T08:23:07.021181996Z"
