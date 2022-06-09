@@ -3,6 +3,10 @@
 # #   repository: truecharts/freeradius
 #   # tag: "3.2.0"
 
+persistence:
+  enabled: true
+  storageClass: jiva-noreplica
+
 service:
   type: LoadBalancer
   externalTrafficPolicy: Local
