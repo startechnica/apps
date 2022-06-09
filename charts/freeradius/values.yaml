@@ -287,13 +287,12 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
-  allowPrivilegeEscalation: true
+  # allowPrivilegeEscalation: true
   capabilities:
     add:
       - SYS_PTRACE
   runAsUser: 101
   runAsNonRoot: true
-  privileged: true
 
 ## FreeRADIUS container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
