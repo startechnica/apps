@@ -19,7 +19,7 @@ modsEnabled:
 
 externalDatabase:
   # host: mariadb-infra-mariadb-galera.mariadb-infra.svc
-  host: mariadb.mariadb.svc
+  host: mariadb-primary.mariadb.svc
   port: 3306
   user: radius_user
   database: radiusdb
