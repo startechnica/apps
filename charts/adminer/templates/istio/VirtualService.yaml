@@ -1,6 +1,6 @@
 {{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" }}
 {{- if and .Values.istio.enabled .Values.istio.virtualService.enabled (not .Values.istio.virtualService.existingVirtualService) }}
-apiVersion: networking.istio.io/v1beta1
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: VirtualService
 metadata:
   name: {{ include "common.names.fullname" . }}
