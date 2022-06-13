@@ -31,6 +31,12 @@ fullnameOverride: ""
 ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
 ##
 hostAliases: []
+## @param hostNetwork Specify if host network should be enabled for Multus CNI pod
+##
+hostNetwork: true
+## @param hostIPC Specify if host IPC should be enabled for Multus CNI pod
+##
+hostIPC: false
 ## @param commonLabels Labels to add to all deployed objects
 ##
 commonLabels: {}
@@ -90,18 +96,6 @@ image:
   ##
   debug: false
 
-## Pods Service Account
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
-## @param serviceAccount.create Specify whether a ServiceAccount should be created
-## @param serviceAccount.name Name of the service account to use. If not set and create is true, a name is generated using the fullname template.
-## @param serviceAccount.automountServiceAccountToken Automount service account token for the server service account
-## @param serviceAccount.annotations Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
-##
-serviceAccount:
-  create: true
-  name: ""
-  automountServiceAccountToken: true
-  annotations: {}
 ## @param command Override default container command (useful when using custom images)
 ##
 command: []
@@ -121,13 +115,46 @@ extraEnvVarsCM: ""
 ## @param extraEnvVarsSecret Secret containing extra env vars to configure Multus  replicas
 ##
 extraEnvVarsSecret: ""
+
+## @section RBAC parameter
+#
+
+## Specifies whether a ServiceAccount should be created
+##
+serviceAccount:
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Adminer pods
+  ##
+  create: true
+  ## @param serviceAccount.name Name of the created ServiceAccount
+  ## If not set and create is true, a name is generated using the fullname template
+  ##
+  name: ""
+  ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+  ##
+  automountServiceAccountToken: false
+  ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
+  ##
+  annotations: {}
 ## Role Based Access
 ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
 ##
 rbac:
   ## @param rbac.create Specify whether RBAC resources should be created and used
   ##
-  create: true
+  create: false
+  ## @param rbac.rules Custom RBAC rules
+  ## Example:
+  ## rules:
+  ##   - apiGroups:
+  ##       - ""
+  ##     resources:
+  ##       - pods
+  ##     verbs:
+  ##       - get
+  ##       - list
+  ##
+  rules: []
+
 ## Pod Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 ## @param podSecurityContext.enabled Enable security context
