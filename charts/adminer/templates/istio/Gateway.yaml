@@ -1,6 +1,6 @@
-{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" }}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
 {{- if and .Values.istio.enabled .Values.istio.gateway.enabled }}
-apiVersion: networking.istio.io/v1beta1
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:
   name: {{ include "common.names.fullname" . }}
