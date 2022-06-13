@@ -46,9 +46,11 @@ spec:
             - name: config
               mountPath: /etc/vmware-tools/tools.conf
               subPath: tools.conf
+            - name: adjtime
+              mountPath: /etc/adjtime
+              readOnly: true
             - name: localtime
               mountPath: /etc/localtime
-              readOnly: true
             - name: sysroot
               mountPath: /sysroot
               readOnly: true
@@ -59,9 +61,9 @@ spec:
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
-      hostIPC: true
-      hostNetwork: true
-      hostPID: true
+      hostIPC: {{ .Values.hostIPC }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      hostPID: {{ .Values.hostPID }}
       {{- include "open-vm-tools.imagePullSecrets" . | nindent 6 }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- if .Values.nodeSelector }}
@@ -75,6 +77,9 @@ spec:
         - name: config
           configMap:
             name: {{ printf "%s-config" (include "common.names.fullname" .) }}
+        - name: adjtime
+          hostPath:
+            path: /etc/adjtime
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -88,6 +93,7 @@ spec:
         - name: var-lib-sss-pipes
           hostPath:
             path: /var/lib/sss/pipes
+            type: DirectoryOrCreate
   updateStrategy:
     type: {{ .Values.updateStrategy.type }}
     {{- if (eq "Recreate" .Values.updateStrategy.type) }}

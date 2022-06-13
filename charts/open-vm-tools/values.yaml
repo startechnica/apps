@@ -31,6 +31,15 @@ fullnameOverride: ""
 ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
 ##
 hostAliases: []
+## @param hostIPC Specify if host IPC should be enabled for open-vm-tools pod
+##
+hostIPC: true
+## @param hostNetwork Specify if host network should be enabled for open-vm-tools pod
+##
+hostNetwork: true
+## @param hostPID Specify if host PID should be enabled for open-vm-tools pod
+##
+hostPID: true
 ## @param commonLabels Labels to add to all deployed objects
 ##
 commonLabels: {}
