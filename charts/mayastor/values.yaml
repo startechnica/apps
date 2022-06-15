@@ -59,6 +59,9 @@ diagnosticMode:
   ##
   args:
     - infinity
+  ## @param diagnosticMode.environment
+  ##
+  environment: development
 
 ## @section Mayastor common parameters
 
@@ -602,6 +605,10 @@ mcpCore:
 
 mcpRest:
   enabled: true
+  imageDev:
+    registry: docker.io
+    repository: mayadata/mayastor-api-rest
+    tag: develop
   ## Mayastor Control Plane Rest image
   ## ref: https://hub.docker.com/r/mayadata/mcp-rest/tags
   ## @param image.registry Mayastor Control Plane Rest image registry
