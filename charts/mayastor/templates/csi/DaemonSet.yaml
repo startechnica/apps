@@ -116,8 +116,9 @@ spec:
             mountPath: /var/lib/kubelet
             mountPropagation: "Bidirectional"
       - name: csi-driver-registrar
-        # image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
-        image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
+        # image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
+        image: {{ include "mayastor.csiNode.driverRegistrar.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         args:
           - "--csi-address=$(CSI_SOCKET_ADDRESS)"
           - "--kubelet-registration-path=/var/lib/kubelet/plugins/mayastor.openebs.io/csi.sock"

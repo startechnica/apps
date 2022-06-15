@@ -364,6 +364,12 @@ csi:
     ##
     pullSecrets: []
 
+  driverRegistrar:
+    image:
+      registry: quay.io
+      repository: k8scsi/csi-node-driver-registrar
+      tag: v2.1.0
+
   nvme:
     # nvme_core module io timeout in seconds
     io_timeout: "30"
@@ -398,6 +404,25 @@ csiController:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
+
+  attacher:
+    image:
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-attacher
+      tag: v3.4.0
+
+  livenessprobe:
+    image:
+      registry: k8s.gcr.io
+      repository: sig-storage/livenessprobe
+      tag: v2.6.0
+
+  provisioner:
+    image:
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-provisioner
+      tag: v3.1.0
+
 
 etcd:
   enabled: true

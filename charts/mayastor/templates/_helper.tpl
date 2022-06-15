@@ -12,13 +12,33 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Return the proper Mayastor CSI image name */}}
+{{/* Return the proper Mayastor CSI Node image name */}}
 {{- define "mayastor.csi.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csi.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Return the proper Mayastor CSI image name */}}
+{{/* Return the proper Mayastor CSI Node image name */}}
+{{- define "mayastor.csiNode.driverRegistrar.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csi.driverRegistrar.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor CSI Controller image name */}}
 {{- define "mayastor.csiController.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor CSI Controller Attacher image name */}}
+{{- define "mayastor.csiController.attacher.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor CSI Controller Livenessprobe image name */}}
+{{- define "mayastor.csiController.livenessprobe.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor CSI Controller Provisioner image name */}}
+{{- define "mayastor.csiController.provisioner.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
 {{- end -}}
 
