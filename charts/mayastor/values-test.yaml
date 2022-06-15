@@ -1,0 +1,13 @@
+
+clusterDomain: nebula.mci.net.id
+
+etcd:
+  clusterDomain: nebula.mci.net.id
+  replicaCount: 3
+  persistence:
+    enabled: true
+    storageClass: openebs-hostpath
+
+nats:
+  clusterDomain: nebula.mci.net.id
+  replicaCount: 3
