@@ -527,22 +527,23 @@ etcd:
     ##
     # name: {{ include "mayastor.serviceAccountName" $ }}
     name: mayastor
-
   ## Init containers parameters:
   ## volumePermissions: Change the owner and group of the persistent volume mountpoint to runAsUser:fsGroup values from the securityContext section.
   ##
   volumePermissions:
     enabled: true
-
   ## Set to true if you would like to see extra information on logs
   ##
   debug: false
-
   ## Pod anti-affinity preset
   ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   ## Allowed values: soft, hard
   ##
   podAntiAffinityPreset: "hard"
+    # etcd service parameters defines how the etcd service is exposed
+  service:
+    # etcd client port
+    port: 2379
 
 nats:
   enabled: false
