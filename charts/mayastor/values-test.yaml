@@ -44,3 +44,6 @@ mayastorPools:
     device: /dev/sdb
   - node: verus-lin-k8w.jkt2.mci.net.id
     device: /dev/sdb
+
+podAnnotations:
+  v1.multus-cni.io/default-network: kube-public/calico-ipv4-only
