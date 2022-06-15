@@ -57,7 +57,11 @@ spec:
         command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
         {{- else }}
         command:
+          {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
+          - csi-node
+          {{- else -}}
           - mayastor-csi
+          {{- end -}}
         {{- end }}
         {{- if .Values.diagnosticMode.enabled }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
