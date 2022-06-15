@@ -460,6 +460,10 @@ etcd:
   clusterDomain: cluster.local
   podLabels:
       app.kubernetes.io/component: etcd
+  client:
+    secureTransport: false
+  peer:
+    secureTransport: false
   ## Authentication parameters
   ##
   auth:
