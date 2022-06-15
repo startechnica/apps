@@ -80,8 +80,8 @@ spec:
           args:
             # - "-smayastor-etcd"
             # - "-nmayastor-nats"
-            - "--nats nats://mayastor-nats:4222"
-            - "--store http://mayastor-etcd:2379"
+            - "--nats=mayastor-nats"
+            - "--store=mayastor-etcd"
             - "--request-timeout=5s"
             - "--cache-period=30s"
           {{- end }}
