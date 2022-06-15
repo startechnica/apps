@@ -1,13 +1,13 @@
-## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/core-agents-deployment.yaml
+## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/agent-core-deployment.yaml
 
-{{- if .Values.mcpCore.enabled }}
+{{- if .Values.agentCore.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ printf "%s-core-agents" (include "common.names.fullname" .) }}
+  name: {{ include "mayastor.agentCore.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: core-agents
+    app.kubernetes.io/component: agent-core
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -19,7 +19,7 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: core-agents
+      app.kubernetes.io/component: agent-core
   template:
     metadata:
       {{- if .Values.podAnnotations }}
@@ -27,7 +27,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: core-agents
+        app.kubernetes.io/component: agent-core
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
@@ -46,19 +46,7 @@ spec:
             - -c
             - >-
               trap "exit 1" TERM;
-              until nc -vz mayastor-nats 4222;
-              do 
-                echo "Waiting for nats...";
-                sleep 1;
-              done;
-          image: busybox:latest
-          name: nats-probe
-        - command:
-            - sh
-            - -c
-            - >-
-              trap "exit 1" TERM;
-              until nc -vz mayastor-etcd 2379;
+              until nc -vzw 5 {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.port }};
               do
                 echo "Waiting for etcd...";
                 sleep 1;
@@ -66,7 +54,8 @@ spec:
           image: busybox:latest
           name: etcd-probe
       containers:
-        - name: core
+        - name: agent-core
+          image: {{ include "mayastor.agentCore.image" . }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.command }}
@@ -80,10 +69,11 @@ spec:
           args:
             # - "-smayastor-etcd"
             # - "-nmayastor-nats"
-            - "--nats=mayastor-nats"
-            - "--store=mayastor-etcd"
+            # - "--nats={{ $natsName }}"
+            - "--store={{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
             - "--request-timeout=5s"
             - "--cache-period=30s"
+            - "--grpc-server-addr=https://0.0.0.0:{{ .Values.agentCore.containerPorts.port }}"
           {{- end }}
           env:
             - name: MY_POD_NAME
@@ -95,11 +85,18 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: RUST_LOG
-              value: info
+              value: {{ .Values.agentCore.logLevel }}
             - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
               value: full
-          image: {{ include "mayastor.mcpCore.image" . }}
-          imagePullPolicy: {{ .Values.mcpCore.image.pullPolicy | quote }}
+              {{- else }}
+              value: "1"
+              {{- end }}
+          imagePullPolicy: {{ .Values.agentCore.image.pullPolicy | quote }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.agentCore.containerPorts.grpc }}
+              protocol: TCP
           resources:
             limits:
               cpu: 1000m

@@ -1,3 +1,16 @@
+
+{{- define "mayastor.agentCore.fullname" -}}
+  {{- printf "%s-agent-core" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{- define "mayastor.apiRest.fullname" -}}
+  {{- printf "%s-api-rest" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{- define "mayastor.etcd.fullname" -}}
+  {{- printf "%s-etcd" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
 {{/* Create the name of the service account to use for the deployment */}}
 {{- define "mayastor.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
@@ -16,18 +29,13 @@
 {{- end -}}
 {{- end -}}
 
-{{/* Return the proper Mayastor CSI Node image name */}}
-{{- define "mayastor.csi.image" -}}
+{{/* Return the proper Mayastor Agent Core image name */}}
+{{- define "mayastor.agentCore.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.csi.imageDev "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.agentCore.imageDev "global" .Values.global) }}
 {{- else -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.csi.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.agentCore.image "global" .Values.global) }}
 {{- end -}}
-{{- end -}}
-
-{{/* Return the proper Mayastor CSI Node image name */}}
-{{- define "mayastor.csiNode.driverRegistrar.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.csi.driverRegistrar.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Mayastor CSI Controller image name */}}
@@ -54,21 +62,26 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.provisioner.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Return the proper Mayastor Core Agent image name */}}
-{{- define "mayastor.mcpCore.image" -}}
+{{/* Return the proper Mayastor CSI Node image name */}}
+{{- define "mayastor.csiNode.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mcpCore.imageDev "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiNode.imageDev "global" .Values.global) }}
 {{- else -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mcpCore.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiNode.image "global" .Values.global) }}
 {{- end -}}
 {{- end -}}
 
+{{/* Return the proper Mayastor CSI Node image name */}}
+{{- define "mayastor.csiNode.driverRegistrar.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiNode.driverRegistrar.image "global" .Values.global) }}
+{{- end -}}
+
 {{/* Return the proper Mayastor Rest image name */}}
-{{- define "mayastor.mcpRest.image" -}}
+{{- define "mayastor.apiRest.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mcpRest.imageDev "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.apiRest.imageDev "global" .Values.global) }}
 {{- else -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mcpRest.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.apiRest.image "global" .Values.global) }}
 {{- end -}}
 {{- end -}}
 

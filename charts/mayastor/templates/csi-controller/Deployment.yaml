@@ -43,18 +43,20 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       initContainers:
-        - command:
-            - sh
-            - -c
-            - >-
-              trap "exit 1" TERM;
-              until nc -vz mayastor-rest 8081;
-              do
-                echo "Waiting for REST API endpoint to become available";
-                sleep 1;
-              done;
+        - name: api-rest-probe
           image: busybox:latest
-          name: rest-probe
+          command:
+            - sh
+          args:
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vz {{ include "mayastor.apiRest.fullname" . }} 8081
+              do
+                date
+                echo "Waiting for REST API endpoint to become available"
+                sleep 1
+              done
       containers:
         - name: csi-provisioner
           image: k8s.gcr.io/sig-storage/csi-provisioner:v3.1.0
@@ -95,10 +97,13 @@ spec:
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
-            - "--rest-endpoint=http://mayastor-rest:8081"
+            - "--rest-endpoint=http://{{ include "mayastor.apiRest.fullname" . }}:8081"
+            {{- range $key, $val := .Values.nodeSelector }}
+            - "--io-engine-selector={{ $key }}:{{ $val }}"
+            {{- end }}
           env:
             - name: RUST_LOG
-              value: info
+              value: {{ .Values.csiController.logLevel }}
             - name: RUST_BACKTRACE
               value: full
           volumeMounts:

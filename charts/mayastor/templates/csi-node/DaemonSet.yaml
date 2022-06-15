@@ -1,9 +1,10 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ printf "%s-csi" (include "common.names.fullname" .) }}
+  name: {{ printf "%s-csi-node" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
+    openebs.io/engine: io-engine
     app.kubernetes.io/component: csi-node
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
@@ -34,9 +35,9 @@ spec:
         {{- end }}
     spec:
       hostNetwork: true
-      nodeSelector:
-        openebs.io/engine: mayastor
-        kubernetes.io/arch: amd64
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       {{- if .Values.tolerations }}
@@ -57,11 +58,7 @@ spec:
         command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
         {{- else }}
         command:
-          {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") }}
           - csi-node
-          {{- else }}
-          - mayastor-csi
-          {{- end }}
         {{- end }}
         {{- if .Values.diagnosticMode.enabled }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
@@ -72,18 +69,19 @@ spec:
           - "--csi-socket=$(CSI_SOCKET_ADDRESS)"
           - "--node-name=$(MY_NODE_NAME)"
           - "--grpc-endpoint=$(MY_POD_IP):10199"
-          {{- if .Values.csi.nvme.io_timeout_enabled }}
-          - "--nvme-core-io-timeout={{ .Values.csi.nvme.io_timeout }}"
+          {{- if .Values.csiNode.nvme.io_timeout_enabled }}
+          - "--nvme-core-io-timeout={{ .Values.csiNode.nvme.io_timeout }}"
           {{- end }}
+          - "--nvme-nr-io-queues=2"
           - "-v"
         {{- end }}
-        image: {{ include "mayastor.csi.image" . }}
+        image: {{ include "mayastor.csiNode.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         securityContext:
           privileged: true
         env:
           - name: CSI_SOCKET_ADDRESS
-            value: {{ .Values.csi.socketAddress | quote }}
+            value: {{ .Values.csiNode.socketAddress | quote }}
           - name: MY_NODE_NAME
             valueFrom:
               fieldRef:
@@ -93,6 +91,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          - name: RUST_LOG
+            value: {{ .Values.csiNode.logLevel }}
           - name: RUST_BACKTRACE
             value: full
           {{- if .Values.moac }}
@@ -113,8 +113,6 @@ spec:
             mountPath: /sys
           - name: run-udev
             mountPath: /run/udev
-          - name: host-root
-            mountPath: /host
           - name: plugin-dir
             mountPath: /csi
           - name: kubelet-dir
@@ -125,11 +123,11 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         args:
           - "--csi-address=$(CSI_SOCKET_ADDRESS)"
-          - "--kubelet-registration-path=/var/lib/kubelet/plugins/mayastor.openebs.io/csi.sock"
+          - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
           - "--v=5"
         env:
           - name: CSI_SOCKET_ADDRESS
-            value: {{ .Values.csi.socketAddress | quote }}
+            value: {{ .Values.csiNode.socketAddress | quote }}
         lifecycle:
           preStop:
             exec:
@@ -138,7 +136,7 @@ spec:
                 - -c
                 - >-
                   echo "Deleting stale file";
-                  rm -rf /registration/mayastor.openebs.io /registration/mayastor.openebs.io-reg.sock;
+                  rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock;
         # Mayastor node plugin gRPC server
         ports:
           - containerPort: 10199
@@ -169,17 +167,13 @@ spec:
           hostPath:
             path: /run/udev
             type: Directory
-        - name: host-root
-          hostPath:
-            path: /
-            type: Directory
         - name: registration-dir
           hostPath:
             path: /var/lib/kubelet/plugins_registry/
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/mayastor.openebs.io/
+            path: /var/lib/kubelet/plugins/io.openebs.mayastor/
             type: DirectoryOrCreate
         - name: kubelet-dir
           hostPath:

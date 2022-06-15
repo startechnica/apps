@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ printf "%s-node" (include "common.names.fullname" .) }}
+  name: {{ printf "%s" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    openebs/engine: mayastor
-    app.kubernetes.io/component: mayastor-node
+    openebs.io/engine: io-engine
+    app.kubernetes.io/component: mayastor
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -16,7 +16,7 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: mayastor-node
+      app.kubernetes.io/component: mayastor
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -29,7 +29,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: mayastor-node
+        app.kubernetes.io/component: mayastor
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
@@ -37,10 +37,10 @@ spec:
       # To resolve services from mayastor's namespace
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
-      nodeSelector:
-        openebs.io/engine: mayastor
-        kubernetes.io/arch: amd64
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       {{- if .Values.tolerations }}
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
@@ -53,7 +53,7 @@ spec:
           image: busybox:latest
           command: ['sh', '-c', 'until nc -vz mayastor-nats 4222; do echo "Waiting for message bus..."; sleep 1; done;']
       containers:
-      - name: mayastor-node
+      - name: mayastor
         image: {{ include "mayastor.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         env:
