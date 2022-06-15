@@ -33,6 +33,8 @@ spec:
         {{- end }}
     spec:
       hostNetwork: true
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       # To resolve services from mayastor's namespace
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:

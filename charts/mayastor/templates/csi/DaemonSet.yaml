@@ -33,6 +33,7 @@ spec:
         {{- end }}
     spec:
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       hostNetwork: true
       nodeSelector:
         kubernetes.io/arch: amd64
