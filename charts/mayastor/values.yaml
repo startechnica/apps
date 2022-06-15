@@ -366,9 +366,12 @@ csi:
 
   driverRegistrar:
     image:
-      registry: quay.io
-      repository: k8scsi/csi-node-driver-registrar
-      tag: v2.1.0
+      # registry: quay.io
+      # repository: k8scsi/csi-node-driver-registrar
+      # tag: v2.1.0
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-node-driver-registrar
+      tag: v2.5.0
 
   nvme:
     # nvme_core module io timeout in seconds
