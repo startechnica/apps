@@ -108,6 +108,33 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/adminer-0.1.1/adminer-0.1.1.tgz
     version: 0.1.1
+  common:
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/common
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.0
+    created: "2022-06-15T03:35:29.646001295Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 2404427f5c3bd3bd09e49f7121204b16be5d653dd7d996e25e40d52f7465186e
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    keywords:
+    - common
+    kubeVersion: '>=1.19.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/common-0.1.0/common-0.1.0.tgz
+    version: 0.1.0
   freeradius:
   - annotations:
       artifacthub.io/links: |
@@ -445,4 +472,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-09T08:23:07.021181996Z"
+generated: "2022-06-15T03:35:29.780133256Z"
