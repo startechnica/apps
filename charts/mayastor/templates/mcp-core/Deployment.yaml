@@ -71,8 +71,10 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- else }}
           args:
-            - "-smayastor-etcd"
-            - "-nmayastor-nats"
+            # - "-smayastor-etcd"
+            # - "-nmayastor-nats"
+            - "--nats nats://mayastor-nats:4222"
+            - "--store http://mayastor-etcd:2379"
             - "--request-timeout=5s"
             - "--cache-period=30s"
           {{- end }}
