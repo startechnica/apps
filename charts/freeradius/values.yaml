@@ -24,6 +24,7 @@ kubeVersion: ""
 ## @param nameOverride String to partially override adminer.fullname
 ##
 nameOverride: ""
+namespaceOverride: ""
 ## @param fullnameOverride String to fully override adminer.fullname
 ##
 fullnameOverride: ""
