@@ -40,12 +40,12 @@ spec:
             - sh
             - -c
             - >-
-              trap "exit 1" TERM
-              until nc -vz mayastor-rest 8081
+              trap "exit 1" TERM;
+              until nc -vz mayastor-rest 8081;
               do
-                echo "Waiting for REST API endpoint to become available"
-                sleep 1
-              done
+                echo "Waiting for REST API endpoint to become available";
+                sleep 1;
+              done;
           image: busybox:latest
           name: rest-probe
       containers:
