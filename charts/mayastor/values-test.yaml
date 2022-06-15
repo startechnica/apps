@@ -3,11 +3,11 @@ clusterDomain: nebula.mci.net.id
 
 etcd:
   clusterDomain: nebula.mci.net.id
-  replicaCount: 3
+  replicaCount: 1
   persistence:
     enabled: true
     storageClass: openebs-hostpath
 
 nats:
   clusterDomain: nebula.mci.net.id
-  replicaCount: 3
+  replicaCount: 1

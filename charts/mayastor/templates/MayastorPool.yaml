@@ -1,5 +1,4 @@
 {{- range .Values.mayastorPools }}
----
 apiVersion: "openebs.io/v1alpha1"
 kind: MayastorPool
 metadata:

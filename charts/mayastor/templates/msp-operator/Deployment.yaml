@@ -1,12 +1,13 @@
-## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/rest-deployment.yaml
+##ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/msp-deployment.yaml
 
+{{- if .Values.mspOperator.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ printf "%s-rest" (include "common.names.fullname" .) }}
+  name: {{ printf "%s-msp-operator" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-      app.kubernetes.io/component: rest
+      app.kubernetes.io/component: msp-operator
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -17,7 +18,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: rest
+      app.kubernetes.io/component: msp-operator
   template:
     metadata:
       {{- if .Values.podAnnotations }}
@@ -25,18 +26,18 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: rest
+        app.kubernetes.io/component: msp-operator
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
-      imagePullSecrets:
-        - name: regcred
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       initContainers:
         - command:
           - sh
           - -c
-          - trap "exit 1" TERM; until nc -vz nats 4222; do echo "Waiting for nats..."; sleep
+          - trap "exit 1" TERM; until nc -vz mayastor-nats 4222; do echo "Waiting for nats..."; sleep
             1; done;
           image: busybox:latest
           name: nats-probe
@@ -48,25 +49,24 @@ spec:
           image: busybox:latest
           name: etcd-probe
       containers:
-        - name: rest
+        - name: msp-operator
           resources:
             limits:
               cpu: 100m
-              memory: 64Mi
+              memory: 32Mi
             requests:
               cpu: 50m
-              memory: 32Mi
-          image: mayadata/mcp-rest:v1.0.1
-          imagePullPolicy: IfNotPresent
+              memory: 16Mi
+          image: {{ include "mayastor.mspOperator.image" . }}
+          imagePullPolicy: {{ .Values.mspOperator.image.pullPolicy | quote }}
           args:
-            - "--dummy-certificates"
-            - "--no-auth"
-            - "-nnats"
-            - "--http=0.0.0.0:8081"
-            - "--request-timeout=5s"
-          ports:
-            - containerPort: 8080
-            - containerPort: 8081
+            - "-e http://mayastor-rest:8081"
+            - "--interval=30s"
           env:
             - name: RUST_LOG
-              value: info
+              value: info,msp_operator=info
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+{{- end }}

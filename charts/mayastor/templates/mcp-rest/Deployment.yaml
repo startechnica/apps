@@ -1,12 +1,13 @@
-## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/core-agents-deployment.yaml
+## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/rest-deployment.yaml
 
+{{- if .Values.mcpRest.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ printf "%s-core-agents" (include "common.names.fullname" .) }}
+  name: {{ printf "%s-rest" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-      app.kubernetes.io/component: core-agents
+      app.kubernetes.io/component: mcp-rest
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -17,7 +18,7 @@ spec:
   replicas: 1
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: core-agents
+      app.kubernetes.io/component: mcp-rest
   template:
     metadata:
       {{- if .Values.podAnnotations }}
@@ -25,13 +26,13 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: core-agents
+        app.kubernetes.io/component: mcp-rest
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
-      imagePullSecrets:
-        - name: regcred
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       initContainers:
         - command:
           - sh
@@ -48,29 +49,30 @@ spec:
           image: busybox:latest
           name: etcd-probe
       containers:
-        - name: core
+        - name: rest
           resources:
             limits:
-              cpu: 1000m
-              memory: 32Mi
+              cpu: 100m
+              memory: 64Mi
             requests:
-              cpu: 500m
-              memory: 16Mi
-          image: mayadata/mcp-core:v1.0.1
-          imagePullPolicy: IfNotPresent
+              cpu: 50m
+              memory: 32Mi
+          image: {{ include "mayastor.mcpRest.image" . }}
+          imagePullPolicy: {{ .Values.mcpRest.image.pullPolicy | quote }}
           args:
-            - "-smayastor-etcd"
+            - "--dummy-certificates"
+            - "--no-auth"
             - "-nnats"
+            - "--http=0.0.0.0:8081"
             - "--request-timeout=5s"
-            - "--cache-period=30s"
+          ports:
+            - name: http
+              containerPort: {{ .Values.mcpRest.containerPorts.http }}
+              protocol: TCP
+            - name: https
+              containerPort: {{ .Values.mcpRest.containerPorts.https }}
+              protocol: TCP
           env:
             - name: RUST_LOG
               value: info
-            - name: MY_POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: MY_POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+{{- end }}

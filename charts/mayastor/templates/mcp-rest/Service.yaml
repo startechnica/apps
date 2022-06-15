@@ -4,7 +4,7 @@ metadata:
   name: {{ printf "%s-rest" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: rest
+    app.kubernetes.io/component: mcp-rest
   {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
@@ -21,24 +21,24 @@ metadata:
     {{- end }}
   {{- end }}
 spec:
-  type: {{ .Values.service.type }}
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.allocateLoadBalancerNodePorts)) }}
+  type: {{ .Values.mcpRest.service.type }}
+  {{- if and (eq .Values.mcpRest.service.type "LoadBalancer") (not (empty .Values.service.allocateLoadBalancerNodePorts)) }}
   allocateLoadBalancerNodePorts: {{ .Values.service.allocateLoadBalancerNodePorts }}
   {{- end }}
-  {{- if and .Values.service.clusterIP (eq .Values.service.type "ClusterIP") }}
+  {{- if and .Values.service.clusterIP (eq .Values.mcpRest.service.type "ClusterIP") }}
   clusterIP: {{ .Values.service.clusterIP }}
   {{- end }}
-  {{- if and .Values.service.externalTrafficPolicy (or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort")) }}
+  {{- if and .Values.service.externalTrafficPolicy (or (eq .Values.mcpRest.service.type "LoadBalancer") (eq .Values.mcpRest.service.type "NodePort")) }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
   ipFamilyPolicy: {{ .Values.service.ipFamilyPolicy }}
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerClass)) }}
+  {{- if and (eq .Values.mcpRest.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerClass)) }}
   loadBalancerClass: {{ .Values.service.loadBalancerClass }}
   {{- end }}
-  {{- if (and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP))) }}
+  {{- if (and (eq .Values.mcpRest.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP))) }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
+  {{- if and (eq .Values.mcpRest.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
   loadBalancerSourceRanges: {{ .Values.service.loadBalancerSourceRanges }}
   {{- end }}
   {{- if .Values.service.sessionAffinity }}
@@ -49,25 +49,25 @@ spec:
   {{- end }}
   ports:
     - name: http
-      port: {{ .Values.service.ports.http }}
+      port: {{ .Values.mcpRest.service.ports.http }}
       protocol: UDP
-      targetPort: {{ .Values.containerPorts.http }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.http) }}
-      nodePort: {{ coalesce .Values.service.nodePorts.http .Values.service.nodePort }}
-      {{- else if eq .Values.service.type "ClusterIP" }}
+      targetPort: {{ .Values.mcpRest.containerPorts.http }}
+      {{- if (and (or (eq .Values.mcpRest.service.type "NodePort") (eq .Values.mcpRest.service.type "LoadBalancer")) .Values.mcpRest.service.nodePorts.http) }}
+      nodePort: {{ coalesce .Values.mcpRest.service.nodePorts.http .Values.mcpRest.service.nodePort }}
+      {{- else if eq .Values.mcpRest.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- if .Values.tls.enabled }}
+    {{- if .Values.mcpRest.tls.enabled }}
     - name: https
-      port: {{ .Values.service.ports.https }}
+      port: {{ .Values.mcpRest.service.ports.https }}
       protocol: TCP
-      targetPort: {{ .Values.containerPorts.https }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.https) }}
-      nodePort: {{ .Values.service.nodePorts.https }}
-      {{- else if eq .Values.service.type "ClusterIP" }}
+      targetPort: {{ .Values.mcpRest.containerPorts.https }}
+      {{- if (and (or (eq .Values.mcpRest.service.type "NodePort") (eq .Values.mcpRest.service.type "LoadBalancer")) .Values.mcpRest.service.nodePorts.https) }}
+      nodePort: {{ .Values.mcpRest.service.nodePorts.https }}
+      {{- else if eq .Values.mcpRest.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
   selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
-    app.kubernetes.io/component: rest
+    app.kubernetes.io/component: mcp-rest
 ---

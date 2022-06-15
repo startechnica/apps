@@ -1,0 +1,95 @@
+## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/csi-deployment.yaml
+
+{{- if .Values.rest.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-csi-controller" (include "common.names.fullname" .) }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+      app.kubernetes.io/component: csi-controller
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: csi-controller
+  template:
+    metadata:
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: csi-controller
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      initContainers:
+        - command:
+          - sh
+          - -c
+          - trap "exit 1" TERM; until nc -vz mayastor-rest 8081; do echo "Waiting for REST API endpoint
+            to become available"; sleep 1; done;
+          image: busybox:latest
+          name: rest-probe
+      containers:
+        - name: csi-provisioner
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.2.1
+          args:
+            - "--v=2"
+            - "--csi-address=$(ADDRESS)"
+            - "--feature-gates=Topology=true"
+            - "--strict-topology=false"
+            - "--default-fstype=ext4"
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-attacher
+          image: k8s.gcr.io/sig-storage/csi-attacher:v3.2.1
+          args:
+            - "--v=2"
+            - "--csi-address=$(ADDRESS)"
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-controller
+          resources:
+            limits:
+              cpu: 32m
+              memory: 128Mi
+            requests:
+              cpu: 16m
+              memory: 64Mi
+          image: {{ include "mayastor.csiController.image" . }}
+          imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
+          args:
+            - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
+            - "--rest-endpoint=http://mayastor-rest:8081"
+          env:
+            - name: RUST_LOG
+              value: info
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+      volumes:
+        - name: socket-dir
+          emptyDir:

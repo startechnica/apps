@@ -21,10 +21,10 @@ global:
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
 ##
 kubeVersion: ""
-## @param nameOverride String to partially override adminer.fullname
+## @param nameOverride String to partially override Mayastor Control Plane Rest.fullname
 ##
 nameOverride: ""
-## @param fullnameOverride String to fully override adminer.fullname
+## @param fullnameOverride String to fully override Mayastor Control Plane Rest.fullname
 ##
 fullnameOverride: ""
 ## @param hostAliases Add deployment host aliases
@@ -63,10 +63,10 @@ diagnosticMode:
 
 ## Mayastor image
 ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
-## @param image.registry Adminer image registry
-## @param image.repository Adminer image repository
-## @param image.tag Adminer image tag (immutable tags are recommended)
-## @param image.pullPolicy Adminer image pull policy
+## @param image.registry Mayastor Control Plane Rest image registry
+## @param image.repository Mayastor Control Plane Rest image repository
+## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
 ## @param image.pullSecrets Specify docker-registry secret names as an array
 ## @param image.debug Specify if debug logs should be enabled
 ##
@@ -91,15 +91,42 @@ image:
   ##
   debug: false
 
+coreAgents:
+  enabled: true
+  ## Mayastor Control Plane Core Agent image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mcp-core
+    tag: release-1.0.2
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
 csi:
   enabled: true
-
   ## Mayastor CSI image
   ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
-  ## @param image.registry Adminer image registry
-  ## @param image.repository Adminer image repository
-  ## @param image.tag Adminer image tag (immutable tags are recommended)
-  ## @param image.pullPolicy Adminer image pull policy
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
   ## @param image.pullSecrets Specify docker-registry secret names as an array
   ## @param image.debug Specify if debug logs should be enabled
   ##
@@ -119,15 +146,39 @@ csi:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
-    ## Set to true if you would like to see extra information on logs
-    ## It turns BASH and/or NAMI debugging in the image
-    ##
-    debug: false
 
   nvme:
     # nvme_core module io timeout in seconds
     io_timeout: "30"
     io_timeout_enabled: true
+
+csiController:
+  enabled: true
+  ## Mayastor Control Plane Core Agent image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mcp-csi-controller
+    tag: release-1.0.2
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
 
 etcd:
   enabled: true
@@ -183,6 +234,41 @@ etcd:
   podAntiAffinityPreset: "hard"
 
 nats:
+  enabled: true
+  ## Number of replicas
+  ##
+  replicaCount: 1
+  ## Kubernetes Cluster Domain
+  ##
+  clusterDomain: cluster.local
+  ## TLS authentication for client-to-server communications
+  ## ref: https://etcd.io/docs/current/op-guide/security/
+  ##
+  client:
+    secureTransport: false
+  ## TLS authentication for server-to-server communications
+  ## ref: https://etcd.io/docs/current/op-guide/security/
+  ##
+  peer:
+    secureTransport: false
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  ##
+  persistence:
+    ## If true, use a Persistent Volume Claim. If false, use emptyDir.
+    ##
+    enabled: true
+    ## Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    storageClass: "manual"
+    ## Persistent Volume size
+    ##
+    size: 2Gi
   cluster:
     enabled: false
   exporter:
@@ -191,9 +277,133 @@ nats:
     debug: false
     trace: false
 
+mcpRest:
+  enabled: true
+  ## Mayastor Control Plane Rest image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-rest/tags
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mcp-rest
+    tag: release-1.0.2
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param mcpRest.containerPorts.auth Mayastor Control Plane Rest HTTP container port
+  ## @param mcpRest.containerPorts.acct Mayastor Control Plane Rest HTTPS container port
+  ##
+  containerPorts:
+    http: 8080
+    https: 8081
+  tls:
+    enabled: true
+  ## Mayastor Control Plane Rest service parameters
+  ##
+  service:
+    ## @param service.type Mayastor Control Plane Rest Kubernetes service type
+    ##
+    type: ClusterIP
+    ## @param service.ports.auth Mayastor Control Plane Rest Kubernetes service port
+    ##
+    ports:
+      http: 8080
+      https: 8081
+    ## @param service.nodePorts.mysql Mayastor Control Plane Rest Kubernetes service node port
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    nodePorts:
+      http: ""
+      https: ""
+    ## @param service.clusterIP Mayastor Control Plane Rest Kubernetes service clusterIP IP
+    ##
+    clusterIP: ""
+    ## @param service.loadBalancerIP Mayastor Control Plane Rest loadBalancerIP if service type is `LoadBalancer`
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    loadBalancerIP: ""
+    ## @param service.ipFamilyPolicy Mayastor Control Plane Rest Kubernetes service ipFamilyPolicy policy
+    ##
+    ipFamilyPolicy: SingleStack
+    ## @param service.externalTrafficPolicy Enable client source IP preservation
+    ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+    ##
+    externalTrafficPolicy: Cluster
+    ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+    ## bare metal / on-prem environments that rely on VIP based LB implementations.
+    allocateLoadBalancerNodePorts: false
+    ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+    ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+    ##
+    loadBalancerClass: ""
+    ## @param service.loadBalancerSourceRanges Address that are allowed when Mayastor Control Plane Rest service is LoadBalancer
+    ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+    ## E.g.
+    ## loadBalancerSourceRanges:
+    ##   - 10.10.10.0/24
+    ##
+    loadBalancerSourceRanges: []
+    ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+    ##
+    extraPorts: []
+    ## @param service.annotations Provide any additional annotations which may be required
+    ##
+    annotations: {}
+    ## @param service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+    ## If "ClientIP", consecutive client requests will be directed to the same Pod
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    ##
+    sessionAffinity: None
+    ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
+    ## sessionAffinityConfig:
+    ##   clientIP:
+    ##     timeoutSeconds: 300
+    sessionAffinityConfig: {}
+
+mspOperator:
+  enabled: true
+  ## Mayastor Control Plane MSP Operator image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
+  ## @param image.registry Mayastor Control Plane MSP Operator image registry
+  ## @param image.repository Mayastor Control Plane MSP Operator image repository
+  ## @param image.tag Mayastor Control Plane MSP Operator image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane MSP Operator image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mcp-msp-operator
+    tag: release-1.0.2
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
 mayastorCpuCount: "1"
 mayastorHugePagesGiB: "1"
-mayastorImagesRegistry: ""
 mayastorPools:
   - node: "NODE_NAME"
     device: "DEVICE"
@@ -209,7 +419,7 @@ moac: false
 ## Specifies whether a ServiceAccount should be created
 ##
 serviceAccount:
-  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Adminer pods
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Mayastor Control Plane Rest pods
   ##
   create: true
   ## @param serviceAccount.name Name of the created ServiceAccount

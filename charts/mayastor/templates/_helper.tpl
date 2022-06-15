@@ -1,11 +1,40 @@
+{{/* Create the name of the service account to use for the deployment */}}
+{{- define "mayastor.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+  {{ default (printf "%s" (include "common.names.fullname" .)) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+{{- else -}}
+  {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the proper Mayastor image name */}}
 {{- define "mayastor.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
+{{/* Return the proper Mayastor Rest image name */}}
+{{- define "mayastor.coreAgents.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.coreAgents.image "global" .Values.global) }}
+{{- end -}}
+
 {{/* Return the proper Mayastor CSI image name */}}
 {{- define "mayastor.csi.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csi.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor CSI image name */}}
+{{- define "mayastor.csiController.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor Rest image name */}}
+{{- define "mayastor.mcpRest.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.mcpRest.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor Operator image name */}}
+{{- define "mayastor.mspOperator.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.mspOperator.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper image name (for the init container volume-permissions image) */}}
