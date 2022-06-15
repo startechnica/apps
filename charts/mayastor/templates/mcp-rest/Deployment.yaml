@@ -61,7 +61,7 @@ spec:
             - "--dummy-certificates"
             - "--no-auth"
             - "-nmayastor-nats"
-            - "--http=0.0.0.0:8080"
+            - "--http=0.0.0.0:8081"
             - "--request-timeout=5s"
           ports:
             - name: http
