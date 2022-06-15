@@ -52,7 +52,7 @@ spec:
       port: {{ .Values.service.ports.auth }}
       protocol: UDP
       targetPort: {{ .Values.containerPorts.auth }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (coalesce .Values.service.nodePorts.auth .Values.service.nodePort)) }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.auth) }}
       nodePort: {{ coalesce .Values.service.nodePorts.auth .Values.service.nodePort }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
