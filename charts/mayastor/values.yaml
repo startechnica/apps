@@ -24,6 +24,7 @@ kubeVersion: ""
 ## @param nameOverride String to partially override Mayastor Control Plane Rest.fullname
 ##
 nameOverride: ""
+namespaceOverride:
 ## @param fullnameOverride String to fully override Mayastor Control Plane Rest.fullname
 ##
 fullnameOverride: ""
@@ -420,7 +421,7 @@ etcd:
   persistence:
     ## If true, use a Persistent Volume Claim. If false, use emptyDir.
     ##
-    enabled: true
+    enabled: false
     ## Persistent Volume Storage Class
     ## If defined, storageClassName: <storageClass>
     ## If set to "-", storageClassName: "", which disables dynamic provisioning
@@ -428,7 +429,7 @@ etcd:
     ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
     ##   GKE, AWS & OpenStack)
     ##
-    storageClass: "manual"
+    storageClass: ""
     ## Persistent Volume size
     ##
     size: 2Gi
@@ -473,7 +474,7 @@ nats:
   persistence:
     ## If true, use a Persistent Volume Claim. If false, use emptyDir.
     ##
-    enabled: true
+    enabled: false
     ## Persistent Volume Storage Class
     ## If defined, storageClassName: <storageClass>
     ## If set to "-", storageClassName: "", which disables dynamic provisioning
@@ -481,7 +482,7 @@ nats:
     ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
     ##   GKE, AWS & OpenStack)
     ##
-    storageClass: "manual"
+    storageClass: ""
     ## Persistent Volume size
     ##
     size: 2Gi
