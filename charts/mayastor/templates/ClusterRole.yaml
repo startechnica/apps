@@ -55,4 +55,11 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["csinodes"]
   verbs: ["get", "list", "watch"]
+  #Custom Role
+- apiGroups: [""]
+  resources: ["secrets","namespaces"]
+  verbs: ["get", "list"]
+- apiGroups: [ "" ]
+  resources: [ "pods" ]
+  verbs: [ "get", "list", "watch" ]
 {{- end }}
