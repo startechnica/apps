@@ -29,17 +29,17 @@
 
 {{/* Return the proper Mayastor CSI Controller Attacher image name */}}
 {{- define "mayastor.csiController.attacher.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.attacher.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Mayastor CSI Controller Livenessprobe image name */}}
 {{- define "mayastor.csiController.livenessprobe.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.livenessprobe.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Mayastor CSI Controller Provisioner image name */}}
 {{- define "mayastor.csiController.provisioner.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.provisioner.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Mayastor Rest image name */}}
