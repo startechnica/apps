@@ -176,7 +176,7 @@ hostAliases: []
 ## @param replicaCount Desired number of cluster nodes
 ##
 replicaCount: 1
-## @param updateStrategy.type updateStrategy for FreeRADIUS deployment
+## @param updateStrategy.type updateStrategy for FreeRADIUS Master StatefulSet
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 ##
 updateStrategy:
@@ -253,6 +253,7 @@ schedulerName: ""
 ##
 podManagementPolicy: ""
 
+
 ## Role Based Access
 ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
 ##
@@ -278,7 +279,7 @@ containerPorts:
 podSecurityContext:
   enabled: false
   fsGroup: 101
-  # runAsUser: 101
+  runAsUser: 101
 ## FreeRADIUS container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
 ## @param containerSecurityContext.enabled FreeRADIUS container securityContext
@@ -287,12 +288,13 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
-  # allowPrivilegeEscalation: true
+  allowPrivilegeEscalation: true
   capabilities:
     add:
       - SYS_PTRACE
   runAsUser: 101
   runAsNonRoot: true
+  privileged: true
 
 ## FreeRADIUS container's resource requests and limits
 ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
@@ -539,6 +541,9 @@ service:
   ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
   ##
   externalTrafficPolicy: Cluster
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## bare metal / on-prem environments that rely on VIP based LB implementations.
+  allocateLoadBalancerNodePorts: false
   ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
   ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
   ##
@@ -874,45 +879,4 @@ metrics:
     ##    for: 5m
     ##
     rules: {}
-
-## @section NetworkPolicy parameters
-
-## Add networkpolicies
-##
-networkPolicy:
-  ## @param networkPolicy.enabled Enable network policies
-  ## If ingress.enabled or metrics.enabled are true, configure networkPolicy.ingress and networkPolicy.metrics selectors respectively to allow communication
-  ##
-  enabled: false
-  ## @param networkPolicy.metrics.enabled Enable network policy for metrics (prometheus)
-  ## @param networkPolicy.metrics.namespaceSelector [object] Monitoring namespace selector labels. These labels will be used to identify the prometheus' namespace.
-  ## @param networkPolicy.metrics.podSelector [object] Monitoring pod selector labels. These labels will be used to identify the Prometheus pods.
-  ##
-  metrics:
-    enabled: false
-    ## e.g:
-    ## podSelector:
-    ##   label: monitoring
-    ##
-    podSelector: {}
-    ## e.g:
-    ## namespaceSelector:
-    ##   label: monitoring
-    ##
-    namespaceSelector: {}
-  ## @param networkPolicy.ingress.enabled Enable network policy for Ingress Proxies
-  ## @param networkPolicy.ingress.namespaceSelector [object] Ingress Proxy namespace selector labels. These labels will be used to identify the Ingress Proxy's namespace.
-  ## @param networkPolicy.ingress.podSelector [object] Ingress Proxy pods selector labels. These labels will be used to identify the Ingress Proxy pods.
-  ##
-  ingress:
-    enabled: false
-    ## e.g:
-    ## podSelector:
-    ##   label: ingress
-    ##
-    podSelector: {}
-    ## e.g:
-    ## namespaceSelector:
-    ##   label: ingress
-    ##
-    namespaceSelector: {}
+---
