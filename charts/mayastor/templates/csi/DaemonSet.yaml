@@ -80,10 +80,10 @@ spec:
                 fieldPath: status.podIP
           - name: RUST_BACKTRACE
             value: full
-        {{- if .Values.moac }}
-        - name: MOAC
-          value: "true"
-        {{- end }}
+          {{- if .Values.moac }}
+          - name: MOAC
+            value: "true"
+          {{- end }}
         volumeMounts:
           - name: device
             mountPath: /dev
