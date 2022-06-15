@@ -349,7 +349,7 @@ csi:
   ##
   image:
     registry: docker.io
-    repository: mayadata/mayastor
+    repository: mayadata/mayastor-csi
     tag: release-1.0.2
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -368,6 +368,8 @@ csi:
     # nvme_core module io timeout in seconds
     io_timeout: "30"
     io_timeout_enabled: true
+
+  socketAddress: /csi/csi.sock
 
 csiController:
   enabled: true

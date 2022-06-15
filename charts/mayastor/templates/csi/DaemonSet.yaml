@@ -64,7 +64,7 @@ spec:
         args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
         {{- else }}
         args:
-          - "--csi-socket=/csi/csi.sock"
+          - "--csi-socket=$(CSI_SOCKET_ADDRESS)"
           - "--node-name=$(MY_NODE_NAME)"
           - "--grpc-endpoint=$(MY_POD_IP):10199"
           {{- if .Values.csi.nvme.io_timeout_enabled }}
@@ -77,6 +77,8 @@ spec:
         securityContext:
           privileged: true
         env:
+          - name: CSI_SOCKET_ADDRESS
+            value: {{ .Values.csi.socketAddress | quote }}
           - name: MY_NODE_NAME
             valueFrom:
               fieldRef:
@@ -91,6 +93,13 @@ spec:
           - name: MOAC
             value: "true"
           {{- end }}
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "50Mi"
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
         volumeMounts:
           - name: device
             mountPath: /dev
@@ -105,37 +114,33 @@ spec:
           - name: kubelet-dir
             mountPath: /var/lib/kubelet
             mountPropagation: "Bidirectional"
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "50Mi"
-          requests:
-            cpu: "100m"
-            memory: "50Mi"
       - name: csi-driver-registrar
         # image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
         image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
         args:
-          - "--csi-address=/csi/csi.sock"
+          - "--csi-address=$(CSI_SOCKET_ADDRESS)"
           - "--kubelet-registration-path=/var/lib/kubelet/plugins/mayastor.openebs.io/csi.sock"
           - "--v=5"
-        volumeMounts:
-          - name: plugin-dir
-            mountPath: /csi
-          - name: registration-dir
-            mountPath: /registration
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "50Mi"
-          requests:
-            cpu: "100m"
-            memory: "50Mi"
+        env:
+          - name: CSI_SOCKET_ADDRESS
+            value: {{ .Values.csi.socketAddress | quote }}
         # Mayastor node plugin gRPC server
         ports:
           - containerPort: 10199
             name: mayastor-node
             protocol: TCP
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "50Mi"
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+        volumeMounts:
+          - name: plugin-dir
+            mountPath: /csi
+          - name: registration-dir
+            mountPath: /registration
       volumes:
         - name: device
           hostPath:
