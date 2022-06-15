@@ -393,8 +393,10 @@ csiController:
   ##
   image:
     registry: docker.io
-    repository: mayadata/mcp-csi-controller
-    tag: release-1.0.2
+    # repository: mayadata/mcp-csi-controller
+    # tag: release-1.0.2
+    repository: mayadata/mayastor-csi-controller
+    tag: develop
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -581,8 +583,10 @@ mcpCore:
   ##
   image:
     registry: docker.io
-    repository: mayadata/mcp-core
-    tag: release-1.0.2
+    # repository: mayadata/mcp-core
+    # tag: release-1.0.2
+    repository: mayadata/mayastor-agent-core
+    tag: develop
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
