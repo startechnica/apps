@@ -4,6 +4,11 @@ clusterDomain: nebula.mci.net.id
 etcd:
   clusterDomain: nebula.mci.net.id
   replicaCount: 1
+  auth:
+    rbac:
+      create: true
+      allowNoneAuthentication: true
+      rootPassword: password
   persistence:
     enabled: true
     storageClass: openebs-hostpath
