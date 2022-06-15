@@ -11,3 +11,11 @@ etcd:
 nats:
   clusterDomain: nebula.mci.net.id
   replicaCount: 1
+
+mayastorPools:
+  - node: alberta-lin-k8m.jkt2.mci.net.id
+    device: /dev/sdb
+  - node: rachel-lin-k8w.jkt2.mci.net.id
+    device: /dev/sdb
+  - node: verus-lin-k8w.jkt2.mci.net.id
+    device: /dev/sdb
