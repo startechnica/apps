@@ -48,10 +48,6 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
-      initContainers:
-        - name: message-bus-probe
-          image: busybox:latest
-          command: ['sh', '-c', 'until nc -vz mayastor-nats 4222; do echo "Waiting for message bus..."; sleep 1; done;']
       containers:
       - name: mayastor
         image: {{ include "mayastor.image" . }}
@@ -91,7 +87,6 @@ spec:
           #       If you use 2 CPUs, the CPU: field should also read 2.
           - "-N$(MY_NODE_NAME)"
           - "-g$(MY_POD_IP)"
-          - "-nmayastor-nats"
           - "-y/var/local/mayastor/config.yaml"
           - "-l{{ include "mayastorCpuSpec" . }}"
           - "-pmayastor-etcd"
