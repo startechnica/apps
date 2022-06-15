@@ -1,8 +1,8 @@
 ##ref: https://github.com/openebs/mayastor/blob/master/deploy/pool.yaml
 
-{{- range .Values.mayastorPools }}
+{{- range .Values.diskPools }}
 apiVersion: "openebs.io/v1alpha1"
-kind: MayastorPool
+kind: DiskPool
 metadata:
   name: pool-on-{{ .node }}
   namespace: {{ include "common.names.namespace" $ | quote }}

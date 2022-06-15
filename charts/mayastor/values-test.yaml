@@ -35,7 +35,7 @@ nats:
     enabled: false
     storageClass: openebs-hostpath
 
-mayastorPools:
+diskPools:
   - node: alberta-lin-k8m.jkt2.mci.net.id
     device: /dev/sdb
   - node: einbech-lin-k8m.jkt2.mci.net.id
