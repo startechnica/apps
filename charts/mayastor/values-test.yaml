@@ -11,6 +11,9 @@ etcd:
 nats:
   clusterDomain: nebula.mci.net.id
   replicaCount: 1
+  persistence:
+    enabled: false
+    storageClass: openebs-hostpath
 
 mayastorPools:
   - node: alberta-lin-k8m.jkt2.mci.net.id

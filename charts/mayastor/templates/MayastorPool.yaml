@@ -7,4 +7,5 @@ metadata:
 spec:
   node: {{ .node }}
   disks: ["{{ .device }}"]
+---
 {{- end }}
