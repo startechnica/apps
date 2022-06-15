@@ -1,0 +1,23 @@
+annotations:
+  category: Infrastructure
+  artifacthub.io/links: |
+    - name: Chart Source
+      url: https://github.com/startechnica/apps/tree/main/charts/common
+apiVersion: v2
+appVersion: 0.1.0
+description: A Library Helm Chart for grouping common logic between Startechnica charts.
+  This chart is not deployable by itself.
+home: https://github.com/startechnica/apps/tree/main/charts/common
+# icon:
+keywords:
+  - common
+kubeVersion: ">=1.19.0-0"
+maintainers:
+  - name: firmansyahn
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
+name: common
+sources:
+  - https://startechnica.github.io/apps
+type: library
+version: 0.1.0
