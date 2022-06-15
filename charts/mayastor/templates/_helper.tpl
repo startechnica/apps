@@ -11,6 +11,14 @@
   {{- printf "%s-etcd" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
+{{- define "mayastor.metrics.fullname" -}}
+  {{- printf "%s-metrics" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{- define "mayastor.operator.fullname" -}}
+  {{- printf "%s-operator" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
 {{/* Create the name of the service account to use for the deployment */}}
 {{- define "mayastor.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
@@ -86,11 +94,11 @@
 {{- end -}}
 
 {{/* Return the proper Mayastor Operator image name */}}
-{{- define "mayastor.mspOperator.image" -}}
+{{- define "mayastor.operator.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mspOperator.imageDev "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.operator.imageDev "global" .Values.global) }}
 {{- else -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mspOperator.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.operator.image "global" .Values.global) }}
 {{- end -}}
 {{- end -}}
 

@@ -1,10 +1,11 @@
+{{- if .Values.metrics.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "mayastor.apiRest.fullname" . }}
+  name: {{ include "mayastor.metrics.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: api-rest
+    app.kubernetes.io/component: metrics
   {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
@@ -21,24 +22,24 @@ metadata:
     {{- end }}
   {{- end }}
 spec:
-  type: {{ .Values.apiRest.service.type }}
-  {{- if and (eq .Values.apiRest.service.type "LoadBalancer") (not (empty .Values.service.allocateLoadBalancerNodePorts)) }}
+  type: {{ .Values.metrics.service.type }}
+  {{- if and (eq .Values.metrics.service.type "LoadBalancer") (not (empty .Values.service.allocateLoadBalancerNodePorts)) }}
   allocateLoadBalancerNodePorts: {{ .Values.service.allocateLoadBalancerNodePorts }}
   {{- end }}
-  {{- if and .Values.service.clusterIP (eq .Values.apiRest.service.type "ClusterIP") }}
+  {{- if and .Values.service.clusterIP (eq .Values.metrics.service.type "ClusterIP") }}
   clusterIP: {{ .Values.service.clusterIP }}
   {{- end }}
-  {{- if and .Values.service.externalTrafficPolicy (or (eq .Values.apiRest.service.type "LoadBalancer") (eq .Values.apiRest.service.type "NodePort")) }}
+  {{- if and .Values.service.externalTrafficPolicy (or (eq .Values.metrics.service.type "LoadBalancer") (eq .Values.metrics.service.type "NodePort")) }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
   ipFamilyPolicy: {{ .Values.service.ipFamilyPolicy }}
-  {{- if and (eq .Values.apiRest.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerClass)) }}
+  {{- if and (eq .Values.metrics.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerClass)) }}
   loadBalancerClass: {{ .Values.service.loadBalancerClass }}
   {{- end }}
-  {{- if (and (eq .Values.apiRest.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP))) }}
+  {{- if (and (eq .Values.metrics.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP))) }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
-  {{- if and (eq .Values.apiRest.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
+  {{- if and (eq .Values.metrics.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
   loadBalancerSourceRanges: {{ .Values.service.loadBalancerSourceRanges }}
   {{- end }}
   {{- if .Values.service.sessionAffinity }}
@@ -48,26 +49,15 @@ spec:
   sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
-    - name: http
-      port: {{ .Values.apiRest.service.ports.http }}
+    - name: tcp-metrics
+      port: {{ .Values.metrics.service.ports.http }}
       protocol: TCP
-      targetPort: {{ .Values.apiRest.containerPorts.http }}
-      {{- if (and (or (eq .Values.apiRest.service.type "NodePort") (eq .Values.apiRest.service.type "LoadBalancer")) .Values.apiRest.service.nodePorts.http) }}
-      nodePort: {{ coalesce .Values.apiRest.service.nodePorts.http .Values.apiRest.service.nodePort }}
-      {{- else if eq .Values.apiRest.service.type "ClusterIP" }}
+      targetPort: {{ .Values.metrics.containerPorts.http }}
+      {{- if (and (or (eq .Values.metrics.service.type "NodePort") (eq .Values.metrics.service.type "LoadBalancer")) .Values.metrics.service.nodePorts.http) }}
+      nodePort: {{ coalesce .Values.metrics.service.nodePorts.http .Values.metrics.service.nodePort }}
+      {{- else if eq .Values.metrics.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- if .Values.apiRest.tls.enabled }}
-    - name: https
-      port: {{ .Values.apiRest.service.ports.https }}
-      protocol: TCP
-      targetPort: {{ .Values.apiRest.containerPorts.https }}
-      {{- if (and (or (eq .Values.apiRest.service.type "NodePort") (eq .Values.apiRest.service.type "LoadBalancer")) .Values.apiRest.service.nodePorts.https) }}
-      nodePort: {{ .Values.apiRest.service.nodePorts.https }}
-      {{- else if eq .Values.apiRest.service.type "ClusterIP" }}
-      nodePort: null
-      {{- end }}
-    {{- end }}
   selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
-    app.kubernetes.io/component: api-rest
----
+    app.kubernetes.io/component: metrics
+{{- end }}
