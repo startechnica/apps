@@ -14,6 +14,7 @@ tolerations:
 etcd:
   clusterDomain: nebula.mci.net.id
   replicaCount: 1
+  revisionHistoryLimit: 2
   auth:
     rbac:
       create: true
@@ -25,9 +26,10 @@ etcd:
 
 nats:
   clusterDomain: nebula.mci.net.id
+  replicaCount: 1
+  revisionHistoryLimit: 2
   auth:
     enabled: false
-  replicaCount: 1
   persistence:
     enabled: false
     storageClass: openebs-hostpath

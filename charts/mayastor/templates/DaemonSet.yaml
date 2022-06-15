@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ printf "%s-node" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     openebs/engine: mayastor
+    app.kubernetes.io/component: mayastor-node
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -15,7 +16,7 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: mayastor
+      app.kubernetes.io/component: mayastor-node
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -28,7 +29,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: mayastor
+        app.kubernetes.io/component: mayastor-node
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
@@ -52,7 +53,7 @@ spec:
           image: busybox:latest
           command: ['sh', '-c', 'until nc -vz mayastor-nats 4222; do echo "Waiting for message bus..."; sleep 1; done;']
       containers:
-      - name: mayastor
+      - name: mayastor-node
         image: {{ include "mayastor.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         env:

@@ -35,6 +35,7 @@ spec:
     spec:
       hostNetwork: true
       nodeSelector:
+        openebs.io/engine: mayastor
         kubernetes.io/arch: amd64
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}

@@ -55,13 +55,6 @@ spec:
           name: etcd-probe
       containers:
         - name: msp-operator
-          resources:
-            limits:
-              cpu: 100m
-              memory: 32Mi
-            requests:
-              cpu: 50m
-              memory: 16Mi
           image: {{ include "mayastor.mspOperator.image" . }}
           imagePullPolicy: {{ .Values.mspOperator.image.pullPolicy | quote }}
           args:
@@ -76,4 +69,11 @@ spec:
               value: info,msp_operator=info
             - name: RUST_BACKTRACE
               value: full
+          resources:
+            limits:
+              cpu: 100m
+              memory: 32Mi
+            requests:
+              cpu: 50m
+              memory: 16Mi
 {{- end }}
