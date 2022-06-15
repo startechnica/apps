@@ -423,6 +423,10 @@ csiController:
       repository: sig-storage/csi-provisioner
       tag: v3.1.0
 
+csiDriver:
+  create: true
+  podInfoOnMount: true
+  attachRequired: false
 
 etcd:
   enabled: true

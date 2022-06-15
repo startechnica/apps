@@ -4,7 +4,7 @@ metadata:
   name: {{ printf "%s-csi" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    openebs/engine: mayastor
+    app.kubernetes.io/component: mayastor-csi
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -50,7 +50,7 @@ spec:
       # pressure unless they exceed those limits. limits and requests must be
       # the same.
       containers:
-      - name: mayastor-csi
+      - name: mayastor-csi-plugin
         {{- if .Values.diagnosticMode.enabled }}
         command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
         {{- else if .Values.command }}
@@ -71,7 +71,7 @@ spec:
           {{- if .Values.csi.nvme.io_timeout_enabled }}
           - "--nvme-core-io-timeout={{ .Values.csi.nvme.io_timeout }}"
           {{- end }}
-          - "-v"
+          - "--v=5"
         {{- end }}
         image: {{ include "mayastor.csi.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
@@ -83,6 +83,7 @@ spec:
           - name: MY_NODE_NAME
             valueFrom:
               fieldRef:
+                apiVersion: v1
                 fieldPath: spec.nodeName
           - name: MY_POD_IP
             valueFrom:
@@ -126,6 +127,13 @@ spec:
         env:
           - name: CSI_SOCKET_ADDRESS
             value: {{ .Values.csi.socketAddress | quote }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh"
+                - -c
+                - rm -rf /registration/mayastor.openebs.io /registration/mayastor.openebs.io-reg.sock
         # Mayastor node plugin gRPC server
         ports:
           - containerPort: 10199
