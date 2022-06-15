@@ -48,6 +48,7 @@ spec:
               trap "exit 1" TERM;
               until nc -vzw 5 {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.port }};
               do
+                date;
                 echo "Waiting for etcd...";
                 sleep 1;
               done;
@@ -67,12 +68,10 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- else }}
           args:
-            # - "-smayastor-etcd"
-            # - "-nmayastor-nats"
             - "--store={{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
             - "--request-timeout=5s"
             - "--cache-period=30s"
-            - "--grpc-server-addr=https://0.0.0.0:{{ .Values.agentCore.containerPorts.port }}"
+            - "--grpc-server-addr=https://0.0.0.0:{{ .Values.agentCore.containerPorts.grpc }}"
           {{- end }}
           env:
             - name: MY_POD_NAME
