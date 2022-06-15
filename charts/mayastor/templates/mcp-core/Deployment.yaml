@@ -63,7 +63,6 @@ spec:
             - "--request-timeout=5s"
             - "--cache-period=30s"
           env:
-
             - name: MY_POD_NAME
               valueFrom:
                 fieldRef:

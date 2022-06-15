@@ -37,15 +37,13 @@ spec:
         - command:
             - sh
             - -c
-            - trap "exit 1" TERM; until nc -vz mayastor-nats 4222; do echo "Waiting for nats..."; sleep
-              1; done;
+            - trap "exit 1" TERM; until nc -vz mayastor-nats 4222; do echo "Waiting for nats..."; sleep 1; done;
           image: busybox:latest
           name: nats-probe
         - command:
             - sh
             - -c
-            - trap "exit 1" TERM; until nc -vz mayastor-etcd 2379; do echo "Waiting for etcd...";
-              sleep 1; done;
+            - trap "exit 1" TERM; until nc -vz mayastor-etcd 2379; do echo "Waiting for etcd..."; sleep 1; done;
           image: busybox:latest
           name: etcd-probe
       containers:
@@ -63,10 +61,12 @@ spec:
             - "-e http://mayastor-rest:8081"
             - "--interval=30s"
           env:
-            - name: RUST_LOG
-              value: info,msp_operator=info
             - name: MY_POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: RUST_LOG
+              value: info,msp_operator=info
+            - name: RUST_BACKTRACE
+              value: full
 {{- end }}
