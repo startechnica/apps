@@ -33,13 +33,19 @@ spec:
     spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
-      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       initContainers:
         - command:
             - sh
             - -c
-            - trap "exit 1" TERM; until nc -vz mayastor-rest 8081; do echo "Waiting for REST API endpoint to become available"; sleep 1; done;
+            - >-
+              trap "exit 1" TERM
+              until nc -vz mayastor-rest 8081
+                            do
+                echo "Waiting for REST API endpoint to become available"
+                sleep 1
+              done
           image: busybox:latest
           name: rest-probe
       containers:
