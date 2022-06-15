@@ -6,7 +6,7 @@ etcd:
   replicaCount: 1
   auth:
     rbac:
-      create: true
+      create: false
       allowNoneAuthentication: true
       rootPassword: password
   persistence:
