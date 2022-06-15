@@ -1,5 +1,7 @@
 
 clusterDomain: nebula.mci.net.id
+diagnosticMode:
+  enabled: true
 
 etcd:
   clusterDomain: nebula.mci.net.id
