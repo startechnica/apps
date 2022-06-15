@@ -9,12 +9,20 @@
 
 {{/* Return the proper Mayastor image name */}}
 {{- define "mayastor.image" -}}
+{{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.imageDev "global" .Values.global) }}
+{{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+{{- end -}}
 {{- end -}}
 
 {{/* Return the proper Mayastor CSI Node image name */}}
 {{- define "mayastor.csi.image" -}}
+{{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csi.imageDev "global" .Values.global) }}
+{{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csi.image "global" .Values.global) }}
+{{- end -}}
 {{- end -}}
 
 {{/* Return the proper Mayastor CSI Node image name */}}
@@ -24,7 +32,11 @@
 
 {{/* Return the proper Mayastor CSI Controller image name */}}
 {{- define "mayastor.csiController.image" -}}
+{{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.imageDev "global" .Values.global) }}
+{{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+{{- end -}}
 {{- end -}}
 
 {{/* Return the proper Mayastor CSI Controller Attacher image name */}}
@@ -44,13 +56,17 @@
 
 {{/* Return the proper Mayastor Rest image name */}}
 {{- define "mayastor.mcpCore.image" -}}
+{{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.mcpCore.imageDev "global" .Values.global) }}
+{{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.mcpCore.image "global" .Values.global) }}
+{{- end -}}
 {{- end -}}
 
 {{/* Return the proper Mayastor Rest image name */}}
 {{- define "mayastor.mcpRest.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.mcpRest.imagedev "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.mcpRest.imageDev "global" .Values.global) }}
 {{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.mcpRest.image "global" .Values.global) }}
 {{- end -}}

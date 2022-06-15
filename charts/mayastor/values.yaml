@@ -66,6 +66,10 @@ diagnosticMode:
 ## @section Mayastor common parameters
 
 ## Mayastor image
+imageDev:
+  registry: docker.io
+  repository: mayadata/mayastor-csi-node
+  tag: develop
 ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
 ## @param image.registry Mayastor Control Plane Rest image registry
 ## @param image.repository Mayastor Control Plane Rest image repository
