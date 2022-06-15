@@ -39,7 +39,6 @@ clusterDomain: cluster.local
 ## @param extraDeploy Array of extra objects to deploy with the release
 ##
 extraDeploy: []
-
 ## Enable diagnostic mode in the deployment
 ##
 diagnosticMode:
@@ -55,10 +54,10 @@ diagnosticMode:
   args:
     - infinity
 
-## @section FreeRADIUS common parameters
+## @section FreeRADIUS Image parameters
 
 ## FreeRADIUS image
-## ref: https://hub.docker.com/r/bitnami/mariadb/tags/
+## ref: https://hub.docker.com/r/freeradius/freeradius-server/tags
 ## @param image.registry FreeRADIUS image registry
 ## @param image.repository FreeRADIUS image repository
 ## @param image.tag FreeRADIUS image tag (immutable tags are recommended)
@@ -348,7 +347,7 @@ livenessProbe:
 ##
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 10
+  initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -479,7 +478,6 @@ volumePermissions:
   ##
   securityContext:
     runAsUser: 0
-
 ## @param extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS pod(s)
 ##
 extraVolumes: []
@@ -716,6 +714,34 @@ rbac:
   ##       - list
   ##
   rules: []
+
+## Network Policy configuration
+## ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+##
+networkPolicy:
+  ## @param networkPolicy.enabled Enable the default NetworkPolicy policy
+  ##
+  enabled: false
+  ## @param networkPolicy.allowExternal Don't require client label for connections
+  ## The Policy model to apply. When set to false, only pods with the correct
+  ## client label will have network access to the ports Keycloak is listening
+  ## on. When true, Keycloak will accept connections from any source
+  ## (with the correct destination port).
+  ##
+  allowExternal: true
+  ## @param networkPolicy.additionalRules Additional NetworkPolicy rules
+  ## Note that all rules are OR-ed.
+  ## Example:
+  ## additionalRules:
+  ##   - matchLabels:
+  ##       - role: frontend
+  ##   - matchExpressions:
+  ##       - key: role
+  ##         operator: In
+  ##         values:
+  ##           - frontend
+  ##
+  additionalRules: {}
 
 ## Pod disruption budget configuration
 ##
