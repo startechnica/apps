@@ -47,7 +47,7 @@ spec:
         command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
         {{- else if .Values.command }}
         command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
-        {{- else }}
+        {{ else }}
         command:
           - mayastor-csi
         {{- end }}
@@ -55,7 +55,7 @@ spec:
         args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
         {{- else if .Values.args }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
-        {{- else }}
+        {{ else }}
         args:
           - "--csi-socket=/csi/csi.sock"
           - "--node-name=$(MY_NODE_NAME)"
