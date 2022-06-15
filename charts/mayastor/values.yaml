@@ -464,6 +464,8 @@ etcd:
     secureTransport: false
   peer:
     secureTransport: false
+  removeMemberOnContainerTermination: false
+  initialClusterState: "new"
   ## Authentication parameters
   ##
   auth:
