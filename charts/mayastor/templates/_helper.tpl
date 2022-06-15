@@ -12,11 +12,6 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Return the proper Mayastor Rest image name */}}
-{{- define "mayastor.coreAgents.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.coreAgents.image "global" .Values.global) }}
-{{- end -}}
-
 {{/* Return the proper Mayastor CSI image name */}}
 {{- define "mayastor.csi.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csi.image "global" .Values.global) }}
@@ -25,6 +20,11 @@
 {{/* Return the proper Mayastor CSI image name */}}
 {{- define "mayastor.csiController.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
+{{- end -}}
+
+{{/* Return the proper Mayastor Rest image name */}}
+{{- define "mayastor.mcpCore.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.mcpCore.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Mayastor Rest image name */}}

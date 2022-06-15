@@ -91,7 +91,7 @@ image:
   ##
   debug: false
 
-coreAgents:
+mcpCore:
   enabled: true
   ## Mayastor Control Plane Core Agent image
   ## ref: https://hub.docker.com/r/mayadata/mayastor/tags

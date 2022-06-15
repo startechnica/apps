@@ -1,6 +1,6 @@
 ## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/core-agents-deployment.yaml
 
-{{- if .Values.core-agents.enabled }}
+{{- if .Values.mcpCore.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -57,8 +57,8 @@ spec:
             requests:
               cpu: 500m
               memory: 16Mi
-          image: {{ include "mayastor.coreAgents.image" . }}
-          imagePullPolicy: {{ .Values.coreAgents.image.pullPolicy | quote }}
+          image: {{ include "mayastor.mcpCore.image" . }}
+          imagePullPolicy: {{ .Values.mcpCore.image.pullPolicy | quote }}
           args:
             - "-smayastor-etcd"
             - "-nmayastor-nats"
