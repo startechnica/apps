@@ -250,9 +250,9 @@ listen {
 #	interface = eth0
 #	clients = per_socket_clients
 	limit {
-	      max_connections = 16
-	      lifetime = 0
-	      idle_timeout = 30
+		max_connections = 16
+		lifetime = 0
+		idle_timeout = 30
 	}
 }
 
@@ -406,37 +406,24 @@ authorize {
 #		updated = return
 	}
 
-	#
-	#  Pull crypt'd passwords from /etc/passwd or /etc/shadow,
-	#  using the system API's to get the password.  If you want
-	#  to read /etc/passwd or /etc/shadow directly, see the
-	#  mods-available/passwd module.
-	#
+	#  Pull crypt'd passwords from /etc/passwd or /etc/shadow, using the system API's to get the password.  If you want
+	#  to read /etc/passwd or /etc/shadow directly, see the mods-available/passwd module.
 #	unix
 
-	#
-	#  Read the 'users' file.  In v3, this is located in
-	#  raddb/mods-config/files/authorize
+	#  Read the 'users' file.  In v3, this is located in raddb/mods-config/files/authorize
 	files
 
-	#
-	#  Look in an SQL database.  The schema of the database
-	#  is meant to mirror the "users" file.
+	#  Look in an SQL database.  The schema of the database is meant to mirror the "users" file.
 	#
 	#  See "Authorization Queries" in mods-available/sql
 	-sql
 
-	#
-	#  If you are using /etc/smbpasswd, and are also doing
-	#  mschap authentication, the un-comment this line, and
-	#  configure the 'smbpasswd' module.
+	#  If you are using /etc/smbpasswd, and are also doing mschap authentication, the un-comment this line, and configure the 'smbpasswd' module.
 #	smbpasswd
 
-	#
 	#  The ldap module reads passwords from the LDAP database.
 	-ldap
 
-	#
 	#  Enforce daily limits on time spent logged in.
 #	daily
 
@@ -457,12 +444,8 @@ authorize {
 	#
 	pap
 
-	#
-	#  If "status_server = yes", then Status-Server messages are passed
-	#  through the following section, and ONLY the following section.
-	#  This permits you to do DB queries, for example.  If the modules
-	#  listed here return "fail", then NO response is sent.
-	#
+	#  If "status_server = yes", then Status-Server messages are passed through the following section, and ONLY the following section.
+	#  This permits you to do DB queries, for example.  If the modules listed here return "fail", then NO response is sent.
 #	Autz-Type Status-Server {
 #
 #	}
@@ -513,41 +496,28 @@ authorize {
 #  the post-auth section is for.
 #
 authenticate {
-	#
-	#  PAP authentication, when a back-end database listed
-	#  in the 'authorize' section supplies a password.  The
-	#  password can be clear-text, or encrypted.
+	#  PAP authentication, when a back-end database listed in the 'authorize' section supplies a password.  The password can be clear-text, or encrypted.
 	Auth-Type PAP {
 		pap
 	}
 
-	#
 	#  Most people want CHAP authentication
-	#  A back-end database listed in the 'authorize' section
-	#  MUST supply a CLEAR TEXT password.  Encrypted passwords
-	#  won't work.
+	#  A back-end database listed in the 'authorize' section MUST supply a CLEAR TEXT password. Encrypted passwords won't work.
 	Auth-Type CHAP {
 		chap
 	}
 
-	#
 	#  MSCHAP authentication.
 	Auth-Type MS-CHAP {
 		mschap
 	}
 
-	#
 	#  For old names, too.
-	#
 	mschap
 
-	#
-	#  If you have a Cisco SIP server authenticating against
-	#  FreeRADIUS, uncomment the following line, and the 'digest'
-	#  line in the 'authorize' section.
+	#  If you have a Cisco SIP server authenticating against FreeRADIUS, uncomment the following line, and the 'digest' line in the 'authorize' section.
 	digest
 
-	#
 	#  Pluggable Authentication Modules.
 #	pam
 
@@ -588,47 +558,31 @@ authenticate {
 }
 
 
-#
 #  Pre-accounting.  Decide which accounting type to use.
 #
 preacct {
 	preprocess
 
-	#
-	#  Merge Acct-[Input|Output]-Gigawords and Acct-[Input-Output]-Octets
-	#  into a single 64bit counter Acct-[Input|Output]-Octets64.
-	#
+	#  Merge Acct-[Input|Output]-Gigawords and Acct-[Input-Output]-Octets into a single 64bit counter Acct-[Input|Output]-Octets64.
 #	acct_counters64
 
-	#
 	#  Session start times are *implied* in RADIUS.
-	#  The NAS never sends a "start time".  Instead, it sends
-	#  a start packet, *possibly* with an Acct-Delay-Time.
-	#  The server is supposed to conclude that the start time
-	#  was "Acct-Delay-Time" seconds in the past.
+	#  The NAS never sends a "start time".  Instead, it sends a start packet, *possibly* with an Acct-Delay-Time.
+	#  The server is supposed to conclude that the start time was "Acct-Delay-Time" seconds in the past.
 	#
-	#  The code below creates an explicit start time, which can
-	#  then be used in other modules.  It will be *mostly* correct.
-	#  Any errors are due to the 1-second resolution of RADIUS,
-	#  and the possibility that the time on the NAS may be off.
+	#  The code below creates an explicit start time, which can then be used in other modules.  It will be *mostly* correct.
+	#  Any errors are due to the 1-second resolution of RADIUS, and the possibility that the time on the NAS may be off.
 	#
 	#  The start time is: NOW - delay - session_length
-	#
 
 #	update request {
 #	  	&FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
 #	}
 
-
-	#
-	#  Ensure that we have a semi-unique identifier for every
-	#  request, and many NAS boxes are broken.
+	#  Ensure that we have a semi-unique identifier for every request, and many NAS boxes are broken.
 	acct_unique
 
-	#
-	#  Look for IPASS-style 'realm/', and if not found, look for
-	#  '@realm', and decide whether or not to proxy, based on
-	#  that.
+	#  Look for IPASS-style 'realm/', and if not found, look for '@realm', and decide whether or not to proxy, based on that.
 	#
 	#  Accounting requests are generally proxied to the same
 	#  home server as authentication requests.
@@ -636,7 +590,6 @@ preacct {
 	suffix
 #	ntdomain
 
-	#
 	#  Read the 'acct_users' file
 	files
 }
@@ -645,14 +598,11 @@ preacct {
 #  Accounting.  Log the accounting data.
 #
 accounting {
-	#  Update accounting packet by adding the CUI attribute
-	#  recorded from the corresponding Access-Accept
-	#  use it only if your NAS boxes do not support CUI themselves
+	#  Update accounting packet by adding the CUI attribute recorded from the corresponding Access-Accept use it only if your NAS boxes do not support CUI themselves
 #	cui
 	#
 	#  Create a 'detail'ed log of the packets.
-	#  Note that accounting requests which are proxied
-	#  are also logged in the detail file.
+	#  Note that accounting requests which are proxied are also logged in the detail file.
 	detail
 #	daily
 
@@ -661,24 +611,16 @@ accounting {
 	#  If you don't use "radlast", you can delete this line.
 	unix
 
-	#
 	#  For Simultaneous-Use tracking.
-	#
-	#  Due to packet losses in the network, the data here
-	#  may be incorrect.  There is little we can do about it.
+	#  Due to packet losses in the network, the data here may be incorrect.  There is little we can do about it.
 #	radutmp
 #	sradutmp
 
-	#
 	#  Return an address to the IP Pool when we see a stop record.
-	#
-	#  Ensure that &control:Pool-Name is set to determine which
-	#  pool of IPs are used.
+	#  Ensure that &control:Pool-Name is set to determine which pool of IPs are used.
 #	sqlippool
 
-	#
 	#  Log traffic to an SQL database.
-	#
 	#  See "Accounting queries" in mods-available/sql
 	-sql
 
@@ -714,13 +656,11 @@ accounting {
 }
 
 
-#  Session database, used for checking Simultaneous-Use. Either the radutmp
-#  or rlm_sql module can handle this.
+#  Session database, used for checking Simultaneous-Use. Either the radutmp rlm_sql module can handle this.
 #  The rlm_sql module is *much* faster
 session {
 #	radutmp
 
-	#
 	#  See "Simultaneous Use Checking Queries" in mods-available/sql
 	sql
 }
@@ -818,12 +758,10 @@ post-auth {
 	#  Uncomment the line below if *returning* the CUI.
 #	cui
 
-	#  Create empty accounting session to make simultaneous check
-	#  more robust. See the accounting queries configuration in
+	#  Create empty accounting session to make simultaneous check more robust. See the accounting queries configuration in
 	#  raddb/mods-config/sql/main/*/queries.conf for details.
 	#
-	#  The "sql_session_start" policy is defined in
-	#  raddb/policy.d/accounting.  See that file for more details.
+	#  The "sql_session_start" policy is defined in raddb/policy.d/accounting.  See that file for more details.
 #	sql_session_start
 
 	#
@@ -944,16 +882,13 @@ post-auth {
 		-sql
 		attr_filter.access_reject
 
-		# Insert EAP-Failure message if the request was
-		# rejected by policy instead of because of an
-		# authentication failure
+		# Insert EAP-Failure message if the request was rejected by policy instead of because of an authentication failure
 		eap
 
 		#  Remove reply message if the response contains an EAP-Message
 		remove_reply_message_if_eap
 	}
 
-	#
 	#  Filter access challenges.
 	#
 	Post-Auth-Type Challenge {

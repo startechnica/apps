@@ -1,8 +1,8 @@
 {{- if .Values.networkPolicy.enabled }}
-apiVersion: networking.k8s.io/v1
+apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
 kind: NetworkPolicy
 metadata:
-  name: {{ template "common.names.fullname" . }}
+  name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: freeradius
@@ -35,7 +35,7 @@ spec:
       from:
         - podSelector:
             matchLabels:
-              {{ template "common.names.fullname" . }}-client: "true"
+              {{ include "common.names.fullname" . }}-client: "true"
         - podSelector:
             matchLabels: {{- include "common.labels.matchLabels" . | nindent 14 }}
               app.kubernetes.io/component: freeradius
