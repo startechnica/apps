@@ -47,16 +47,16 @@ spec:
         securityContext:
           privileged: true
         env:
-        - name: MY_NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        - name: RUST_BACKTRACE
-          value: "1"
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: RUST_BACKTRACE
+            value: full
         {{- if .Values.moac }}
         - name: MOAC
           value: "true"
