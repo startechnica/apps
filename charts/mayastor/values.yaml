@@ -172,6 +172,105 @@ schedulerName: ""
 ##
 podManagementPolicy: ""
 
+## @section Persistence Parameters
+
+## Persistence Parameters
+## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistence:
+  ## @param persistence.enabled Enable persistence on FreeRADIUS replicas using a `PersistentVolumeClaim`
+  ##
+  enabled: false
+    ## @param persistence.existingClaim Name of an existing `PersistentVolumeClaim` for FreeRADIUS primary replicas
+    ## NOTE: When it's set the rest of persistence parameters are ignored
+    ##
+  existingClaim: ""
+  ## @param persistence.subPath Subdirectory of the volume to mount at
+  ##
+  subPath: ""
+  ## @param persistence.storageClass FreeRADIUS persistent volume storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  storageClass: ""
+  ## @param persistence.annotations FreeRADIUS persistent volume claim annotations
+  ##
+  annotations: {}
+  ## @param persistence.accessModes FreeRADIUS persistent volume access Modes
+  ##
+  accessModes:
+    - ReadWriteOnce
+  ## @param persistence.size FreeRADIUS persistent volume size
+  ##
+  size: 8Gi
+  ## @param persistence.selector Selector to match an existing Persistent Volume
+  ## selector:
+  ##   matchLabels:
+  ##     app: my-app
+  ##
+  selector: {}
+## 'volumePermissions' init container parameters
+## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
+##   based on the podSecurityContext/containerSecurityContext parameters
+##
+volumePermissions:
+  ## @param volumePermissions.enabled Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
+  ##
+  enabled: false
+  ## Bitnami Shell image
+  ## ref: https://hub.docker.com/r/bitnami/bitnami-shell/tags/
+  ## @param volumePermissions.image.registry Bitnami Shell image registry
+  ## @param volumePermissions.image.repository Bitnami Shell image repository
+  ## @param volumePermissions.image.tag Bitnami Shell image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.pullPolicy Bitnami Shell image pull policy
+  ## @param volumePermissions.image.pullSecrets Bitnami Shell image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/bitnami-shell
+    tag: 11-debian-11-r0
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Init container's resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param volumePermissions.resources.limits The resources limits for the init container
+  ## @param volumePermissions.resources.requests The requested resources for the init container
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Init container Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
+  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
+  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
+  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
+  ##
+  securityContext:
+    runAsUser: 0
+## @param extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS pod(s)
+##
+extraVolumes: []
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS container(s)
+##
+extraVolumeMounts: []
+## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
+##
+initContainers: []
+## @param sidecars Add additional sidecar containers for the FreeRADIUS pod(s)
+##
+sidecars: []
+
 csi:
   enabled: true
   ## Mayastor CSI image
