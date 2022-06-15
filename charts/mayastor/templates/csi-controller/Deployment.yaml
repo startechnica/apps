@@ -42,7 +42,7 @@ spec:
             - >-
               trap "exit 1" TERM
               until nc -vz mayastor-rest 8081
-                            do
+              do
                 echo "Waiting for REST API endpoint to become available"
                 sleep 1
               done
