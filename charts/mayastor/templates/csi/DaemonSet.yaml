@@ -45,7 +45,6 @@ spec:
       - name: mayastor-csi
         image: {{ include "mayastor.csi.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        # we need privileged because we mount filesystems and use mknod
         securityContext:
           privileged: true
         env:
