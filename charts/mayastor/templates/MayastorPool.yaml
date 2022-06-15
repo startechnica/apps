@@ -6,7 +6,7 @@ metadata:
   name: pool-on-{{ .node }}
   # or let k8s to generate a unique pool name
   #generateName: pool-
-  namespace: {{ include "common.names.namespace" . | quote }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
 spec:
   node: {{ .node }}
   # ATM only one disk device is supported (i.e. /dev/nvme1n1)
