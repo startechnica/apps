@@ -489,7 +489,7 @@ nats:
     create: false
     ## @param serviceAccount.name Name of the service account to create or use
     ##
-    name: {{ include "mayastor.serviceAccountName" . }}
+    name: {{ include "mayastor.serviceAccountName" $ }}
   cluster:
     enabled: false
     auth:
