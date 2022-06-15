@@ -43,6 +43,28 @@ spec:
       # the same.
       containers:
       - name: mayastor-csi
+        {{- if .Values.diagnosticMode.enabled }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+        {{- else if .Values.command }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+        {{- else }}
+        command:
+          - mayastor-csi
+        {{- end }}
+        {{- if .Values.diagnosticMode.enabled }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+        {{- else if .Values.args }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+        {{- else }}
+        args:
+          - "--csi-socket=/csi/csi.sock"
+          - "--node-name=$(MY_NODE_NAME)"
+          - "--grpc-endpoint=$(MY_POD_IP):10199"
+        {{- end }}
+        {{- if .Values.csi.nvme.io_timeout_enabled }}
+        - "--nvme-core-io-timeout={{ .Values.csi.nvme.io_timeout }}"
+        {{- end }}
+        - "-v"
         image: {{ include "mayastor.csi.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         securityContext:
@@ -62,16 +84,6 @@ spec:
         - name: MOAC
           value: "true"
         {{- end }}
-        args:
-        - "--csi-socket=/csi/csi.sock"
-        - "--node-name=$(MY_NODE_NAME)"
-        - "--grpc-endpoint=$(MY_POD_IP):10199"
-        {{- if .Values.csi.nvme.io_timeout_enabled }}
-        - "--nvme-core-io-timeout={{ .Values.csi.nvme.io_timeout }}"
-        {{- end }}
-        - "-v"
-        command:
-          - mayastor-csi
         volumeMounts:
           - name: device
             mountPath: /dev
