@@ -69,7 +69,6 @@ spec:
           args:
             # - "-smayastor-etcd"
             # - "-nmayastor-nats"
-            # - "--nats={{ $natsName }}"
             - "--store={{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
             - "--request-timeout=5s"
             - "--cache-period=30s"
