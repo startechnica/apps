@@ -439,7 +439,7 @@ etcd:
     create: false
     ## @param serviceAccount.name Name of the service account to create or use
     ##
-    name: {{ include "mayastor.serviceAccountName" . }}
+    name: {{ include "mayastor.serviceAccountName" $ }}
 
   ## Init containers parameters:
   ## volumePermissions: Change the owner and group of the persistent volume mountpoint to runAsUser:fsGroup values from the securityContext section.
