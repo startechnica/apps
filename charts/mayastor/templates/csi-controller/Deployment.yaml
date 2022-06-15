@@ -1,6 +1,6 @@
 ## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/csi-deployment.yaml
 
-{{- if .Values.rest.enabled }}
+{{- if .Values.csiController.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -92,4 +92,5 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
       volumes:
         - name: socket-dir
-          emptyDir:
+          emptyDir: {}
+{{- end }}
