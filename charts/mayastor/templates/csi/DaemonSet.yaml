@@ -112,10 +112,12 @@ spec:
             cpu: "100m"
             memory: "50Mi"
       - name: csi-driver-registrar
-        image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
+        # image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
+        image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
         args:
           - "--csi-address=/csi/csi.sock"
           - "--kubelet-registration-path=/var/lib/kubelet/plugins/mayastor.openebs.io/csi.sock"
+          - "--v=5"
         volumeMounts:
           - name: plugin-dir
             mountPath: /csi
