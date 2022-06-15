@@ -459,7 +459,7 @@ etcd:
   ##
   clusterDomain: cluster.local
   podLabels:
-      app.kubernetes.io/component: etcd
+    app.kubernetes.io/component: etcd
   client:
     secureTransport: false
   peer:
