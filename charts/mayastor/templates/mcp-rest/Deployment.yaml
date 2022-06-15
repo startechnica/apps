@@ -37,7 +37,7 @@ spec:
         - command:
           - sh
           - -c
-          - trap "exit 1" TERM; until nc -vz nats 4222; do echo "Waiting for nats..."; sleep
+          - trap "exit 1" TERM; until nc -vz mayastor-nats 4222; do echo "Waiting for nats..."; sleep
             1; done;
           image: busybox:latest
           name: nats-probe
