@@ -24,7 +24,7 @@ kubeVersion: ""
 ## @param nameOverride String to partially override Mayastor Control Plane Rest.fullname
 ##
 nameOverride: ""
-namespaceOverride:
+namespaceOverride: ""
 ## @param fullnameOverride String to fully override Mayastor Control Plane Rest.fullname
 ##
 fullnameOverride: ""
