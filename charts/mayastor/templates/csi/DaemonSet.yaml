@@ -12,6 +12,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: mayastor-csi
@@ -71,21 +72,21 @@ spec:
         {{- end }}
         - "-v"
         command:
-        - mayastor-csi
+          - mayastor-csi
         volumeMounts:
-        - name: device
-          mountPath: /dev
-        - name: sys
-          mountPath: /sys
-        - name: run-udev
-          mountPath: /run/udev
-        - name: host-root
-          mountPath: /host
-        - name: plugin-dir
-          mountPath: /csi
-        - name: kubelet-dir
-          mountPath: /var/lib/kubelet
-          mountPropagation: "Bidirectional"
+          - name: device
+            mountPath: /dev
+          - name: sys
+            mountPath: /sys
+          - name: run-udev
+            mountPath: /run/udev
+          - name: host-root
+            mountPath: /host
+          - name: plugin-dir
+            mountPath: /csi
+          - name: kubelet-dir
+            mountPath: /var/lib/kubelet
+            mountPropagation: "Bidirectional"
         resources:
           limits:
             cpu: "100m"
@@ -96,13 +97,13 @@ spec:
       - name: csi-driver-registrar
         image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
         args:
-        - "--csi-address=/csi/csi.sock"
-        - "--kubelet-registration-path=/var/lib/kubelet/plugins/mayastor.openebs.io/csi.sock"
+          - "--csi-address=/csi/csi.sock"
+          - "--kubelet-registration-path=/var/lib/kubelet/plugins/mayastor.openebs.io/csi.sock"
         volumeMounts:
-        - name: plugin-dir
-          mountPath: /csi
-        - name: registration-dir
-          mountPath: /registration
+          - name: plugin-dir
+            mountPath: /csi
+          - name: registration-dir
+            mountPath: /registration
         resources:
           limits:
             cpu: "100m"
@@ -112,35 +113,35 @@ spec:
             memory: "50Mi"
         # Mayastor node plugin gRPC server
         ports:
-        - containerPort: 10199
-          protocol: TCP
-          name: mayastor-node
+          - containerPort: 10199
+            name: mayastor-node
+            protocol: TCP
       volumes:
-      - name: device
-        hostPath:
-          path: /dev
-          type: Directory
-      - name: sys
-        hostPath:
-          path: /sys
-          type: Directory
-      - name: run-udev
-        hostPath:
-          path: /run/udev
-          type: Directory
-      - name: host-root
-        hostPath:
-          path: /
-          type: Directory
-      - name: registration-dir
-        hostPath:
-          path: /var/lib/kubelet/plugins_registry/
-          type: Directory
-      - name: plugin-dir
-        hostPath:
-          path: /var/lib/kubelet/plugins/mayastor.openebs.io/
-          type: DirectoryOrCreate
-      - name: kubelet-dir
-        hostPath:
-          path: /var/lib/kubelet
-          type: Directory
+        - name: device
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: sys
+          hostPath:
+            path: /sys
+            type: Directory
+        - name: run-udev
+          hostPath:
+            path: /run/udev
+            type: Directory
+        - name: host-root
+          hostPath:
+            path: /
+            type: Directory
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry/
+            type: Directory
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/mayastor.openebs.io/
+            type: DirectoryOrCreate
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
