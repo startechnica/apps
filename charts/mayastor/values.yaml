@@ -458,16 +458,6 @@ nats:
   ## Kubernetes Cluster Domain
   ##
   clusterDomain: cluster.local
-  ## TLS authentication for client-to-server communications
-  ## ref: https://etcd.io/docs/current/op-guide/security/
-  ##
-  client:
-    secureTransport: false
-  ## TLS authentication for server-to-server communications
-  ## ref: https://etcd.io/docs/current/op-guide/security/
-  ##
-  peer:
-    secureTransport: false
   ## Enable persistence using Persistent Volume Claims
   ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
   ##
@@ -488,11 +478,15 @@ nats:
     size: 2Gi
   cluster:
     enabled: false
+    auth:
+      enabled: false
   exporter:
     enabled: false
   logging:
     debug: false
     trace: false
+  metrics:
+    enabled: false
 
 mcpCore:
   enabled: true
