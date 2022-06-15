@@ -4,7 +4,7 @@ metadata:
   name: {{ printf "%s-csi" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: mayastor-csi
+    app.kubernetes.io/component: csi-node
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -15,7 +15,7 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: mayastor-csi
+      app.kubernetes.io/component: csi-node
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -28,7 +28,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: mayastor-csi
+        app.kubernetes.io/component: csi-node
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}

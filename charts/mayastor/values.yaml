@@ -454,6 +454,8 @@ etcd:
   ## Kubernetes Cluster Domain
   ##
   clusterDomain: cluster.local
+  podLabels:
+      app.kubernetes.io/component: etcd
   ## Authentication parameters
   ##
   auth:
@@ -546,6 +548,8 @@ nats:
   ## Kubernetes Cluster Domain
   ##
   clusterDomain: cluster.local
+  podLabels:
+    app.kubernetes.io/component: nats
   ## Enable persistence using Persistent Volume Claims
   ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
   ##
