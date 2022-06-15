@@ -1,7 +1,8 @@
 
 clusterDomain: nebula.mci.net.id
 diagnosticMode:
-  enabled: false
+  enabled: true
+  environment: development
 
 tolerations:
   - effect: NoSchedule

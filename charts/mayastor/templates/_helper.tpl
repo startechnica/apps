@@ -54,7 +54,7 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.provisioner.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Return the proper Mayastor Rest image name */}}
+{{/* Return the proper Mayastor Core Agent image name */}}
 {{- define "mayastor.mcpCore.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.mcpCore.imageDev "global" .Values.global) }}
@@ -74,7 +74,11 @@
 
 {{/* Return the proper Mayastor Operator image name */}}
 {{- define "mayastor.mspOperator.image" -}}
+{{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.mspOperator.imageDev "global" .Values.global) }}
+{{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.mspOperator.image "global" .Values.global) }}
+{{- end -}}
 {{- end -}}
 
 {{/* Return the proper image name (for the init container volume-permissions image) */}}

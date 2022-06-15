@@ -59,9 +59,9 @@ diagnosticMode:
   ##
   args:
     - infinity
-  ## @param diagnosticMode.environment
+  ## @param diagnosticMode.environment (enter: development)
   ##
-  environment: development
+  environment: ""
 
 ## @section Mayastor common parameters
 
@@ -718,6 +718,10 @@ mcpRest:
 
 mspOperator:
   enabled: true
+  imageDev:
+    registry: docker.io
+    repository: mayadata/mayastor-operator-diskpool
+    tag: develop
   ## Mayastor Control Plane MSP Operator image
   ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
   ## @param image.registry Mayastor Control Plane MSP Operator image registry
