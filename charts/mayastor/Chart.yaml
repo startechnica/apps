@@ -13,7 +13,8 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     tags:
       - bitnami-etcd
-    version: 6.x.x
+    # version: 6.x.x
+    version: 8.x.x
   - name: nats
     condition: nats.enabled
     repository: https://charts.bitnami.com/bitnami

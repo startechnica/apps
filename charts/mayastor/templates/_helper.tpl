@@ -38,6 +38,11 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.agentCore.image "global" .Values.global) }}
 {{- end -}}
 
+{{/* Return the proper Mayastor Rest image name */}}
+{{- define "mayastor.apiRest.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.apiRest.image "global" .Values.global) }}
+{{- end -}}
+
 {{/* Return the proper Mayastor CSI Controller image name */}}
 {{- define "mayastor.csiController.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.image "global" .Values.global) }}
@@ -66,11 +71,6 @@
 {{/* Return the proper Mayastor CSI Node image name */}}
 {{- define "mayastor.csiNode.driverRegistrar.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csiNode.driverRegistrar.image "global" .Values.global) }}
-{{- end -}}
-
-{{/* Return the proper Mayastor Rest image name */}}
-{{- define "mayastor.apiRest.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.apiRest.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Mayastor I/O Engine image name */}}

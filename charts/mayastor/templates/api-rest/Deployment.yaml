@@ -48,7 +48,7 @@ spec:
           image: busybox:latest
           name: etcd-probe
       containers:
-        - name: rest
+        - name: api-rest
           resources:
             limits:
               cpu: 100m
