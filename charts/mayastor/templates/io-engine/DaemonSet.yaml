@@ -91,13 +91,13 @@ spec:
             # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
             # Note: Ensure that the CPU resources are updated accordingly.
             #       If you use 2 CPUs, the CPU: field should also read 2.
-            - "-g $(MY_POD_IP)"
+            - "-g$(MY_POD_IP)"
             {{- if .Values.ioEngine.cpuCount }}
-            - "-l {{ include "mayastor.cpuFlag" . | quote }}"
+            - "-l{{ include "mayastor.cpuFlag" . | quote }}"
             {{- end }}
-            - "-p {{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
-            - "-R https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
-            - "-y /var/local/io-engine/config.yaml"
+            - "-p{{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
+            - "-Rhttps://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
+            - "-y/var/local/io-engine/config.yaml"
           {{- end }}
           env:
             - name: MY_NODE_NAME
