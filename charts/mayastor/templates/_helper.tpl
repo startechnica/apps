@@ -128,7 +128,7 @@
 {{- define "mayastor.cpuFlag" -}}
 {{- range $i, $e := until (int .Values.ioEngine.cpuCount) }}
 {{- if gt $i 0 }}
-    {{- printf "," }}
+  {{- printf "," }}
 {{- end }}
 {{- printf "%d" (add $i 1) }}
 {{- end }}
