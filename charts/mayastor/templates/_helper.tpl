@@ -37,11 +37,7 @@
 {{- end -}}
 {{- end -}}
 
-{{/* Return the proper Mayastor I/O Engine image name */}}
-{{- define "mayastor.ioEngine.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.ioEngine.image "global" .Values.global) }}
-{{- end -}}
-{{- end -}}
+
 
 {{/* Return the proper Mayastor Agent Core image name */}}
 {{- define "mayastor.agentCore.image" -}}
@@ -97,6 +93,11 @@
 {{- else -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.apiRest.image "global" .Values.global) }}
 {{- end -}}
+{{- end -}}
+
+{{/* Return the proper Mayastor I/O Engine image name */}}
+{{- define "mayastor.ioEngine.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.ioEngine.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper image name (for the init container volume-permissions image) */}}
