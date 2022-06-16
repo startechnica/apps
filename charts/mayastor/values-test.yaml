@@ -19,6 +19,7 @@ etcd:
   auth:
     rbac:
       create: true
+      enabled: true
       allowNoneAuthentication: true
       rootPassword: password
   persistence:
