@@ -37,6 +37,12 @@
 {{- end -}}
 {{- end -}}
 
+{{/* Return the proper Mayastor I/O Engine image name */}}
+{{- define "mayastor.ioEngine.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.ioEngine.image "global" .Values.global) }}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the proper Mayastor Agent Core image name */}}
 {{- define "mayastor.agentCore.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
@@ -93,6 +99,11 @@
 {{- end -}}
 {{- end -}}
 
+{{/* Return the proper image name (for the init container volume-permissions image) */}}
+{{- define "mayastor.metrics.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
+{{- end -}}
+
 {{/* Return the proper Mayastor Operator image name */}}
 {{- define "mayastor.operator.image" -}}
 {{- if or (eq .Values.diagnosticMode.environment "development") (eq .Values.diagnosticMode.environment "dev") -}}
@@ -113,10 +124,10 @@
 {{- end -}}
 
 {{/* Generate CPU list specification based on CPU count (-l param of mayastor) */}}
-{{- define "mayastorCpuSpec" -}}
-{{- range $i, $e := until (int .Values.mayastorCpuCount) }}
+{{- define "mayastor.cpuFlag" -}}
+{{- range $i, $e := until (int .Values.ioEngine.cpuCount) }}
 {{- if gt $i 0 }}
-{{- printf "," }}
+    {{- printf "," }}
 {{- end }}
 {{- printf "%d" (add $i 1) }}
 {{- end }}

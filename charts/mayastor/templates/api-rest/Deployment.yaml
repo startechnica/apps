@@ -61,7 +61,7 @@ spec:
           args:
             - "--dummy-certificates"
             - "--no-auth"
-            - "--http=0.0.0.0:{{ .Values.apiRest.service.ports.https }}"
+            - "--http=0.0.0.0:{{ .Values.apiRest.containerPorts.https }}"
             - "--request-timeout=5s"
             - "--core-grpc=https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
           ports:

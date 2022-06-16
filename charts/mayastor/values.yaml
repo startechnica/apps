@@ -65,11 +65,7 @@ diagnosticMode:
 
 ## @section Mayastor common parameters
 
-## Mayastor image
-imageDev:
-  registry: docker.io
-  repository: mayadata/mayastor
-  tag: release-1.0.2
+## Mayastor io-engine image
 ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
 ## @param image.registry Mayastor Control Plane Rest image registry
 ## @param image.repository Mayastor Control Plane Rest image repository
@@ -80,8 +76,8 @@ imageDev:
 ##
 image:
   registry: docker.io
-  repository: mayadata/mayastor
-  tag: release-1.0.2
+  repository: mayastor-io-engine
+  tag: develop
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -345,55 +341,6 @@ service:
   ##     timeoutSeconds: 300
   sessionAffinityConfig: {}
 
-csiNode:
-  enabled: true
-  logLevel: info
-  imageDev:
-    registry: docker.io
-    repository: mayadata/mayastor-csi-node
-    tag: develop
-  ## Mayastor CSI image
-  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
-  ## @param image.registry Mayastor Control Plane Rest image registry
-  ## @param image.repository Mayastor Control Plane Rest image repository
-  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
-  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
-  ## @param image.pullSecrets Specify docker-registry secret names as an array
-  ## @param image.debug Specify if debug logs should be enabled
-  ##
-  image:
-    registry: docker.io
-    repository: mayadata/mayastor-csi
-    tag: release-1.0.2
-    ## Specify a imagePullPolicy
-    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
-    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
-    ##
-    pullPolicy: IfNotPresent
-    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-    ## Example:
-    ## pullSecrets:
-    ##   - myRegistryKeySecretName
-    ##
-    pullSecrets: []
-
-  driverRegistrar:
-    image:
-      # registry: quay.io
-      # repository: k8scsi/csi-node-driver-registrar
-      # tag: v2.1.0
-      registry: k8s.gcr.io
-      repository: sig-storage/csi-node-driver-registrar
-      tag: v2.5.0
-
-  nvme:
-    # nvme_core module io timeout in seconds
-    io_timeout: "30"
-    io_timeout_enabled: true
-
-  socketAddress: /csi/csi.sock
-
 csiController:
   enabled: true
   logLevel: info
@@ -449,6 +396,57 @@ csiDriver:
   create: true
   podInfoOnMount: true
   attachRequired: false
+
+csiNode:
+  enabled: true
+  logLevel: info
+  imageDev:
+    registry: docker.io
+    repository: mayadata/mayastor-csi-node
+    tag: develop
+  ## Mayastor CSI image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-csi
+    tag: release-1.0.2
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+  driverRegistrar:
+    image:
+      # registry: quay.io
+      # repository: k8scsi/csi-node-driver-registrar
+      # tag: v2.1.0
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-node-driver-registrar
+      tag: v2.5.0
+
+  nvme:
+    # nvme_core module io timeout in seconds
+    io_timeout: "30"
+    io_timeout_enabled: true
+
+  socketAddress: /csi/csi.sock
+
+
 
 etcd:
   enabled: true
@@ -795,6 +793,131 @@ apiRest:
     ##     timeoutSeconds: 300
     sessionAffinityConfig: {}
 
+ioEngine:
+  ## Mayastor I/O Engine image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
+  ## @param ioEngine.image.registry Mayastor Control Plane MSP Operator image registry
+  ## @param ioEngine.image.repository Mayastor Control Plane MSP Operator image repository
+  ## @param ioEngine.image.tag Mayastor Control Plane MSP Operator image tag (immutable tags are recommended)
+  ## @param ioEngine.image.pullPolicy Mayastor Control Plane MSP Operator image pull policy
+  ## @param ioEngine.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param ioEngine.image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-io-engine
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param ioEngine.replicaCount Number of Mayastor I/O Engine replicas to deploy
+  ##
+  replicaCount: 1
+  ## @param ioEngine.containerPorts.http Mayastor I/O Engine HTTP container port
+  ## @param ioEngine.containerPorts.https Mayastor I/O Engine HTTPS container port
+  ##
+  containerPorts:
+    grpc: 10124
+  ## Configure extra options for Mayastor I/O Engine containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param ioEngine.livenessProbe.enabled Enable livenessProbe on Mayastor I/O Engine containers
+  ## @param ioEngine.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param ioEngine.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param ioEngine.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param ioEngine.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param ioEngine.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: false
+    initialDelaySeconds: foo
+    periodSeconds: bar
+    timeoutSeconds: foo
+    failureThreshold: bar
+    successThreshold: foo
+  ## @param ioEngine.readinessProbe.enabled Enable readinessProbe on Mayastor I/O Engine containers
+  ## @param ioEngine.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param ioEngine.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param ioEngine.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param ioEngine.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param ioEngine.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: false
+    initialDelaySeconds: foo
+    periodSeconds: bar
+    timeoutSeconds: foo
+    failureThreshold: bar
+    successThreshold: foo
+  ## @param ioEngine.startupProbe.enabled Enable startupProbe on Mayastor I/O Engine containers
+  ## @param ioEngine.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param ioEngine.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param ioEngine.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param ioEngine.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param ioEngine.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: foo
+    periodSeconds: bar
+    timeoutSeconds: foo
+    failureThreshold: bar
+    successThreshold: foo
+  ## @param ioEngine.customLivenessProbe Custom livenessProbe that overrides the default one
+  ##
+  customLivenessProbe: {}
+  ## @param ioEngine.customReadinessProbe Custom readinessProbe that overrides the default one
+  ##
+  customReadinessProbe: {}
+  ## @param ioEngine.customStartupProbe Custom startupProbe that overrides the default one
+  ##
+  customStartupProbe: {}
+  ## Mayastor I/O Engine resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param ioEngine.resources.limits The resources limits for the Mayastor I/O Engine containers
+  ## @param ioEngine.resources.requests The requested resources for the Mayastor I/O Engine containers
+  ##
+  resources:
+    limits:
+      cpu: 2
+      memory: 1Gi
+      hugepages-2Mi: 2Gi
+    requests:
+      cpu: 2
+      memory: 1Gi
+      hugepages-2Mi: 2Gi
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param ioEngine.podSecurityContext.enabled Enabled Mayastor I/O Engine pods' Security Context
+  ## @param ioEngine.podSecurityContext.fsGroup Set Mayastor I/O Engine pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: false
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param ioEngine.containerSecurityContext.enabled Enabled Mayastor I/O Engine containers' Security Context
+  ## @param ioEngine.containerSecurityContext.runAsUser Set Mayastor I/O Engine containers' Security Context runAsUser
+  ## @param ioEngine.containerSecurityContext.runAsNonRoot Set Mayastor I/O Engine containers' Security Context runAsNonRoot
+  ## @param ioEngine.containerSecurityContext.readOnlyRootFilesystem Set Mayastor I/O Engine containers' Security Context runAsNonRoot
+  ##
+  containerSecurityContext:
+    enabled: false
+    runAsUser: 1001
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+
+  logLevel: info
+  cpuCount: ""
+
 operator:
   enabled: true
   imageDev:
@@ -879,3 +1002,5 @@ rbac:
 
 metrics:
   enabled: false
+  serviceMonitor:
+    enabled: false

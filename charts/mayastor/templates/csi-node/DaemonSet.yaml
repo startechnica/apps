@@ -91,10 +91,14 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          - name: RUST_BACKTRACE
+            {{- if .Values.diagnosticMode.enabled }}
+            value: full
+            {{- else }}
+            value: "1"
+            {{- end }}
           - name: RUST_LOG
             value: {{ .Values.csiNode.logLevel }}
-          - name: RUST_BACKTRACE
-            value: full
           {{- if .Values.moac }}
           - name: MOAC
             value: "true"

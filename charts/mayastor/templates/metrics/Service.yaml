@@ -50,11 +50,11 @@ spec:
   {{- end }}
   ports:
     - name: tcp-metrics
-      port: {{ .Values.metrics.service.ports.http }}
+      port: {{ .Values.metrics.service.ports.metrics }}
       protocol: TCP
-      targetPort: {{ .Values.metrics.containerPorts.http }}
-      {{- if (and (or (eq .Values.metrics.service.type "NodePort") (eq .Values.metrics.service.type "LoadBalancer")) .Values.metrics.service.nodePorts.http) }}
-      nodePort: {{ coalesce .Values.metrics.service.nodePorts.http .Values.metrics.service.nodePort }}
+      targetPort: {{ .Values.metrics.containerPorts.metrics }}
+      {{- if (and (or (eq .Values.metrics.service.type "NodePort") (eq .Values.metrics.service.type "LoadBalancer")) .Values.metrics.service.nodePorts.metrics) }}
+      nodePort: {{ coalesce .Values.metrics.service.nodePorts.metrics .Values.metrics.service.nodePort }}
       {{- else if eq .Values.metrics.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
