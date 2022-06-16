@@ -772,6 +772,8 @@ apiRest:
     sessionAffinityConfig: {}
 
 ioEngine:
+  logLevel: info
+  cpuCount: ""
   ## Mayastor I/O Engine image
   ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
   ## @param ioEngine.image.registry Mayastor Control Plane MSP Operator image registry
@@ -915,8 +917,7 @@ ioEngine:
   ##
   topologySpreadConstraints: {}
 
-  logLevel: info
-  cpuCount: ""
+
 
 operator:
   enabled: true

@@ -37,6 +37,7 @@ diskPools:
     device: /dev/sdb
 
 ioEngine:
+  logLevel: debug
   tolerations:
     - effect: NoSchedule
       key: node-role.kubernetes.io/control-plane
@@ -44,6 +45,3 @@ ioEngine:
     - effect: NoSchedule
       key: node-role.kubernetes.io/master
       operator: Exists
-
-podAnnotations:
-  v1.multus-cni.io/default-network: kube-public/calico-ipv4-only
