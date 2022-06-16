@@ -79,14 +79,10 @@ spec:
             - "-g $(MY_POD_IP)"
             - "-l {{ include "mayastor.cpuFlag" . }}"
             - "-p {{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
-            - "-R https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.port.grpc }}"
+            - "-R https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
             - "-y /var/local/io-engine/config.yaml"
           {{- end }}
           env:
-            - name: NVME_QPAIR_CONNECT_ASYNC
-              value: "true"
-            - name: NVMF_TCP_MAX_QUEUE_DEPTH
-              value: "32"
             - name: MY_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -95,6 +91,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: NVME_QPAIR_CONNECT_ASYNC
+              value: "true"
+            - name: NVMF_TCP_MAX_QUEUE_DEPTH
+              value: "32"
             - name: RUST_BACKTRACE
               {{- if .Values.diagnosticMode.enabled }}
               value: full
@@ -103,8 +103,16 @@ spec:
               {{- end }}
             - name: RUST_LOG
               value: {{ .Values.ioEngine.logLevel }}
-          securityContext:
-            privileged: true
+          ports:
+            - name: io-engine
+              containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
+              protocol: TCP
+          {{- if .Values.ioEngine.resources }}
+          resources: {{ toYaml .Values.ioEngine.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.ioEngine.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.ioEngine.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: device
               mountPath: /dev
@@ -114,13 +122,6 @@ spec:
               mountPath: /dev/shm
             - name: configlocation
               mountPath: /var/local/io-engine/
-          {{- if .Values.resources }}
-          resources: {{ toYaml .Values.resources | nindent 12 }}
-          {{- end }}
-          ports:
-            - name: io-engine
-              containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
-              protocol: TCP
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
           image: {{ include "mayastor.apiRest.image" . }}

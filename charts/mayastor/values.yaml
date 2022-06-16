@@ -907,10 +907,8 @@ ioEngine:
   ## @param ioEngine.containerSecurityContext.readOnlyRootFilesystem Set Mayastor I/O Engine containers' Security Context runAsNonRoot
   ##
   containerSecurityContext:
-    enabled: false
-    runAsUser: 1001
-    runAsNonRoot: true
-    readOnlyRootFilesystem: false
+    enabled: true
+    privileged: true
 
   logLevel: info
   cpuCount: ""
