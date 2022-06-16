@@ -118,9 +118,9 @@ spec:
           resources: {{ toYaml .Values.resources | nindent 12 }}
           {{- end }}
           ports:
-          - name: io-engine
-            containerPort: {{ .Values.ioEngine.containerPorts.io-engine }}
-            protocol: TCP
+            - name: io-engine
+              containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
+              protocol: TCP
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
           image: {{ include "mayastor.apiRest.image" . }}

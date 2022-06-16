@@ -65,7 +65,7 @@ diagnosticMode:
 
 ## @section Mayastor common parameters
 
-## Mayastor io-engine image
+## Mayastor image
 ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
 ## @param image.registry Mayastor Control Plane Rest image registry
 ## @param image.repository Mayastor Control Plane Rest image repository
@@ -824,7 +824,7 @@ ioEngine:
   ## @param ioEngine.containerPorts.https Mayastor I/O Engine HTTPS container port
   ##
   containerPorts:
-    io-engine: 10124
+    ioEngine: 10124
   ## Configure extra options for Mayastor I/O Engine containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param ioEngine.livenessProbe.enabled Enable livenessProbe on Mayastor I/O Engine containers
