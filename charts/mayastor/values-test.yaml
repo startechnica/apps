@@ -18,8 +18,8 @@ etcd:
   revisionHistoryLimit: 2
   auth:
     rbac:
-      create: true
-      enabled: true
+      create: false
+      enabled: false
       allowNoneAuthentication: true
       rootPassword: password
   persistence:
