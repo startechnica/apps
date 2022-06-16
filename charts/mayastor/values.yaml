@@ -739,7 +739,6 @@ apiRest:
     ports:
       http: 8080
       https: 8081
-      grpc: 50051
     ## @param service.nodePorts.mysql Mayastor Control Plane Rest Kubernetes service node port
     ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
     ##

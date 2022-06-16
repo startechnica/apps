@@ -46,7 +46,7 @@ spec:
             - sh
           args:
             - -c
-            - trap "exit 1" TERM; until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.port.grpc }}; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;
+            - trap "exit 1" TERM; until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;
         - name: etcd-probe
           image: busybox:latest
           command:
