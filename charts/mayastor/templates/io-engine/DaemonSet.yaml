@@ -81,7 +81,7 @@ spec:
             - "-p {{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
             - "-R https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.port.grpc }}"
             - "-y /var/local/io-engine/config.yaml"
-          {{- else }}
+          {{- end }}
           env:
             - name: NVME_QPAIR_CONNECT_ASYNC
               value: "true"
@@ -118,9 +118,9 @@ spec:
           resources: {{ toYaml .Values.resources | nindent 12 }}
           {{- end }}
           ports:
-          - containerPort: 10124
+          - name: io-engine
+            containerPort: {{ .Values.ioEngine.containerPorts.io-engine }}
             protocol: TCP
-            name: io-engine
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
           image: {{ include "mayastor.apiRest.image" . }}

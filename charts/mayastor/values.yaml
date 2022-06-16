@@ -446,8 +446,6 @@ csiNode:
 
   socketAddress: /csi/csi.sock
 
-
-
 etcd:
   enabled: true
   ## @param replicaCount Number of etcd replicas to deploy
@@ -826,7 +824,7 @@ ioEngine:
   ## @param ioEngine.containerPorts.https Mayastor I/O Engine HTTPS container port
   ##
   containerPorts:
-    grpc: 10124
+    io-engine: 10124
   ## Configure extra options for Mayastor I/O Engine containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param ioEngine.livenessProbe.enabled Enable livenessProbe on Mayastor I/O Engine containers
