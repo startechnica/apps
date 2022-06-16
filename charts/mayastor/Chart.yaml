@@ -15,12 +15,6 @@ dependencies:
       - bitnami-etcd
     # version: 6.x.x
     version: 8.x.x
-  - name: nats
-    condition: nats.enabled
-    repository: https://charts.bitnami.com/bitnami
-    tags:
-      - bitnami-nats
-    version: 7.x.x
 description: Mayastor is a cloud-native declarative data plane written in Rust.
   Our goal is to abstract storage resources and their differences through the data
   plane such that users only need to supply the what and do not have to worry about

@@ -586,7 +586,7 @@ nats:
 
 agentCore:
   enabled: true
-  logLevel: info
+  logLevel: debug
   ## Mayastor Control Plane Core Agent image
   ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
   ## @param image.registry Mayastor Control Plane Rest image registry
