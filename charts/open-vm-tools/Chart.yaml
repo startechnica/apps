@@ -18,7 +18,7 @@ keywords:
   - vmware
 kubeVersion: ">=1.19.0-0"
 maintainers:
-  - name: Firmansyah Nainggolan
+  - name: firmansyahn
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
 name: open-vm-tools
