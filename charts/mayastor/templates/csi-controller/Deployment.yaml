@@ -91,14 +91,6 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           {{- if .Values.csiController.attacher.resources }}
           resources: {{ toYaml .Values.csiController.attacher.resources | nindent 12 }}
