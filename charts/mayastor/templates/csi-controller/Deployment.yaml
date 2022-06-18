@@ -84,6 +84,9 @@ spec:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
+          {{- if .Values.csiController.attacher.resources }}
+          resources: {{ toYaml .Values.csiController.attacher.resources | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -105,13 +108,9 @@ spec:
               {{- end }}
             - name: RUST_LOG
               value: {{ .Values.csiController.logLevel }}
-          resources:
-            limits:
-              cpu: 32m
-              memory: 128Mi
-            requests:
-              cpu: 16m
-              memory: 64Mi
+          {{- if .Values.csiController.resources }}
+          resources: {{ toYaml .Values.csiController.resources | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

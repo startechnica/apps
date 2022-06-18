@@ -341,12 +341,12 @@ service:
 csiController:
   enabled: true
   logLevel: info
-  ## Mayastor Control Plane Core Agent image
+  ## Mayastor CSI Controller image
   ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
-  ## @param image.registry Mayastor Control Plane Rest image registry
-  ## @param image.repository Mayastor Control Plane Rest image repository
-  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
-  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.registry Mayastor CSI Controller image registry
+  ## @param image.repository Mayastor CSI Controller image repository
+  ## @param image.tag Mayastor CSI Controller image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor CSI Controller image pull policy
   ## @param image.pullSecrets Specify docker-registry secret names as an array
   ## @param image.debug Specify if debug logs should be enabled
   ##
@@ -366,24 +366,102 @@ csiController:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
+  ## CSI controller resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param controller.resources.limits The resources limits for CSI controller containers
+  ## @param controller.resources.requests The requested resources for CSI controller containers
+  ##
+  resources:
+    limits:
+      cpu: 32m
+      memory: 128Mi
+    requests:
+      cpu: 16m
+      memory: 64Mi
 
+  ## @section Kubernetes CSI Driver Parameters
+  ## ref: https://kubernetes-csi.github.io/docs/introduction.html
+
+  ## CSI external-attacher
+  ## ref: https://github.com/kubernetes-csi/external-attacher
+  ##
   attacher:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-attacher
       tag: v3.4.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
+    ## CSI attacher resource requests and limits
+    ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+    ## @param attacher.resources.limits The resources limits for CSI attacher containers
+    ## @param attacher.resources.requests The requested resources for CSI attacher containers
+    ##
+    resources:
+      ## Example:
+      ## limits:
+      ##    cpu: 100m
+      ##    memory: 256Mi
+      ##
+      limits: {}
+      ## Examples:
+      ## requests:
+      ##    cpu: 100m
+      ##    memory: 256Mi
+      ##
+      requests: {}
 
+  ## CSI livenessprobe
+  ## ref: https://github.com/kubernetes-csi/livenessprobe
+  ##
   livenessprobe:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/livenessprobe
       tag: v2.6.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
 
+  ## CSI external-provisioner
+  ## ref: https://github.com/kubernetes-csi/external-provisioner
+  ##
   provisioner:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-provisioner
       tag: v3.1.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
 
 csiDriver:
   create: true
@@ -419,6 +497,9 @@ csiNode:
     ##
     pullSecrets: []
 
+  ## CSI node-driver-registrar
+  ## ref: https://github.com/kubernetes-csi/node-driver-registrar
+  ##
   driverRegistrar:
     image:
       # registry: quay.io
@@ -947,8 +1028,6 @@ ioEngine:
   ##     whenUnsatisfiable: DoNotSchedule
   ##
   topologySpreadConstraints: {}
-
-
 
 operator:
   enabled: true

@@ -138,9 +138,9 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - >-
-                  echo "Deleting stale file";
-                  rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock;
+                - |-
+                  echo "Deleting stale file"
+                  rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
         # Mayastor node plugin gRPC server
         ports:
           - containerPort: 10199
