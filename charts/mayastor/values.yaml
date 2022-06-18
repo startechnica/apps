@@ -402,6 +402,10 @@ csiController:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
+    ## @param agentCore.containerPorts.http Mayastor Agent Core GRPC container port
+    ##
+    containerPorts:
+      metrics: 9601
     ## CSI attacher resource requests and limits
     ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
     ## @param attacher.resources.limits The resources limits for CSI attacher containers
@@ -420,6 +424,8 @@ csiController:
       ##    memory: 256Mi
       ##
       requests: {}
+    metrics:
+      enabled: true
 
   ## CSI livenessprobe
   ## ref: https://github.com/kubernetes-csi/livenessprobe
@@ -462,11 +468,6 @@ csiController:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
-
-csiDriver:
-  create: true
-  podInfoOnMount: true
-  attachRequired: false
 
 csiNode:
   enabled: true
