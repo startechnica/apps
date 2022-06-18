@@ -67,9 +67,9 @@ spec:
             - "--feature-gates=Topology=true"
             - "--strict-topology=false"
             - "--default-fstype=ext4"
-            - "--v=2"
+            - "--v=5"
             {{- if .Values.csiController.attacher.metrics.enabled }}
-            - "--http-endpoint=0.0.0.0:{{ .Values.csiController.attacher.containerPorts.metrics }}"
+            - "--http-endpoint=:{{ .Values.csiController.attacher.containerPorts.metrics }}"
             {{- end }}
           env:
             - name: ADDRESS
