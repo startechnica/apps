@@ -73,11 +73,11 @@ spec:
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
             - name: NAMESPACE
               valueFrom:
-                  fieldRef:
+                fieldRef:
                   fieldPath: metadata.namespace
             - name: POD_NAME
               valueFrom:
-                  fieldRef:
+                fieldRef:
                   fieldPath: metadata.name
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           volumeMounts:
@@ -93,11 +93,11 @@ spec:
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
             - name: NAMESPACE
               valueFrom:
-                  fieldRef:
+                fieldRef:
                   fieldPath: metadata.namespace
             - name: POD_NAME
               valueFrom:
-                  fieldRef:
+                fieldRef:
                   fieldPath: metadata.name
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           {{- if .Values.csiController.attacher.resources }}
