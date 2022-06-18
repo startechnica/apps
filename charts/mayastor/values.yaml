@@ -425,7 +425,7 @@ csiController:
       ##
       requests: {}
     metrics:
-      enabled: true
+      enabled: false
 
   ## CSI livenessprobe
   ## ref: https://github.com/kubernetes-csi/livenessprobe
