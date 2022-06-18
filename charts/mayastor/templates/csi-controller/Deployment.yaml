@@ -35,6 +35,9 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.ioEngine.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       {{- if .Values.tolerations }}
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
@@ -51,10 +54,9 @@ spec:
             - -c
             - |
               trap "exit 1" TERM
-              until nc -vz {{ include "mayastor.apiRest.fullname" . }} 8081
+              until nc -vz {{ include "mayastor.apiRest.fullname" . }} {{ .Values.apiRest.service.ports.https }}
               do
-                date
-                echo "Waiting for REST API endpoint to become available"
+                echo "$(date) Waiting for REST API endpoint to become available"
                 sleep 1
               done
       containers:
@@ -86,6 +88,23 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-controller
+          image: {{ include "mayastor.csiController.image" . }}
+          imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
+          args:
+            - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
+            - "--rest-endpoint=http://{{ include "mayastor.apiRest.fullname" . }}:{{ .Values.apiRest.service.ports.https }}"
+            {{- range $key, $val := .Values.ioEngine.nodeSelector }}
+            - "--io-engine-selector={{ $key }}:{{ $val }}"
+            {{- end }}
+          env:
+            - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
+              value: full
+              {{- else }}
+              value: full
+              {{- end }}
+            - name: RUST_LOG
+              value: {{ .Values.csiController.logLevel }}
           resources:
             limits:
               cpu: 32m
@@ -93,19 +112,6 @@ spec:
             requests:
               cpu: 16m
               memory: 64Mi
-          image: {{ include "mayastor.csiController.image" . }}
-          imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
-          args:
-            - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
-            - "--rest-endpoint=http://{{ include "mayastor.apiRest.fullname" . }}:8081"
-            {{- range $key, $val := .Values.nodeSelector }}
-            - "--io-engine-selector={{ $key }}:{{ $val }}"
-            {{- end }}
-          env:
-            - name: RUST_LOG
-              value: {{ .Values.csiController.logLevel }}
-            - name: RUST_BACKTRACE
-              value: full
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
