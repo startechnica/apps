@@ -4,7 +4,6 @@ metadata:
   name: {{ printf "%s-csi-node" (include "common.names.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    openebs.io/engine: io-engine
     app.kubernetes.io/component: csi-node
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
@@ -51,113 +50,114 @@ spec:
       # pressure unless they exceed those limits. limits and requests must be
       # the same.
       containers:
-      - name: csi-plugin
-        {{- if .Values.diagnosticMode.enabled }}
-        command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
-        {{- else if .Values.command }}
-        command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
-        {{- else }}
-        command:
-          - csi-node
-        {{- end }}
-        {{- if .Values.diagnosticMode.enabled }}
-        args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
-        {{- else if .Values.args }}
-        args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
-        {{- else }}
-        args:
-          - "--csi-socket=$(CSI_SOCKET_ADDRESS)"
-          - "--node-name=$(MY_NODE_NAME)"
-          - "--grpc-endpoint=$(MY_POD_IP):10199"
-          {{- if .Values.csiNode.nvme.io_timeout_enabled }}
-          - "--nvme-core-io-timeout={{ .Values.csiNode.nvme.io_timeout }}"
+        - name: csi-plugin
+          image: {{ include "mayastor.csiNode.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- else }}
+          command:
+            - csi-node
           {{- end }}
-          - "--nvme-nr-io-queues=2"
-          - "-v"
-        {{- end }}
-        image: {{ include "mayastor.csiNode.image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        securityContext:
-          privileged: true
-        env:
-          - name: CSI_SOCKET_ADDRESS
-            value: {{ .Values.csiNode.socketAddress | quote }}
-          - name: MY_NODE_NAME
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: spec.nodeName
-          - name: MY_POD_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.podIP
-          - name: RUST_BACKTRACE
-            {{- if .Values.diagnosticMode.enabled }}
-            value: full
-            {{- else }}
-            value: "1"
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+          args:
+            - "--csi-socket=$(CSI_SOCKET_ADDRESS)"
+            - "--node-name=$(MY_NODE_NAME)"
+            - "--grpc-endpoint=$(MY_POD_IP):10199"
+            {{- if .Values.csiNode.nvme.io_timeout_enabled }}
+            - "--nvme-core-io-timeout={{ .Values.csiNode.nvme.io_timeout }}"
             {{- end }}
-          - name: RUST_LOG
-            value: {{ .Values.csiNode.logLevel }}
-          {{- if .Values.moac }}
-          - name: MOAC
-            value: "true"
+            - "--nvme-nr-io-queues=2"
+            - "-v"
           {{- end }}
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "50Mi"
-          requests:
-            cpu: "100m"
-            memory: "50Mi"
-        volumeMounts:
-          - name: device
-            mountPath: /dev
-          - name: sys
-            mountPath: /sys
-          - name: run-udev
-            mountPath: /run/udev
-          - name: plugin-dir
-            mountPath: /csi
-          - name: kubelet-dir
-            mountPath: /var/lib/kubelet
-            mountPropagation: "Bidirectional"
-      - name: csi-driver-registrar
-        image: {{ include "mayastor.csiNode.driverRegistrar.image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        args:
-          - "--csi-address=$(CSI_SOCKET_ADDRESS)"
-          - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
-          - "--v=5"
-        env:
-          - name: CSI_SOCKET_ADDRESS
-            value: {{ .Values.csiNode.socketAddress | quote }}
-        lifecycle:
-          preStop:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - |-
-                  echo "Deleting stale file"
-                  rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
-        # Mayastor node plugin gRPC server
-        ports:
-          - containerPort: 10199
-            name: mayastor-node
-            protocol: TCP
-        resources:
-          limits:
-            cpu: "100m"
-            memory: "50Mi"
-          requests:
-            cpu: "100m"
-            memory: "50Mi"
-        volumeMounts:
-          - name: plugin-dir
-            mountPath: /csi
-          - name: registration-dir
-            mountPath: /registration
+          {{- if .Values.csiNode.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.csiNode.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          env:
+            - name: CSI_SOCKET_ADDRESS
+              value: {{ .Values.csiNode.socketAddress | quote }}
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
+              value: full
+              {{- else }}
+              value: "1"
+              {{- end }}
+            - name: RUST_LOG
+              {{- if .Values.diagnosticMode.enabled }}
+              value: debug
+              {{- else }}
+              value: {{ .Values.csiNode.logLevel }}
+              {{- end }}
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+          volumeMounts:
+            - name: device
+              mountPath: /dev
+            - name: sys
+              mountPath: /sys
+            - name: run-udev
+              mountPath: /run/udev
+            - name: plugin-dir
+              mountPath: /csi
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: "Bidirectional"
+        - name: csi-driver-registrar
+          image: {{ include "mayastor.csiNode.driverRegistrar.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(CSI_SOCKET_ADDRESS)"
+            - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
+            - "--v=5"
+          env:
+            - name: CSI_SOCKET_ADDRESS
+              value: {{ .Values.csiNode.socketAddress | quote }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - |-
+                    echo "Deleting stale file"
+                    rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
+          # Mayastor node plugin gRPC server
+          ports:
+            - containerPort: 10199
+              name: csi-driver
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
       volumes:
         - name: device
           hostPath:

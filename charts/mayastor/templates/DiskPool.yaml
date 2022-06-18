@@ -1,6 +1,7 @@
-##ref: https://github.com/openebs/mayastor/blob/master/deploy/pool.yaml
+## ref: https://github.com/openebs/mayastor/blob/master/deploy/pool.yaml
 
-{{- range .Values.diskPools }}
+{{- if .Values.diskPools.create }}
+{{- range .Values.diskPools.pools }}
 apiVersion: "openebs.io/v1alpha1"
 kind: DiskPool
 metadata:
@@ -10,4 +11,5 @@ spec:
   node: {{ .node }}
   disks: ["{{ .device }}"]
 ---
+{{- end }}
 {{- end }}
