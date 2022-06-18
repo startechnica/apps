@@ -35,16 +35,16 @@ spec:
         {{- end }}
     spec:
       hostNetwork: true
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- if .Values.csiNode.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.csiNode.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
-      {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- if .Values.csiNode.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.csiNode.tolerations "context" .) | nindent 8 }}
       {{- end }}
-      {{- if .Values.topologySpreadConstraints }}
-      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- if .Values.csiNode.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.csiNode.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       # NOTE: Each container must have mem/cpu limits defined in order to
       # belong to Guaranteed QoS class, hence can never get evicted in case of

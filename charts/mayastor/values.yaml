@@ -497,6 +497,46 @@ csiNode:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param ioEngine.podSecurityContext.enabled Enabled Mayastor I/O Engine pods' Security Context
+  ## @param ioEngine.podSecurityContext.fsGroup Set Mayastor I/O Engine pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: false
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param ioEngine.containerSecurityContext.enabled Enabled Mayastor I/O Engine containers' Security Context
+  ## @param ioEngine.containerSecurityContext.runAsUser Set Mayastor I/O Engine containers' Security Context runAsUser
+  ## @param ioEngine.containerSecurityContext.runAsNonRoot Set Mayastor I/O Engine containers' Security Context runAsNonRoot
+  ## @param ioEngine.containerSecurityContext.readOnlyRootFilesystem Set Mayastor I/O Engine containers' Security Context runAsNonRoot
+  ##
+  containerSecurityContext:
+    enabled: false
+    privileged: true
+  ## @param affinity Affinity for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param nodeSelector Node labels for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector: {}
+  ## @param tolerations Tolerations for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param topologySpreadConstraints Topology Spread Constraints for Mayastor I/O Engine pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  ## E.g.
+  ## topologySpreadConstraints:
+  ##   - maxSkew: 1
+  ##     topologyKey: topology.kubernetes.io/zone
+  ##     whenUnsatisfiable: DoNotSchedule
+  ##
+  topologySpreadConstraints: {}
 
   ## CSI node-driver-registrar
   ## ref: https://github.com/kubernetes-csi/node-driver-registrar
