@@ -82,6 +82,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           ports:
             - name: csi-provisioner
