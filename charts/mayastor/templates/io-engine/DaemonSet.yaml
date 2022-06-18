@@ -125,7 +125,11 @@ spec:
               value: full
               {{- end }}
             - name: RUST_LOG
+              {{- if .Values.diagnosticMode.enabled }}
+              value: debug
+              {{- else }}
               value: {{ .Values.ioEngine.logLevel }}
+              {{- end }}
           ports:
             - name: io-engine
               containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
