@@ -8,7 +8,7 @@ parameters:
   ioTimeout: '60'
   local: 'false'
   # It is recommended to use xfs for Mayastor
-  fsType: 'xfs'
+  csi.storage.k8s.io/fstype: 'xfs'
 provisioner: io.openebs.csi-mayastor
 volumeBindingMode: WaitForFirstConsumer
 ---
@@ -22,7 +22,7 @@ parameters:
   ioTimeout: '60'
   local: 'false'
   # It is recommended to use xfs for Mayastor
-  fsType: 'xfs'
+  csi.storage.k8s.io/fstype: 'xfs'
 provisioner: io.openebs.csi-mayastor
 volumeBindingMode: WaitForFirstConsumer
 ---
