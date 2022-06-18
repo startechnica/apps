@@ -62,7 +62,7 @@ spec:
             - -c
             - |
               trap "exit 1" TERM
-              until nc -vzw 5 {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.port }}
+              until nc -vzw 5 {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.ports.client }}
               do
                 date
                 echo "Waiting for etcd..."
@@ -74,7 +74,14 @@ spec:
             - sh
           args:
             - -c
-            - trap "exit 1" TERM; until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;
+            - |-
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}
+              do
+                date
+                echo "Waiting for agent-core-grpc services..."
+                sleep 1
+              done
       containers:
         - name: io-engine
           image: {{ include "mayastor.ioEngine.image" . }}
@@ -101,7 +108,7 @@ spec:
             {{- if .Values.ioEngine.cpuCount }}
             - "-l{{ include "mayastor.cpuFlag" . | quote }}"
             {{- end }}
-            - "-p{{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
+            - "-p{{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.ports.client }}"
             - "-Rhttps://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
             - "-y/var/local/io-engine/config.yaml"
           {{- end }}
@@ -151,8 +158,10 @@ spec:
               mountPath: /var/local/io-engine/
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
-          image: {{ include "mayastor.apiRest.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          image: {{ .Values.metrics.image }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          command:
+            - metrics-exporter-pool
           env:
           - name: MY_NODE_NAME
             valueFrom:
@@ -162,12 +171,13 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
-          command:
-            - metrics-exporter-pool
           ports:
-            - name: http-metrics
-              containerPort: 9502
+            - name: metrics
+              containerPort: {{ .Values.metrics.containerPorts.metrics }}
               protocol: TCP
+          {{- if .Values.metrics.resources }}
+          resources: {{ toYaml .Values.metrics.resources | nindent 12 }}
+          {{- end }}
         {{- end }}
       volumes:
       - name: device

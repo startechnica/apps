@@ -51,7 +51,7 @@ spec:
       # pressure unless they exceed those limits. limits and requests must be
       # the same.
       containers:
-      - name: mayastor-csi-plugin
+      - name: csi-plugin
         {{- if .Values.diagnosticMode.enabled }}
         command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
         {{- else if .Values.command }}

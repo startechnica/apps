@@ -393,14 +393,14 @@ csiDriver:
 csiNode:
   enabled: true
   logLevel: info
-  ## Mayastor CSI image
-  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
-  ## @param image.registry Mayastor Control Plane Rest image registry
-  ## @param image.repository Mayastor Control Plane Rest image repository
-  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
-  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
-  ## @param image.pullSecrets Specify docker-registry secret names as an array
-  ## @param image.debug Specify if debug logs should be enabled
+  ## Mayastor CSI Node image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor-csi-node/tags
+  ## @param csiNode.image.registry Mayastor CSI Node image registry
+  ## @param csiNode.image.repository Mayastor CSI Node image repository
+  ## @param csiNode.image.tag Mayastor CSI Node image tag (immutable tags are recommended)
+  ## @param csiNode.image.pullPolicy Mayastor CSI Node image pull policy
+  ## @param csiNode.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param csiNode.image.debug Specify if debug logs should be enabled
   ##
   image:
     registry: docker.io
@@ -427,6 +427,18 @@ csiNode:
       registry: k8s.gcr.io
       repository: sig-storage/csi-node-driver-registrar
       tag: v2.5.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
 
   nvme:
     # nvme_core module io timeout in seconds
@@ -435,22 +447,15 @@ csiNode:
 
   socketAddress: /csi/csi.sock
 
+## @section etcd parameters
+##
 etcd:
-  enabled: true
-  ## @param replicaCount Number of etcd replicas to deploy
+  ## @param etcd.enabled Enable etcd service
   ##
-  replicaCount: 1
-  ## Kubernetes Cluster Domain
+  enabled: true
+  ## @param etcd.clusterDomain Default Kubernetes cluster domain
   ##
   clusterDomain: cluster.local
-  podLabels:
-    app.kubernetes.io/component: etcd
-  client:
-    secureTransport: false
-  peer:
-    secureTransport: false
-  removeMemberOnContainerTermination: false
-  initialClusterState: "new"
   ## Authentication parameters
   ##
   auth:
@@ -458,27 +463,27 @@ etcd:
     ## ref: https://etcd.io/docs/current/op-guide/authentication/
     ##
     rbac:
-      ## @param auth.rbac.create Switch to enable RBAC authentication
+      ## @param etcd.auth.rbac.create Switch to enable RBAC authentication
       ##
       #create: true
       enabled: false
-      ## @param auth.rbac.allowNoneAuthentication Allow to use etcd without configuring RBAC authentication
+      ## @param etcd.auth.rbac.allowNoneAuthentication Allow to use etcd without configuring RBAC authentication
       ##
       allowNoneAuthentication: true
-      ## @param auth.rbac.rootPassword Root user password. The root user is always `root`
+      ## @param etcd.auth.rbac.rootPassword Root user password. The root user is always `root`
       ##
       rootPassword: ""
-      ## @param auth.rbac.existingSecret Name of the existing secret containing credentials for the root user
+      ## @param etcd.auth.rbac.existingSecret Name of the existing secret containing credentials for the root user
       ##
       existingSecret: ""
-      ## @param auth.rbac.existingSecretPasswordKey Name of key containing password to be retrieved from the existing secret
+      ## @param etcd.auth.rbac.existingSecretPasswordKey Name of key containing password to be retrieved from the existing secret
       ##
       existingSecretPasswordKey: ""
     ## Authentication token
     ## ref: https://etcd.io/docs/latest/learning/design-auth-v3/#two-types-of-tokens-simple-and-jwt
     ##
     token:
-      ## @param auth.token.type Authentication token type. Allowed values: 'simple' or 'jwt'
+      ## @param etcd.auth.token.type Authentication token type. Allowed values: 'simple' or 'jwt'
       ## ref: https://etcd.io/docs/latest/op-guide/configuration/#--auth-token
       ##
       type: simple
@@ -492,7 +497,26 @@ etcd:
     ##
     peer:
       secureTransport: false
-  ## Enable persistence using Persistent Volume Claims
+  ## @param etcd.initialClusterState Initial cluster state. Allowed values: 'new' or 'existing'
+  ## If this values is not set, the default values below are set:
+  ## - 'new': when installing the chart ('helm install ...')
+  ## - 'existing': when upgrading the chart ('helm upgrade ...')
+  ##
+  initialClusterState: ""
+  ## @param etcd.removeMemberOnContainerTermination Use a PreStop hook to remove the etcd members from the etcd cluster on container termination
+  ## they the containers are terminated
+  ## NOTE: Ignored if lifecycleHooks is set or replicaCount=1
+  ##
+  removeMemberOnContainerTermination: false
+  ## @param etcd.replicaCount Number of etcd replicas to deploy
+  ##
+  replicaCount: 1
+  ## @param etcd.podLabels [object] Extra labels for etcd pods
+  ## Ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels:
+    app.kubernetes.io/component: etcd
+  ## Enable etcd.persistence using Persistent Volume Claims
   ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
   ##
   persistence:
@@ -511,13 +535,13 @@ etcd:
     ##
     size: 2Gi
   serviceAccount:
-    ## @param serviceAccount.create Enable/disable service account creation
+    ## @param etcd.serviceAccount.create Enable/disable service account creation
     ##
-    create: false
+    create: true
     ## @param serviceAccount.name Name of the service account to create or use
     ##
     # name: {{ include "mayastor.serviceAccountName" $ }}
-    name: mayastor
+    name: ""
   ## Init containers parameters:
   ## volumePermissions: Change the owner and group of the persistent volume mountpoint to runAsUser:fsGroup values from the securityContext section.
   ##
@@ -531,10 +555,17 @@ etcd:
   ## Allowed values: soft, hard
   ##
   podAntiAffinityPreset: "hard"
-    # etcd service parameters defines how the etcd service is exposed
+
+  ## @section Traffic exposure parameters
+  ##
   service:
-    # etcd client port
     port: 2379
+    ## @param etcd.service.ports.client etcd client port
+    ## @param etcd.service.ports.peer etcd peer port
+    ##
+    ports:
+      client: 2379
+      peer: 2380
 
 nats:
   enabled: false
@@ -997,7 +1028,206 @@ rbac:
   ##
   rules: []
 
+
+## @section Metrics parameters
+##
+
 metrics:
+  ## @param metrics.enabled Start a side-car prometheus exporter
+  ##
   enabled: false
-  serviceMonitor:
+  ## @param metrics.image.registry Exporter image registry
+  ## @param metrics.image.repository Exporter image repository
+  ## @param metrics.image.tag Exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy Exporter image pull policy
+  ## @param metrics.image.pullSecrets Specify docker-registry secret names as an array
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-metrics-exporter-pool
+    tag: develop
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param metrics.annotations [object] Annotations for the Exporter pod
+  ##
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9502"
+  ## Mayastor metrics container ports to open
+  ## @param containerPorts.metrics Exporter port to expose at container level
+  ##
+  containerPorts:
+    metrics: 9502
+  ## Mayastor metrics container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param metrics.containerSecurityContext.enabled Enable security context for Mayastor metrics container
+  ## Example:
+  ##   containerSecurityContext:
+  ##     enabled: true
+  ##     capabilities:
+  ##       drop: ["NET_RAW"]
+  ##     readOnlyRootFilesystem: true
+  ##
+  containerSecurityContext:
     enabled: false
+  ## Mayastor Prometheus exporter resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## @param metrics.resources.limits The resources limits for MariaDB prometheus exporter containers
+  ## @param metrics.resources.requests The requested resources for MariaDB prometheus exporter containers
+  ##
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 100m
+    ##    memory: 256Mi
+    ##
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    cpu: 100m
+    ##    memory: 256Mi
+    ##
+    requests: {}
+  ## Configure extra options for liveness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param metrics.livenessProbe.enabled Enable livenessProbe
+  ## @param metrics.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param metrics.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param metrics.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param metrics.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param metrics.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  ## Configure extra options for readiness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param metrics.readinessProbe.enabled Enable readinessProbe
+  ## @param metrics.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param metrics.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param metrics.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param metrics.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param metrics.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  ## Prometheus Service Monitor
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+  ##
+  podMonitor:
+    ## @param metrics.podMonitor.enabled Create PodMonitor Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.podMonitor.namespace Namespace in which Prometheus is running
+    ##
+    namespace: monitoring
+    ## @param metrics.podMonitor.interval Specify the interval at which metrics should be scraped
+    ##
+    interval: 30s
+    ## @param metrics.podMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
+    ##
+    scrapeTimeout: 30s
+    ## @param metrics.podMonitor.additionalLabels [object] Additional labels that can be used so PodMonitors will be discovered by Prometheus
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+    ##
+    additionalLabels: {}
+    ## @param metrics.podMonitor.scheme Scheme to use for scraping
+    ##
+    scheme: http
+    ## @param metrics.podMonitor.tlsConfig [object] TLS configuration used for scrape endpoints used by Prometheus
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/api.md#tlsconfig
+    ## e.g:
+    ## tlsConfig:
+    ##   ca:
+    ##     secret:
+    ##       name: existingSecretName
+    ##
+    tlsConfig: {}
+    ## @param metrics.podMonitor.relabelings [array] Prometheus relabeling rules
+    ##
+    relabelings: []
+  ## Prometheus Service Monitor
+  ## ref: https://github.com/coreos/prometheus-operator
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace which Prometheus is running in
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped
+    ##
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
+    ## e.g:
+    ## scrapeTimeout: 30s
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.selector ServiceMonitor selector labels
+    ## ref: https://github.com/bitnami/charts/tree/master/bitnami/prometheus-operator#prometheus-configuration
+    ##
+    ## selector:
+    ##   prometheus: my-prometheus
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor
+    ##
+    labels: {}
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled Create a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true` and `metrics.prometheusRule.rules`)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace for the PrometheusRule Resource (defaults to the Release Namespace)
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.additionalLabels Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    ##
+    additionalLabels: {}
+    ## @param metrics.prometheusRule.rules Prometheus Rule definitions
+      # - alert: ETCD has no leader
+      #   annotations:
+      #     summary: "ETCD has no leader"
+      #     description: "pod {{`{{`}} $labels.pod {{`}}`}} state error, can't connect leader"
+      #   for: 1m
+      #   expr: etcd_server_has_leader == 0
+      #   labels:
+      #     severity: critical
+      #     group: PaaS
+    ##
+    rules: []

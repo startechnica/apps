@@ -54,7 +54,7 @@ spec:
             - -c
             - |
               trap "exit 1" TERM
-              until nc -vz {{ include "mayastor.apiRest.fullname" . }} {{ .Values.apiRest.service.ports.https }}
+              until nc -vzw 5 {{ include "mayastor.apiRest.fullname" . }} {{ .Values.apiRest.service.ports.https }}
               do
                 echo "$(date) Waiting for REST API endpoint to become available"
                 sleep 1
