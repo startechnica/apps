@@ -11,15 +11,6 @@ rules:
   resources: ["customresourcedefinitions"]
   verbs: ["create", "list"]
 
-  # must read mayastor pools info
-- apiGroups: ["openebs.io"]
-  resources: ["mayastorpools"]
-  verbs: ["get", "list", "watch", "update", "replace", "patch"]
-  # must update mayastor pools status
-- apiGroups: ["openebs.io"]
-  resources: ["mayastorpools/status"]
-  verbs: ["update", "patch"]
-
   # must read diskpool info
 - apiGroups: ["openebs.io"]
   resources: ["diskpools"]
