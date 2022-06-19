@@ -163,6 +163,24 @@ spec:
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
+        - name: liveness-probe
+          image: {{ include "mayastor.csiNode.livenessprobe.image" . }}
+          imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(CSI_SOCKET_ADDRESS)"
+          env:
+            - name: CSI_SOCKET_ADDRESS
+              value: {{ .Values.csiNode.socketAddress | quote }}
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
       volumes:
         - name: device
           hostPath:
