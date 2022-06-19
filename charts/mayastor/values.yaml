@@ -389,7 +389,7 @@ csiController:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-attacher
-      tag: v3.4.0
+      tag: v3.5.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -427,14 +427,14 @@ csiController:
     metrics:
       enabled: false
 
-  ## CSI livenessprobe
-  ## ref: https://github.com/kubernetes-csi/livenessprobe
+  ## CSI external-health-monitor-controller
+  ## ref: https://kubernetes-csi.github.io/docs/external-health-monitor-controller.html
   ##
-  livenessprobe:
+  healthMonitor:
     image:
       registry: k8s.gcr.io
-      repository: sig-storage/livenessprobe
-      tag: v2.6.0
+      repository: csi-external-health-monitor-controller
+      tag: v0.5.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
