@@ -402,14 +402,14 @@ csiController:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
-    ## @param agentCore.containerPorts.http Mayastor Agent Core GRPC container port
+    ## @param csiController.attacher.containerPorts.http Mayastor Agent Core GRPC container port
     ##
     containerPorts:
       metrics: 9601
     ## CSI attacher resource requests and limits
     ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
-    ## @param attacher.resources.limits The resources limits for CSI attacher containers
-    ## @param attacher.resources.requests The requested resources for CSI attacher containers
+    ## @param csiController.attacher.resources.limits The resources limits for CSI attacher containers
+    ## @param csiController.attacher.resources.requests The requested resources for CSI attacher containers
     ##
     resources:
       ## Example:
@@ -455,7 +455,7 @@ csiController:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-provisioner
-      tag: v3.1.0
+      tag: v3.1.1
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
