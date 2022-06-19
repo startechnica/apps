@@ -108,13 +108,9 @@ spec:
               {{- else }}
               value: {{ .Values.csiNode.logLevel }}
               {{- end }}
-          resources:
-            limits:
-              cpu: "100m"
-              memory: "50Mi"
-            requests:
-              cpu: "100m"
-              memory: "50Mi"
+          {{- if .Values.csiNode.resources }}
+          resources: {{ toYaml .Values.csiNode.resources | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: device
               mountPath: /dev
@@ -151,13 +147,9 @@ spec:
             - containerPort: 10199
               name: csi-driver
               protocol: TCP
-          resources:
-            limits:
-              cpu: "100m"
-              memory: "50Mi"
-            requests:
-              cpu: "100m"
-              memory: "50Mi"
+          {{- if .Values.csiNode.driverRegistrar.resources }}
+          resources: {{ toYaml .Values.csiNode.driverRegistrar.resources | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -171,13 +163,9 @@ spec:
           env:
             - name: CSI_SOCKET_ADDRESS
               value: {{ .Values.csiNode.socketAddress | quote }}
-          resources:
-            limits:
-              cpu: "100m"
-              memory: "50Mi"
-            requests:
-              cpu: "100m"
-              memory: "50Mi"
+          {{- if .Values.csiNode.livenessprobe.resources }}
+          resources: {{ toYaml .Values.csiNode.livenessprobe.resources | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi

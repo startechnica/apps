@@ -523,10 +523,10 @@ csiNode:
   resources:
     limits:
       cpu: 100m
-      memory: 50Mi
+      memory: 64Mi
     requests:
       cpu: 100m
-      memory: 50Mi
+      memory: 64Mi
   ## @param affinity Affinity for Mayastor I/O Engine pods assignment
   ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
@@ -573,6 +573,18 @@ csiNode:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
+    ## CSI Driver Registrar resource requests and limits
+    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    ## @param csiNode.driverRegistrar.resources.limits The resources limits for the Mayastor I/O Engine containers
+    ## @param csiNode.driverRegistrar.resources.requests The requested resources for the Mayastor I/O Engine containers
+    ##
+    resources:
+      limits:
+        cpu: 100m
+        memory: 64Mi
+      requests:
+        cpu: 100m
+        memory: 64Mi
 
   ## CSI livenessprobe
   ## ref: https://github.com/kubernetes-csi/livenessprobe
@@ -597,6 +609,18 @@ csiNode:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
+    ## CSI liveness Probe resource requests and limits
+    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    ## @param csiNode.livenessprobe.resources.limits The resources limits for the Mayastor I/O Engine containers
+    ## @param csiNode.livenessprobe.resources.requests The requested resources for the Mayastor I/O Engine containers
+    ##
+    resources:
+      limits:
+        cpu: 100m
+        memory: 64Mi
+      requests:
+        cpu: 100m
+        memory: 64Mi
 
   nvme:
     # nvme_core module io timeout in seconds
