@@ -108,6 +108,10 @@ spec:
               {{- else }}
               value: {{ .Values.csiNode.logLevel }}
               {{- end }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.csiNode.containerPorts.grpc }}
+              protocol: TCP
           {{- if .Values.csiNode.resources }}
           resources: {{ toYaml .Values.csiNode.resources | nindent 12 }}
           {{- end }}

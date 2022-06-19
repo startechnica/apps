@@ -497,6 +497,10 @@ csiNode:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
+  ## @param csiNode.containerPorts.http Mayastor Agent Core GRPC container port
+  ##
+  containerPorts:
+    grpc: 10199
   ## Configure Pods Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
   ## @param csiNode.podSecurityContext.enabled Enabled Mayastor I/O Engine pods' Security Context
@@ -573,7 +577,7 @@ csiNode:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
-    ## @param agentCore.containerPorts.http Mayastor Agent Core GRPC container port
+    ## @param csiNode.driverRegistrar.containerPorts.http Mayastor Agent Core GRPC container port
     ##
     containerPorts:
       healthz: 9809
