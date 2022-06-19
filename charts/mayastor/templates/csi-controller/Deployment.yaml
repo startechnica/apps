@@ -103,7 +103,7 @@ spec:
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(ADDRESS)"
-            - "--v=2"
+            - "--v=5"
           env:
             - name: ADDRESS
               value: {{ .Values.csiController.csiSocketAddress | quote }}
@@ -125,7 +125,7 @@ spec:
           image: {{ include "mayastor.csiController.healthMonitor.image" . }}
           imagePullPolicy: {{ .Values.csiController.healthMonitor.image.pullPolicy | quote }}
           args:
-            - "--csiAddress=$(ADDRESS)"
+            - "--csi-address=$(ADDRESS)"
             - "--v=5"
           env:
             - name: ADDRESS
