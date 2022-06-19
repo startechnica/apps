@@ -73,6 +73,11 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.attacher.image "global" .Values.global) }}
 {{- end -}}
 
+{{/* Return the proper Mayastor CSI Controller Health Monitor image name */}}
+{{- define "mayastor.csiController.healthMonitor.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.csiController.healthMonitor.image "global" .Values.global) }}
+{{- end -}}
+
 {{/* Return the proper Mayastor CSI Controller Provisioner image name */}}
 {{- define "mayastor.csiController.provisioner.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.csiController.provisioner.image "global" .Values.global) }}

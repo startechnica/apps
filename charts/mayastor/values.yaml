@@ -469,6 +469,8 @@ csiController:
       ##
       pullSecrets: []
 
+  csiSocketAddress: /var/lib/csi/sockets/pluginproxy/csi.sock
+
 csiNode:
   enabled: true
   logLevel: info

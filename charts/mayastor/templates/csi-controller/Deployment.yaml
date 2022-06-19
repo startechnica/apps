@@ -78,7 +78,7 @@ spec:
             {{- end }}
           env:
             - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+              value: {{ .Values.csiController.csiSocketAddress | quote }}
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -102,11 +102,11 @@ spec:
           image: {{ include "mayastor.csiController.attacher.image" . }}
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           args:
-            - "--csi-address=$(ADDRESS)"
+            - "--csi-address=$(CSI_SOCKET_ADDRESS)"
             - "--v=2"
           env:
             - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+              value: {{ .Values.csiController.csiSocketAddress | quote }}
             - name: RUST_BACKTRACE
               {{- if .Values.diagnosticMode.enabled }}
               value: full
@@ -118,6 +118,26 @@ spec:
           {{- if .Values.csiController.attacher.resources }}
           resources: {{ toYaml .Values.csiController.attacher.resources | nindent 12 }}
           {{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-health-monitor
+          image: {{ include "mayastor.csiController.healthMonitor.image" . }}
+          imagePullPolicy: {{ .Values.csiController.healthMonitor.image.pullPolicy | quote }}
+          args:
+            - "--csiAddress=$(ADDRESS)"
+            - "--v=5"
+          env:
+            - name: ADDRESS
+              value: {{ .Values.csiController.csiSocketAddress | quote }}
+            - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
+              value: full
+              {{- else }}
+              value: full
+              {{- end }}
+            - name: RUST_LOG
+              value: {{ .Values.csiController.logLevel }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
