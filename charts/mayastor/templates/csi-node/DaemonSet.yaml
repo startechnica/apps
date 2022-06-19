@@ -133,7 +133,7 @@ spec:
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
             - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
-            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.diagnostic }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}"
             - "--v=5"
           env:
             - name: CSI_SOCKET_ADDRESS
@@ -156,8 +156,8 @@ spec:
                     echo "Deleting stale file"
                     rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
           ports:
-            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.diagnostic }}
-              name: diagnostic
+            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
+              name: healthz
               protocol: TCP
           {{- if .Values.csiNode.driverRegistrar.resources }}
           resources: {{ toYaml .Values.csiNode.driverRegistrar.resources | nindent 12 }}
@@ -172,9 +172,8 @@ spec:
           imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
-            - "--health-port={{ .Values.csiNode.livenessprobe.containerPorts.health }}"
             - "--metrics-address=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.metrics }}"
-            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.diagnostic }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.healthz }}"
           env:
             - name: CSI_SOCKET_ADDRESS
               value: {{ .Values.csiNode.socketAddress | quote }}

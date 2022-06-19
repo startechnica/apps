@@ -580,7 +580,7 @@ csiNode:
     ## @param csiNode.driverRegistrar.containerPorts.http Mayastor Agent Core GRPC container port
     ##
     containerPorts:
-      diagnostic: 9809
+      healthz: 9809
     ## CSI Driver Registrar resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
     ## @param csiNode.driverRegistrar.resources.limits The resources limits for the Mayastor I/O Engine containers
@@ -620,8 +620,8 @@ csiNode:
     ## @param csiNode.livenessprobe.containerPorts.http Mayastor Agent Core GRPC container port
     ##
     containerPorts:
-      health: 9810
-      diagnostic: 50212
+      # health: 9810
+      healthz: 9810
       metrics: 50211
     ## CSI liveness Probe resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
