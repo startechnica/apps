@@ -41,6 +41,7 @@ spec:
       {{- if .Values.ioEngine.nodeSelector }}
       nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
+      priorityClassName: {{ printf "%s-critical" (include "mayastor.csiController.fullname" .) }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       {{- if .Values.tolerations }}
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
