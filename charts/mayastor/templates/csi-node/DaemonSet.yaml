@@ -129,10 +129,15 @@ spec:
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
             - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
+            - "--http-endpoint=:{{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}"
             - "--v=5"
           env:
             - name: CSI_SOCKET_ADDRESS
               value: {{ .Values.csiNode.socketAddress | quote }}
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           lifecycle:
             preStop:
               exec:
@@ -142,10 +147,9 @@ spec:
                   - |-
                     echo "Deleting stale file"
                     rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
-          # Mayastor node plugin gRPC server
           ports:
-            - containerPort: 10199
-              name: csi-driver
+            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
+              name: healthz
               protocol: TCP
           {{- if .Values.csiNode.driverRegistrar.resources }}
           resources: {{ toYaml .Values.csiNode.driverRegistrar.resources | nindent 12 }}
