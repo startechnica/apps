@@ -599,8 +599,7 @@ etcd:
     rbac:
       ## @param etcd.auth.rbac.create Switch to enable RBAC authentication
       ##
-      #create: true
-      enabled: false
+      create: false
       ## @param etcd.auth.rbac.allowNoneAuthentication Allow to use etcd without configuring RBAC authentication
       ##
       allowNoneAuthentication: true
