@@ -121,7 +121,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-        {{- if .Values.csiNode.healthMonitor.enabled }}
+        {{- if .Values.csiController.healthMonitor.enabled }}
         - name: csi-health-monitor
           image: {{ include "mayastor.csiController.healthMonitor.image" . }}
           imagePullPolicy: {{ .Values.csiController.healthMonitor.image.pullPolicy | quote }}
