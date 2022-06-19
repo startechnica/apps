@@ -172,7 +172,6 @@ spec:
           imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
-            - "--metrics-address=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.metrics }}"
             - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.healthz }}"
           env:
             - name: CSI_SOCKET_ADDRESS
