@@ -7,8 +7,20 @@
   {{- printf "%s-api-rest" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
+{{- define "mayastor.csiNode.fullname" -}}
+  {{- printf "%s-csi-node" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{- define "mayastor.csiController.fullname" -}}
+  {{- printf "%s-csi-controller" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
 {{- define "mayastor.etcd.fullname" -}}
   {{- printf "%s-etcd" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{- define "mayastor.ioEngine.fullname" -}}
+  {{- printf "%s-io-engine" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{- define "mayastor.metrics.fullname" -}}
