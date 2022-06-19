@@ -129,11 +129,11 @@ spec:
               mountPropagation: "Bidirectional"
         - name: csi-driver-registrar
           image: {{ include "mayastor.csiNode.driverRegistrar.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          imagePullPolicy: {{ .Values.csiNode.driverRegistrar.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
             - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
-            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.http }}"
             - "--v=5"
           env:
             - name: CSI_SOCKET_ADDRESS
@@ -149,11 +149,11 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.csiNode.livenessprobe.containerPorts.healthz }}
+              port: {{ .Values.csiNode.livenessprobe.containerPorts.http }}
             initialDelaySeconds: 5
             timeoutSeconds: 5
           ports:
-            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
+            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.http }}
               name: healthz
               protocol: TCP
           {{- if .Values.csiNode.driverRegistrar.resources }}
@@ -169,7 +169,7 @@ spec:
           imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
-            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.healthz }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.http }}"
           env:
             - name: CSI_SOCKET_ADDRESS
               value: {{ .Values.csiNode.socketAddress | quote }}
