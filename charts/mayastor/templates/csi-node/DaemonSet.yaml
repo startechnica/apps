@@ -156,8 +156,8 @@ spec:
                     echo "Deleting stale file"
                     rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
           ports:
-            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
-              name: healthz
+            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.diagnostic }}
+              name: diagnostic
               protocol: TCP
           {{- if .Values.csiNode.driverRegistrar.resources }}
           resources: {{ toYaml .Values.csiNode.driverRegistrar.resources | nindent 12 }}
