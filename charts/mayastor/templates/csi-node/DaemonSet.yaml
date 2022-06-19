@@ -133,7 +133,7 @@ spec:
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
             - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
-            - "--http-endpoint=:{{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}"
             - "--v=5"
           env:
             - name: CSI_SOCKET_ADDRESS
@@ -142,6 +142,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
           lifecycle:
             preStop:
               exec:
