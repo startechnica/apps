@@ -146,15 +146,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-          lifecycle:
-            preStop:
-              exec:
-                command:
-                  - /bin/sh
-                  - -c
-                  - |-
-                    echo "Deleting stale file"
-                    rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
           livenessProbe:
             httpGet:
               path: /healthz

@@ -622,7 +622,7 @@ csiNode:
     containerPorts:
       # health: 9810
       healthz: 9810
-      metrics: 50211
+      # metrics: 50211
     ## CSI liveness Probe resource requests and limits
     ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
     ## @param csiNode.livenessprobe.resources.limits The resources limits for the Mayastor I/O Engine containers
