@@ -172,6 +172,8 @@ spec:
           imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
+            - "--health-port=9809"
+            - "--metrics-address=20201"
           env:
             - name: CSI_SOCKET_ADDRESS
               value: {{ .Values.csiNode.socketAddress | quote }}
