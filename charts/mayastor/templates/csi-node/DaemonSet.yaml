@@ -149,7 +149,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
+              port: {{ .Values.csiNode.livenessprobe.containerPorts.healthz }}
             initialDelaySeconds: 5
             timeoutSeconds: 5
           ports:
