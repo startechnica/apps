@@ -155,6 +155,12 @@ spec:
                   - |-
                     echo "Deleting stale file"
                     rm -rf /registration/io.openebs.mayastor /registration/io.openebs.mayastor-reg.sock
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
           ports:
             - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}
               name: healthz
