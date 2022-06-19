@@ -469,7 +469,7 @@ csiController:
       ##
       pullSecrets: []
 
-  csiSocketAddress: /var/lib/csi/sockets/pluginproxy/csi.sock
+  csiSocketAddress: "/var/lib/csi/sockets/pluginproxy/csi.sock"
 
 csiNode:
   enabled: true

@@ -102,7 +102,7 @@ spec:
           image: {{ include "mayastor.csiController.attacher.image" . }}
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
           args:
-            - "--csi-address=$(CSI_SOCKET_ADDRESS)"
+            - "--csi-address=$(ADDRESS)"
             - "--v=2"
           env:
             - name: ADDRESS
