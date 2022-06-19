@@ -111,7 +111,7 @@ spec:
               {{- if .Values.diagnosticMode.enabled }}
               value: full
               {{- else }}
-              value: full
+              value: "1"
               {{- end }}
             - name: RUST_LOG
               value: {{ .Values.csiController.logLevel }}
@@ -121,6 +121,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- if .Values.csiNode.healthMonitor.enabled }}
         - name: csi-health-monitor
           image: {{ include "mayastor.csiController.healthMonitor.image" . }}
           imagePullPolicy: {{ .Values.csiController.healthMonitor.image.pullPolicy | quote }}
@@ -141,6 +142,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- end }}
         - name: csi-controller
           image: {{ include "mayastor.csiController.image" . }}
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}

@@ -431,6 +431,7 @@ csiController:
   ## ref: https://kubernetes-csi.github.io/docs/external-health-monitor-controller.html
   ##
   healthMonitor:
+    enabled: false
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-external-health-monitor-controller
