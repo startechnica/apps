@@ -133,7 +133,7 @@ spec:
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
             - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
-            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.healthz }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.diagnostic }}"
             - "--v=5"
           env:
             - name: CSI_SOCKET_ADDRESS
@@ -172,11 +172,16 @@ spec:
           imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
           args:
             - "--csi-address=$(CSI_SOCKET_ADDRESS)"
-            - "--health-port=9809"
-            - "--metrics-address=20201"
+            - "--health-port={{ .Values.csiNode.livenessprobe.containerPorts.health }}"
+            - "--metrics-address=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.metrics }}"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.diagnostic }}"
           env:
             - name: CSI_SOCKET_ADDRESS
               value: {{ .Values.csiNode.socketAddress | quote }}
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
           {{- if .Values.csiNode.livenessprobe.resources }}
           resources: {{ toYaml .Values.csiNode.livenessprobe.resources | nindent 12 }}
           {{- end }}
