@@ -389,7 +389,7 @@ csiController:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-attacher
-      tag: v3.5.0
+      tag: v3.4.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -434,7 +434,7 @@ csiController:
     image:
       registry: k8s.gcr.io
       repository: csi-external-health-monitor-controller
-      tag: v0.5.0
+      tag: v0.4.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
