@@ -32,6 +32,9 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
       {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
       {{- if .Values.tolerations }}
