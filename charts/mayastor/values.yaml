@@ -604,7 +604,7 @@ csiNode:
       # tag: v2.1.0
       registry: k8s.gcr.io
       repository: sig-storage/livenessprobe
-      tag: v2.6.0
+      tag: v2.7.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
