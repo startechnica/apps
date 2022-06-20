@@ -47,7 +47,7 @@ diskPools:
     #   device: /dev/sdb
 
 ioEngine:
-  logLevel: info
+  logLevel: debug
   tolerations:
     - effect: NoSchedule
       key: node-role.kubernetes.io/control-plane
