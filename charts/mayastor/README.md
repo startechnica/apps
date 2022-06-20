@@ -66,6 +66,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `commonLabels`      | Add labels to all the deployed resources                                                   | `{}`            |
 | `commonAnnotations` | Add annotations to all the deployed resources                                              | `{}`            |
 
+### I/O Engine Dataplane Deployment
+
 ### Setting Pod's affinity
 
 This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod's affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).

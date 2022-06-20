@@ -141,7 +141,6 @@ spec:
               value: full
               {{- end }}
             - name: RUST_LOG
-              {{- if .Values.diagnosticMode.enabled }}
               value: {{ ternary "debug" (.Values.ioEngine.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           ports:
             - name: io-engine
