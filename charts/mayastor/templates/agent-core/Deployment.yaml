@@ -49,7 +49,7 @@ spec:
           command:
             - sh
             - -c
-            - |
+            - |-
               trap "exit 1" TERM
               until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.clientPort" . }}
               do
