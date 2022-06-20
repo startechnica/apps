@@ -890,6 +890,18 @@ agentCore:
   ##
   containerPorts:
     grpc: 50051
+  ## Mayastor Agent Core resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param agentCore.resources.limits The resources limits for Mayastor Agent Core containers
+  ## @param agentCore.resources.requests The requested resources for Mayastor Agent Core containers
+  ##
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 32Mi
+    requests:
+      cpu: 500m
+      memory: 16Mi
   service:
     ## @param service.type Mayastor Control Plane Rest Kubernetes service type
     ##
