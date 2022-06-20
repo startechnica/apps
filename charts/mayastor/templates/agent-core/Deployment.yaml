@@ -1,0 +1,104 @@
+## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/agent-core-deployment.yaml
+
+{{- if .Values.agentCore.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mayastor.agentCore.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: agent-core
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: agent-core
+  template:
+    metadata:
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: agent-core
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: etcd-probe
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.clientPort" . }}
+              do
+                date
+                echo "Waiting for etcd..."
+                sleep 1;
+              done
+      containers:
+        - name: agent-core
+          image: {{ include "mayastor.agentCore.image" . }}
+          imagePullPolicy: {{ .Values.agentCore.image.pullPolicy | quote }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+          args:
+            - "--store={{ include "mayastor.etcd.host" . }}:{{ include "mayastor.etcd.clientPort" . }}"
+            - "--request-timeout={{ .Values.agentCore.requestTimeout | default "5s" }}"
+            - "--cache-period=30s"
+            {{ if .Values.jaeger.enabled }}
+            - "--jaeger={{ .Values.jaeger.agent.name }}:{{ .Values.jaeger.agent.port }}"
+            {{ end }}
+            - "--grpc-server-addr=https://0.0.0.0:{{ .Values.agentCore.containerPorts.grpc }}"
+          {{- end }}
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RUST_BACKTRACE
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: {{ ternary "debug" (.Values.agentCore.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.agentCore.containerPorts.grpc }}
+              protocol: TCP
+          {{- if .Values.agentCore.resources }}
+          resources: {{ toYaml .Values.agentCore.resources | nindent 12 }}
+          {{- end }}
+{{- end }}

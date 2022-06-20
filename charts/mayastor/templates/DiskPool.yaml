@@ -1,0 +1,19 @@
+## ref: https://github.com/openebs/mayastor/blob/master/deploy/pool.yaml
+
+{{- if .Values.diskPools.create }}
+{{- range .Values.diskPools.pools }}
+apiVersion: "openebs.io/v1alpha1"
+kind: DiskPool
+metadata:
+  {{- if not (empty $.Values.diskPools.generateName) }}
+  generateName: {{ $.Values.diskPools.generateName }}
+  {{- else }}
+  name: pool-on-{{ .node }}
+  {{- end }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+spec:
+  node: {{ .node }}
+  disks: ["{{ .device }}"]
+---
+{{- end }}
+{{- end }}

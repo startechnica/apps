@@ -1,0 +1,235 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "mayastor.ioEngine.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: io-engine
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: io-engine
+  {{- if .Values.ioEngine.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.ioEngine.updateStrategy | nindent 4 }}
+  {{- end }}
+  minReadySeconds: 10
+  template:
+    metadata:
+      {{- if .Values.ioEngine.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: io-engine
+        openebs.io/logging: "true"
+        {{- if .Values.ioEngine.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.ioEngine.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.ioEngine.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.ioEngine.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.ioEngine.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.ioEngine.nodeAffinityPreset.type "key" .Values.ioEngine.nodeAffinityPreset.key "values" .Values.ioEngine.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      hostNetwork: true
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.ioEngine.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.ioEngine.priorityClassName }}
+      priorityClassName: {{ .Values.ioEngine.priorityClassName | quote }}
+      {{- else if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- else }}
+      priorityClassName: {{ printf "%s-critical" (include "mayastor.ioEngine.fullname" .) }}
+      {{- end }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
+      {{- if .Values.ioEngine.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.ioEngine.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: etcd-probe
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.clientPort" . }}
+              do
+                date
+                echo "Waiting for etcd..."
+                sleep 1
+              done
+        - name: agent-core-probe
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}
+              do
+                date
+                echo "Waiting for agent-core-grpc services..."
+                sleep 1
+              done
+        {{- if .Values.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | trim | nindent 8 }}
+        {{- end }}
+        {{- if .Values.ioEngine.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.initContainers "context" $) | trim | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: io-engine
+          image: {{ include "mayastor.ioEngine.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- else }}
+          command:
+            - io-engine
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+          args:
+            # The -l argument accepts cpu-list. Indexing starts at zero.
+            # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
+            # Note: Ensure that the CPU resources are updated accordingly.
+            #       If you use 2 CPUs, the CPU: field should also read 2.
+            - "-g$(MY_POD_IP)"
+            {{- if .Values.ioEngine.cpuCount }}
+            - "-l{{ include "mayastor.cpuFlag" . | quote }}"
+            {{- end }}
+            - "-p{{ include "mayastor.etcd.host" . }}:{{ include "mayastor.etcd.clientPort" . }}"
+            - "-Rhttps://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
+            - "-y/var/local/io-engine/config.yaml"
+          {{- end }}
+          env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NVME_QPAIR_CONNECT_ASYNC
+              value: "true"
+            - name: NVMF_TCP_MAX_QUEUE_DEPTH
+              value: "32"
+            - name: RUST_BACKTRACE
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: debug,io_engine={{ ternary "debug" (.Values.ioEngine.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+          ports:
+            - name: io-engine
+              containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
+              protocol: TCP
+          {{- if .Values.ioEngine.resources }}
+          resources: {{ toYaml .Values.ioEngine.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.ioEngine.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.ioEngine.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: device
+              mountPath: /dev
+            - name: udev
+              mountPath: /run/udev
+            - name: dshm
+              mountPath: /dev/shm
+            - name: configlocation
+              mountPath: /var/local/io-engine/
+            - mountPath: /etc/podinfo
+              name: podinfo
+            {{- if .Values.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+            {{- if .Values.ioEngine.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+        {{- if .Values.metrics.enabled }}
+        - name: metrics-exporter-pool
+          image: {{ .Values.metrics.image }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          command:
+            - metrics-exporter-pool
+          env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.containerPorts.metrics }}
+              protocol: TCP
+          {{- if .Values.metrics.livenessProbe.enabled }}
+          livenessProbe: {{- omit .Values.metrics.livenessProbe "enabled" | toYaml | nindent 12 }}
+            httpGet:
+              path: /metrics
+              port: metrics
+          {{- end }}
+          {{- if .Values.metrics.readinessProbe.enabled }}
+          readinessProbe: {{- omit .Values.metrics.readinessProbe "enabled" | toYaml | nindent 12 }}
+            httpGet:
+              path: /metrics
+              port: metrics
+          {{- end }}
+          {{- if .Values.metrics.resources }}
+          resources: {{ toYaml .Values.metrics.resources | nindent 12 }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.ioEngine.sidecars }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.ioEngine.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: device
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: udev
+          hostPath:
+            path: /run/udev
+            type: Directory
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "1Gi"
+        - name: hugepage
+          emptyDir:
+            medium: HugePages
+        - name: configlocation
+          hostPath:
+            path: /var/local/io-engine/
+            type: DirectoryOrCreate
+      {{- if .Values.ioEngine.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}

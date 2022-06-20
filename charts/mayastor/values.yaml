@@ -1,0 +1,1616 @@
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+
+## @section Common parameters
+
+## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
+##
+kubeVersion: ""
+## @param nameOverride String to partially override Mayastor Control Plane Rest.fullname
+##
+nameOverride: ""
+namespaceOverride: ""
+## @param fullnameOverride String to fully override Mayastor Control Plane Rest.fullname
+##
+fullnameOverride: ""
+## @param hostAliases Add deployment host aliases
+## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+##
+hostAliases: []
+## @param commonLabels Labels to add to all deployed objects
+##
+commonLabels: {}
+## @param commonAnnotations Annotations to add to all deployed objects
+##
+commonAnnotations: {}
+## @param clusterDomain Default Kubernetes cluster domain
+##
+clusterDomain: cluster.local
+## @param extraDeploy Array of extra objects to deploy with the release
+##
+extraDeploy: []
+
+## Enable diagnostic mode in the deployment
+##
+diagnosticMode:
+  ## @param diagnosticMode.enabled Enable diagnostic mode (all probes will be disabled and the command will be overridden)
+  ##
+  enabled: false
+  ## @param diagnosticMode.command Command to override all containers in the deployment
+  ##
+  command:
+    - sleep
+  ## @param diagnosticMode.args Args to override all containers in the deployment
+  ##
+  args:
+    - infinity
+
+## @section Mayastor common parameters
+
+## Mayastor image
+## ref: https://hub.docker.com/r/mayadata/mayastor/tags
+## @param image.registry Mayastor Control Plane Rest image registry
+## @param image.repository Mayastor Control Plane Rest image repository
+## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+## @param image.pullSecrets Specify docker-registry secret names as an array
+## @param image.debug Specify if debug logs should be enabled
+##
+image:
+  registry: docker.io
+  repository: mayastor-io-engine
+  tag: develop
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## Example:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  pullSecrets: []
+  ## Set to true if you would like to see extra information on logs
+  ## It turns BASH and/or NAMI debugging in the image
+  ##
+  debug: false
+
+## @section Mayastor Deployment parameters
+
+## @param replicaCount Desired number of cluster nodes
+##
+replicaCount: 1
+## @param updateStrategy.type updateStrategy for Mayastor Daemonset
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+##
+updateStrategy:
+  type: RollingUpdate
+## @param podLabels Extra labels for Mayastor pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+##
+podLabels: {}
+## @param podAnnotations Annotations for Mayastor pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+##
+podAnnotations: {}
+## @param podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAffinityPreset: ""
+## @param podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAntiAffinityPreset: soft
+## Node affinity preset
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+##
+nodeAffinityPreset:
+  ## @param nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ##
+  type: ""
+  ## @param nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
+  ## E.g.
+  ## key: "kubernetes.io/e2e-az-name"
+  ##
+  key: ""
+  ## @param nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+  ## E.g.
+  ## values:
+  ##   - e2e-az1
+  ##   - e2e-az2
+  ##
+  values: []
+## @param affinity Affinity for Mayastor pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+##
+affinity: {}
+## @param nodeSelector Node labels for Mayastor pods assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector:
+  openebs.io/engine: mayastor
+  kubernetes.io/arch: amd64
+## @param tolerations Tolerations for Mayastor pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+## @param topologySpreadConstraints Topology Spread Constraints for Mayastor pods assignment
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+## E.g.
+## topologySpreadConstraints:
+##   - maxSkew: 1
+##     topologyKey: topology.kubernetes.io/zone
+##     whenUnsatisfiable: DoNotSchedule
+##
+topologySpreadConstraints: {}
+
+## @param priorityClassName Priority class for Mayastor pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+##
+priorityClassName: ""
+## @param schedulerName Name of the k8s scheduler (other than default)
+## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+##
+schedulerName: ""
+## @param podManagementPolicy podManagementPolicy to manage scaling operation of Mayastor pods
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
+##
+podManagementPolicy: ""
+
+## @section Persistence Parameters
+
+## Persistence Parameters
+## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistence:
+  ## @param persistence.enabled Enable persistence on Mayastor replicas using a `PersistentVolumeClaim`
+  ##
+  enabled: false
+    ## @param persistence.existingClaim Name of an existing `PersistentVolumeClaim` for Mayastor primary replicas
+    ## NOTE: When it's set the rest of persistence parameters are ignored
+    ##
+  existingClaim: ""
+  ## @param persistence.subPath Subdirectory of the volume to mount at
+  ##
+  subPath: ""
+  ## @param persistence.storageClass Mayastor persistent volume storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  storageClass: ""
+  ## @param persistence.annotations Mayastor persistent volume claim annotations
+  ##
+  annotations: {}
+  ## @param persistence.accessModes Mayastor persistent volume access Modes
+  ##
+  accessModes:
+    - ReadWriteOnce
+  ## @param persistence.size Mayastor persistent volume size
+  ##
+  size: 8Gi
+  ## @param persistence.selector Selector to match an existing Persistent Volume
+  ## selector:
+  ##   matchLabels:
+  ##     app: my-app
+  ##
+  selector: {}
+## 'volumePermissions' init container parameters
+## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
+##   based on the podSecurityContext/containerSecurityContext parameters
+##
+volumePermissions:
+  ## @param volumePermissions.enabled Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
+  ##
+  enabled: false
+  ## Bitnami Shell image
+  ## ref: https://hub.docker.com/r/bitnami/bitnami-shell/tags/
+  ## @param volumePermissions.image.registry Bitnami Shell image registry
+  ## @param volumePermissions.image.repository Bitnami Shell image repository
+  ## @param volumePermissions.image.tag Bitnami Shell image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.pullPolicy Bitnami Shell image pull policy
+  ## @param volumePermissions.image.pullSecrets Bitnami Shell image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/bitnami-shell
+    tag: 11-debian-11-r0
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Init container's resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param volumePermissions.resources.limits The resources limits for the init container
+  ## @param volumePermissions.resources.requests The requested resources for the init container
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Init container Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
+  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
+  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
+  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
+  ##
+  securityContext:
+    runAsUser: 0
+## @param extraVolumes Optionally specify extra list of additional volumes to the Mayastor pod(s)
+##
+extraVolumes: []
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Mayastor container(s)
+##
+extraVolumeMounts: []
+## @param initContainers Add additional init containers for the Mayastor pod(s)
+##
+initContainers: []
+## @param sidecars Add additional sidecar containers for the Mayastor pod(s)
+##
+sidecars: []
+
+## @section Traffic Exposure Parameters
+
+## Mayastor service parameters
+##
+service:
+  ## @param service.type Mayastor Kubernetes service type
+  ##
+  type: ClusterIP
+  ## @param service.ports.auth Mayastor Kubernetes service port
+  ##
+  ports:
+    http: 1812
+    https: 1813
+  ## @param service.nodePorts.mysql Mayastor Kubernetes service node port
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+  ##
+  nodePorts:
+    http: ""
+    https: ""
+  ## @param service.clusterIP Mayastor Kubernetes service clusterIP IP
+  ##
+  clusterIP: ""
+  ## @param service.loadBalancerIP Mayastor loadBalancerIP if service type is `LoadBalancer`
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+  ##
+  loadBalancerIP: ""
+  ## @param service.ipFamilyPolicy Mayastor Kubernetes service ipFamilyPolicy policy
+  ##
+  ipFamilyPolicy: SingleStack
+  ## @param service.externalTrafficPolicy Enable client source IP preservation
+  ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+  ##
+  externalTrafficPolicy: Cluster
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## bare metal / on-prem environments that rely on VIP based LB implementations.
+  allocateLoadBalancerNodePorts: false
+  ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+  ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+  ##
+  loadBalancerClass: ""
+  ## @param service.loadBalancerSourceRanges Address that are allowed when Mayastor service is LoadBalancer
+  ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+  ## E.g.
+  ## loadBalancerSourceRanges:
+  ##   - 10.10.10.0/24
+  ##
+  loadBalancerSourceRanges: []
+  ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+  ##
+  extraPorts: []
+  ## @param service.annotations Provide any additional annotations which may be required
+  ##
+  annotations: {}
+  ## @param service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+  ## If "ClientIP", consecutive client requests will be directed to the same Pod
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+  ##
+  sessionAffinity: None
+  ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
+  ## sessionAffinityConfig:
+  ##   clientIP:
+  ##     timeoutSeconds: 300
+  sessionAffinityConfig: {}
+
+csiController:
+  enabled: true
+  logLevel: info
+  ## Mayastor CSI Controller image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
+  ## @param image.registry Mayastor CSI Controller image registry
+  ## @param image.repository Mayastor CSI Controller image repository
+  ## @param image.tag Mayastor CSI Controller image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor CSI Controller image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-csi-controller
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## CSI controller resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param controller.resources.limits The resources limits for CSI controller containers
+  ## @param controller.resources.requests The requested resources for CSI controller containers
+  ##
+  resources:
+    limits:
+      cpu: 32m
+      memory: 128Mi
+    requests:
+      cpu: 16m
+      memory: 64Mi
+
+  ## @section Kubernetes CSI Driver Parameters
+  ## ref: https://kubernetes-csi.github.io/docs/introduction.html
+
+  ## CSI external-attacher
+  ## ref: https://github.com/kubernetes-csi/external-attacher
+  ##
+  attacher:
+    enabled: true
+    image:
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-attacher
+      tag: v3.5.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
+    ## @param csiController.attacher.containerPorts.http Mayastor Agent Core GRPC container port
+    ##
+    containerPorts:
+      metrics: 9601
+    ## CSI attacher resource requests and limits
+    ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+    ## @param csiController.attacher.resources.limits The resources limits for CSI attacher containers
+    ## @param csiController.attacher.resources.requests The requested resources for CSI attacher containers
+    ##
+    resources:
+      ## Example:
+      ## limits:
+      ##    cpu: 100m
+      ##    memory: 256Mi
+      ##
+      limits: {}
+      ## Examples:
+      ## requests:
+      ##    cpu: 100m
+      ##    memory: 256Mi
+      ##
+      requests: {}
+    metrics:
+      enabled: false
+
+  ## CSI external-health-monitor-controller
+  ## ref: https://kubernetes-csi.github.io/docs/external-health-monitor-controller.html
+  ##
+  healthMonitor:
+    enabled: false
+    image:
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-external-health-monitor-controller
+      tag: v0.5.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
+
+  ## CSI external-provisioner
+  ## ref: https://github.com/kubernetes-csi/external-provisioner
+  ##
+  provisioner:
+    image:
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-provisioner
+      tag: v3.1.1
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
+
+  csiSocketAddress: "/var/lib/csi/sockets/pluginproxy/csi.sock"
+
+csiNode:
+  enabled: true
+  logLevel: info
+  ## Mayastor CSI Node image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor-csi-node/tags
+  ## @param csiNode.image.registry Mayastor CSI Node image registry
+  ## @param csiNode.image.repository Mayastor CSI Node image repository
+  ## @param csiNode.image.tag Mayastor CSI Node image tag (immutable tags are recommended)
+  ## @param csiNode.image.pullPolicy Mayastor CSI Node image pull policy
+  ## @param csiNode.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param csiNode.image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-csi-node
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param csiNode.containerPorts.http Mayastor Agent Core GRPC container port
+  ##
+  containerPorts:
+    grpc: 10199
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param csiNode.podSecurityContext.enabled Enabled Mayastor I/O Engine pods' Security Context
+  ## @param csiNode.podSecurityContext.fsGroup Set Mayastor I/O Engine pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: false
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param csiNode.containerSecurityContext.enabled Enabled Mayastore CSI Plugin containers' Security Context
+  ## @param csiNode.containerSecurityContext.runAsUser Set Mayastore CSI Plugin containers' Security Context runAsUser
+  ## @param csiNode.containerSecurityContext.runAsNonRoot Set Mayastore CSI Plugin containers' Security Context runAsNonRoot
+  ## @param csiNode.containerSecurityContext.readOnlyRootFilesystem Set Mayastore CSI Plugin containers' Security Context runAsNonRoot
+  ##
+  containerSecurityContext:
+    enabled: true
+    privileged: true
+  ## Mayastor CSI Plugin container's resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param csiNode..resources.limits The resources limits for MariaDB primary containers
+  ## @param csiNode..resources.requests The requested resources for MariaDB primary containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+  ## @param csiNode.affinity Affinity for CSI Plugin Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param csiNode.nodeSelector Node labels for CSI Plugin Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector: {}
+  ## @param csiNode.tolerations Tolerations for CSI Plugin Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param csiNode.topologySpreadConstraints Topology Spread Constraints for CSI Plugin Engine pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  ## E.g.
+  ## topologySpreadConstraints:
+  ##   - maxSkew: 1
+  ##     topologyKey: topology.kubernetes.io/zone
+  ##     whenUnsatisfiable: DoNotSchedule
+  ##
+  topologySpreadConstraints: {}
+
+  ## CSI node-driver-registrar
+  ## ref: https://github.com/kubernetes-csi/node-driver-registrar
+  ##
+  driverRegistrar:
+    image:
+      # registry: quay.io
+      # repository: k8scsi/csi-node-driver-registrar
+      # tag: v2.1.0
+      registry: k8s.gcr.io
+      repository: sig-storage/csi-node-driver-registrar
+      tag: v2.5.1
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
+    ## @param csiNode.driverRegistrar.containerPorts.http Mayastor Agent Core GRPC container port
+    ##
+    containerPorts:
+      http: 9809
+    ## CSI Driver Registrar resource requests and limits
+    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    ## @param csiNode.driverRegistrar.resources.limits The resources limits for the Mayastor I/O Engine containers
+    ## @param csiNode.driverRegistrar.resources.requests The requested resources for the Mayastor I/O Engine containers
+    ##
+    resources:
+      limits:
+        cpu: 100m
+        memory: 64Mi
+      requests:
+        cpu: 100m
+        memory: 64Mi
+
+  ## CSI livenessprobe
+  ## ref: https://github.com/kubernetes-csi/livenessprobe
+  ##
+  livenessprobe:
+    image:
+      # registry: quay.io
+      # repository: k8scsi/csi-node-driver-registrar
+      # tag: v2.1.0
+      registry: k8s.gcr.io
+      repository: sig-storage/livenessprobe
+      tag: v2.7.0
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+      ##
+      pullPolicy: IfNotPresent
+      ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ## Example:
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      ##
+      pullSecrets: []
+    ## @param csiNode.livenessprobe.containerPorts.http Mayastor Agent Core GRPC container port
+    ##
+    containerPorts:
+      http: 9810
+    ## CSI liveness Probe resource requests and limits
+    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    ## @param csiNode.livenessprobe.resources.limits The resources limits for the Mayastor I/O Engine containers
+    ## @param csiNode.livenessprobe.resources.requests The requested resources for the Mayastor I/O Engine containers
+    ##
+    resources:
+      limits:
+        cpu: 100m
+        memory: 64Mi
+      requests:
+        cpu: 100m
+        memory: 64Mi
+
+  nvme:
+    # nvme_core module io timeout in seconds
+    io_timeout: "30"
+    io_timeout_enabled: true
+
+  socketAddress: /csi/csi.sock
+
+  ## Specifies whether a ServiceAccount should be created
+  ##
+  serviceAccount:
+    ## @param csiNode.serviceAccount.create Enable the creation of a ServiceAccount for Mayastor Control Plane Rest pods
+    ##
+    create: true
+    ## @param csiNode.serviceAccount.name Name of the created ServiceAccount
+    ## If not set and create is true, a name is generated using the fullname template
+    ##
+    name: ""
+    ## @param csiNode.serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+    ##
+    automountServiceAccountToken: true
+    ## @param csiNode.serviceAccount.annotations Additional custom annotations for the ServiceAccount
+    ##
+    annotations: {}
+  ## Role Based Access
+  ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+  ##
+  rbac:
+    ## @param csiNode.rbac.create Specify whether RBAC resources should be created and used
+    ##
+    create: true
+    ## @param csiNode.rbac.rules Custom RBAC rules
+    ## Example:
+    ## rules:
+    ##   - apiGroups:
+    ##       - ""
+    ##     resources:
+    ##       - pods
+    ##     verbs:
+    ##       - get
+    ##       - list
+    ##
+    rules: []
+
+## @section etcd parameters
+##
+etcd:
+  ## @param etcd.enabled Enable etcd service
+  ##
+  enabled: true
+  ## @param etcd.clusterDomain Default Kubernetes cluster domain
+  ##
+  clusterDomain: cluster.local
+  ## Authentication parameters
+  ##
+  auth:
+    ## Role-based access control parameters
+    ## ref: https://etcd.io/docs/current/op-guide/authentication/
+    ##
+    rbac:
+      ## @param etcd.auth.rbac.create Switch to enable RBAC authentication
+      ##
+      create: false
+      ## @param etcd.auth.rbac.allowNoneAuthentication Allow to use etcd without configuring RBAC authentication
+      ##
+      allowNoneAuthentication: true
+      ## @param etcd.auth.rbac.rootPassword Root user password. The root user is always `root`
+      ##
+      rootPassword: ""
+      ## @param etcd.auth.rbac.existingSecret Name of the existing secret containing credentials for the root user
+      ##
+      existingSecret: ""
+      ## @param etcd.auth.rbac.existingSecretPasswordKey Name of key containing password to be retrieved from the existing secret
+      ##
+      existingSecretPasswordKey: ""
+    ## Authentication token
+    ## ref: https://etcd.io/docs/latest/learning/design-auth-v3/#two-types-of-tokens-simple-and-jwt
+    ##
+    token:
+      ## @param etcd.auth.token.type Authentication token type. Allowed values: 'simple' or 'jwt'
+      ## ref: https://etcd.io/docs/latest/op-guide/configuration/#--auth-token
+      ##
+      type: simple
+    ## TLS authentication for client-to-server communications
+    ## ref: https://etcd.io/docs/current/op-guide/security/
+    ##
+    client:
+      secureTransport: false
+    ## TLS authentication for server-to-server communications
+    ## ref: https://etcd.io/docs/current/op-guide/security/
+    ##
+    peer:
+      secureTransport: false
+  ## @param etcd.initialClusterState Initial cluster state. Allowed values: 'new' or 'existing'
+  ## If this values is not set, the default values below are set:
+  ## - 'new': when installing the chart ('helm install ...')
+  ## - 'existing': when upgrading the chart ('helm upgrade ...')
+  ##
+  initialClusterState: ""
+  ## @param etcd.removeMemberOnContainerTermination Use a PreStop hook to remove the etcd members from the etcd cluster on container termination
+  ## they the containers are terminated
+  ## NOTE: Ignored if lifecycleHooks is set or replicaCount=1
+  ##
+  removeMemberOnContainerTermination: false
+  ## @param etcd.replicaCount Number of etcd replicas to deploy
+  ##
+  replicaCount: 1
+  ## @param etcd.podLabels [object] Extra labels for etcd pods
+  ## Ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels:
+    app.kubernetes.io/component: etcd
+  ## Enable etcd.persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  ##
+  persistence:
+    ## If true, use a Persistent Volume Claim. If false, use emptyDir.
+    ##
+    enabled: false
+    ## Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    storageClass: ""
+    ## Persistent Volume size
+    ##
+    size: 2Gi
+  serviceAccount:
+    ## @param etcd.serviceAccount.create Enable/disable service account creation
+    ##
+    create: true
+    ## @param serviceAccount.name Name of the service account to create or use
+    ##
+    # name: {{ include "mayastor.serviceAccountName" $ }}
+    name: ""
+  ## Init containers parameters:
+  ## volumePermissions: Change the owner and group of the persistent volume mountpoint to runAsUser:fsGroup values from the securityContext section.
+  ##
+  volumePermissions:
+    enabled: true
+  ## Set to true if you would like to see extra information on logs
+  ##
+  debug: false
+  ## Pod anti-affinity preset
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ## Allowed values: soft, hard
+  ##
+  podAntiAffinityPreset: "hard"
+
+  ## @section Traffic exposure parameters
+  ##
+  service:
+    port: 2379
+    ## @param etcd.service.ports.client etcd client port
+    ## @param etcd.service.ports.peer etcd peer port
+    ##
+    ports:
+      client: 2379
+      peer: 2380
+
+externalEtcd:
+  host: ""
+  port: ""
+
+jaeger:
+  enabled: false
+
+lokiStack:
+  enabled: false
+
+nats:
+  enabled: false
+  ## Number of replicas
+  ##
+  replicaCount: 1
+  ## Kubernetes Cluster Domain
+  ##
+  clusterDomain: cluster.local
+  podLabels:
+    app.kubernetes.io/component: nats
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  ##
+  persistence:
+    ## If true, use a Persistent Volume Claim. If false, use emptyDir.
+    ##
+    enabled: false
+    ## Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    storageClass: ""
+    ## Persistent Volume size
+    ##
+    size: 2Gi
+  serviceAccount:
+    ## @param serviceAccount.create Enable/disable service account creation
+    ##
+    create: false
+    ## @param serviceAccount.name Name of the service account to create or use
+    ##
+    # name: {{ include "mayastor.serviceAccountName" $ }}
+    name: mayastor
+  cluster:
+    enabled: false
+    auth:
+      enabled: false
+  exporter:
+    enabled: false
+  logging:
+    debug: false
+    trace: false
+  metrics:
+    enabled: false
+
+agentCore:
+  enabled: true
+  logLevel: debug
+  ## Mayastor Control Plane Core Agent image
+  ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-agent-core
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param agentCore.containerPorts.http Mayastor Agent Core GRPC container port
+  ##
+  containerPorts:
+    grpc: 50051
+  ## Mayastor Agent Core resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param agentCore.resources.limits The resources limits for Mayastor Agent Core containers
+  ## @param agentCore.resources.requests The requested resources for Mayastor Agent Core containers
+  ##
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 32Mi
+    requests:
+      cpu: 500m
+      memory: 16Mi
+  service:
+    ## @param service.type Mayastor Control Plane Rest Kubernetes service type
+    ##
+    type: ClusterIP
+    ## @param service.ports.auth Mayastor Control Plane Rest Kubernetes service port
+    ##
+    ports:
+      grpc: 50051
+    ## @param service.nodePorts.mysql Mayastor Control Plane Rest Kubernetes service node port
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    nodePorts:
+      grpc: ""
+    ## @param service.clusterIP Mayastor Control Plane Rest Kubernetes service clusterIP IP
+    ##
+    clusterIP: ""
+    ## @param service.loadBalancerIP Mayastor Control Plane Rest loadBalancerIP if service type is `LoadBalancer`
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    loadBalancerIP: ""
+    ## @param service.ipFamilyPolicy Mayastor Control Plane Rest Kubernetes service ipFamilyPolicy policy
+    ##
+    ipFamilyPolicy: SingleStack
+    ## @param service.externalTrafficPolicy Enable client source IP preservation
+    ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+    ##
+    externalTrafficPolicy: Cluster
+    ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+    ## bare metal / on-prem environments that rely on VIP based LB implementations.
+    allocateLoadBalancerNodePorts: false
+    ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+    ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+    ##
+    loadBalancerClass: ""
+    ## @param service.loadBalancerSourceRanges Address that are allowed when Mayastor Control Plane Rest service is LoadBalancer
+    ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+    ## E.g.
+    ## loadBalancerSourceRanges:
+    ##   - 10.10.10.0/24
+    ##
+    loadBalancerSourceRanges: []
+    ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+    ##
+    extraPorts: []
+    ## @param service.annotations Provide any additional annotations which may be required
+    ##
+    annotations: {}
+    ## @param service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+    ## If "ClientIP", consecutive client requests will be directed to the same Pod
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    ##
+    sessionAffinity: None
+    ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
+    ## sessionAffinityConfig:
+    ##   clientIP:
+    ##     timeoutSeconds: 300
+    sessionAffinityConfig: {}
+
+apiRest:
+  enabled: true
+  logLevel: info
+  ## Mayastor Control Plane Rest image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-rest/tags
+  ## @param image.registry Mayastor Control Plane Rest image registry
+  ## @param image.repository Mayastor Control Plane Rest image repository
+  ## @param image.tag Mayastor Control Plane Rest image tag (immutable tags are recommended)
+  ## @param image.pullPolicy Mayastor Control Plane Rest image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-api-rest
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param mcpRest.containerPorts.http Mayastor Control Plane Rest HTTP container port
+  ## @param mcpRest.containerPorts.https Mayastor Control Plane Rest HTTPS container port
+  ##
+  containerPorts:
+    http: 8080
+    https: 8081
+  ## Mayastor API Rest resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param apiRest.resources.limits The resources limits for the Mayastor API Rest containers
+  ## @param apiRest.resources.requests The requested resources for the Mayastor API Rest containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
+  tls:
+    enabled: true
+  ## Mayastor Control Plane Rest service parameters
+  ##
+  service:
+    ## @param service.type Mayastor Control Plane Rest Kubernetes service type
+    ##
+    type: ClusterIP
+    ## @param service.ports.auth Mayastor Control Plane Rest Kubernetes service port
+    ##
+    ports:
+      http: 8080
+      https: 8081
+    ## @param service.nodePorts.mysql Mayastor Control Plane Rest Kubernetes service node port
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    nodePorts:
+      http: ""
+      https: ""
+    ## @param service.clusterIP Mayastor Control Plane Rest Kubernetes service clusterIP IP
+    ##
+    clusterIP: ""
+    ## @param service.loadBalancerIP Mayastor Control Plane Rest loadBalancerIP if service type is `LoadBalancer`
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    loadBalancerIP: ""
+    ## @param service.ipFamilyPolicy Mayastor Control Plane Rest Kubernetes service ipFamilyPolicy policy
+    ##
+    ipFamilyPolicy: SingleStack
+    ## @param service.externalTrafficPolicy Enable client source IP preservation
+    ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+    ##
+    externalTrafficPolicy: Cluster
+    ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+    ## bare metal / on-prem environments that rely on VIP based LB implementations.
+    allocateLoadBalancerNodePorts: false
+    ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+    ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+    ##
+    loadBalancerClass: ""
+    ## @param service.loadBalancerSourceRanges Address that are allowed when Mayastor Control Plane Rest service is LoadBalancer
+    ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+    ## E.g.
+    ## loadBalancerSourceRanges:
+    ##   - 10.10.10.0/24
+    ##
+    loadBalancerSourceRanges: []
+    ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+    ##
+    extraPorts: []
+    ## @param service.annotations Provide any additional annotations which may be required
+    ##
+    annotations: {}
+    ## @param service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+    ## If "ClientIP", consecutive client requests will be directed to the same Pod
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    ##
+    sessionAffinity: None
+    ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
+    ## sessionAffinityConfig:
+    ##   clientIP:
+    ##     timeoutSeconds: 300
+    sessionAffinityConfig: {}
+
+  requestTimeout: 5s
+
+## @section Mayastor I/O Engine Dataplane parameters
+##
+ioEngine:
+  logLevel: info
+  cpuCount: ""
+  ## Mayastor I/O Engine image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
+  ## @param ioEngine.image.registry Mayastor Control Plane MSP Operator image registry
+  ## @param ioEngine.image.repository Mayastor Control Plane MSP Operator image repository
+  ## @param ioEngine.image.tag Mayastor Control Plane MSP Operator image tag (immutable tags are recommended)
+  ## @param ioEngine.image.pullPolicy Mayastor Control Plane MSP Operator image pull policy
+  ## @param ioEngine.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param ioEngine.image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-io-engine
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param ioEngine.updateStrategy.type updateStrategy for Mayastor Daemonset
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  ##
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  ## @param ioEngine.podLabels Extra labels for Mayastor pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+  ## @param ioEngine.podAnnotations Annotations for Mayastor pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## @param ioEngine.podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param ioEngine.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: ""
+  ## Node affinity preset
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
+  nodeAffinityPreset:
+    ## @param ioEngine.nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param ioEngine.nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
+    ## E.g.
+    ## key: "kubernetes.io/e2e-az-name"
+    ##
+    key: ""
+    ## @param ioEngine.nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
+  ## @param ioEngine.affinity Affinity for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param ioEngine.nodeSelector Node labels for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector:
+    openebs.io/engine: mayastor
+    kubernetes.io/arch: amd64
+  ## @param ioEngine.tolerations Tolerations for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param ioEngine.topologySpreadConstraints Topology Spread Constraints for Mayastor I/O Engine pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  ## E.g.
+  ## topologySpreadConstraints:
+  ##   - maxSkew: 1
+  ##     topologyKey: topology.kubernetes.io/zone
+  ##     whenUnsatisfiable: DoNotSchedule
+  ##
+  topologySpreadConstraints: {}
+  ## @param ioEngine.priorityClassName Priority class for Mayastor I/O Engine primary pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+  ##
+  priorityClassName: ""
+  ## @param ioEngine.containerPorts.http Mayastor I/O Engine HTTP container port
+  ## @param ioEngine.containerPorts.https Mayastor I/O Engine HTTPS container port
+  ##
+  containerPorts:
+    ioEngine: 10124
+  ## Configure extra options for Mayastor I/O Engine containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param ioEngine.livenessProbe.enabled Enable livenessProbe on Mayastor I/O Engine containers
+  ## @param ioEngine.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param ioEngine.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param ioEngine.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param ioEngine.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param ioEngine.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: false
+    initialDelaySeconds: foo
+    periodSeconds: bar
+    timeoutSeconds: foo
+    failureThreshold: bar
+    successThreshold: foo
+  ## @param ioEngine.readinessProbe.enabled Enable readinessProbe on Mayastor I/O Engine containers
+  ## @param ioEngine.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param ioEngine.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param ioEngine.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param ioEngine.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param ioEngine.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: false
+    initialDelaySeconds: foo
+    periodSeconds: bar
+    timeoutSeconds: foo
+    failureThreshold: bar
+    successThreshold: foo
+  ## @param ioEngine.startupProbe.enabled Enable startupProbe on Mayastor I/O Engine containers
+  ## @param ioEngine.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param ioEngine.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param ioEngine.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param ioEngine.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param ioEngine.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: foo
+    periodSeconds: bar
+    timeoutSeconds: foo
+    failureThreshold: bar
+    successThreshold: foo
+  ## @param ioEngine.customLivenessProbe Custom livenessProbe that overrides the default one
+  ##
+  customLivenessProbe: {}
+  ## @param ioEngine.customReadinessProbe Custom readinessProbe that overrides the default one
+  ##
+  customReadinessProbe: {}
+  ## @param ioEngine.customStartupProbe Custom startupProbe that overrides the default one
+  ##
+  customStartupProbe: {}
+  ## Mayastor I/O Engine resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param ioEngine.resources.limits The resources limits for the Mayastor I/O Engine containers
+  ## @param ioEngine.resources.requests The requested resources for the Mayastor I/O Engine containers
+  ##
+  resources:
+    limits:
+      cpu: 2
+      memory: 1Gi
+      hugepages-2Mi: 2Gi
+    requests:
+      cpu: 2
+      memory: 1Gi
+      hugepages-2Mi: 2Gi
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param ioEngine.podSecurityContext.enabled Enabled Mayastor I/O Engine pods' Security Context
+  ## @param ioEngine.podSecurityContext.fsGroup Set Mayastor I/O Engine pod's Security Context fsGroup
+  ##
+  podSecurityContext:
+    enabled: false
+    fsGroup: 1001
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param ioEngine.containerSecurityContext.enabled Enabled Mayastor I/O Engine containers' Security Context
+  ## @param ioEngine.containerSecurityContext.runAsUser Set Mayastor I/O Engine containers' Security Context runAsUser
+  ## @param ioEngine.containerSecurityContext.runAsNonRoot Set Mayastor I/O Engine containers' Security Context runAsNonRoot
+  ## @param ioEngine.containerSecurityContext.readOnlyRootFilesystem Set Mayastor I/O Engine containers' Security Context runAsNonRoot
+  ##
+  containerSecurityContext:
+    enabled: true
+    privileged: true
+  ## @param ioEngine.extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS pod(s)
+  ##
+  extraVolumes: []
+  ## @param ioEngine.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS container(s)
+  ##
+  extraVolumeMounts: []
+  ## @param ioEngine.initContainers Add additional init containers for the FreeRADIUS pod(s)
+  ##
+  initContainers: []
+  ## @param ioEngine.sidecars Add additional sidecar containers for the FreeRADIUS pod(s)
+  ##
+  sidecars: []
+
+operator:
+  enabled: true
+  logLevel: info
+  ## Mayastor CSI Operator image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
+  ## @param operator.image.registry Mayastor CSI MSP Operator image registry
+  ## @param operator.image.repository Mayastor CSI MSP Operator image repository
+  ## @param operator.image.tag Mayastor CSI MSP Operator image tag (immutable tags are recommended)
+  ## @param operator.image.pullPolicy Mayastor CSI MSP Operator image pull policy
+  ## @param operator.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param operator.image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-operator-diskpool
+    tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Mayastor Operator resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param operator.resources.limits The resources limits for Mayastor Operator containers
+  ## @param operator.resources.requests The requested resources for Mayastor Operator containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 32Mi
+    requests:
+      cpu: 50m
+      memory: 16Mi
+
+  requestTimeout: 5s
+
+probe:
+  enabled: true
+  ## Mayastor CSI Operator image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
+  ## @param operator.image.registry Mayastor CSI MSP Operator image registry
+  ## @param operator.image.repository Mayastor CSI MSP Operator image repository
+  ## @param operator.image.tag Mayastor CSI MSP Operator image tag (immutable tags are recommended)
+  ## @param operator.image.pullPolicy Mayastor CSI MSP Operator image pull policy
+  ## @param operator.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param operator.image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: latest
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Mayastor Probe resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param probe.resources.limits The resources limits for Mayastor Probe containers
+  ## @param probe.resources.requests The requested resources for Mayastor Probe containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 32Mi
+    requests:
+      cpu: 50m
+      memory: 16Mi
+
+## @param diskPools.create 
+##
+diskPools:
+  create: false
+  ## @param diskPools.generateName Let Kubernetes generate pool name
+  ##
+  generateName: ""
+  ## @param diskPools.pools Custom RBAC rules
+  ## Example:
+  ## pools:
+  ##   - node: node-1
+  ##     device: /dev/sdb  
+  pools: []
+  
+## @section RBAC parameter
+#
+
+## Specifies whether a ServiceAccount should be created
+##
+serviceAccount:
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Mayastor Control Plane Rest pods
+  ##
+  create: true
+  ## @param serviceAccount.name Name of the created ServiceAccount
+  ## If not set and create is true, a name is generated using the fullname template
+  ##
+  name: ""
+  ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+  ##
+  automountServiceAccountToken: true
+  ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
+  ##
+  annotations: {}
+## Role Based Access
+## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+##
+rbac:
+  ## @param rbac.create Specify whether RBAC resources should be created and used
+  ##
+  create: true
+  ## @param rbac.rules Custom RBAC rules
+  ## Example:
+  ## rules:
+  ##   - apiGroups:
+  ##       - ""
+  ##     resources:
+  ##       - pods
+  ##     verbs:
+  ##       - get
+  ##       - list
+  ##
+  rules: []
+
+
+## @section Metrics parameters
+##
+
+metrics:
+  ## @param metrics.enabled Start a side-car prometheus exporter
+  ##
+  enabled: false
+  ## @param metrics.image.registry Exporter image registry
+  ## @param metrics.image.repository Exporter image repository
+  ## @param metrics.image.tag Exporter image tag (immutable tags are recommended)
+  ## @param metrics.image.pullPolicy Exporter image pull policy
+  ## @param metrics.image.pullSecrets Specify docker-registry secret names as an array
+  ##
+  image:
+    registry: docker.io
+    repository: mayadata/mayastor-metrics-exporter-pool
+    tag: develop
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param metrics.annotations [object] Annotations for the Exporter pod
+  ##
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9502"
+  ## Mayastor metrics container ports to open
+  ## @param containerPorts.metrics Exporter port to expose at container level
+  ##
+  containerPorts:
+    metrics: 9502
+  ## Mayastor metrics container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param metrics.containerSecurityContext.enabled Enable security context for Mayastor metrics container
+  ## Example:
+  ##   containerSecurityContext:
+  ##     enabled: true
+  ##     capabilities:
+  ##       drop: ["NET_RAW"]
+  ##     readOnlyRootFilesystem: true
+  ##
+  containerSecurityContext:
+    enabled: false
+  ## Mayastor Prometheus exporter resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## @param metrics.resources.limits The resources limits for MariaDB prometheus exporter containers
+  ## @param metrics.resources.requests The requested resources for MariaDB prometheus exporter containers
+  ##
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 100m
+    ##    memory: 256Mi
+    ##
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    cpu: 100m
+    ##    memory: 256Mi
+    ##
+    requests: {}
+  ## Configure extra options for liveness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param metrics.livenessProbe.enabled Enable livenessProbe
+  ## @param metrics.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param metrics.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param metrics.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param metrics.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param metrics.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  ## Configure extra options for readiness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param metrics.readinessProbe.enabled Enable readinessProbe
+  ## @param metrics.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param metrics.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param metrics.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param metrics.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param metrics.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 3
+  ## Prometheus Service Monitor
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+  ##
+  podMonitor:
+    ## @param metrics.podMonitor.enabled Create PodMonitor Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.podMonitor.namespace Namespace in which Prometheus is running
+    ##
+    namespace: monitoring
+    ## @param metrics.podMonitor.interval Specify the interval at which metrics should be scraped
+    ##
+    interval: 30s
+    ## @param metrics.podMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
+    ##
+    scrapeTimeout: 30s
+    ## @param metrics.podMonitor.additionalLabels [object] Additional labels that can be used so PodMonitors will be discovered by Prometheus
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+    ##
+    additionalLabels: {}
+    ## @param metrics.podMonitor.scheme Scheme to use for scraping
+    ##
+    scheme: http
+    ## @param metrics.podMonitor.tlsConfig [object] TLS configuration used for scrape endpoints used by Prometheus
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/api.md#tlsconfig
+    ## e.g:
+    ## tlsConfig:
+    ##   ca:
+    ##     secret:
+    ##       name: existingSecretName
+    ##
+    tlsConfig: {}
+    ## @param metrics.podMonitor.relabelings [array] Prometheus relabeling rules
+    ##
+    relabelings: []
+  ## Prometheus Service Monitor
+  ## ref: https://github.com/coreos/prometheus-operator
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace which Prometheus is running in
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped
+    ##
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
+    ## e.g:
+    ## scrapeTimeout: 30s
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.selector ServiceMonitor selector labels
+    ## ref: https://github.com/bitnami/charts/tree/master/bitnami/prometheus-operator#prometheus-configuration
+    ##
+    ## selector:
+    ##   prometheus: my-prometheus
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor
+    ##
+    labels: {}
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled Create a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true` and `metrics.prometheusRule.rules`)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace for the PrometheusRule Resource (defaults to the Release Namespace)
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.additionalLabels Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    ##
+    additionalLabels: {}
+    ## @param metrics.prometheusRule.rules Prometheus Rule definitions
+      # - alert: ETCD has no leader
+      #   annotations:
+      #     summary: "ETCD has no leader"
+      #     description: "pod {{`{{`}} $labels.pod {{`}}`}} state error, can't connect leader"
+      #   for: 1m
+      #   expr: etcd_server_has_leader == 0
+      #   labels:
+      #     severity: critical
+      #     group: PaaS
+    ##
+    rules: []
