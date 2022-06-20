@@ -40,9 +40,6 @@ spec:
       {{- if .Values.tolerations }}
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
       {{- end }}
-      initContainers:
-        - name: etcd-probe
-          image: busybox:latest
       containers:
         - name: agent-core
           image: {{ include "mayastor.agentCore.image" . }}
