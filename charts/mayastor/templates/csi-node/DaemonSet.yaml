@@ -97,17 +97,9 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
-              {{- if .Values.diagnosticMode.enabled }}
-              value: full
-              {{- else }}
-              value: "1"
-              {{- end }}
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
             - name: RUST_LOG
-              {{- if .Values.diagnosticMode.enabled }}
-              value: debug
-              {{- else }}
-              value: {{ .Values.csiNode.logLevel }}
-              {{- end }}
+              value: {{ ternary "debug" (.Values.csiNode.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           ports:
             - name: grpc
               containerPort: {{ .Values.csiNode.containerPorts.grpc }}
