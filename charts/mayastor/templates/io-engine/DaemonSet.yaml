@@ -85,13 +85,14 @@ spec:
             - sh
             - -c
             - |
+              echo "Huepages: $(REQUESTS_HUGEPAGES_2MI)"
+              cat  /etc/podinfo/hugepages_2Mi_request
               trap "exit 1" TERM
               until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}
               do
                 date
                 echo "Waiting for agent-core-grpc services..."
                 sleep 1
-                echo "Huepages: $(REQUESTS_HUGEPAGES_2MI)"
               done
           env:
             - name: REQUESTS_HUGEPAGES_2MI
@@ -99,6 +100,9 @@ spec:
                 resourceFieldRef:
                   containerName: io-engine
                   resource: requests.hugepages-2Mi
+          volumeMounts:
+            - mountPath: /etc/podinfo
+              name: podinfo
       containers:
         - name: io-engine
           image: {{ include "mayastor.ioEngine.image" . }}
