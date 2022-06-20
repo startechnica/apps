@@ -44,14 +44,23 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       initContainers:
-        - command:
+        - name: etcd-probe
+          image: busybox:latest
+          command:
             - sh
             - -c
-            - trap "exit 1" TERM; until nc -vz {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.port }}; do echo "Waiting for etcd..."; sleep 1; done;
-          image: busybox:latest
-          name: etcd-probe
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.clientPort" . }}
+              do
+                date
+                echo "Waiting for etcd..."
+                sleep 1;
+              done
       containers:
         - name: api-rest
+          image: {{ include "mayastor.apiRest.image" . }}
+          imagePullPolicy: {{ .Values.apiRest.image.pullPolicy | quote }}
           resources:
             limits:
               cpu: 100m
@@ -59,14 +68,17 @@ spec:
             requests:
               cpu: 50m
               memory: 32Mi
-          image: {{ include "mayastor.apiRest.image" . }}
-          imagePullPolicy: {{ .Values.apiRest.image.pullPolicy | quote }}
           args:
             - "--dummy-certificates"
             - "--no-auth"
             - "--http=0.0.0.0:{{ .Values.apiRest.containerPorts.https }}"
             - "--request-timeout=5s"
             - "--core-grpc=https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
+          env:
+            - name: RUST_LOG
+              value: info
+            - name: RUST_BACKTRACE
+              value: full
           ports:
             - name: http
               containerPort: {{ .Values.apiRest.containerPorts.http }}
@@ -74,9 +86,4 @@ spec:
             - name: https
               containerPort: {{ .Values.apiRest.containerPorts.https }}
               protocol: TCP
-          env:
-            - name: RUST_LOG
-              value: info
-            - name: RUST_BACKTRACE
-              value: full
 {{- end }}

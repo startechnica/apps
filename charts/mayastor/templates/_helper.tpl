@@ -132,3 +132,13 @@
 {{- printf "%d" (add $i 1) }}
 {{- end }}
 {{- end }}
+
+{{/* Return the etcd hostname */}}
+{{- define "mayastor.etcd.host" -}}
+  {{- ternary (include "mayastor.etcd.fullname" .) .Values.externalEtcd.host .Values.etcd.enabled -}}
+{{- end -}}
+
+{{/* Return the etcd client port */}}
+{{- define "mayastor.etcd.clientPort" -}}
+  {{- ternary .Values.etcd.service.ports.client .Values.externalEtcd.port .Values.etcd.enabled | quote -}}
+{{- end -}}

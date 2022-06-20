@@ -2,7 +2,7 @@
 
 # Helm chart for Mayastor
 
-Mayastor is a cloud-native declarative data plane written in Rust. Our goal is to abstract storage resources and their differences through the data plane such that users only need to supply the what and do not have to worry about the how so that individual teams stay in control.
+Mayastor is a cloud-native declarative data plane written in Rust. The goal is to abstract storage resources and their differences through the data plane such that users only need to supply the what and do not have to worry about the how so that individual teams stay in control.
 
 Mayastor also try to be as unopinionated as possible. What this means is that we try to work with the existing storage systems you might already have and unify them as abstract resources instead of swapping them out whenever the resources are local or remote.
 
@@ -59,6 +59,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | Name                | Description                                                                                | Value           |
 | ------------------- | ------------------------------------------------------------------------------------------ | --------------- |
 | `nameOverride`      | String to partially override mayastor.fullname template (will maintain the release name)   | `""`            |
+| `namespaceOverride` |                                                                                            | `""`            |
 | `fullnameOverride`  | String to fully override mayastor.fullname template                                        | `""`            |
 | `kubeVersion`       | Force target Kubernetes version (using Helm capabilities if not set)                       | `""`            |
 | `clusterDomain`     | Kubernetes Cluster Domain                                                                  | `cluster.local` |
@@ -67,6 +68,16 @@ The command removes all the Kubernetes components associated with the chart and 
 | `commonAnnotations` | Add annotations to all the deployed resources                                              | `{}`            |
 
 ### I/O Engine Dataplane Deployment
+
+### CSI Node Deployment
+
+### CSI Controller Deployment
+
+### Agent Core Deployment
+
+### API Rest Deployment
+
+### ETCD Deployment
 
 ### Setting Pod's affinity
 
@@ -79,8 +90,6 @@ There are cases where you may want to deploy extra objects, such a ConfigMap con
 ## Troubleshooting
 
 Find more information about how to deal with common errors related to Startechnica's Helm charts in [this troubleshooting guide](https://startechnica.github.io/doc/troubleshoot-helm-chart-issues).
-
-## Upgrading
 
 ## License
 

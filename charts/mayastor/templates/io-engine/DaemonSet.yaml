@@ -71,7 +71,7 @@ spec:
             - -c
             - |
               trap "exit 1" TERM
-              until nc -vzw 5 {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.ports.client }}
+              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.port" . }}
               do
                 date
                 echo "Waiting for etcd..."
@@ -117,7 +117,7 @@ spec:
             {{- if .Values.ioEngine.cpuCount }}
             - "-l{{ include "mayastor.cpuFlag" . | quote }}"
             {{- end }}
-            - "-p{{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.ports.client }}"
+            - "-p{{ include "mayastor.etcd.host" . }}:{{ include "mayastor.etcd.clientPort" . }}"
             - "-Rhttps://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
             - "-y/var/local/io-engine/config.yaml"
           {{- end }}

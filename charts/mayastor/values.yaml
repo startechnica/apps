@@ -799,6 +799,10 @@ etcd:
       client: 2379
       peer: 2380
 
+externalEtcd:
+  host: ""
+  port: ""
+
 nats:
   enabled: false
   ## Number of replicas
@@ -1222,7 +1226,6 @@ ioEngine:
   containerSecurityContext:
     enabled: true
     privileged: true
-
 
 operator:
   enabled: true

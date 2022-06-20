@@ -44,19 +44,19 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       initContainers:
-        - command:
+        - name: etcd-probe
+          image: busybox:latest
+          command:
             - sh
             - -c
-            - >-
-              trap "exit 1" TERM;
-              until nc -vzw 5 {{ include "mayastor.etcd.fullname" . }} {{ .Values.etcd.service.port }};
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.port" . }}
               do
-                date;
-                echo "Waiting for etcd...";
-                sleep 1;
-              done;
-          image: busybox:latest
-          name: etcd-probe
+                date
+                echo "Waiting for etcd..."
+                sleep 1
+              done
       containers:
         - name: agent-core
           image: {{ include "mayastor.agentCore.image" . }}
@@ -71,7 +71,7 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- else }}
           args:
-            - "--store={{ include "mayastor.etcd.fullname" . }}:{{ .Values.etcd.service.port }}"
+            - "--store={{ include "mayastor.etcd.host" . }}:{{ include "mayastor.etcd.port" . }}"
             - "--request-timeout=5s"
             - "--cache-period=30s"
             - "--grpc-server-addr=https://0.0.0.0:{{ .Values.agentCore.containerPorts.grpc }}"
@@ -85,14 +85,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: RUST_LOG
-              value: {{ .Values.agentCore.logLevel }}
             - name: RUST_BACKTRACE
-              {{- if .Values.diagnosticMode.enabled }}
-              value: full
-              {{- else }}
-              value: full
-              {{- end }}
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: {{ ternary "debug" (.Values.agentCore.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           imagePullPolicy: {{ .Values.agentCore.image.pullPolicy | quote }}
           ports:
             - name: grpc
