@@ -163,6 +163,8 @@ spec:
               mountPath: /dev/shm
             - name: configlocation
               mountPath: /var/local/io-engine/
+            - mountPath: /opt/podinfo
+              name: podinfo
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
           image: {{ .Values.metrics.image }}
@@ -218,3 +220,11 @@ spec:
         hostPath:
           path: /var/local/io-engine/
           type: DirectoryOrCreate
+      - name: podinfo
+        downwardAPI:
+          items:
+            - path: "hugepages_2Mi_request" 
+              resourceFieldRef:
+                containerName: io-engine
+                resource: requests.hugepages-2Mi
+                divisor: 2Mi
