@@ -108,6 +108,7 @@ spec:
             # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
             # Note: Ensure that the CPU resources are updated accordingly.
             #       If you use 2 CPUs, the CPU: field should also read 2.
+            - "-N$(MY_NODE_NAME)"
             - "-g$(MY_POD_IP)"
             {{- if .Values.ioEngine.cpuCount }}
             - "-l{{ include "mayastor.cpuFlag" . | quote }}"
