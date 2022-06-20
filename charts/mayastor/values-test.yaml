@@ -49,3 +49,27 @@ ioEngine:
     - effect: NoSchedule
       key: node-role.kubernetes.io/master
       operator: Exists
+  extraVolumes:
+    - name: podinfo
+      downwardAPI:
+        items:
+          - path: "hugepages_2Mi_request" 
+            resourceFieldRef:
+              containerName: io-engine
+              resource: requests.hugepages-2Mi
+              divisor: 1Mi
+  sidecars:
+    - name: debug-probe
+      image: busybox:latest
+      command:
+        - sleep
+        - inf
+      env:
+        - name: REQUESTS_HUGEPAGES_2MI
+          valueFrom:
+            resourceFieldRef:
+              containerName: io-engine
+              resource: requests.hugepages-2Mi
+      volumeMounts:
+        - mountPath: /etc/podinfo
+          name: podinfo

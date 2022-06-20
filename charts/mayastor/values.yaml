@@ -1072,6 +1072,8 @@ apiRest:
 
   requestTimeout: 5s
 
+## @section Mayastor I/O Engine Dataplane parameters
+##
 ioEngine:
   logLevel: info
   cpuCount: ""
@@ -1260,6 +1262,18 @@ ioEngine:
   containerSecurityContext:
     enabled: true
     privileged: true
+  ## @param ioEngine.extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS pod(s)
+  ##
+  extraVolumes: []
+  ## @param ioEngine.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS container(s)
+  ##
+  extraVolumeMounts: []
+  ## @param ioEngine.initContainers Add additional init containers for the FreeRADIUS pod(s)
+  ##
+  initContainers: []
+  ## @param ioEngine.sidecars Add additional sidecar containers for the FreeRADIUS pod(s)
+  ##
+  sidecars: []
 
 operator:
   enabled: true

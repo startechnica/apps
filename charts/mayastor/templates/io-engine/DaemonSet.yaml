@@ -85,8 +85,6 @@ spec:
             - sh
             - -c
             - |
-              echo "Huepages: $(REQUESTS_HUGEPAGES_2MI)"
-              cat  /etc/podinfo/hugepages_2Mi_request
               trap "exit 1" TERM
               until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}
               do
@@ -94,15 +92,12 @@ spec:
                 echo "Waiting for agent-core-grpc services..."
                 sleep 1
               done
-          env:
-            - name: REQUESTS_HUGEPAGES_2MI
-              valueFrom:
-                resourceFieldRef:
-                  containerName: io-engine
-                  resource: requests.hugepages-2Mi
-          volumeMounts:
-            - mountPath: /etc/podinfo
-              name: podinfo
+        {{- if .Values.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | trim | nindent 8 }}
+        {{- end }}
+        {{- if .Values.ioEngine.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.initContainers "context" $) | trim | nindent 8 }}
+        {{- end }}
       containers:
         - name: io-engine
           image: {{ include "mayastor.ioEngine.image" . }}
@@ -171,6 +166,9 @@ spec:
               mountPath: /var/local/io-engine/
             - mountPath: /etc/podinfo
               name: podinfo
+            {{- if .Values.ioEngine.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
           image: {{ .Values.metrics.image }}
@@ -206,31 +204,30 @@ spec:
           resources: {{ toYaml .Values.metrics.resources | nindent 12 }}
           {{- end }}
         {{- end }}
+        {{- if .Values.ioEngine.sidecars }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.ioEngine.sidecars "context" $) | nindent 8 }}
+        {{- end }}
       volumes:
-      - name: device
-        hostPath:
-          path: /dev
-          type: Directory
-      - name: udev
-        hostPath:
-          path: /run/udev
-          type: Directory
-      - name: dshm
-        emptyDir:
-          medium: Memory
-          sizeLimit: "1Gi"
-      - name: hugepage
-        emptyDir:
-          medium: HugePages
-      - name: configlocation
-        hostPath:
-          path: /var/local/io-engine/
-          type: DirectoryOrCreate
-      - name: podinfo
-        downwardAPI:
-          items:
-            - path: "hugepages_2Mi_request" 
-              resourceFieldRef:
-                containerName: io-engine
-                resource: requests.hugepages-2Mi
-                divisor: 1Mi
+        - name: device
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: udev
+          hostPath:
+            path: /run/udev
+            type: Directory
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "1Gi"
+        - name: hugepage
+          emptyDir:
+            medium: HugePages
+        - name: configlocation
+          hostPath:
+            path: /var/local/io-engine/
+            type: DirectoryOrCreate
+
+      {{- if .Values.ioEngine.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}
