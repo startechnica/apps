@@ -131,7 +131,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: REQUESTS_HUGEPAGES_1GI 
+            - name: REQUESTS_HUGEPAGES_2Mi
               valueFrom:
                 resourceFieldRef:
                   containerName: io-engine
