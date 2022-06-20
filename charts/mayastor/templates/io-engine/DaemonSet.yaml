@@ -163,7 +163,7 @@ spec:
               mountPath: /dev/shm
             - name: configlocation
               mountPath: /var/local/io-engine/
-            - mountPath: /opt/podinfo
+            - mountPath: /etc/podinfo
               name: podinfo
         {{- if .Values.metrics.enabled }}
         - name: metrics-exporter-pool
