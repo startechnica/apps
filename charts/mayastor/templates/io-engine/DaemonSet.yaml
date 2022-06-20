@@ -81,9 +81,8 @@ spec:
           image: busybox:latest
           command:
             - sh
-          args:
             - -c
-            - |-
+            - |
               trap "exit 1" TERM
               until nc -vzw 5 {{ include "mayastor.agentCore.fullname" . }} {{ .Values.agentCore.service.ports.grpc }}
               do
@@ -143,10 +142,7 @@ spec:
               {{- end }}
             - name: RUST_LOG
               {{- if .Values.diagnosticMode.enabled }}
-              value: debug
-              {{- else }}
-              value: {{ .Values.ioEngine.logLevel }}
-              {{- end }}
+              value: {{ ternary "debug" (.Values.ioEngine.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           ports:
             - name: io-engine
               containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
