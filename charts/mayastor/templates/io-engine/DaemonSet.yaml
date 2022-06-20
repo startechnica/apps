@@ -65,7 +65,8 @@ spec:
       {{- end }}
       initContainers:
         - name: etcd-probe
-          image: busybox:latest
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
           command:
             - sh
             - -c
@@ -78,7 +79,8 @@ spec:
                 sleep 1
               done
         - name: agent-core-probe
-          image: busybox:latest
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
           command:
             - sh
             - -c

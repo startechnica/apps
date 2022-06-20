@@ -45,7 +45,8 @@ spec:
       {{- end }}
       initContainers:
         - name: etcd-probe
-          image: busybox:latest
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
           command:
             - sh
             - -c

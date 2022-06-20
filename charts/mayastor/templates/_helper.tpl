@@ -113,6 +113,11 @@
   {{ include "common.images.image" (dict "imageRoot" .Values.operator.image "global" .Values.global) }}
 {{- end -}}
 
+{{/* Return the proper Mayastor Probe image name */}}
+{{- define "mayastor.probe.image" -}}
+  {{ include "common.images.image" (dict "imageRoot" .Values.probe.image "global" .Values.global) }}
+{{- end -}}
+
 {{/* Return the proper image name (for the init container volume-permissions image) */}}
 {{- define "mayastor.volumePermissions.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}

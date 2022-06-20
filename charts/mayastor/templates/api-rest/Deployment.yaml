@@ -45,7 +45,8 @@ spec:
       {{- end }}
       initContainers:
         - name: etcd-probe
-          image: busybox:latest
+          image: {{ include "mayastor.probe.image" . }}
+          imagePullPolicy: {{ .Values.probe.image.pullPolicy }}
           command:
             - sh
             - -c
@@ -55,7 +56,7 @@ spec:
               do
                 date
                 echo "Waiting for etcd..."
-                sleep 1;
+                sleep 1
               done
       containers:
         - name: api-rest
@@ -75,10 +76,10 @@ spec:
             - "--request-timeout=5s"
             - "--core-grpc=https://{{ include "mayastor.agentCore.fullname" . }}:{{ .Values.agentCore.service.ports.grpc }}"
           env:
-            - name: RUST_LOG
-              value: info
             - name: RUST_BACKTRACE
-              value: full
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: {{ ternary "debug" (.Values.apiRest.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           ports:
             - name: http
               containerPort: {{ .Values.apiRest.containerPorts.http }}

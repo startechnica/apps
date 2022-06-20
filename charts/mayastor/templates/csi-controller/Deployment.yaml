@@ -51,7 +51,7 @@ spec:
       {{- end }}
       initContainers:
         - name: api-rest-probe
-          image: busybox:latest
+          image: {{ include "mayastor.probe.image" . }}
           command:
             - sh
           args:
@@ -99,6 +99,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- if .Values.csiController.attacher.enabled }}
         - name: csi-attacher
           image: {{ include "mayastor.csiController.attacher.image" . }}
           imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
@@ -122,6 +123,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- end }}
         {{- if .Values.csiController.healthMonitor.enabled }}
         - name: csi-health-monitor
           image: {{ include "mayastor.csiController.healthMonitor.image" . }}

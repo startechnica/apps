@@ -386,6 +386,7 @@ csiController:
   ## ref: https://github.com/kubernetes-csi/external-attacher
   ##
   attacher:
+    enabled: true
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-attacher
@@ -943,6 +944,7 @@ agentCore:
 
 apiRest:
   enabled: true
+  logLevel: info
   ## Mayastor Control Plane Rest image
   ## ref: https://hub.docker.com/r/mayadata/mcp-rest/tags
   ## @param image.registry Mayastor Control Plane Rest image registry
@@ -1242,6 +1244,34 @@ operator:
     registry: docker.io
     repository: mayadata/mayastor-operator-diskpool
     tag: develop
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+probe:
+  enabled: true
+  ## Mayastor CSI Operator image
+  ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
+  ## @param operator.image.registry Mayastor CSI MSP Operator image registry
+  ## @param operator.image.repository Mayastor CSI MSP Operator image repository
+  ## @param operator.image.tag Mayastor CSI MSP Operator image tag (immutable tags are recommended)
+  ## @param operator.image.pullPolicy Mayastor CSI MSP Operator image pull policy
+  ## @param operator.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param operator.image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: latest
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
