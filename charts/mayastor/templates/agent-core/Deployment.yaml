@@ -46,10 +46,6 @@ spec:
       initContainers:
         - name: etcd-probe
           image: busybox:latest
-          command:
-            - sh
-            - -c
-            - sleep
       containers:
         - name: agent-core
           image: {{ include "mayastor.agentCore.image" . }}
