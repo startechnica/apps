@@ -140,5 +140,5 @@
 
 {{/* Return the etcd client port */}}
 {{- define "mayastor.etcd.clientPort" -}}
-  {{- ternary .Values.etcd.service.ports.client .Values.externalEtcd.port .Values.etcd.enabled | quote -}}
+  {{- ternary .Values.etcd.service.ports.client .Values.externalEtcd.port .Values.etcd.enabled -}}
 {{- end -}}
