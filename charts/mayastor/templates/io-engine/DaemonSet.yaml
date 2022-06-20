@@ -145,7 +145,7 @@ spec:
             - name: RUST_BACKTRACE
               value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
             - name: RUST_LOG
-              value: info,io_engine={{ ternary "debug" (.Values.ioEngine.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+              value: debug,io_engine={{ ternary "debug" (.Values.ioEngine.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           ports:
             - name: io-engine
               containerPort: {{ .Values.ioEngine.containerPorts.ioEngine }}
