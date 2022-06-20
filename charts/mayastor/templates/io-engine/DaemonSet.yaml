@@ -227,4 +227,4 @@ spec:
               resourceFieldRef:
                 containerName: io-engine
                 resource: requests.hugepages-2Mi
-                divisor: 2Mi
+                divisor: 1Mi
