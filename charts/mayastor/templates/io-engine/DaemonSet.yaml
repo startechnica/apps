@@ -131,6 +131,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: REQUESTS_HUGEPAGES_1GI 
+              valueFrom:
+                resourceFieldRef:
+                  containerName: io-engine
+                  resource: requests.hugepages-2Mi
             - name: NVME_QPAIR_CONNECT_ASYNC
               value: "true"
             - name: NVMF_TCP_MAX_QUEUE_DEPTH
