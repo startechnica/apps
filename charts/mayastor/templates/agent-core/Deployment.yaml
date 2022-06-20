@@ -32,6 +32,31 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: etcd-probe
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.clientPort" . }}
+              do
+                date
+                echo "Waiting for etcd..."
+                sleep 1;
+              done
       containers:
         - name: agent-core
           image: {{ include "mayastor.agentCore.image" . }}
