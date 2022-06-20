@@ -91,7 +91,14 @@ spec:
                 date
                 echo "Waiting for agent-core-grpc services..."
                 sleep 1
+                echo "Huepages: $(REQUESTS_HUGEPAGES_2MI)""
               done
+          env:
+            - name: REQUESTS_HUGEPAGES_2MI
+              valueFrom:
+                resourceFieldRef:
+                  containerName: io-engine
+                  resource: requests.hugepages-2Mi
       containers:
         - name: io-engine
           image: {{ include "mayastor.ioEngine.image" . }}
@@ -131,11 +138,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: REQUESTS_HUGEPAGES_2MI
-              valueFrom:
-                resourceFieldRef:
-                  containerName: io-engine
-                  resource: requests.hugepages-2Mi
             - name: NVME_QPAIR_CONNECT_ASYNC
               value: "true"
             - name: NVMF_TCP_MAX_QUEUE_DEPTH
