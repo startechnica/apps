@@ -11,6 +11,9 @@ tolerations:
     key: node-role.kubernetes.io/master
     operator: Exists
 
+agentCore:
+  enabled: false
+
 csiNode:
   tolerations:
     - effect: NoSchedule
