@@ -6,7 +6,7 @@ annotations:
     - name: Upstream Project
       url: https://github.com/jacobalberty/unifi-docker
 apiVersion: v2
-appVersion: v7.1.65
+appVersion: v7.1.66
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
