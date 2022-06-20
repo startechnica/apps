@@ -49,14 +49,7 @@ spec:
           command:
             - sh
             - -c
-            - |-
-              trap "exit 1" TERM
-              until nc -vzw 5 {{ include "mayastor.etcd.host" . }} {{ include "mayastor.etcd.clientPort" . }}
-              do
-                date
-                echo "Waiting for etcd..."
-                sleep 1
-              done
+            - sleep
       containers:
         - name: agent-core
           image: {{ include "mayastor.agentCore.image" . }}
