@@ -288,6 +288,57 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/istio-ingress-gateway-0.1.0/istio-ingress-gateway-0.1.0.tgz
     version: 0.1.0
+  mayastor:
+  - annotations:
+      category: Storage
+    apiVersion: v2
+    appVersion: 1.0.2
+    created: "2022-06-20T11:35:20.070778342Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    - condition: etcd.enabled
+      name: etcd
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-etcd
+      version: 8.x.x
+    - condition: jaeger.enabled
+      name: jaeger-operator
+      repository: https://jaegertracing.github.io/helm-charts
+      version: 2.32.2
+    - condition: lokiStack.enabled
+      name: loki-stack
+      repository: https://grafana.github.io/helm-charts
+      version: 2.6.5
+    description: Mayastor is a cloud-native declarative data plane written in Rust.
+      Our goal is to abstract storage resources and their differences through the
+      data plane such that users only need to supply the what and do not have to worry
+      about the how so that individual teams stay in control.
+    digest: c058ce0a2580dac88804e7f444ac127e2a159628ea443667d4489b61c5ccc16d
+    home: https://github.com/startechnica/apps/tree/main/charts/mayastor
+    icon: https://openebs.io/images/seo/openebs.png
+    keywords:
+    - mayastor
+    - openebs
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: mayastor
+    sources:
+    - https://github.com/openebs/mayastor
+    - https://github.com/openebs/mayastor-control-plane
+    - https://github.com/openebs/mayastor-api
+    - https://openebs.io/docs/concepts/mayastor
+    - https://mayastor.gitbook.io
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/mayastor-0.1.0/mayastor-0.1.0.tgz
+    version: 0.1.0
   multus:
   - annotations:
       artifacthub.io/links: |
@@ -472,4 +523,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-15T03:35:29.780133256Z"
+generated: "2022-06-20T11:35:20.070809543Z"
