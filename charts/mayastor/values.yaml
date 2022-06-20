@@ -1087,24 +1087,49 @@ ioEngine:
   ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
   ##
   nodeAffinityPreset:
-    ## @param nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## @param ioEngine.nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
     ##
     type: ""
-    ## @param nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
+    ## @param ioEngine.nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
     ## E.g.
     ## key: "kubernetes.io/e2e-az-name"
     ##
     key: ""
-    ## @param nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+    ## @param ioEngine.nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
     ## E.g.
     ## values:
     ##   - e2e-az1
     ##   - e2e-az2
     ##
     values: []
-  ## Node affinity preset
-  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ## @param ioEngine.affinity Affinity for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
   ##
+  affinity: {}
+  ## @param ioEngine.nodeSelector Node labels for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ##
+  nodeSelector:
+    openebs.io/engine: mayastor
+    kubernetes.io/arch: amd64
+  ## @param ioEngine.tolerations Tolerations for Mayastor I/O Engine pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param ioEngine.topologySpreadConstraints Topology Spread Constraints for Mayastor I/O Engine pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  ## E.g.
+  ## topologySpreadConstraints:
+  ##   - maxSkew: 1
+  ##     topologyKey: topology.kubernetes.io/zone
+  ##     whenUnsatisfiable: DoNotSchedule
+  ##
+  topologySpreadConstraints: {}
+  ## @param ioEngine.priorityClassName Priority class for Mayastor I/O Engine primary pods assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+  ##
+  priorityClassName: ""
   ## @param ioEngine.containerPorts.http Mayastor I/O Engine HTTP container port
   ## @param ioEngine.containerPorts.https Mayastor I/O Engine HTTPS container port
   ##
@@ -1195,41 +1220,18 @@ ioEngine:
   containerSecurityContext:
     enabled: true
     privileged: true
-  ## @param affinity Affinity for Mayastor I/O Engine pods assignment
-  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-  ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
-  ##
-  affinity: {}
-  ## @param nodeSelector Node labels for Mayastor I/O Engine pods assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-  ##
-  nodeSelector:
-    openebs.io/engine: mayastor
-    kubernetes.io/arch: amd64
-  ## @param tolerations Tolerations for Mayastor I/O Engine pods assignment
-  ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
-  tolerations: []
-  ## @param topologySpreadConstraints Topology Spread Constraints for Mayastor I/O Engine pods assignment
-  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
-  ## E.g.
-  ## topologySpreadConstraints:
-  ##   - maxSkew: 1
-  ##     topologyKey: topology.kubernetes.io/zone
-  ##     whenUnsatisfiable: DoNotSchedule
-  ##
-  topologySpreadConstraints: {}
+
 
 operator:
   enabled: true
-  ## Mayastor Control Plane MSP Operator image
+  ## Mayastor CSI Operator image
   ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
-  ## @param image.registry Mayastor Control Plane MSP Operator image registry
-  ## @param image.repository Mayastor Control Plane MSP Operator image repository
-  ## @param image.tag Mayastor Control Plane MSP Operator image tag (immutable tags are recommended)
-  ## @param image.pullPolicy Mayastor Control Plane MSP Operator image pull policy
-  ## @param image.pullSecrets Specify docker-registry secret names as an array
-  ## @param image.debug Specify if debug logs should be enabled
+  ## @param operator.image.registry Mayastor CSI MSP Operator image registry
+  ## @param operator.image.repository Mayastor CSI MSP Operator image repository
+  ## @param operator.image.tag Mayastor CSI MSP Operator image tag (immutable tags are recommended)
+  ## @param operator.image.pullPolicy Mayastor CSI MSP Operator image pull policy
+  ## @param operator.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param operator.image.debug Specify if debug logs should be enabled
   ##
   image:
     registry: docker.io
