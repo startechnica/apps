@@ -807,6 +807,9 @@ externalEtcd:
 jaeger:
   enabled: false
 
+lokiStack:
+  enabled: false
+
 nats:
   enabled: false
   ## Number of replicas
@@ -1042,6 +1045,8 @@ apiRest:
     ##   clientIP:
     ##     timeoutSeconds: 300
     sessionAffinityConfig: {}
+
+  requestTimeout: 5s
 
 ioEngine:
   logLevel: info

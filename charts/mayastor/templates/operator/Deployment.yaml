@@ -67,7 +67,7 @@ spec:
           args:
             - "-e http://{{ include "mayastor.apiRest.fullname" . }}:{{ .Values.apiRest.containerPorts.https }}"
             - "-n={{ include "common.names.namespace" . }}"
-            - "--request-timeout={{ .Values.operator.requestTimeout }}"
+            - "--request-timeout={{ .Values.operator.requestTimeout | default "5s" }}"
             - "--interval=30s"
             {{ if .Values.jaeger.enabled }}
             - "--jaeger={{ .Values.jaeger.agent.name }}:{{ .Values.jaeger.agent.port }}"

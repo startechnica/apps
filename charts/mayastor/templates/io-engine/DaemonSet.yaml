@@ -91,7 +91,7 @@ spec:
                 date
                 echo "Waiting for agent-core-grpc services..."
                 sleep 1
-                echo "Huepages: $(REQUESTS_HUGEPAGES_2MI)""
+                echo "Huepages: $(REQUESTS_HUGEPAGES_2MI)"
               done
           env:
             - name: REQUESTS_HUGEPAGES_2MI

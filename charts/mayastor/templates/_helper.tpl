@@ -19,6 +19,10 @@
   {{- printf "%s-etcd" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
+{{- define "mayastor.jaeger.fullname" -}}
+  {{- printf "%s-jaeger" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
 {{- define "mayastor.ioEngine.fullname" -}}
   {{- printf "%s-io-engine" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}

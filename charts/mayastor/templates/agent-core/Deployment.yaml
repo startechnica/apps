@@ -73,8 +73,11 @@ spec:
           {{- else }}
           args:
             - "--store={{ include "mayastor.etcd.host" . }}:{{ include "mayastor.etcd.clientPort" . }}"
-            - "--request-timeout=5s"
+            - "--request-timeout={{ .Values.agentCore.requestTimeout | default "5s" }}"
             - "--cache-period=30s"
+            {{ if .Values.jaeger.enabled }}
+            - "--jaeger={{ .Values.jaeger.agent.name }}:{{ .Values.jaeger.agent.port }}"
+            {{ end }}
             - "--grpc-server-addr=https://0.0.0.0:{{ .Values.agentCore.containerPorts.grpc }}"
           {{- end }}
           env:
