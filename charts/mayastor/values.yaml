@@ -1062,9 +1062,30 @@ ioEngine:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
-  ## @param ioEngine.replicaCount Number of Mayastor I/O Engine replicas to deploy
+  ## @param ioEngine.updateStrategy.type updateStrategy for Mayastor Daemonset
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   ##
-  replicaCount: 1
+  updateStrategy:
+    type: RollingUpdate
+  ## @param ioEngine.podLabels Extra labels for Mayastor pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+  ## @param ioEngine.podAnnotations Annotations for Mayastor pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## @param ioEngine.podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param ioEngine.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: ""
+  ## Node affinity preset
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
   ## @param ioEngine.containerPorts.http Mayastor I/O Engine HTTP container port
   ## @param ioEngine.containerPorts.https Mayastor I/O Engine HTTPS container port
   ##

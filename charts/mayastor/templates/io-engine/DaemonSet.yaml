@@ -22,24 +22,24 @@ spec:
   minReadySeconds: 10
   template:
     metadata:
-      {{- if .Values.podAnnotations }}
+      {{- if .Values.ioEngine.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: io-engine
         openebs.io/logging: "true"
-        {{- if .Values.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- if .Values.ioEngine.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
       {{- if .Values.ioEngine.affinity }}
       affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.ioEngine.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
-        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
-        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
-        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.ioEngine.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.ioEngine.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.ioEngine.nodeAffinityPreset.type "key" .Values.ioEngine.nodeAffinityPreset.key "values" .Values.ioEngine.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
       dnsPolicy: ClusterFirstWithHostNet
       {{- if .Values.hostAliases }}
