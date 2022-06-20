@@ -166,6 +166,9 @@ spec:
               mountPath: /var/local/io-engine/
             - mountPath: /etc/podinfo
               name: podinfo
+            {{- if .Values.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
             {{- if .Values.ioEngine.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -227,7 +230,6 @@ spec:
           hostPath:
             path: /var/local/io-engine/
             type: DirectoryOrCreate
-
       {{- if .Values.ioEngine.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.extraVolumes "context" $) | nindent 8 }}
       {{- end }}

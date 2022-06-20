@@ -62,8 +62,13 @@ ioEngine:
     - name: debug-probe
       image: busybox:latest
       command:
-        - sleep
-        - inf
+        - sh
+        - -c
+        - |
+          echo "$(REQUESTS_HUGEPAGES_2MI)"
+          ls -liah /etc/podinfo
+          cat /etc/podinfo/hugepages_2Mi_request
+          sleep inf
       env:
         - name: REQUESTS_HUGEPAGES_2MI
           valueFrom:
