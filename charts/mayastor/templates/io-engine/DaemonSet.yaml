@@ -135,11 +135,7 @@ spec:
             - name: NVMF_TCP_MAX_QUEUE_DEPTH
               value: "32"
             - name: RUST_BACKTRACE
-              {{- if .Values.diagnosticMode.enabled }}
-              value: full
-              {{- else }}
-              value: full
-              {{- end }}
+              value: {{ ternary "full" "info" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
             - name: RUST_LOG
               value: {{ ternary "debug" (.Values.ioEngine.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
           ports:
