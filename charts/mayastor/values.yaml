@@ -525,8 +525,8 @@ csiNode:
     privileged: true
   ## Mayastor CSI Plugin container's resource requests and limits
   ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
-  ## @param primary.resources.limits The resources limits for MariaDB primary containers
-  ## @param primary.resources.requests The requested resources for MariaDB primary containers
+  ## @param csiNode..resources.limits The resources limits for MariaDB primary containers
+  ## @param csiNode..resources.requests The requested resources for MariaDB primary containers
   ##
   resources:
     limits:
@@ -535,20 +535,20 @@ csiNode:
     requests:
       cpu: 100m
       memory: 64Mi
-  ## @param affinity Affinity for Mayastor I/O Engine pods assignment
+  ## @param csiNode.affinity Affinity for CSI Plugin Engine pods assignment
   ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
   ##
   affinity: {}
-  ## @param nodeSelector Node labels for Mayastor I/O Engine pods assignment
+  ## @param csiNode.nodeSelector Node labels for CSI Plugin Engine pods assignment
   ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
   nodeSelector: {}
-  ## @param tolerations Tolerations for Mayastor I/O Engine pods assignment
+  ## @param csiNode.tolerations Tolerations for CSI Plugin Engine pods assignment
   ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## @param topologySpreadConstraints Topology Spread Constraints for Mayastor I/O Engine pods assignment
+  ## @param csiNode.topologySpreadConstraints Topology Spread Constraints for CSI Plugin Engine pods assignment
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
   ## E.g.
   ## topologySpreadConstraints:
