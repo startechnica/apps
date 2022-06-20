@@ -1324,6 +1324,9 @@ probe:
 ##
 diskPools:
   create: false
+  ## @param diskPools.generateName Let Kubernetes generate pool name
+  ##
+  generateName: ""
   ## @param diskPools.pools Custom RBAC rules
   ## Example:
   ## pools:
