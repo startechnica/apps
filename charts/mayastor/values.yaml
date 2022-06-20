@@ -804,6 +804,9 @@ externalEtcd:
   host: ""
   port: ""
 
+jaeger:
+  enabled: false
+
 nats:
   enabled: false
   ## Number of replicas
@@ -1231,6 +1234,7 @@ ioEngine:
 
 operator:
   enabled: true
+  logLevel: info
   ## Mayastor CSI Operator image
   ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
   ## @param operator.image.registry Mayastor CSI MSP Operator image registry
@@ -1256,6 +1260,20 @@ operator:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
+  ## Mayastor Operator resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param operator.resources.limits The resources limits for Mayastor Operator containers
+  ## @param operator.resources.requests The requested resources for Mayastor Operator containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 32Mi
+    requests:
+      cpu: 50m
+      memory: 16Mi
+
+  requestTimeout: 5s
 
 probe:
   enabled: true
@@ -1284,6 +1302,18 @@ probe:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
+  ## Mayastor Probe resource requests and limits
+  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param probe.resources.limits The resources limits for Mayastor Probe containers
+  ## @param probe.resources.requests The requested resources for Mayastor Probe containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 32Mi
+    requests:
+      cpu: 50m
+      memory: 16Mi
 
 ## @param diskPools.create 
 ##

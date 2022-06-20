@@ -44,33 +44,44 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       initContainers:
-        - command:
+        - name: etcd-probe
+          image: busybox:latest
+          command:
             - sh
             - -c
-            - trap "exit 1" TERM; until nc -vzw 5 mayastor-etcd 2379; do date; echo "Waiting for etcd..."; sleep 1; done;
-          image: busybox:latest
-          name: etcd-probe
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 mayastor-etcd 2379
+              do
+                date
+                echo "Waiting for etcd..."
+                sleep 1
+              done
+          {{- if .Values.probe.resources }}
+          resources: {{ toYaml .Values.probe.resources | nindent 12 }}
+          {{- end }}
       containers:
         - name: operator
           image: {{ include "mayastor.operator.image" . }}
           imagePullPolicy: {{ .Values.operator.image.pullPolicy | quote }}
           args:
             - "-e http://{{ include "mayastor.apiRest.fullname" . }}:{{ .Values.apiRest.containerPorts.https }}"
+            - "-n={{ include "common.names.namespace" . }}"
+            - "--request-timeout={{ .Values.operator.requestTimeout }}"
             - "--interval=30s"
+            {{ if .Values.jaeger.enabled }}
+            - "--jaeger={{ .Values.jaeger.agent.name }}:{{ .Values.jaeger.agent.port }}"
+            {{ end }}
           env:
             - name: MY_POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: RUST_LOG
-              value: info,msp_operator=info
             - name: RUST_BACKTRACE
-              value: full
-          resources:
-            limits:
-              cpu: 100m
-              memory: 32Mi
-            requests:
-              cpu: 50m
-              memory: 16Mi
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: info,operator_diskpool={{ ternary "debug" (.Values.operator.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+          {{- if .Values.operator.resources }}
+          resources: {{ toYaml .Values.operator.resources | nindent 12 }}
+          {{- end }}
 {{- end }}
