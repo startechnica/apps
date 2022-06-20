@@ -15,10 +15,9 @@ spec:
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: io-engine
-  updateStrategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
+  {{- if .Values.ioEngine.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.ioEngine.updateStrategy | nindent 4 }}
+  {{- end }}
   minReadySeconds: 10
   template:
     metadata:

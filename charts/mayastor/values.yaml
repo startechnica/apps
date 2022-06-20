@@ -1067,6 +1067,8 @@ ioEngine:
   ##
   updateStrategy:
     type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   ## @param ioEngine.podLabels Extra labels for Mayastor pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
