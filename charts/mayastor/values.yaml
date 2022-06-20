@@ -994,6 +994,18 @@ apiRest:
   containerPorts:
     http: 8080
     https: 8081
+  ## Mayastor API Rest resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## @param apiRest.resources.limits The resources limits for the Mayastor API Rest containers
+  ## @param apiRest.resources.requests The requested resources for the Mayastor API Rest containers
+  ##
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
   tls:
     enabled: true
   ## Mayastor Control Plane Rest service parameters

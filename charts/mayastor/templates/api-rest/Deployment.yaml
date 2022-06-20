@@ -62,13 +62,9 @@ spec:
         - name: api-rest
           image: {{ include "mayastor.apiRest.image" . }}
           imagePullPolicy: {{ .Values.apiRest.image.pullPolicy | quote }}
-          resources:
-            limits:
-              cpu: 100m
-              memory: 64Mi
-            requests:
-              cpu: 50m
-              memory: 32Mi
+          {{- if .Values.apiRest.resources }}
+          resources: {{ toYaml .Values.apiRest.resources | nindent 12 }}
+          {{- end }}
           args:
             - "--dummy-certificates"
             - "--no-auth"
