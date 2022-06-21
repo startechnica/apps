@@ -210,6 +210,25 @@ freeradius: tls.enabled
 {{- end -}}
 {{- end -}}
 
+{{/* Get the configuration ConfigMap name. */}}
+{{- define "freeradius.configurationCM" -}}
+{{- if .Values.configurationConfigMap -}}
+  {{- printf "%s" (tpl .Values.configurationConfigMap $) -}}
+{{- else -}}
+  {{- printf "%s-configuration" (include "common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{ template "freeradius.initdbScriptsCM" . }}
+{{/* Get the initialization scripts ConfigMap name. */}}
+{{- define "freeradius.initdbScriptsCM" -}}
+{{- if .Values.initdbScriptsConfigMap -}}
+  {{- printf "%s" .Values.initdbScriptsConfigMap -}}
+{{- else -}}
+  {{- printf "%s-init-scripts" (include "common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the FreeRADIUS PVC name. */}}
 {{- define "freeradius.claimName" -}}
 {{- if .Values.persistence.existingClaim }}

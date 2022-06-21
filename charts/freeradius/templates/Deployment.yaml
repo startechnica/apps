@@ -183,7 +183,13 @@ spec:
               command:
                 - sh
                 - -c
-                - >-
+                - |
+                  {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+                  if [[ ! -f "{{ .Values.persistence.mountPath }}/.user_scripts_initialized" ]]; then
+                      echo "Init scripts still not executed. Skipping check"
+                      exit 1
+                  fi
+                  {{- end }}
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.livenessProbe.enabled }}
@@ -218,6 +224,15 @@ spec:
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
+            {{- end }}
+            {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+            - name: freeradius-config
+              mountPath: /etc/freeradius/radiusd.conf
+              subPath: radiusd.conf
+            {{- end }}
+            {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+            - name: custom-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
@@ -272,9 +287,18 @@ spec:
         - name: freeradius-tls
           secret:
             secretName: {{ include "freeradius.tlsSecretName" . }}
-            # defaultMode: 420
         - name: shared-certs
           emptyDir: {}
+        {{- end }}
+        {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+        - name: freeradius-config
+          configMap:
+            name: {{ include "freeradius.configurationCM" . }}
+        {{- end }}
+        {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+        - name: custom-init-scripts
+          configMap:
+            name: {{ include "freeradius.initdbScriptsCM" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
