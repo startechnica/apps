@@ -108,7 +108,7 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/adminer-0.1.1/adminer-0.1.1.tgz
     version: 0.1.1
-   freeradius:
+  freeradius:
   - annotations:
       artifacthub.io/links: |
         - name: Chart Source
