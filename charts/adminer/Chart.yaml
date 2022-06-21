@@ -3,12 +3,12 @@ annotations:
 apiVersion: v2
 appVersion: 4.8.1
 dependencies:
-  - name: common
+  - name: bitnami/common
     repository: https://charts.bitnami.com/bitnami
     tags:
       - bitnami-common
     version: 1.x.x
-  - name: common
+  - name: startechnica/common
     repository: https://startechnica.github.io/apps
     version: x.x.x
 description: Adminer is a full-featured database management tool written in PHP. Conversely
