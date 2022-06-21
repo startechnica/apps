@@ -8,9 +8,11 @@ dependencies:
     tags:
       - bitnami-common
     version: 1.x.x
+    alias: bitnami
   - name: startechnica/common
     repository: https://startechnica.github.io/apps
     version: x.x.x
+    alias: startechnica
 description: Adminer is a full-featured database management tool written in PHP. Conversely
   to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer
   is available for MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB,
