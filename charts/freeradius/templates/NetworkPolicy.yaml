@@ -18,18 +18,24 @@ spec:
   ingress:
     - ports:
         - port: {{ .Values.containerPorts.auth }}
+          protocol: UDP
         - port: {{ .Values.containerPorts.acct }}
+          protocol: UDP
         {{- if .Values.tls.enabled }}
         - port: {{ .Values.containerPorts.radsec }}
+          protocol: TCP
         {{- end }}
         {{- if .Values.metrics.enabled }}
         - port: {{ .Values.containerPorts.metrics }}
+          protocol: TCP
         {{- end }}
         {{- if .Values.sitesEnabled.coa.enabled }}
         - port: {{ .Values.containerPorts.coa }}
+          protocol: UDP
         {{- end }}
         {{- if .Values.sitesEnabled.status.enabled }}
         - port: {{ .Values.containerPorts.status }}
+          protocol: UDP
         {{- end }}
       {{- if not .Values.networkPolicy.allowExternal }}
       from:

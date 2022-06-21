@@ -1,11 +1,6 @@
-# image:
-# #   registry: tccr.io
-# #   repository: truecharts/freeradius
-#   # tag: "3.2.0"
-
 # persistence:
 #   enabled: true
-#   storageClass: openebs-jiva-noreplica
+#   storageClass: 
 
 service:
   type: LoadBalancer

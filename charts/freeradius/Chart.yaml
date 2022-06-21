@@ -36,4 +36,4 @@ name: freeradius
 sources:
   - https://freeradius.org/
 type: application
-version: 0.1.6
+version: 0.1.7
