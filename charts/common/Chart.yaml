@@ -8,7 +8,7 @@ appVersion: 0.1.0
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
   This chart is not deployable by itself.
 home: https://github.com/startechnica/apps/tree/main/charts/common
-# icon:
+icon: https://startechnica.github.io/apps/images/star.png
 keywords:
   - common
 kubeVersion: ">=1.19.0-0"
