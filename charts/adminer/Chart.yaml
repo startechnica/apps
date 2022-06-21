@@ -9,7 +9,7 @@ dependencies:
       - bitnami-common
     version: 1.x.x
     alias: bitnami
-  - name: startechnica/common
+  - name: common
     repository: https://startechnica.github.io/apps
     version: x.x.x
     alias: startechnica
