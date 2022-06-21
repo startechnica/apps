@@ -462,6 +462,34 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/multus-0.1.0/multus-0.1.0.tgz
     version: 0.1.0
+  st-common:
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/common
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.1
+    created: "2022-06-21T04:24:05.8192983Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: a084acf1a79226535c23aa7cd6a6f5aba69e9713a3ecc385e4051e4c29817220
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    kubeVersion: '>=1.19.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.1/st-common-0.1.1.tgz
+    version: 0.1.1
   unifi:
   - annotations:
       artifacthub.io/links: |
@@ -550,4 +578,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-21T03:53:56.998788664Z"
+generated: "2022-06-21T04:24:05.8193237Z"
