@@ -21,9 +21,11 @@ global:
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
 ##
 kubeVersion: ""
-## @param nameOverride String to partially override adminer.fullname
+## @param nameOverride String to partially override freeradius.fullname
 ##
 nameOverride: ""
+## @param namespaceOverride String to partially override freeradius.namespace
+##
 namespaceOverride: ""
 ## @param fullnameOverride String to fully override adminer.fullname
 ##
