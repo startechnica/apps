@@ -3,7 +3,7 @@ annotations:
 apiVersion: v2
 appVersion: 4.8.1
 dependencies:
-  - name: bitnami/common
+  - name: common
     repository: https://charts.bitnami.com/bitnami
     tags:
       - bitnami-common
