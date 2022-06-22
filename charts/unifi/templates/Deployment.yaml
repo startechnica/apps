@@ -211,6 +211,12 @@ spec:
           volumeMounts:
             - name: unifi-data
               mountPath: /unifi
+            {{- if .Values.auth.tls.enabled }}
+            - name: certificates
+              mountPath: /unifi/cert
+            - name: shared-certs
+              mountPath: /unifi/shared-certs
+            {{- end }}
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -225,6 +231,14 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if .Values.auth.tls.enabled }}
+        - name: certificates
+          secret:
+            secretName: {{ include "unifi.tlsSecretName" . }}
+            defaultMode: 420
+        - name: shared-certs
+          emptyDir: {}
+        {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
