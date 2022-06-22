@@ -122,12 +122,6 @@ spec:
               value: {{ .Values.containerPorts.httpsController | quote }}
             - name: UNIFI_STDOUT
               value: "true"
-            - name: DB_URI
-              value: {{ include "unifi.databaseName" }}
-            - name: DB_NAME
-              value: {{ include "unifi.databaseName" }}
-            - name: STATDB_URI
-              value: {{ include "unifi.databaseHost" }}
             - name: JVM_MAX_HEAP_SIZE
               value: 1024M
             {{- if .Values.jvmExtraOpts }}
