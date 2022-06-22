@@ -24,9 +24,9 @@ spec:
     size: 256
   subject:
     organizations:
-      - {{ .Values.organization | quote }}
-    organizationalUnits:
       - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
     {{- range $.Values.ingress.extraHosts }}
@@ -58,9 +58,9 @@ spec:
     size: 256
   subject:
     organizations:
-      - {{ .Values.organization | quote }}
-    organizationalUnits:
       - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
     {{- range $.Values.ingress.extraHosts }}
