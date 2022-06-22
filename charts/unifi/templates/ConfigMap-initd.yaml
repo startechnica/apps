@@ -13,5 +13,4 @@ metadata:
   {{- end }}
 data:
 {{ (.Files.Glob "files/initd/import_cert.sh").AsConfig | indent 2 }}
-{{- include "common.tplvalues.render" (dict "value" .Values.initScripts "context" .) | nindent 2 }}
 {{- end }}
