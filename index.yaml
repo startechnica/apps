@@ -489,6 +489,52 @@ entries:
           url: https://github.com/jacobalberty/unifi-docker
       category: NetworkManagement
     apiVersion: v2
+    appVersion: v7.1.66
+    created: "2022-06-22T18:02:24.514986665Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    - condition: influxdb.enabled
+      name: influxdb
+      repository: https://helm.influxdata.com
+      version: 4.x.x
+    - condition: mongodb.enabled
+      name: mongodb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    description: UniFi Network Application to manage UniFi devices
+    digest: fe1bd331eea3632b33e33488a2aa2830aa23b72ea42c024a96aaed257cc818e4
+    home: https://github.com/startechnica/apps/tree/main/charts/unifi
+    icon: https://prd-www-cdn.ubnt.com/static/favicon-152.png
+    keywords:
+    - ubiquiti
+    - unifi
+    - unifi-poller
+    kubeVersion: '>=1.19.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: unifi
+    sources:
+    - https://www.ui.com
+    - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
+    - https://unpoller.com/
+    - https://github.com/unifi-poller/unifi-poller
+    urls:
+    - https://github.com/startechnica/apps/releases/download/unifi-0.1.3/unifi-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/unifi
+        - name: Upstream Project
+          url: https://github.com/jacobalberty/unifi-docker
+      category: NetworkManagement
+    apiVersion: v2
     appVersion: v7.1.65
     created: "2022-05-28T05:49:34.067188175Z"
     dependencies:
@@ -568,4 +614,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-21T14:48:15.695546244Z"
+generated: "2022-06-22T18:02:24.515019471Z"
