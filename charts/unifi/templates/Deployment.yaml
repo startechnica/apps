@@ -127,7 +127,7 @@ spec:
             - name: DB_NAME
               value: {{ include "unifi.databaseName" }}
             - name: STATDB_URI
-              value: mongodb://{{ include "unifi.databaseHost" }}:{{ include "unifi.databasePort" }}/{{ printf "%s_stat" include "unifi.databaseName" }}
+              value: "mongodb://{{ include "unifi.databaseHost" }}:{{ include "unifi.databasePort" }}/{{ printf "%s_stat" include "unifi.databaseName" }}"
             - name: JVM_MAX_HEAP_SIZE
               value: 1024M
             {{- if .Values.jvmExtraOpts }}
