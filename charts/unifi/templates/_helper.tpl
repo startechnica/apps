@@ -99,8 +99,13 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 
 {{/* Create a default fully qualified app name. We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec). */}}
+{{/* 
 {{- define "unifi.mongodb.fullname" -}}
   {{- include "common.names.dependency.fullname" (dict "chartName" "mongodb" "chartValues" .Values.mongodb "context" $) -}}
+{{- end -}}
+*/}}
+{{- define "unifi.mongodb.fullname" -}}
+  {{- printf "%s-mongodb" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{/* Return the Database hostname */}}
