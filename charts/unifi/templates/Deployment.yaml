@@ -213,8 +213,15 @@ spec:
             - name: unifi-data
               mountPath: /unifi
             {{- if .Values.auth.tls.enabled }}
-            - name: certificates
-              mountPath: /unifi/cert
+            - name: cert-pem
+              mountPath: /unifi/cert/cert.pem
+              subPath: cert.pem
+            - name: priv-pem
+              mountPath: /unifi/cert/priv.pem
+              subPath: priv.pem
+            - name: chain-pem
+              mountPath: /unifi/cert/chain.pem
+              subPath: chain.pem
             - name: shared-certs
               mountPath: /unifi/shared-certs
             {{- end }}
@@ -233,10 +240,21 @@ spec:
           emptyDir: {}
           {{- end }}
         {{- if .Values.auth.tls.enabled }}
-        - name: certificates
+        - name: cert-pem
           secret:
             secretName: {{ include "unifi.tlsSecretName" . }}
-            defaultMode: 420
+          items:
+          - key: cert.pem
+        - name: privkey-pem
+          secret:
+            secretName: {{ include "unifi.tlsSecretName" . }}
+          items:
+          - key: privkey.pem
+        - name: chain-pem
+          secret:
+            secretName: {{ include "unifi.tlsSecretName" . }}
+          items:
+          - key: chain.pem
         - name: shared-certs
           emptyDir: {}
         {{- end }}
