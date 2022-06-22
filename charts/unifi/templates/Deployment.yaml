@@ -120,6 +120,12 @@ spec:
               value: {{ .Values.containerPorts.httpController | quote }}
             - name: UNIFI_HTTPS_PORT
               value: {{ .Values.containerPorts.httpsController | quote }}
+            - name: DB_URI
+              value: mongodb://{{ include "unifi.databaseHost" . }}:{{ include "unifi.databasePort" . }}/{{ include "unifi.databaseName" . }}
+            - name: DB_NAME
+              value: {{ include "unifi.databaseName" . }}
+            - name: STATDB_URI
+              value: mongodb://{{ include "unifi.databaseHost" . }}:{{ include "unifi.databasePort" . }}/{{ printf "%s_stat" include "unifi.databaseName" . }}
             - name: UNIFI_STDOUT
               value: "true"
             - name: JVM_MAX_HEAP_SIZE
