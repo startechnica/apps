@@ -11,7 +11,8 @@ fi
 log 'Cert directory found. Checking Certs'
 
 # if `md5sum -c "${CERTDIR}/${CERTNAME}.md5" &>/dev/null`; then
-if `sha256sum -c "${CERTDIR}/${CERTNAME}.sha256" &>/dev/null`; then
+# if `sha256sum -c "${CERTDIR}/${CERTNAME}.sha256" &>/dev/null`; then
+  if `sha256sum -c <(sha256sum "${CERTDIR}/${CERTNAME}.sha256")`; then
     log "Cert has not changed, not updating controller."
     exit 0
 else

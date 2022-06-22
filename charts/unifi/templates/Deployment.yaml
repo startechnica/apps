@@ -242,7 +242,7 @@ spec:
             - name: shared-certs
               mountPath: /unifi/shared-certs
             {{- end }}
-            {{- if or (.Files.Glob "files/initd/*") .Values.initScriptsConfigMap .Values.initScripts }}
+            {{- if or (.Files.Glob "files/init.d/*") .Values.initScriptsConfigMap .Values.initScripts }}
             - name: custom-init-d
               mountPath: /unifi/init.d
             {{- end }}
@@ -268,7 +268,7 @@ spec:
         - name: shared-certs
           emptyDir: {}
         {{- end }}
-        {{- if or (.Files.Glob "files/initd/*") .Values.initScriptsConfigMap .Values.initScripts }}
+        {{- if or (.Files.Glob "files/init.d/*") .Values.initScriptsConfigMap .Values.initScripts }}
         - name: custom-init-d
           configMap:
             name: {{ include "unifi.initScriptsCM" . }}

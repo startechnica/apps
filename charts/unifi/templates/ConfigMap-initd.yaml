@@ -1,4 +1,4 @@
-{{- if or (.Files.Glob "files/initd/*") (and .Values.initScripts (not .Values.initScriptsConfigMap)) }}
+{{- if or (.Files.Glob "files/init.d/*") (and .Values.initScripts (not .Values.initScriptsConfigMap)) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,5 +12,5 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 data:
-{{ (.Files.Glob "files/initd/*").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/init.d/*").AsConfig | indent 2 }}
 {{- end }}
