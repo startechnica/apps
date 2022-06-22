@@ -119,7 +119,7 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 
 {{/* Return the Database port */}}
 {{- define "unifi.databasePort" -}}
-    {{- ternary "27017" .Values.externalDatabase.port .Values.mongodb.enabled | quote -}}
+    {{- ternary "27017" .Values.externalDatabase.port .Values.mongodb.enabled -}}
 {{- end -}}
 
 {{/* Return the Database database name */}}
