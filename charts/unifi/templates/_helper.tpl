@@ -105,7 +105,7 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 */}}
 {{- define "unifi.mongodb.fullname" -}}
-  {{- printf "%s-mongodb" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+    {{- printf "%s-mongodb" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{/* Return the Database hostname */}}
