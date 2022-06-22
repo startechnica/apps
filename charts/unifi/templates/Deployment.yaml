@@ -123,7 +123,7 @@ spec:
             - name: UNIFI_STDOUT
               value: "true"
             - name: DB_URI
-              value: {{ include "unifi.databaseHost" | quote }}
+              value: "mongodb://{{ include "unifi.databaseHost" }}:{{ include "unifi.databasePort" }}/{{ include "unifi.databaseName" }}"
             - name: DB_NAME
               value: {{ include "unifi.databaseName" }}
             - name: STATDB_URI
