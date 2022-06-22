@@ -99,26 +99,26 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 
 {{/* Create a default fully qualified app name. We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec). */}}
-{{- define "freeradius.mongodb.fullname" -}}
+{{- define "unifi.mongodb.fullname" -}}
   {{- include "common.names.dependency.fullname" (dict "chartName" "mongodb" "chartValues" .Values.mongodb "context" $) -}}
 {{- end -}}
 
 {{/* Return the Database hostname */}}
-{{- define "freeradius.databaseHost" -}}
+{{- define "unifi.databaseHost" -}}
 {{- if eq .Values.mongodb.architecture "replication" }}
-    {{- ternary (include "freeradius.mongodb.fullname" .) .Values.externalDatabase.host .Values.mongodb.enabled -}}-primary
+    {{- ternary (include "unifi.mongodb.fullname" .) .Values.externalDatabase.host .Values.mongodb.enabled -}}-primary
 {{- else -}}
-    {{- ternary (include "freeradius.mongodb.fullname" .) .Values.externalDatabase.host .Values.mongodb.enabled -}}
+    {{- ternary (include "unifi.mongodb.fullname" .) .Values.externalDatabase.host .Values.mongodb.enabled -}}
 {{- end -}}
 {{- end -}}
 
 {{/* Return the Database port */}}
-{{- define "freeradius.databasePort" -}}
+{{- define "unifi.databasePort" -}}
     {{- ternary "27017" .Values.externalDatabase.port .Values.mongodb.enabled | quote -}}
 {{- end -}}
 
 {{/* Return the Database database name */}}
-{{- define "freeradius.databaseName" -}}
+{{- define "unifi.databaseName" -}}
 {{- if .Values.mongodb.enabled }}
     {{- if .Values.global.mongodb }}
         {{- if .Values.global.mongodb.auth }}
@@ -135,7 +135,7 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 
 {{/* Return the Database user */}}
-{{- define "freeradius.databaseUser" -}}
+{{- define "unifi.databaseUser" -}}
 {{- if .Values.mongodb.enabled }}
     {{- if .Values.global.mongodb }}
         {{- if .Values.global.mongodb.auth }}
@@ -152,20 +152,20 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 
 {{/* Return the Database encrypted password */}}
-{{- define "freeradius.databaseSecretName" -}}
+{{- define "unifi.databaseSecretName" -}}
 {{- if .Values.mongodb.enabled }}
     {{- if .Values.global.mongodb }}
         {{- if .Values.global.mongodb.auth }}
             {{- if .Values.global.mongodb.auth.existingSecret }}
                 {{- tpl .Values.global.mongodb.auth.existingSecret $ -}}
             {{- else -}}
-                {{- default (include "freeradius.mongodb.fullname" .) (tpl .Values.mongodb.auth.existingSecret $) -}}
+                {{- default (include "unifi.mongodb.fullname" .) (tpl .Values.mongodb.auth.existingSecret $) -}}
             {{- end -}}
         {{- else -}}
-            {{- default (include "freeradius.mongodb.fullname" .) (tpl .Values.mongodb.auth.existingSecret $) -}}
+            {{- default (include "unifi.mongodb.fullname" .) (tpl .Values.mongodb.auth.existingSecret $) -}}
         {{- end -}}
     {{- else -}}
-        {{- default (include "freeradius.mongodb.fullname" .) (tpl .Values.mongodb.auth.existingSecret $) -}}
+        {{- default (include "unifi.mongodb.fullname" .) (tpl .Values.mongodb.auth.existingSecret $) -}}
     {{- end -}}
 {{- else -}}
     {{- default (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) (tpl .Values.externalDatabase.existingSecret $) -}}
@@ -173,7 +173,7 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 
 {{/* Add environment variables to configure database values */}}
-{{- define "freeradius.databaseSecretKey" -}}
+{{- define "unifi.databaseSecretKey" -}}
 {{- if .Values.mongodb.enabled -}}
   {{- print "mongodb-password" -}}
 {{- else -}}
