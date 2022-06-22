@@ -216,9 +216,9 @@ spec:
             - name: cert-pem
               mountPath: /unifi/cert/cert.pem
               subPath: cert.pem
-            - name: priv-pem
-              mountPath: /unifi/cert/priv.pem
-              subPath: priv.pem
+            - name: privkey-pem
+              mountPath: /unifi/cert/privkey.pem
+              subPath: privkey.pem
             - name: chain-pem
               mountPath: /unifi/cert/chain.pem
               subPath: chain.pem
