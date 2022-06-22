@@ -69,6 +69,15 @@ Create the name of the service account to use
 {{- end -}}
 {{- end -}}
 
+{{/* Return the UniFi init.d scripts configmap */}}
+{{- define "unifi.initScriptsCM" -}}
+{{- if .Values.initScriptsConfigMap -}}
+    {{- printf "%s" .Values.initScriptsConfigMap -}}
+{{- else -}}
+    {{- printf "%s-init-d" (include "common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
 {{/*
 Return the secret containing AppName TLS certificates
 */}}
