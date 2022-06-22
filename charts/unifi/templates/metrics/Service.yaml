@@ -9,8 +9,14 @@ metadata:
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
-  {{- if .Values.metrics.service.annotations }}
-  annotations: {{ include "common.tplvalues.render" ( dict "value" .Values.metrics.service.annotations "context" $) | nindent 4 }}
+  {{- if .Values.metrics.service.annotations .Values.commonAnnotations }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.metrics.service.annotations }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.service.annotations "context" $) | nindent 4 }}
+    {{- end }}
   {{- end }}
 spec:
   type: {{ .Values.metrics.service.type }}
@@ -35,11 +41,11 @@ spec:
       {{- end }}
     {{- if .Values.metrics.webserver.enabled }}
     - name: http-poller
-      port: {{ .Values.metrics.service.ports.poller }}
+      port: {{ .Values.metrics.service.ports.http }}
       protocol: TCP
       targetPort: {{ .Values.metrics.containerPorts.http }}
-      {{- if (and (or (eq .Values.metrics.service.type "NodePort") (eq .Values.metrics.service.type "LoadBalancer")) (not (empty .Values.metrics.service.nodePorts.poller))) }}
-      nodePort: {{ .Values.metrics.service.nodePorts.poller }}
+      {{- if (and (or (eq .Values.metrics.service.type "NodePort") (eq .Values.metrics.service.type "LoadBalancer")) (not (empty .Values.metrics.service.nodePorts.http))) }}
+      nodePort: {{ .Values.metrics.service.nodePorts.http }}
       {{- else if eq .Values.metrics.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
