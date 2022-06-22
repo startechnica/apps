@@ -1,4 +1,4 @@
-{{- if or (.Files.Glob "files/init.d/*") (and .Values.initScripts (not .Values.initScriptsConfigMap)) }}
+{{- if or (.Files.Glob "files/initd/*") (and .Values.initScripts (not .Values.initScriptsConfigMap)) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
