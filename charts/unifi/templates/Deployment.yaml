@@ -245,16 +245,19 @@ spec:
             secretName: {{ include "unifi.tlsSecretName" . }}
             items:
             - key: cert.pem
+              path: cert.pem
         - name: privkey-pem
           secret:
             secretName: {{ include "unifi.tlsSecretName" . }}
             items:
             - key: privkey.pem
+              path: privkey.pem
         - name: chain-pem
           secret:
             secretName: {{ include "unifi.tlsSecretName" . }}
             items:
             - key: chain.pem
+              path: chain.pem
         - name: shared-certs
           emptyDir: {}
         {{- end }}
