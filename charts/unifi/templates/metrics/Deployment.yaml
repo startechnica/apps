@@ -119,6 +119,10 @@ spec:
               value: "true"
             {{- end }}
             {{- end }}
+            {{- if .Values.metrics.webserver.enabled }}
+            - name: UP_WEBSERVER_ENABLE
+              value: "true"
+            {{- end }}
             {{- if .Values.diagnosticMode.enabled }}
             - name: UP_POLLER_DEBUG
               value: "true"
