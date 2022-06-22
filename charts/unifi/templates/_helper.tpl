@@ -1,29 +1,41 @@
 {{/* vim: set filetype=mustache: */}}
 
-{{/*
-Return the proper UniFi Controller image name
-*/}}
+{{- define "unifi.metrics.fullname" -}}
+  {{- printf "%s-metrics" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end -}}
+
+{{/* Allow the release namespace to be overridden for multi-namespace deployments in combined charts. */}}
+{{- define "unifi.serviceMonitor.namespace" -}}
+    {{- if .Values.metrics.serviceMonitor.namespace -}}
+        {{- print .Values.metrics.serviceMonitor.namespace -}}
+    {{- else -}}
+        {{- include "common.names.namespace" . -}}
+    {{- end }}
+{{- end -}}
+{{- define "unifi.prometheusRule.namespace" -}}
+    {{- if .Values.metrics.prometheusRule.namespace -}}
+        {{- print .Values.metrics.prometheusRule.namespace -}}
+    {{- else -}}
+        {{- include "common.names.namespace" . -}}
+    {{- end }}
+{{- end -}}
+
+{{/* Return the proper UniFi Controller image name */}}
 {{- define "unifi.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
-{{/*
-Return the proper image name (for the metrics image)
-*/}}
+{{/* Return the proper image name (for the metrics image) */}}
 {{- define "unifi.metrics.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
 {{- end -}}
 
-{{/*
-Return the proper image name (for the init container volume-permissions image)
-*/}}
+{{/* Return the proper image name (for the init container volume-permissions image) */}}
 {{- define "unifi.volumePermissions.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
 {{- end -}}
 
-{{/*
-Return the proper Docker Image Registry Secret Names
-*/}}
+{{/* Return the proper Docker Image Registry Secret Names */}}
 {{- define "unifi.imagePullSecrets" -}}
   {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.metrics.image .Values.volumePermissions.image) "global" .Values.global) -}}
 {{- end -}}

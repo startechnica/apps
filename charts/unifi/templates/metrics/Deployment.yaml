@@ -1,0 +1,159 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "unifi.metrics.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  strategy: {{- include "common.tplvalues.render" (dict "value" .Values.updateStrategy "context" $ ) | nindent 4 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: metrics
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secrets: {{ include (print $.Template.BasePath "/Secret.yaml") . | sha256sum }}
+        {{- if .Values.podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "unifi.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ template "unifi.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: metrics
+          image: {{ include "unifi.metrics.image" . }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          env:
+            - name: UP_UNIFI_DEFAULT_URL
+              value: "https://{{ include "common.names.fullname" . }}:{{ .Values.service.ports.httpsController }}"
+            {{- if .Values.auth.unifiUser }}
+            - name: UP_UNIFI_DEFAULT_USER
+              value: {{ .Values.auth.unifiUser | quote }}
+            {{- end }}
+            {{- if .Values.auth.unifiPassword }}
+            - name: UP_UNIFI_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}
+                  key: unifi-password
+            {{- end }}
+            {{- if .Values.influxdb.enabled }}
+            - name: UP_INFLUXDB_DB
+              value: unifi
+            - name: UP_INFLUXDB_URL
+              value: http://{{ .Release.Name }}-influxdb:8086
+            - name: UP_INFLUXDB_USER
+              value: {{ .Values.influxdb.setDefaultUser.user.username | quote }}
+            - name: UP_INFLUXDB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}
+                  key: influxdb-password
+            - name: UP_UNIFI_DEFAULT_SAVE_IDS
+              value: "true"
+            - name: UP_UNIFI_DEFAULT_SAVE_EVENTS
+              value: "true"
+            - name: UP_UNIFI_DEFAULT_SAVE_ALARMS
+              value: "true"
+            - name: UP_UNIFI_DEFAULT_SAVE_ANOMALIES
+              value: "true"
+            - name: UP_PROMETHEUS_DISABLE
+              value: "true"
+            {{- else }}
+            - name: UP_INFLUXDB_DISABLE
+              value: "true"
+            - name: UP_PROMETHEUS_DISABLE
+              value: "false"
+            - name: UP_PROMETHEUS_NAMESPACE
+              value: {{ include "unifi.prometheusRule.namespace" . | quote }}
+            - name: UP_PROMETHEUS_HTTP_LISTEN
+              value: {{ printf "0.0.0.0:%v" .Values.metrics.containerPorts.metrics | quote }}
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+            {{- if .Values.diagnosticMode.enabled }}
+            - name: UP_PROMETHEUS_REPORT_ERRORS
+              value: "true"
+            {{- end }}
+            {{- end }}
+            {{- if .Values.diagnosticMode.enabled }}
+            - name: UP_POLLER_DEBUG
+              value: "true"
+            {{- end }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.containerPorts.metrics }}
+            {{- if .Values.metrics.webserver.enabled }}
+            - name: http
+              containerPort: {{ .Values.metrics.containerPorts.http }}
+            {{- end }}
+          {{- if .Values.metrics.liveness }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          {{- end }}
+          {{- if .Values.metrics.resources }}
+          resources: {{- toYaml .Values.metrics.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.metrics.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.metrics.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+        {{- if .Values.sidecars }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.extraVolumes }}
+      volumes:
+        {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}
+---
