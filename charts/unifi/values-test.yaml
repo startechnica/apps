@@ -5,3 +5,5 @@ auth:
 
 metrics:
   enabled: true
+  webserver:
+    enabled: true
