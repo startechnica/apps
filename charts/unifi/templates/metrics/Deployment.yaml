@@ -114,15 +114,11 @@ spec:
               value: {{ printf "0.0.0.0:%v" .Values.metrics.containerPorts.metrics | quote }}
             - name: TZ
               value: {{ .Values.timezone | quote }}
-            {{- if .Values.diagnosticMode.enabled }}
             - name: UP_PROMETHEUS_REPORT_ERRORS
-              value: "true"
+              value: {{ ternary "true" "false" .Values.diagnosticMode.enabled }}
             {{- end }}
-            {{- end }}
-            {{- if .Values.metrics.webserver.enabled }}
             - name: UP_WEBSERVER_ENABLE
-              value: "true"
-            {{- end }}
+              value: {{ ternary "true" "false" .Values.metrics.webserver.enabled }}
             {{- if .Values.diagnosticMode.enabled }}
             - name: UP_POLLER_DEBUG
               value: "true"
