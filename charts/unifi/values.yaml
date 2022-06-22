@@ -148,15 +148,12 @@ auth:
     ## Note: Setting up this value, you will use the same trustore file in all the replicas
     ##
     keystoreFilename: ""
-    ## @param auth.tls.jksSecret DEPRECATED. Use `auth.tls.existingSecret` instead
-    ##
-    jksSecret: ""
     ## @param auth.tls.keystorePassword Password to access the keystore when it's password-protected
     ##
-    keystorePassword: ""
+    keystorePassword: aircontrolenterprise
     ## @param auth.tls.truststorePassword Password to access the truststore when it's password-protected
     ##
-    truststorePassword: ""
+    truststorePassword: aircontrolenterprise
     ## Init containers' resource requests and limits
     ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
     ## We usually recommend not to specify default resources and to leave this as a conscious
