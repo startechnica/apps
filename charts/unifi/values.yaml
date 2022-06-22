@@ -15,27 +15,31 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
+  namespaceOverride: ""
 
 ## @section Common parameters
 
-## @param kubeVersion Override Kubernetes version
-##
-kubeVersion: ""
 ## @param nameOverride String to partially override common.names.fullname
 ##
 nameOverride: ""
 ## @param fullnameOverride String to fully override common.names.fullname
 ##
 fullnameOverride: ""
+## @param namespaceOverride String to fully override common.names.namespace
+##
+namespaceOverride: ""
+## @param kubeVersion Override Kubernetes version
+##
+kubeVersion: ""
+## @param clusterDomain Kubernetes cluster domain name
+##
+clusterDomain: cluster.local
 ## @param commonLabels Labels to add to all deployed objects
 ##
 commonLabels: {}
 ## @param commonAnnotations Annotations to add to all deployed objects
 ##
 commonAnnotations: {}
-## @param clusterDomain Kubernetes cluster domain name
-##
-clusterDomain: cluster.local
 ## @param extraDeploy Array of extra objects to deploy with the release
 ##
 extraDeploy: []
@@ -91,6 +95,10 @@ image:
   ## Enable debug mode
   ##
   debug: false
+
+## @param useStatefulSet Set to true to use a StatefulSet instead of a Deployment (only when `architecture=standalone`)
+##
+useStatefulSet: false
 
 ## @section UniFi Controller Configuration parameters
 ## UniFi Controller settings based on environment variables
@@ -429,7 +437,6 @@ service:
   annotations: {}
 
 
-
 ## Configure the ingress resource that allows you to access the UniFi Controller installation
 ## ref: https://kubernetes.io/docs/user-guide/ingress/
 ##
@@ -559,6 +566,47 @@ rbac:
   ##       - list
   ##
   rules: []
+
+## Network Policy configuration
+## ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+##
+networkPolicy:
+  ## @param networkPolicy.enabled Enable the default NetworkPolicy policy
+  ##
+  enabled: false
+  ## @param networkPolicy.allowExternal Don't require client label for connections
+  ## The Policy model to apply. When set to false, only pods with the correct
+  ## client label will have network access to the ports Keycloak is listening
+  ## on. When true, UniFi will accept connections from any source
+  ## (with the correct destination port).
+  ##
+  allowExternal: true
+  ## @param networkPolicy.additionalRules Additional NetworkPolicy rules
+  ## Note that all rules are OR-ed.
+  ## Example:
+  ## additionalRules:
+  ##   - matchLabels:
+  ##       - role: frontend
+  ##   - matchExpressions:
+  ##       - key: role
+  ##         operator: In
+  ##         values:
+  ##           - frontend
+  ##
+  additionalRules: {}
+
+## Pod disruption budget configuration
+##
+podDisruptionBudget:
+  ## @param podDisruptionBudget.create Specifies whether a Pod disruption budget should be created
+  ##
+  create: false
+  ## @param podDisruptionBudget.minAvailable Minimum number / percentage of pods that should remain scheduled
+  ##
+  minAvailable: 1
+  ## @param podDisruptionBudget.maxUnavailable Maximum number / percentage of pods that may be made unavailable
+  ##
+  maxUnavailable: ""
 
 ## @section Persistence Parameters
 
