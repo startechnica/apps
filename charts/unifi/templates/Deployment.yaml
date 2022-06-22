@@ -105,6 +105,8 @@ spec:
                     -inkey "/unifi/cert/privkey.pem" \
                     -out "/tmp/keystore.p12"
                 printf '%s\n' "[init] Importing keystore \"/tmp/keystore.p12\" to \"/unifi/data/keystore\"" >&2
+                ls -liah /unifi
+                sleep inf
                 keytool -importkeystore \
                     -srckeystore "/tmp/keystore.p12" \
                     -srcstoretype PKCS12 \
@@ -119,7 +121,6 @@ spec:
                         -keystore "/unifi/data/keystore" \
                         -storepass "${UNIFI_TLS_TRUSTSTORE_PASSWORD}" \
                         -noprompt
-                sleep inf
               else
                   echo "Couldn't find the expected PEM certificates! They are mandatory when encryption via TLS is enabled."
                   exit 1
