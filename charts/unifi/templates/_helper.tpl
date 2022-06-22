@@ -137,17 +137,17 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{/* Return the Database user */}}
 {{- define "freeradius.databaseUser" -}}
 {{- if .Values.mongodb.enabled }}
-  {{- if .Values.global.mongodb }}
-    {{- if .Values.global.mongodb.auth }}
-      {{- coalesce .Values.global.mongodb.auth.username .Values.mongodb.auth.username -}}
+    {{- if .Values.global.mongodb }}
+        {{- if .Values.global.mongodb.auth }}
+            {{- coalesce .Values.global.mongodb.auth.username .Values.mongodb.auth.username -}}
+        {{- else -}}
+            {{- .Values.mongodb.auth.username -}}
+        {{- end -}}
     {{- else -}}
-      {{- .Values.mongodb.auth.username -}}
+        {{- .Values.mongodb.auth.username -}}
     {{- end -}}
-  {{- else -}}
-    {{- .Values.mongodb.auth.username -}}
-  {{- end -}}
 {{- else -}}
-  {{- .Values.externalDatabase.user -}}
+    {{- .Values.externalDatabase.user -}}
 {{- end -}}
 {{- end -}}
 
@@ -186,5 +186,16 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
   {{- else -}}
     {{- print "database-password" -}}
   {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Validate values of UniFi MongoDB database */}}
+{{- define "unifi.validateValues.database" -}}
+{{- if and (not .Values.mongodb.enabled) (not .Values.externalDatabase.host) (not .Values.externalDatabase.existingSecret) -}}
+unifi: database
+    You disabled the MongoDB sub-chart but did not specify an external MongoDB host.
+    Either deploy the MongoDB sub-chart (--set mongodb.enabled=true),
+    or set a value for the external database host (--set externalDatabase.host=FOO)
+    or set a value for the external database existing secret (--set externalDatabase.existingSecret=BAR).
 {{- end -}}
 {{- end -}}
