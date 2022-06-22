@@ -1,4 +1,5 @@
 {{- if .Values.metrics.enabled }}
+{{- $globalSecretName := printf "%s" (tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -70,6 +71,8 @@ spec:
           image: {{ include "unifi.metrics.image" . }}
           imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
           env:
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
             - name: UP_UNIFI_DEFAULT_URL
               value: "https://{{ include "common.names.fullname" . }}:{{ .Values.service.ports.httpsController }}"
             {{- if .Values.auth.unifiUser }}
@@ -79,7 +82,7 @@ spec:
             - name: UP_UNIFI_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}
+                  name: {{ $globalSecretName }}
                   key: unifi-password
             {{- if .Values.influxdb.enabled }}
             - name: UP_INFLUXDB_DB
@@ -91,7 +94,7 @@ spec:
             - name: UP_INFLUXDB_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}
+                  name: {{ $globalSecretName }}
                   key: influxdb-password
             - name: UP_UNIFI_DEFAULT_SAVE_IDS
               value: "true"
@@ -112,8 +115,6 @@ spec:
               value: {{ include "unifi.prometheusRule.namespace" . | quote }}
             - name: UP_PROMETHEUS_HTTP_LISTEN
               value: {{ printf "0.0.0.0:%v" .Values.metrics.containerPorts.metrics | quote }}
-            - name: TZ
-              value: {{ .Values.timezone | quote }}
             - name: UP_PROMETHEUS_REPORT_ERRORS
               value: {{ ternary "true" "false" .Values.diagnosticMode.enabled }}
             {{- end }}
