@@ -75,9 +75,9 @@ Return the secret containing AppName TLS certificates
 {{- define "unifi.tlsSecretName" -}}
 {{- $secretName := coalesce .Values.auth.tls.existingSecret .Values.auth.tls.jksSecret -}}
 {{- if $secretName -}}
-  {{- printf "%s" (tpl $secretName $) -}}
+    {{- printf "%s" (tpl $secretName $) -}}
 {{- else -}}
-  {{- printf "%s-crt" (include "common.names.fullname" .) -}}
+    {{- printf "%s-crt" (include "common.names.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
