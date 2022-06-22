@@ -86,14 +86,14 @@ _EOF
         -name unifi
     log "Removing existing certificate from Unifi protected keystore..."
     keytool -delete -alias unifi -keystore "${DATADIR}/keystore" \
-        -deststorepass aircontrolenterprise
+        -deststorepass ${UNIFI_TLS_KEYSTORE_PASSWORD}
     log "Inserting certificate into Unifi keystore..."
     keytool -trustcacerts -importkeystore \
-        -deststorepass aircontrolenterprise \
+        -deststorepass ${UNIFI_TLS_KEYSTORE_PASSWORD} \
         -destkeypass aircontrolenterprise \
         -destkeystore "${DATADIR}/keystore" \
         -srckeystore "${TEMPFILE}" -srcstoretype PKCS12 \
-        -srcstorepass aircontrolenterprise \
+        -srcstorepass ${UNIFI_TLS_KEYSTORE_PASSWORD} \
         -alias unifi
     log "Cleaning up temp files"
     for file in ${TMPLIST}; do

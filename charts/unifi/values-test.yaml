@@ -1,4 +1,7 @@
 
+auth:
+  unifiUser: unifiuser
+  unifiPassword: unifipassword
 
 metrics:
   enabled: true
