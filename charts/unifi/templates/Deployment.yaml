@@ -111,7 +111,9 @@ spec:
                     -srcstorepass "${UNIFI_TLS_KEYSTORE_PASSWORD}" \
                     -deststorepass "${UNIFI_TLS_KEYSTORE_PASSWORD}" \
                     -destkeystore "/unifi/data/keystore"
+                printf '%s\n' "[init] Removing temporary keystore \"/tmp/keystore.p12\"" >&2
                 rm "/tmp/keystore.p12"
+                printf '%s\n' "[init] Import keystore to store" >&2
                 keytool -import -file "/unifi/cert/chain.pem" \
                         -keystore "/unifi/data/keystore" \
                         -storepass "${UNIFI_TLS_TRUSTSTORE_PASSWORD}" \
