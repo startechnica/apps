@@ -701,6 +701,8 @@ mongodb:
   architecture: standalone
   auth:
     enabled: false
+    databases:
+      - unifi
   persistence:
     enabled: false
     # storageClass: ""

@@ -129,10 +129,10 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
         {{- if .Values.global.mongodb.auth }}
             {{- coalesce .Values.global.mongodb.auth.database .Values.mongodb.auth.database -}}
         {{- else -}}
-            {{- .Values.mongodb.auth.database -}}
+            {{- (index .Values.mongodb.auth.databases 0) -}}
         {{- end -}}
     {{- else -}}
-        {{- .Values.mongodb.auth.database -}}
+        {{- (index .Values.mongodb.auth.databases 0) -}}
     {{- end -}}
 {{- else -}}
   {{- .Values.externalDatabase.database -}}
