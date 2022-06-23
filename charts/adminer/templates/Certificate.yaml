@@ -1,6 +1,6 @@
-{{- if .Capabilities.APIVersions.Has "cert-manager.io/v1" }}
 {{- if and .Values.ingress.tls .Values.ingress.certManager.create (not .Values.ingress.selfSigned) }}
-apiVersion: cert-manager.io/v1
+{{- if (include "common.capabilities.certManager.apiVersion" .) }}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "common.names.fullname" . }}

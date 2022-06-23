@@ -1,5 +1,8 @@
 annotations:
   category: DatabaseManagement
+  artifacthub.io/images: |
+    - name: adminer
+      image: docker.io/adminer:4.8.1-standalone
 apiVersion: v2
 appVersion: 4.8.1
 dependencies:
