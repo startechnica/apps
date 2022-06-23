@@ -3,13 +3,13 @@ annotations:
 apiVersion: v2
 appVersion: 4.8.1
 dependencies:
-  - name: common
+  - name: st-common
     repository: https://startechnica.github.io/apps
-    version: 0.1.2
+    version: "*"
     alias: startechnica-common
   - name: common
     repository: https://charts.bitnami.com/bitnami
-    version: 1.16.0
+    version: "*"
     tags:
       - bitnami-common
     alias: bitnami-common
