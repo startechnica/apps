@@ -109,11 +109,11 @@ useStatefulSet: false
 auth:
   ## @param unifiUser UniFi Controller username
   ##
-  unifiUser: unifiuser
+  unifiUser: ubnt
   ## @param unifiPassword UniFi Controller user password
   ## Defaults to a random 10-character alphanumeric string if not set
   ##
-  unifiPassword: ""
+  unifiPassword: ubnt
   ## @param auth.existingSecret An already existing secret containing auth info
   ## e.g:
   ## existingSecret:
