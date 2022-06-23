@@ -75,12 +75,12 @@ spec:
             - -c
             - |
               cookie=$(mktemp)
-              curl_cmd="curl --tlsv1 --cookie ${cookie} --cookie-jar ${cookie} --insecure --fail "
+              curl_cmd="curl --tlsv1 --cookie ${cookie} --cookie-jar ${cookie} --insecure --silent --fail "
+              data_json="--data \"{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}\" "
+              login="${curl_cmd} ${data_json} ${UP_UNIFI_DEFAULT_URL}/api/login"
 
-              ${curl_cmd} --data "{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}" ${UP_UNIFI_DEFAULT_URL}/api/login
               trap "exit 1" TERM
-              #until nc -vzw 5 {{ include "common.names.fullname" . }} {{ .Values.service.ports.httpsController }}
-              until ${curl_cmd} --data "{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}" ${UP_UNIFI_DEFAULT_URL}/api/login
+              until $login
               do
                   echo "$(date) Waiting for UniFi Network Application endpoint to become available"
                   sleep 1
