@@ -103,7 +103,7 @@ spec:
             - name: UP_INFLUXDB_DB
               value: unifi
             - name: UP_INFLUXDB_URL
-              value: "http://{{ .Release.Name }}-influxdb:8086"
+              value: "http://{{ include unifi.influxdb.fullname . }}:8086"
             - name: UP_INFLUXDB_USER
               value: {{ .Values.influxdb.setDefaultUser.user.username | quote }}
             - name: UP_INFLUXDB_PASS

@@ -111,11 +111,9 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- define "unifi.mongodb.fullname" -}}
   {{- include "common.names.dependency.fullname" (dict "chartName" "mongodb" "chartValues" .Values.mongodb "context" $) -}}
 {{- end -}}
-{{/* 
-{{- define "unifi.mongodb.fullname" -}}
-    {{- printf "%s-mongodb" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- define "unifi.influxdb.fullname" -}}
+  {{- include "common.names.dependency.fullname" (dict "chartName" "influxdb" "chartValues" .Values.mongodb "context" $) -}}
 {{- end -}}
-*/}}
 
 {{/* Return the Database hostname */}}
 {{- define "unifi.databaseHost" -}}
