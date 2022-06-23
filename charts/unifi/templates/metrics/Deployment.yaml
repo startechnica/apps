@@ -31,6 +31,7 @@ spec:
         {{- end }}
       annotations:
         checksum/secrets: {{ include (print $.Template.BasePath "/Secret.yaml") . | sha256sum }}
+        checksum/secrets: {{ include (print $.Template.BasePath "/Secret-tls.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
@@ -75,11 +76,11 @@ spec:
             - -c
             - |
               cookie=$(mktemp)
-              curl_cmd="curl --tlsv1 --cookie ${cookie} --cookie-jar ${cookie} --insecure --silent --fail "
+              curl_cmd="curl --tlsv1 --cookie ${cookie} --cookie-jar ${cookie} --insecure --silent --fail"
               #data_json="--data \"{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}\" "
               login="${curl_cmd} --data \"{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}\" ${UP_UNIFI_DEFAULT_URL}/api/login"
 
-              # printf '%s\n' "${login}" >&2
+              #printf '%s\n' "${login}" >&2
 
               trap "exit 1" TERM
               until ${curl_cmd} --data "{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}" ${UP_UNIFI_DEFAULT_URL}/api/login
