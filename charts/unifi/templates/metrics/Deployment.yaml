@@ -68,7 +68,7 @@ spec:
       {{- end }}
       initContainers:
         - name: unifi-probe
-          image: busybox:latest
+          image: curlimages/curl:latest
           command:
             - sh
           args:
