@@ -4,6 +4,14 @@
   {{- printf "%s-metrics" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
+{{/* Create a default fully qualified app name. We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec). */}}
+{{- define "unifi.mongodb.fullname" -}}
+  {{- include "common.names.dependency.fullname" (dict "chartName" "mongodb" "chartValues" .Values.mongodb "context" $) -}}
+{{- end -}}
+{{- define "unifi.influxdb.fullname" -}}
+  {{- include "common.names.dependency.fullname" (dict "chartName" "influxdb" "chartValues" .Values.mongodb "context" $) -}}
+{{- end -}}
+
 {{/* Allow the release namespace to be overridden for multi-namespace deployments in combined charts. */}}
 {{- define "unifi.serviceMonitor.namespace" -}}
     {{- if .Values.metrics.serviceMonitor.namespace -}}
@@ -107,14 +115,6 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
 {{- end -}}
 {{- end -}}
 
-{{/* Create a default fully qualified app name. We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec). */}}
-{{- define "unifi.mongodb.fullname" -}}
-  {{- include "common.names.dependency.fullname" (dict "chartName" "mongodb" "chartValues" .Values.mongodb "context" $) -}}
-{{- end -}}
-{{- define "unifi.influxdb.fullname" -}}
-  {{- include "common.names.dependency.fullname" (dict "chartName" "influxdb" "chartValues" .Values.mongodb "context" $) -}}
-{{- end -}}
-
 {{/* Return the Database hostname */}}
 {{- define "unifi.databaseHost" -}}
 {{- if eq .Values.mongodb.architecture "replication" }}
@@ -200,8 +200,6 @@ Ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
   {{- end -}}
 {{- end -}}
 {{- end -}}
-
-
 
 {{/* Validate values of UniFi MongoDB database */}}
 {{- define "unifi.validateValues.database" -}}
