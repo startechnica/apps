@@ -1,5 +1,5 @@
-{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
 {{- if and .Values.istio.enabled .Values.istio.gateway.enabled }}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:

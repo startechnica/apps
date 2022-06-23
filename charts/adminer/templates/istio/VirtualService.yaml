@@ -1,5 +1,5 @@
-{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
 {{- if and .Values.istio.enabled .Values.istio.virtualService.enabled (not .Values.istio.virtualService.existingVirtualService) }}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: VirtualService
 metadata:
