@@ -75,7 +75,7 @@ spec:
             - -c
             - |
               cookie=$(mktemp)
-              curl_cmd="curl --tlsv1 --silent --cookie ${cookie} --cookie-jar ${cookie} --insecure "
+              curl_cmd="curl --tlsv1 --cookie ${cookie} --cookie-jar ${cookie} --insecure "
 
               ${curl_cmd} --data "{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}" ${UP_UNIFI_DEFAULT_URL}/api/login
               trap "exit 1" TERM
@@ -85,6 +85,20 @@ spec:
                   echo "$(date) Waiting for UniFi Network Application endpoint to become available"
                   sleep 1
               done
+          env:
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+            - name: UP_UNIFI_DEFAULT_URL
+              value: "https://{{ include "common.names.fullname" . }}:{{ .Values.service.ports.httpsController }}"
+            {{- if .Values.auth.unifiUser }}
+            - name: UP_UNIFI_DEFAULT_USER
+              value: {{ .Values.auth.unifiUser | quote }}
+            {{- end }}
+            - name: UP_UNIFI_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $globalSecretName }}
+                  key: metrics-password
       containers:
         - name: metrics
           image: {{ include "unifi.metrics.image" . }}
