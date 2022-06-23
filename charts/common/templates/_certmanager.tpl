@@ -3,6 +3,6 @@
 {{- if .Capabilities.APIVersions.Has "cert-manager.io/v1" -}}
   {{- print "cert-manager.io/v1" -}}
 {{- else -}}
-  {{- print "false" -}}
+  {{- false -}}
 {{- end -}}
 {{- end -}}
