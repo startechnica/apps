@@ -76,11 +76,12 @@ spec:
             - |
               cookie=$(mktemp)
               curl_cmd="curl --tlsv1 --silent --cookie ${cookie} --cookie-jar ${cookie} --insecure "
+
               trap "exit 1" TERM
-              until nc -vzw 5 {{ include "common.names.fullname" . }} {{ .Values.service.ports.httpsController }}
+              #until nc -vzw 5 {{ include "common.names.fullname" . }} {{ .Values.service.ports.httpsController }}
+              until ${curl_cmd} --data "{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}" ${UP_UNIFI_DEFAULT_URL}/api/login
               do
                   echo "$(date) Waiting for UniFi Network Application endpoint to become available"
-                  ${curl_cmd} --data "{\"username\":\"${UP_UNIFI_DEFAULT_USER}\", \"password\":\"${UP_UNIFI_DEFAULT_PASS}\"}" ${UP_UNIFI_DEFAULT_URL}/api/login
                   sleep 1
               done
       containers:
