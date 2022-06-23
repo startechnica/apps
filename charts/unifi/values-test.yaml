@@ -1,7 +1,7 @@
 
 auth:
-  unifiUser: unifiuser
-  unifiPassword: eh4w9URxg6
+  unifiUser: ubnt
+  unifiPassword: ubnt
 
 metrics:
   enabled: true
