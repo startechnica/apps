@@ -43,26 +43,6 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.additionalRules "context" $) | nindent 8 }}
         {{- end }}
       {{- end }}
-    {{- if .Values.metrics.enabled }}
-    - ports:
-        - port: {{ .Values.metrics.service.ports.metrics }}
-          protocol: TCP
-        {{- if .Values.metrics.webserver.enabled }}
-        - port: {{ .Values.metrics.service.ports.http }}
-          protocol: TCP
-        {{- end }}
-      from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/component: metrics
-    {{- end }}
-    - ports:
-        - port: {{ include "unifi.databasePort" . }}
-          protocol: TCP
-      from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/component: network-application
   policyTypes:
     - Ingress
 {{- end }}
