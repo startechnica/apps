@@ -5,8 +5,6 @@ appVersion: 4.8.1
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
-    tags:
-      - bitnami-common
     version: 1.x.x
     alias: bitnami-common
   - name: common
