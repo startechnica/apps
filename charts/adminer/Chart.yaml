@@ -8,7 +8,7 @@ dependencies:
     tags:
       - bitnami-common
     version: 1.x.x
-  - name: st-common
+  - name: common
     repository: https://startechnica.github.io/apps
     version: 0.x.x
     alias: startechnica-common
