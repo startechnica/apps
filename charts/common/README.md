@@ -7,7 +7,7 @@ A [Helm Library Chart](https://helm.sh/docs/topics/library_charts/#helm) for gro
 ```yaml
 dependencies:
   - name: st-common
-    version: x.x.x
+    version: "*"
     repository: https://startechnica.github.io/apps
 ```
 
