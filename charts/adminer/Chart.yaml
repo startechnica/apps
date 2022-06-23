@@ -9,7 +9,7 @@ dependencies:
     alias: startechnica-common
   - name: common
     repository: https://charts.bitnami.com/bitnami
-    version: x.x.x
+    version: 1.x.x
     tags:
       - bitnami-common
     alias: bitnami-common
