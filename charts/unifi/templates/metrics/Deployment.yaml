@@ -98,7 +98,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ $globalSecretName }}
-                  key: unifi-password
+                  key: metrics-password
             {{- if .Values.influxdb.enabled }}
             - name: UP_INFLUXDB_DB
               value: unifi
