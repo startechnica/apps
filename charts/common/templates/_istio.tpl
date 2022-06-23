@@ -3,7 +3,7 @@
 {{- if .Capabilities.APIVersions.Has "extensions.istio.io/v1alpha1" -}}
   {{- print "extensions.istio.io/v1alpha1" -}}
 {{- else -}}
-  {{- print "false" -}}
+  {{- false -}}
 {{- end -}}
 {{- end -}}
 
@@ -12,7 +12,7 @@
 {{- if .Capabilities.APIVersions.Has "install.istio.io/v1alpha1" -}}
   {{- print "install.istio.io/v1alpha1" -}}
 {{- else -}}
-  {{- print "false" -}}
+  {{- false -}}
 {{- end -}}
 {{- end -}}
 
@@ -23,7 +23,7 @@
 {{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1alpha3" -}}
   {{- print "networking.istio.io/v1alpha3" -}}
 {{- else -}}
-  {{- print "false" -}}
+  {{- false -}}
 {{- end -}}
 {{- end -}}
 
@@ -32,7 +32,7 @@
 {{- if .Capabilities.APIVersions.Has "security.istio.io/v1beta1" -}}
   {{- print "security.istio.io/v1beta1" -}}
 {{- else -}}
-  {{- print "false" -}}
+  {{- false -}}
 {{- end -}}
 {{- end -}}
 
@@ -41,6 +41,6 @@
 {{- if .Capabilities.APIVersions.Has "telemetry.istio.io/v1alpha1" -}}
   {{- print "telemetry.istio.io/v1alpha1" -}}
 {{- else -}}
-  {{- print "false" -}}
+  {{- false -}}
 {{- end -}}
 {{- end -}}
