@@ -108,34 +108,6 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/adminer-0.1.1/adminer-0.1.1.tgz
     version: 0.1.1
-  common:
-  - annotations:
-      artifacthub.io/links: |
-        - name: Chart Source
-          url: https://github.com/startechnica/apps/tree/main/charts/common
-      category: Infrastructure
-    apiVersion: v2
-    appVersion: 0.1.2
-    created: "2022-06-23T06:28:47.780640811Z"
-    description: A Library Helm Chart for grouping common logic between Startechnica
-      charts. This chart is not deployable by itself.
-    digest: 4b422f3660165a3d2f5281986d882d23cdd8e84ee86ef707da66fd0c2e3e147c
-    home: https://github.com/startechnica/apps/tree/main/charts/common
-    icon: https://startechnica.github.io/apps/images/star.png
-    keywords:
-    - common
-    kubeVersion: '>=1.19.0-0'
-    maintainers:
-    - email: firmansyah@nainggolan.id
-      name: firmansyahn
-      url: https://firmansyah.nainggolan.id
-    name: common
-    sources:
-    - https://startechnica.github.io/apps
-    type: library
-    urls:
-    - https://github.com/startechnica/apps/releases/download/common-0.1.2/common-0.1.2.tgz
-    version: 0.1.2
   freeradius:
   - annotations:
       artifacthub.io/links: |
@@ -526,6 +498,9 @@ entries:
     icon: https://startechnica.github.io/apps/images/star.png
     keywords:
     - common
+    - helper
+    - template
+    - function
     kubeVersion: '>=1.19.0-0'
     maintainers:
     - email: firmansyah@nainggolan.id
