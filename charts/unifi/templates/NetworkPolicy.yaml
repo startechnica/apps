@@ -20,14 +20,18 @@ spec:
           protocol: TCP
         - port: {{ .Values.service.ports.httpsController }}
           protocol: TCP
-        {{- if .Values.metrics.enabled }}
-        - port: {{ .Values.metrics.service.ports.metrics }}
+        - port: {{ .Values.service.ports.httpPortal }}
           protocol: TCP
-        {{- if .Values.metrics.webserver.enabled }}
-        - port: {{ .Values.metrics.service.ports.http }}
+        - port: {{ .Values.service.ports.httpsPortal }}
           protocol: TCP
-        {{- end }}
-        {{- end }}
+        - port: {{ .Values.service.ports.discovery }}
+          protocol: UDP
+        - port: {{ .Values.service.ports.speedtest }}
+          protocol: TCP
+        - port: {{ .Values.service.ports.stun }}
+          protocol: UDP
+        - port: {{ .Values.service.ports.syslog }}
+          protocol: UDP
       {{- if not .Values.networkPolicy.allowExternal }}
       from:
         - podSelector:
@@ -39,4 +43,26 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.additionalRules "context" $) | nindent 8 }}
         {{- end }}
       {{- end }}
+    {{- if .Values.metrics.enabled }}
+    - ports:
+        - port: {{ .Values.metrics.service.ports.metrics }}
+          protocol: TCP
+        {{- if .Values.metrics.webserver.enabled }}
+        - port: {{ .Values.metrics.service.ports.http }}
+          protocol: TCP
+        {{- end }}
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: metrics
+    {{- end }}
+    - ports:
+        - port: {{ .Values.mongodb.service.ports.mongodb }}
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: network-application
+  policyTypes:
+    - Ingress
 {{- end }}
