@@ -257,10 +257,10 @@ spec:
               mountPath: /etc/freeradius/sites-enabled/tls
               subPath: tls
             - name: freeradius-tls
-              mountPath: /startechnica/freeradius/certs
+              mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             - name: shared-certs
-              mountPath: /startechnica/freeradius/shared-certs
+              mountPath: /opt/startechnica/freeradius/shared-certs
               readOnly: true
             {{- end }}
             {{- if .Values.extraVolumeMounts }}

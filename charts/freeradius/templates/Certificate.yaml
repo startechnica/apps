@@ -32,12 +32,18 @@ spec:
     rotationPolicy: Always
     size: 256
   subject:
+    organizations:
+      - {{ .Release.Name | quote }}
     organizationalUnits:
-    - {{ .Release.Name | quote }}
+      - {{ include "common.names.fullname" . }}
   dnsNames:
-  {{- with $altNames }}
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    - {{ .Values.ingress.hostname | quote }}
+    {{- range $.Values.ingress.extraHosts }}
+    - {{ .name | quote }}
+    {{- end }}
+    {{- with $altNames }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
 {{- end }}
 {{- end }}
 ---
