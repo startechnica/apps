@@ -116,10 +116,10 @@ spec:
             - name: UP_PROMETHEUS_HTTP_LISTEN
               value: {{ printf "0.0.0.0:%v" .Values.metrics.containerPorts.metrics | quote }}
             - name: UP_PROMETHEUS_REPORT_ERRORS
-              value: {{ ternary "true" "false" .Values.diagnosticMode.enabled }}
+              value: {{ ternary "true" "false" .Values.diagnosticMode.enabled | quote }}
             {{- end }}
             - name: UP_WEBSERVER_ENABLE
-              value: {{ ternary "true" "false" .Values.metrics.webserver.enabled }}
+              value: {{ ternary "true" "false" .Values.metrics.webserver.enabled | quote }}
             {{- if .Values.diagnosticMode.enabled }}
             - name: UP_POLLER_DEBUG
               value: "true"
