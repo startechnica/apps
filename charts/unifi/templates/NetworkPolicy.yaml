@@ -57,7 +57,7 @@ spec:
               app.kubernetes.io/component: metrics
     {{- end }}
     - ports:
-        - port: {{ include "unifi.databasePort" }}
+        - port: {{ include "unifi.databasePort" . }}
           protocol: TCP
       from:
         - podSelector:
