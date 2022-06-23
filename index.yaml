@@ -482,6 +482,36 @@ entries:
     version: 0.1.0
   st-common:
   - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Rename chart name from "common" to "st-common"
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.2
+    created: "2022-06-23T07:07:02.018775922Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 6e7a4a8ab6c1252632d557f4f402cb655ec2f02f75c656bb677272efd276ff78
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.19.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.2/st-common-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
       artifacthub.io/links: |
         - name: Chart Source
           url: https://github.com/startechnica/apps/tree/main/charts/common
@@ -642,4 +672,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-23T06:28:47.943418615Z"
+generated: "2022-06-23T07:07:02.018805222Z"
