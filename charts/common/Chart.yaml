@@ -1,8 +1,8 @@
 annotations:
   category: Infrastructure
-  artifacthub.io/links: |
-    - name: Chart Source
-      url: https://github.com/startechnica/apps/tree/main/charts/common
+  artifacthub.io/changes: |
+    - kind: changed
+      description: Rename chart name from "common" to "st-common"
 apiVersion: v2
 appVersion: 0.1.2
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
@@ -11,12 +11,15 @@ home: https://github.com/startechnica/apps/tree/main/charts/common
 icon: https://startechnica.github.io/apps/images/star.png
 keywords:
   - common
+  - helper
+  - template
+  - function
 kubeVersion: ">=1.19.0-0"
 maintainers:
   - name: firmansyahn
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
-name: common
+name: st-common
 sources:
   - https://startechnica.github.io/apps
 type: library
