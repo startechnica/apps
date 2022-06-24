@@ -1,13 +1,11 @@
 annotations:
   category: AccessManagement
-  artifacthub.io/links: |
-    - name: Chart Source
-      url: https://github.com/startechnica/apps/tree/main/charts/freeradius
-    - name: Upstream Project
-      url: https://github.com/FreeRADIUS/freeradius-server
 apiVersion: v2
 appVersion: 3.2.0
 dependencies:
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: "*"
   - name: common
     repository: https://charts.bitnami.com/bitnami
     tags:
@@ -35,5 +33,6 @@ maintainers:
 name: freeradius
 sources:
   - https://freeradius.org/
+  - https://github.com/FreeRADIUS/freeradius-server
 type: application
-version: 0.1.7
+version: 0.1.8
