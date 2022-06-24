@@ -874,6 +874,24 @@ tls:
   secretName: ~
   existingSecret: ""
 
+istio:
+  enabled: false
+  clusterName: cluster.local
+  ingressGateway: ingressgateway
+  ingressNamespace: istio-ingress
+
+  gateway:
+    enabled: true
+    servers:
+      - name: tcp-radsec
+        port: 2083
+        protocol: TCP
+    existingGateway: ~
+
+  virtualService:
+    enabled: true
+    existingVirtualService: ~
+
 ## Prometheus exporter configuration
 ##
 metrics:
@@ -926,4 +944,3 @@ metrics:
     ##    for: 5m
     ##
     rules: {}
----

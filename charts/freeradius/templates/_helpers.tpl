@@ -10,7 +10,7 @@
 
 {{/* Return the proper Docker Image Registry Secret Names */}}
 {{- define "freeradius.imagePullSecrets" -}}
-  {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image) "global" .Values.global) -}}
+  {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.metrics.image) "global" .Values.global) -}}
 {{- end -}}
 
 {{/* Create the name of the service account to use */}}
