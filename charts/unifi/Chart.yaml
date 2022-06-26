@@ -8,6 +8,9 @@ annotations:
 apiVersion: v2
 appVersion: v7.1.66
 dependencies:
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: "*"
   - name: common
     repository: https://charts.bitnami.com/bitnami
     tags:
