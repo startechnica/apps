@@ -22,11 +22,11 @@ $ helm install my-release startechnica/unifi
 
 ## Dependencies
 
-| Repository	                          | Name	    | Version |
-| ------------------------------------- | --------- | ------- |
-| https://startechnica.github.io/apps   | st-common | "*"     |
-| https://charts.bitnami.com/bitnami    | common    | "*"     |
-| https://charts.bitnami.com/bitnami    | mongodb   | "*"     |
+| Repository	                            | Name	      | Version   |
+| --------------------------------------- | ----------- | --------- |
+| `https://startechnica.github.io/apps`   | `st-common` | `"*"`     |
+| `https://charts.bitnami.com/bitnami`    | `common`    | `"*"`     |
+| `https://charts.bitnami.com/bitnami`    | `mongodb`   | `"*"`     |
 
 ## Installing the Chart
 
@@ -65,8 +65,8 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Common parameters
 
-| Name                | Description                                                                                                              | Value           |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| Name                       | Description                                                                                                       | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- |
 | `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                                              | `""`            |
 | `nameOverride`             | String to partially override common.names.fullname template with a string (will prepend the release name)         | `""`            |
 | `namespaceOverride`        | String to fully override common.names.namespace                                                                   | `""`            |
@@ -99,7 +99,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `extraEnvVarsSecret` | Secret with extra environment variables                              | `""`                      |
 
 
-### UniFi Network deployment parameters
+### UniFi Network Application deployment parameters
 
 | Name                                    | Description                                                                               | Value   |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- | ------- |
@@ -163,11 +163,14 @@ The command removes all the Kubernetes components associated with the chart and 
 | Name                                          | Description                                                                                                              | Value                          |
 | ----------------------------------------------| -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
 | `metrics.enabled`                             | Start a side-car prometheus exporter                                                                                     | `false`                        |
-| `metrics.image.registry`                      | UniFi Prometheus exporter image registry                                                                                 | `""`                           |
-| `metrics.image.repository`                    | UniFi Prometheus exporter image repository                                                                               | `""`                           |
-| `metrics.image.tag`                           | UniFi Prometheus exporter image tag (immutable tags are recommended)                                                     | `""`                           |
+| `metrics.image.registry`                      | UniFi Prometheus exporter image registry                                                                                 | `"docker.io"`                  |
+| `metrics.image.repository`                    | UniFi Prometheus exporter image repository                                                                               | `"golift/unifi-poller"`        |
+| `metrics.image.tag`                           | UniFi Prometheus exporter image tag (immutable tags are recommended)                                                     | `"2.1.3"`                      |
 | `metrics.image.pullPolicy`                    | UniFi Prometheus exporter image pull policy                                                                              | `IfNotPresent`                 |
 | `metrics.image.pullSecrets`                   | UniFi Prometheus exporter image pull secrets                                                                             | `[]`                           |
+| `containerSecurityContext.enabled`            | Enabled metrics containers' Security Context                                                                             | `true`                         |
+| `containerSecurityContext.runAsUser`          | Set metrics container's Security Context runAsUser                                                                       | `1001`                         |
+| `containerSecurityContext.runAsNonRoot`       | Set metrics container's Security Context runAsNonRoot                                                                    | `true`                         |
 | `metrics.extraFlags`                          | UniFi Prometheus exporter additional command line flags                                                                  | `[]`                           |
 | `metrics.resources.limits`                    | The resources limits for the container                                                                                   | `{}`                           |
 | `metrics.resources.requests`                  | The requested resources for the container                                                                                | `{}`                           |
