@@ -1,7 +1,7 @@
 annotations:
   category: AccessManagement
 apiVersion: v2
-appVersion: 3.2.0
+appVersion: 3.2.1
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
@@ -35,4 +35,4 @@ sources:
   - https://freeradius.org/
   - https://github.com/FreeRADIUS/freeradius-server
 type: application
-version: 0.1.8
+version: 0.1.9

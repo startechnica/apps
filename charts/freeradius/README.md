@@ -93,8 +93,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `service.clusterIP`                           | Specific cluster IP when service type is cluster IP. Use `None` for headless service                                     | `""`                           |
 | `service.ports.auth`                          | FreeRADIUS Authentication and Authorization service port                                                                 | `1812`                         |
 | `service.ports.acct`                          | FreeRADIUS Accounting service port                                                                                       | `1813`                         |
-| `service.ports.coa`                           | FreeRADIUS Coa service port                                                                                              | `3799`                         |
-| `service.ports.radsec`                        | FreeRADIUS Radsec service port                                                                                           | `2083`                         |
+| `service.ports.coa`                           | FreeRADIUS CoA service port                                                                                              | `3799`                         |
+| `service.ports.radsec`                        | FreeRADIUS RadSec service port                                                                                           | `2083`                         |
 | `service.ports.status`                        | FreeRADIUS Status service port                                                                                           | `18121`                        |
 | `service.nodePorts.auth`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
 | `service.nodePorts.acct`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
@@ -107,7 +107,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `service.loadBalancerSourceRanges`            | Addresses that are allowed when svc is `LoadBalancer`                                                                    | `[]`                           |
 | `service.externalTrafficPolicy`               | FreeRADIUS service external traffic policy                                                                               | `Cluster`                      |
 | `service.annotations`                         | Additional annotations for FreeRADIUS service                                                                            | `{}`                           |
-| `service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be "None" or "ClientIP"                                                     | `None`                         |
+| `service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
 | `service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
 | `serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
 | `serviceAccount.name`                         | Name of the service account to use. If not set and create is true, a name is generated using the fullname template.      | `""`                           |
@@ -121,9 +121,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `podSecurityContext.enabled`                  | Enable security context                                                                                                  | `true`                         |
 | `podSecurityContext.fsGroup`                  | Group ID for the container filesystem                                                                                    | `101`                          |
 | `podSecurityContext.runAsUser`                | User ID for the container                                                                                                | `101`                          |
-| `containerSecurityContext.enabled`            | Enabled galera's container Security Context                                                                              | `true`                         |
-| `containerSecurityContext.runAsUser`          | Set galera's container Security Context runAsUser                                                                        | `101`                          |
-| `containerSecurityContext.runAsNonRoot`       | Set galera's container Security Context runAsNonRoot                                                                     | `true`                         |
+| `containerSecurityContext.enabled`            | Enabled FreeRADIUS container Security Context                                                                            | `true`                         |
+| `containerSecurityContext.runAsUser`          | Set FreeRADIUS container Security Context runAsUser                                                                      | `101`                          |
+| `containerSecurityContext.runAsNonRoot`       | Set FreeRADIUS container Security Context runAsNonRoot                                                                   | `true`                         |
 | `tls.enabled`                                 | Enable TLS support for replication traffic                                                                               | `false`                        |
 | `tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
 | `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `""`                           |
@@ -149,11 +149,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tolerations`                                 | Tolerations for pod assignment                                                                                           | `[]`                           |
 | `topologySpreadConstraints`                   | Topology Spread Constraints for pods assignment                                                                          | `[]`                           |
 | `lifecycleHooks`                              | for the galera container(s) to automate configuration before or after startup                                            | `{}`                           |
-| `containerPorts.auth`                         | auth database container port                                                                                             | `1812`                         |
-| `containerPorts.acct`                         | acct cluster container port                                                                                              | `1813`                         |
-| `containerPorts.coa`                          | coa container port                                                                                                       | `3799`                         |
-| `containerPorts.radsec`                       | radsec container port                                                                                                    | `2083`                         |
-| `containerPorts.status`                       | status container port                                                                                                    | `18121`                        |
+| `containerPorts.auth`                         | Auth database container port                                                                                             | `1812`                         |
+| `containerPorts.acct`                         | Acct cluster container port                                                                                              | `1813`                         |
+| `containerPorts.coa`                          | CoA container port                                                                                                       | `3799`                         |
+| `containerPorts.radsec`                       | RadSec container port                                                                                                    | `2083`                         |
+| `containerPorts.status`                       | Status container port                                                                                                    | `18121`                        |
 | `persistence.enabled`                         | Enable persistence using PVC                                                                                             | `true`                         |
 | `persistence.existingClaim`                   | Provide an existing `PersistentVolumeClaim`                                                                              | `""`                           |
 | `persistence.subPath`                         | Subdirectory of the volume to mount                                                                                      | `""`                           |
@@ -228,11 +228,11 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Custom FreeRADIUS application parameters
 
-| Name                                       | Description                                                                                       | Value             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------- |
-| `modsEnabled.sql.enabled`                  |                                                                                                   | `false`           |
-| `sitesEnabled.status.port`                 | Git image registry                                                                                | `18121`           |
-| `sitesEnabled.status.secret`               | Git image repository                                                                              | `adminsecret`     |
+| Name                                       | Description                                                                     | Value             |
+| ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
+| `modsEnabled.sql.enabled`                  | Enable FreeRADIUS SQL module                                                    | `false`           |
+| `sitesEnabled.status.port`                 | FreeRADIUS status port                                                          | `18121`           |
+| `sitesEnabled.status.secret`               | FreRADIUS status secret                                                         | `adminsecret`     |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
