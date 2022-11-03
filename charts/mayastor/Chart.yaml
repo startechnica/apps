@@ -1,7 +1,7 @@
 annotations:
   category: Storage
 apiVersion: v2
-appVersion: 1.0.2
+appVersion: 1.0.3
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
@@ -17,10 +17,10 @@ dependencies:
   - name: jaeger-operator 
     condition: jaeger.enabled
     repository: https://jaegertracing.github.io/helm-charts
-    version: 2.32.2
+    version: 2.36.0
   - name: loki-stack
     condition: lokiStack.enabled
-    version: 2.6.5
+    version: 2.8.4
     repository: https://grafana.github.io/helm-charts
 description: Mayastor is a cloud-native declarative data plane written in Rust.
   Our goal is to abstract storage resources and their differences through the data
@@ -44,4 +44,4 @@ sources:
   - https://openebs.io/docs/concepts/mayastor
   - https://mayastor.gitbook.io
 type: application
-version: 0.1.0
+version: 0.2.0
