@@ -352,6 +352,57 @@ entries:
   - annotations:
       category: Storage
     apiVersion: v2
+    appVersion: 1.0.3
+    created: "2022-11-03T11:33:44.167162761Z"
+    dependencies:
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    - condition: etcd.enabled
+      name: etcd
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-etcd
+      version: 8.x.x
+    - condition: jaeger.enabled
+      name: jaeger-operator
+      repository: https://jaegertracing.github.io/helm-charts
+      version: 2.36.0
+    - condition: lokiStack.enabled
+      name: loki-stack
+      repository: https://grafana.github.io/helm-charts
+      version: 2.8.4
+    description: Mayastor is a cloud-native declarative data plane written in Rust.
+      Our goal is to abstract storage resources and their differences through the
+      data plane such that users only need to supply the what and do not have to worry
+      about the how so that individual teams stay in control.
+    digest: 444642aa44de63c67d9a352f07c6d6ceee573e00934b9a8dbf0a28e5c879574a
+    home: https://github.com/startechnica/apps/tree/main/charts/mayastor
+    icon: https://raw.githubusercontent.com/cncf/artwork/master/projects/openebs/icon/color/openebs-icon-color.png
+    keywords:
+    - mayastor
+    - openebs
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: mayastor
+    sources:
+    - https://github.com/openebs/mayastor
+    - https://github.com/openebs/mayastor-control-plane
+    - https://github.com/openebs/mayastor-api
+    - https://openebs.io/docs/concepts/mayastor
+    - https://mayastor.gitbook.io
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/mayastor-0.2.0/mayastor-0.2.0.tgz
+    version: 0.2.0
+  - annotations:
+      category: Storage
+    apiVersion: v2
     appVersion: 1.0.2
     created: "2022-06-20T11:35:20.070778342Z"
     dependencies:
@@ -690,4 +741,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2022-06-24T03:41:24.100221416Z"
+generated: "2022-11-03T11:33:44.167202661Z"
