@@ -6,7 +6,7 @@ annotations:
     - name: Upstream Project
       url: https://github.com/jacobalberty/unifi-docker
 apiVersion: v2
-appVersion: v7.1.65
+appVersion: v7.1.66
 dependencies:
   - name: common
     repository: https://charts.bitnami.com/bitnami
@@ -28,9 +28,9 @@ keywords:
   - ubiquiti
   - unifi
   - unifi-poller
-kubeVersion: ">=1.16.0-0"
+kubeVersion: ">=1.19.0-0"
 maintainers:
-  - name: Firmansyah Nainggolan
+  - name: firmansyahn
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
 name: unifi
@@ -39,4 +39,4 @@ sources:
   - https://help.ui.com/hc/en-us/categories/200320654-UniFi-Network
   - https://unpoller.com/
   - https://github.com/unifi-poller/unifi-poller
-version: 0.1.2
+version: 0.1.3

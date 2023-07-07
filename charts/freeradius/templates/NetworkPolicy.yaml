@@ -1,0 +1,52 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+kind: NetworkPolicy
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  ingress:
+    - ports:
+        - port: {{ .Values.containerPorts.auth }}
+          protocol: UDP
+        - port: {{ .Values.containerPorts.acct }}
+          protocol: UDP
+        {{- if .Values.tls.enabled }}
+        - port: {{ .Values.containerPorts.radsec }}
+          protocol: TCP
+        {{- end }}
+        {{- if .Values.metrics.enabled }}
+        - port: {{ .Values.containerPorts.metrics }}
+          protocol: TCP
+        {{- end }}
+        {{- if .Values.sitesEnabled.coa.enabled }}
+        - port: {{ .Values.containerPorts.coa }}
+          protocol: UDP
+        {{- end }}
+        {{- if .Values.sitesEnabled.status.enabled }}
+        - port: {{ .Values.containerPorts.status }}
+          protocol: UDP
+        {{- end }}
+      {{- if not .Values.networkPolicy.allowExternal }}
+      from:
+        - podSelector:
+            matchLabels:
+              {{ include "common.names.fullname" . }}-client: "true"
+        - podSelector:
+            matchLabels: {{- include "common.labels.matchLabels" . | nindent 14 }}
+              app.kubernetes.io/component: freeradius
+        {{- if .Values.networkPolicy.additionalRules }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.additionalRules "context" $) | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}

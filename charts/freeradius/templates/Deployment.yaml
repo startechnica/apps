@@ -2,7 +2,7 @@
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
-  name: {{ template "common.names.fullname" . }}
+  name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: freeradius
@@ -44,7 +44,7 @@ spec:
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-        {{- include "freeradius.imagePullSecrets" . | nindent 6 }}
+      {{- include "freeradius.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -67,28 +67,38 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
+      {{- if or (and .Values.volumePermissions.enabled .Values.persistence.enabled) .Values.initContainers }}
       initContainers:
-        - name: take-data-dir-ownership
-          image: busybox:latest
-          command: 
-            - sh
-            - -c
-            - |-
+        {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
+        - name: volume-permissions
+          image: {{ include "freeradius.volumePermissions.image" . }}
+          imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |
               whoami
-              ls -liah /startechnica/freeradius/mods-enabled
-              ls -liah /startechnica/freeradius/sites-enabled
-              sleep 2
+              mkdir -p /etc/freeradius
+              chown -R "{{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }}" /etc/freeradius
+              chmod 2755 /etc/freeradius
+              ls -liah /etc
+          {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
+          securityContext: {{- omit .Values.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
+          {{- else }}
+          securityContext: {{- .Values.volumePermissions.securityContext | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .Values.volumePermissions.resources }}
+          resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
+          {{- end }}
           volumeMounts:
-            - name: freeradius-mods
-              mountPath: /startechnica/freeradius/mods-enabled
-            - name: freeradius-sites
-              mountPath: /startechnica/freeradius/sites-enabled
-      {{- if .Values.initContainers }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+            - name: raddb
+              mountPath: /etc/freeradius
+        {{- end }}
       {{- end }}
       containers:
         - name: freeradius
-          image: {{ template "freeradius.image" . }}
+          image: {{ include "freeradius.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
@@ -173,7 +183,13 @@ spec:
               command:
                 - sh
                 - -c
-                - >-
+                - |
+                  {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+                  if [[ ! -f "{{ .Values.persistence.mountPath }}/.user_scripts_initialized" ]]; then
+                      echo "Init scripts still not executed. Skipping check"
+                      exit 1
+                  fi
+                  {{- end }}
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.livenessProbe.enabled }}
@@ -202,12 +218,21 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+            {{- if .Values.persistence.enabled }}
             - name: raddb
               mountPath: /etc/freeradius
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
+            {{- end }}
+            {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+            - name: freeradius-config
+              mountPath: /etc/freeradius/radiusd.conf
+              subPath: radiusd.conf
+            {{- end }}
+            {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+            - name: custom-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
@@ -232,10 +257,10 @@ spec:
               mountPath: /etc/freeradius/sites-enabled/tls
               subPath: tls
             - name: freeradius-tls
-              mountPath: /startechnica/freeradius/certs
+              mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             - name: shared-certs
-              mountPath: /startechnica/freeradius/shared-certs
+              mountPath: /opt/startechnica/freeradius/shared-certs
               readOnly: true
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
@@ -253,20 +278,28 @@ spec:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
         - name: temp
           emptyDir: {}
-        {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+        {{- if .Values.persistence.enabled }}
         - name: raddb
           persistentVolumeClaim:
-            claimName: {{ tpl .Values.persistence.existingClaim . }}
+            claimName: {{ include "freeradius.claimName" . }}
         {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
             secretName: {{ include "freeradius.tlsSecretName" . }}
-            # defaultMode: 420
         - name: shared-certs
           emptyDir: {}
+        {{- end }}
+        {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+        - name: freeradius-config
+          configMap:
+            name: {{ include "freeradius.configurationCM" . }}
+        {{- end }}
+        {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+        - name: custom-init-scripts
+          configMap:
+            name: {{ include "freeradius.initdbScriptsCM" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
----

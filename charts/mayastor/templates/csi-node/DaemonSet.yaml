@@ -1,0 +1,202 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  
+  name: {{ include "mayastor.csiNode.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: csi-node
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: csi-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  minReadySeconds: 10
+  template:
+    metadata:
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: csi-node
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      hostNetwork: true
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.csiNode.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.csiNode.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      priorityClassName: {{ printf "%s-critical" (include "mayastor.csiNode.fullname" .) }}
+      serviceAccountName: {{ include "mayastor.csiNode.serviceAccountName" . }}
+      {{- if .Values.csiNode.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.csiNode.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.csiNode.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.csiNode.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      # NOTE: Each container must have mem/cpu limits defined in order to
+      # belong to Guaranteed QoS class, hence can never get evicted in case of
+      # pressure unless they exceed those limits. limits and requests must be
+      # the same.
+      containers:
+        - name: csi-plugin
+          image: {{ include "mayastor.csiNode.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- else }}
+          command:
+            - csi-node
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+          args:
+            - "--csi-socket=$(CSI_SOCKET_ADDRESS)"
+            - "--node-name=$(MY_NODE_NAME)"
+            - "--grpc-endpoint=$(MY_POD_IP):{{ .Values.csiNode.containerPorts.grpc }}"
+            {{- if .Values.csiNode.nvme.io_timeout_enabled }}
+            - "--nvme-core-io-timeout={{ .Values.csiNode.nvme.io_timeout }}"
+            {{- end }}
+            - "--nvme-nr-io-queues=2"
+            - "-v"
+          {{- end }}
+          {{- if .Values.csiNode.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.csiNode.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          env:
+            - name: CSI_SOCKET_ADDRESS
+              value: {{ .Values.csiNode.socketAddress | quote }}
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: RUST_BACKTRACE
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: {{ ternary "debug" (.Values.csiNode.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.csiNode.containerPorts.grpc }}
+              protocol: TCP
+          {{- if .Values.csiNode.resources }}
+          resources: {{ toYaml .Values.csiNode.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: device
+              mountPath: /dev
+            - name: sys
+              mountPath: /sys
+            - name: run-udev
+              mountPath: /run/udev
+            - name: plugin-dir
+              mountPath: /csi
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: "Bidirectional"
+        - name: csi-driver-registrar
+          image: {{ include "mayastor.csiNode.driverRegistrar.image" . }}
+          imagePullPolicy: {{ .Values.csiNode.driverRegistrar.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(CSI_SOCKET_ADDRESS)"
+            - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.driverRegistrar.containerPorts.http }}"
+            - "--v=5"
+          env:
+            - name: CSI_SOCKET_ADDRESS
+              value: {{ .Values.csiNode.socketAddress | quote }}
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.csiNode.livenessprobe.containerPorts.http }}
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          ports:
+            - containerPort: {{ .Values.csiNode.driverRegistrar.containerPorts.http }}
+              name: healthz
+              protocol: TCP
+          {{- if .Values.csiNode.driverRegistrar.resources }}
+          resources: {{ toYaml .Values.csiNode.driverRegistrar.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+        - name: liveness-probe
+          image: {{ include "mayastor.csiNode.livenessprobe.image" . }}
+          imagePullPolicy: {{ .Values.csiNode.livenessprobe.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(CSI_SOCKET_ADDRESS)"
+            - "--http-endpoint=$(MY_POD_IP):{{ .Values.csiNode.livenessprobe.containerPorts.http }}"
+          env:
+            - name: CSI_SOCKET_ADDRESS
+              value: {{ .Values.csiNode.socketAddress | quote }}
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          {{- if .Values.csiNode.livenessprobe.resources }}
+          resources: {{ toYaml .Values.csiNode.livenessprobe.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+      volumes:
+        - name: device
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: sys
+          hostPath:
+            path: /sys
+            type: Directory
+        - name: run-udev
+          hostPath:
+            path: /run/udev
+            type: Directory
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry/
+            type: Directory
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/io.openebs.mayastor/
+            type: DirectoryOrCreate
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory

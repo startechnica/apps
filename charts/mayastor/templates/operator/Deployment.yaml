@@ -1,0 +1,87 @@
+##ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/msp-deployment.yaml
+
+{{- if .Values.operator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mayastor.operator.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: operator
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: operator
+  template:
+    metadata:
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: operator
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: etcd-probe
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 mayastor-etcd 2379
+              do
+                date
+                echo "Waiting for etcd..."
+                sleep 1
+              done
+          {{- if .Values.probe.resources }}
+          resources: {{ toYaml .Values.probe.resources | nindent 12 }}
+          {{- end }}
+      containers:
+        - name: operator
+          image: {{ include "mayastor.operator.image" . }}
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy | quote }}
+          args:
+            - "-e http://{{ include "mayastor.apiRest.fullname" . }}:{{ .Values.apiRest.containerPorts.https }}"
+            - "-n={{ include "common.names.namespace" . }}"
+            - "--request-timeout={{ .Values.operator.requestTimeout | default "5s" }}"
+            - "--interval=30s"
+            {{ if .Values.jaeger.enabled }}
+            - "--jaeger={{ .Values.jaeger.agent.name }}:{{ .Values.jaeger.agent.port }}"
+            {{ end }}
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: RUST_BACKTRACE
+              value: {{ ternary "full" "1" (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+            - name: RUST_LOG
+              value: info,operator_diskpool={{ ternary "debug" (.Values.operator.logLevel) (or .Values.image.debug .Values.diagnosticMode.enabled) | quote }}
+          {{- if .Values.operator.resources }}
+          resources: {{ toYaml .Values.operator.resources | nindent 12 }}
+          {{- end }}
+{{- end }}

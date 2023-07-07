@@ -47,112 +47,192 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Global parameters
 
-| Name                      | Description                                     | Value |
-| ------------------------- | ----------------------------------------------- | ----- |
-| `global.imageRegistry`    | Global Docker image registry                    | `""`  |
-| `global.imagePullSecrets` | Global Docker registry secret names as an array | `[]`  |
+| Name                       | Description                                                                                                             | Value |
+| -------------------------  | ----------------------------------------------------------------------------------------------------------------------- | ----- |
+| `global.imageRegistry`     | Global Docker image registry                                                                                            | `""`  |
+| `global.imagePullSecrets`  | Global Docker registry secret names as an array                                                                         | `[]`  |
+| `global.storageClass`      | Global StorageClass for Persistent Volume(s)                                                                            | `""`  |
+| `global.namespaceOverride` | Override the namespace for resource deployed by the chart, but can itself be overridden by the local namespaceOverride  | `""`  |
 
 
 ### Common parameters
 
-| Name                | Description                                                                                | Value           |
-| ------------------- | ------------------------------------------------------------------------------------------ | --------------- |
-| `nameOverride`      | String to partially override freeradius.fullname template (will maintain the release name) | `""`            |
-| `fullnameOverride`  | String to fully override freeradius.fullname template                                      | `""`            |
-| `kubeVersion`       | Force target Kubernetes version (using Helm capabilities if not set)                       | `""`            |
-| `clusterDomain`     | Kubernetes Cluster Domain                                                                  | `cluster.local` |
-| `extraDeploy`       | Extra objects to deploy (value evaluated as a template)                                    | `[]`            |
-| `commonLabels`      | Add labels to all the deployed resources                                                   | `{}`            |
-| `commonAnnotations` | Add annotations to all the deployed resources                                              | `{}`            |
-
-
+| Name                       | Description                                                                                                       | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- |
+| `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                                              | `""`            |
+| `nameOverride`             | String to partially override common.names.fullname template with a string (will prepend the release name)         | `""`            |
+| `namespaceOverride`        | String to fully override common.names.namespace                                                                   | `""`            |
+| `fullnameOverride`         | String to fully override common.names.fullname template with a string                                             | `""`            |
+| `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
+| `commonLabels`             | Labels to add to all deployed objects                                                                             | `{}`            |
+| `schedulerName`            | Name of the Kubernetes scheduler (other than default)                                                             | `""`            |
+| `clusterDomain`            | Kubernetes DNS Domain name to use                                                                                 | `cluster.local` |
+| `extraDeploy`              | Array of extra objects to deploy with the release (evaluated as a template)                                       | `[]`            |
+| `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                           | `false`         |
+| `diagnosticMode.command`   | Command to override all containers in the deployment                                                              | `[]`            |
+| `diagnosticMode.args`      | Args to override all containers in the deployment                                                                 | `[]`            |
+   
+   
 ### FreeRADIUS parameters
 
-| Name                 | Description                                                          | Value                          |
-| -------------------- | -------------------------------------------------------------------- | -------------------------      |
-| `image.registry`     | FreeRADIUS image registry                                            | `docker.io`                    |
-| `image.repository`   | FreeRADIUS image repository                                          | `freeradius/freeradius-server` |
-| `image.tag`          | FreeRADIUS image tag (immutable tags are recommended)                | `3.2.0`                        |
-| `image.pullPolicy`   | FreeRADIUS image pull policy                                         | `IfNotPresent`                 |
-| `image.pullSecrets`  | Specify docker-registry secret names as an array                     | `[]`                           |
-| `image.debug`        | Set to true if you would like to see extra information on logs       | `false`                        |
-| `hostAliases`        | Deployment pod host aliases                                          | `[]`                           |
-| `command`            | Override default container command (useful when using custom images) | `[]`                           |
-| `args`               | Override default container args (useful when using custom images)    | `[]`                           |
-| `extraEnvVars`       | Extra environment variables to be set on FreeRADIUS containers       | `[]`                           |
-| `extraEnvVarsCM`     | ConfigMap with extra environment variables                           | `""`                           |
-| `extraEnvVarsSecret` | Secret with extra environment variables                              | `""`                           |
-
-
-### FreeRADIUS deployment parameters
-
-| Name                                    | Description                                                                               | Value   |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| `replicaCount`                          | Number of FreeRADIUS replicas to deploy                                                   | `1`     |
-| `podLabels`                             | Additional labels for FreeRADIUS pods                                                     | `{}`    |
-| `podAnnotations`                        | Annotations for FreeRADIUS pods                                                           | `{}`    |
-| `podAffinityPreset`                     | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`       | `""`    |
-| `podAntiAffinityPreset`                 | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`  | `soft`  |
-| `nodeAffinityPreset.type`               | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard` | `""`    |
-| `nodeAffinityPreset.key`                | Node label key to match Ignored if `affinity` is set.                                     | `""`    |
-| `nodeAffinityPreset.values`             | Node label values to match. Ignored if `affinity` is set.                                 | `[]`    |
-| `affinity`                              | Affinity for pod assignment                                                               | `{}`    |
-| `nodeSelector`                          | Node labels for pod assignment. Evaluated as a template.                                  | `{}`    |
-| `tolerations`                           | Tolerations for pod assignment. Evaluated as a template.                                  | `{}`    |
-| `priorityClassName`                     | Priority class name                                                                       | `""`    |
-| `podSecurityContext.enabled`            | Enabled FreeRADIUS pods' Security Context                                                 | `false` |
-| `podSecurityContext.fsGroup`            | Set FreeRADIUS pod's Security Context fsGroup                                             | `101`   |
-| `podSecurityContext.sysctls`            | sysctl settings of the FreeRADIUS pods                                                    | `[]`    |
-| `containerSecurityContext.enabled`      | Enabled FreeRADIUS containers' Security Context                                           | `false` |
-| `containerSecurityContext.runAsUser`    | Set FreeRADIUS container's Security Context runAsUser                                     | `1001`  |
-| `containerSecurityContext.runAsNonRoot` | Set FreeRADIUS container's Security Context runAsNonRoot                                  | `true`  |
-| `containerPorts.auth`                   | Sets auth port inside FreeRADIUS container                                                | `1812`  |
-| `containerPorts.acct`                   | Sets acct port inside FreeRADIUS container                                                | `1813`  |
-| `containerPorts.coa`                    | Sets coa port inside FreeRADIUS container                                                 | `3799`  |
-| `containerPorts.radsec`                 | Sets radsec port inside FreeRADIUS container                                              | `2083`  |
-| `containerPorts.status`                 | Sets status port inside FreeRADIUS container                                              | `18121` |
-| `resources.limits`                      | The resources limits for the FreeRADIUS container                                         | `{}`    |
-| `resources.requests`                    | The requested resources for the FreeRADIUS container                                      | `{}`    |
-| `livenessProbe.enabled`                 | Enable livenessProbe                                                                      | `true`  |
-| `livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                   | `30`    |
-| `livenessProbe.periodSeconds`           | Period seconds for livenessProbe                                                          | `10`    |
-| `livenessProbe.timeoutSeconds`          | Timeout seconds for livenessProbe                                                         | `5`     |
-| `livenessProbe.failureThreshold`        | Failure threshold for livenessProbe                                                       | `6`     |
-| `livenessProbe.successThreshold`        | Success threshold for livenessProbe                                                       | `1`     |
-| `readinessProbe.enabled`                | Enable readinessProbe                                                                     | `true`  |
-| `readinessProbe.initialDelaySeconds`    | Initial delay seconds for readinessProbe                                                  | `5`     |
-| `readinessProbe.periodSeconds`          | Period seconds for readinessProbe                                                         | `5`     |
-| `readinessProbe.timeoutSeconds`         | Timeout seconds for readinessProbe                                                        | `3`     |
-| `readinessProbe.failureThreshold`       | Failure threshold for readinessProbe                                                      | `3`     |
-| `readinessProbe.successThreshold`       | Success threshold for readinessProbe                                                      | `1`     |
-| `customLivenessProbe`                   | Override default liveness probe                                                           | `{}`    |
-| `customReadinessProbe`                  | Override default readiness probe                                                          | `{}`    |
-| `autoscaling.enabled`                   | Enable autoscaling for FreeRADIUS deployment                                              | `false` |
-| `autoscaling.minReplicas`               | Minimum number of replicas to scale back                                                  | `""`    |
-| `autoscaling.maxReplicas`               | Maximum number of replicas to scale out                                                   | `""`    |
-| `autoscaling.targetCPU`                 | Target CPU utilization percentage                                                         | `""`    |
-| `autoscaling.targetMemory`              | Target Memory utilization percentage                                                      | `""`    |
-| `extraVolumes`                          | Array to add extra volumes                                                                | `[]`    |
-| `extraVolumeMounts`                     | Array to add extra mount                                                                  | `[]`    |
-| `serviceAccount.create`                 | Enable creation of ServiceAccount for freeradius pod                                      | `false` |
-| `serviceAccount.name`                   | The name of the ServiceAccount to use.                                                    | `""`    |
-| `serviceAccount.annotations`            | Annotations for service account. Evaluated as a template.                                 | `{}`    |
-| `serviceAccount.autoMount`              | Auto-mount the service account token in the pod                                           | `false` |
-| `sidecars`                              | Sidecar parameters                                                                        | `[]`    |
-| `sidecarSingleProcessNamespace`         | Enable sharing the process namespace with sidecars                                        | `false` |
-| `initContainers`                        | Extra init containers                                                                     | `[]`    |
-| `pdb.create`                            | Created a PodDisruptionBudget                                                             | `false` |
-| `pdb.minAvailable`                      | Min number of pods that must still be available after the eviction                        | `1`     |
-| `pdb.maxUnavailable`                    | Max number of pods that can be unavailable after the eviction                             | `0`     |
+| Name                                          | Description                                                                                                              | Value                          |
+| ----------------------------------------------| -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
+| `image.registry`                              | FreeRADIUS image registry                                                                                                | `docker.io`                    |
+| `image.repository`                            | FreeRADIUS image repository                                                                                              | `freeradius/freeradius-server` |
+| `image.tag`                                   | FreeRADIUS image tag (immutable tags are recommended)                                                                    | `3.2.0`                        |
+| `image.pullPolicy`                            | FreeRADIUS image pull policy                                                                                             | `IfNotPresent`                 |
+| `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
+| `image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
+| `hostAliases`                                 | Deployment pod host aliases                                                                                              | `[]`                           |
+| `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
+| `args`                                        | Override default container args (useful when using custom images)                                                        | `[]`                           |
+| `extraEnvVars`                                | Extra environment variables to be set on FreeRADIUS containers                                                           | `[]`                           |
+| `extraEnvVarsCM`                              | ConfigMap with extra environment variables                                                                               | `""`                           |
+| `extraEnvVarsSecret`                          | Secret with extra environment variables                                                                                  | `""`                           |
+| `service.type`                                | Kubernetes service type                                                                                                  | `ClusterIP`                    |
+| `service.clusterIP`                           | Specific cluster IP when service type is cluster IP. Use `None` for headless service                                     | `""`                           |
+| `service.ports.auth`                          | FreeRADIUS Authentication and Authorization service port                                                                 | `1812`                         |
+| `service.ports.acct`                          | FreeRADIUS Accounting service port                                                                                       | `1813`                         |
+| `service.ports.coa`                           | FreeRADIUS CoA service port                                                                                              | `3799`                         |
+| `service.ports.radsec`                        | FreeRADIUS RadSec service port                                                                                           | `2083`                         |
+| `service.ports.status`                        | FreeRADIUS Status service port                                                                                           | `18121`                        |
+| `service.nodePorts.auth`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.acct`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.coa`                       | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.radsec`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.status`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.extraPorts`                          | Extra ports to expose (normally used with the `sidecar` value)                                                           | `[]`                           |
+| `service.externalIPs`                         | External IP list to use with ClusterIP service type                                                                      | `[]`                           |
+| `service.loadBalancerIP`                      | `loadBalancerIP` if service type is `LoadBalancer`                                                                       | `""`                           |
+| `service.loadBalancerSourceRanges`            | Addresses that are allowed when svc is `LoadBalancer`                                                                    | `[]`                           |
+| `service.externalTrafficPolicy`               | FreeRADIUS service external traffic policy                                                                               | `Cluster`                      |
+| `service.annotations`                         | Additional annotations for FreeRADIUS service                                                                            | `{}`                           |
+| `service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
+| `service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
+| `serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
+| `serviceAccount.name`                         | Name of the service account to use. If not set and create is true, a name is generated using the fullname template.      | `""`                           |
+| `serviceAccount.automountServiceAccountToken` | Automount service account token for the server service account                                                           | `false`                        |
+| `serviceAccount.annotations`                  | Annotations for service account. Evaluated as a template. Only used if `create` is `true`.                               | `{}`                           |
+| `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
+| `extraEnvVars`                                | Array containing extra env vars to configure FreeRADIUS                                                                  | `[]`                           |
+| `extraEnvVarsCM`                              | ConfigMap containing extra env vars to configure FreeRADIUS                                                              | `""`                           |
+| `extraEnvVarsSecret`                          | Secret containing extra env vars to configure FreeRADIUS                                                                 | `""`                           |
+| `rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
+| `podSecurityContext.enabled`                  | Enable security context                                                                                                  | `true`                         |
+| `podSecurityContext.fsGroup`                  | Group ID for the container filesystem                                                                                    | `101`                          |
+| `podSecurityContext.runAsUser`                | User ID for the container                                                                                                | `101`                          |
+| `containerSecurityContext.enabled`            | Enabled FreeRADIUS container Security Context                                                                            | `true`                         |
+| `containerSecurityContext.runAsUser`          | Set FreeRADIUS container Security Context runAsUser                                                                      | `101`                          |
+| `containerSecurityContext.runAsNonRoot`       | Set FreeRADIUS container Security Context runAsNonRoot                                                                   | `true`                         |
+| `tls.enabled`                                 | Enable TLS support for replication traffic                                                                               | `false`                        |
+| `tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
+| `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `""`                           |
+| `tls.certFilename`                            | Certificate filename                                                                                                     | `""`                           |
+| `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
+| `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
+| `configuration`                               | Configuration for the FreeRADIUS server                                                                                  | `""`                           |
+| `configurationConfigMap`                      | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configuration`). The value is evaluated as a template. | `""`                         |
+| `initdbScripts`                               | Specify dictionary of scripts to be run at first boot                                                                    | `{}`                           |
+| `initdbScriptsConfigMap`                      | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                      | `""`                           |
+| `extraFlags`                                  | FreeRADIUS additional command line flags                                                                                 | `""`                           |
+| `replicaCount`                                | Desired number of cluster nodes                                                                                          | `3`                            |
+| `updateStrategy.type`                         | updateStrategy for FreeRADIUS Master StatefulSet                                                                         | `RollingUpdate`                |
+| `podLabels`                                   | Extra labels for FreeRADIUS pods                                                                                         | `{}`                           |
+| `podAnnotations`                              | Annotations for FreeRADIUS  pods                                                                                         | `{}`                           |
+| `podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
+| `podAntiAffinityPreset`                       | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                 | `soft`                         |
+| `nodeAffinityPreset.type`                     | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                | `""`                           |
+| `nodeAffinityPreset.key`                      | Node label key to match. Ignored if `affinity` is set.                                                                   | `""`                           |
+| `nodeAffinityPreset.values`                   | Node label values to match. Ignored if `affinity` is set.                                                                | `[]`                           |
+| `affinity`                                    | Affinity for pod assignment                                                                                              | `{}`                           |
+| `nodeSelector`                                | Node labels for pod assignment                                                                                           | `{}`                           |
+| `tolerations`                                 | Tolerations for pod assignment                                                                                           | `[]`                           |
+| `topologySpreadConstraints`                   | Topology Spread Constraints for pods assignment                                                                          | `[]`                           |
+| `lifecycleHooks`                              | for the galera container(s) to automate configuration before or after startup                                            | `{}`                           |
+| `containerPorts.auth`                         | Auth database container port                                                                                             | `1812`                         |
+| `containerPorts.acct`                         | Acct cluster container port                                                                                              | `1813`                         |
+| `containerPorts.coa`                          | CoA container port                                                                                                       | `3799`                         |
+| `containerPorts.radsec`                       | RadSec container port                                                                                                    | `2083`                         |
+| `containerPorts.status`                       | Status container port                                                                                                    | `18121`                        |
+| `persistence.enabled`                         | Enable persistence using PVC                                                                                             | `true`                         |
+| `persistence.existingClaim`                   | Provide an existing `PersistentVolumeClaim`                                                                              | `""`                           |
+| `persistence.subPath`                         | Subdirectory of the volume to mount                                                                                      | `""`                           |
+| `persistence.mountPath`                       | Path to mount the volume at                                                                                              | `/etc/freeradius`              |
+| `persistence.selector`                        | Selector to match an existing Persistent Volume (this value is evaluated as a template)                                  | `{}`                           |
+| `persistence.storageClass`                    | Persistent Volume Storage Class                                                                                          | `""`                           |
+| `persistence.annotations`                     | Persistent Volume Claim annotations                                                                                      | `{}`                           |
+| `persistence.labels`                          | Persistent Volume Claim Labels                                                                                           | `{}`                           |
+| `persistence.accessModes`                     | Persistent Volume Access Modes                                                                                           | `["ReadWriteOnce"]`            |
+| `persistence.size`                            | Persistent Volume Size                                                                                                   | `8Gi`                          |
+| `priorityClassName`                           | Priority Class Name for Statefulset                                                                                      | `""`                           |
+| `initContainers`                              | Additional init containers (this value is evaluated as a template)                                                       | `[]`                           |
+| `sidecars`                                    | Add additional sidecar containers (this value is evaluated as a template)                                                | `[]`                           |
+| `extraVolumes`                                | Extra volumes                                                                                                            | `[]`                           |
+| `extraVolumeMounts`                           | Mount extra volume(s)                                                                                                    | `[]`                           |
+| `resources.limits`                            | The resources limits for the container                                                                                   | `{}`                           |
+| `resources.requests`                          | The requested resources for the container                                                                                | `{}`                           |
+| `livenessProbe.enabled`                       | Turn on and off liveness probe                                                                                           | `true`                         |
+| `livenessProbe.initialDelaySeconds`           | Delay before liveness probe is initiated                                                                                 | `120`                          |
+| `livenessProbe.periodSeconds`                 | How often to perform the probe                                                                                           | `10`                           |
+| `livenessProbe.timeoutSeconds`                | When the probe times out                                                                                                 | `1`                            |
+| `livenessProbe.failureThreshold`              | Minimum consecutive failures for the probe                                                                               | `3`                            |
+| `livenessProbe.successThreshold`              | Minimum consecutive successes for the probe                                                                              | `1`                            |
+| `readinessProbe.enabled`                      | Turn on and off readiness probe                                                                                          | `true`                         |
+| `readinessProbe.initialDelaySeconds`          | Delay before readiness probe is initiated                                                                                | `30`                           |
+| `readinessProbe.periodSeconds`                | How often to perform the probe                                                                                           | `10`                           |
+| `readinessProbe.timeoutSeconds`               | When the probe times out                                                                                                 | `1`                            |
+| `readinessProbe.failureThreshold`             | Minimum consecutive failures for the probe                                                                               | `3`                            |
+| `readinessProbe.successThreshold`             | Minimum consecutive successes for the probe                                                                              | `1`                            |
+| `startupProbe.enabled`                        | Turn on and off startup probe                                                                                            | `false`                        |
+| `startupProbe.initialDelaySeconds`            | Delay before startup probe is initiated                                                                                  | `120`                          |
+| `startupProbe.periodSeconds`                  | How often to perform the probe                                                                                           | `10`                           |
+| `startupProbe.timeoutSeconds`                 | When the probe times out                                                                                                 | `1`                            |
+| `startupProbe.failureThreshold`               | Minimum consecutive failures for the probe                                                                               | `48`                           |
+| `startupProbe.successThreshold`               | Minimum consecutive successes for the probe                                                                              | `1`                            |
+| `customStartupProbe`                          | Custom liveness probe for the Web component                                                                              | `{}`                           |
+| `customLivenessProbe`                         | Custom liveness probe for the Web component                                                                              | `{}`                           |
+| `customReadinessProbe`                        | Custom rediness probe for the Web component                                                                              | `{}`                           |
+| `podDisruptionBudget.create`                  | Specifies whether a Pod disruption budget should be created                                                              | `false`                        |
+| `podDisruptionBudget.minAvailable`            | Minimum number / percentage of pods that should remain scheduled                                                         | `1`                            |
+| `podDisruptionBudget.maxUnavailable`          | Maximum number / percentage of pods that may be made unavailable                                                         | `""`                           |
+| `metrics.enabled`                             | Start a side-car prometheus exporter                                                                                     | `false`                        |
+| `metrics.image.registry`                      | FreeRADIUS Prometheus exporter image registry                                                                            | `""`                           |
+| `metrics.image.repository`                    | FreeRADIUS Prometheus exporter image repository                                                                          | `""`                           |
+| `metrics.image.tag`                           | FreeRADIUS Prometheus exporter image tag (immutable tags are recommended)                                                | `""`                           |
+| `metrics.image.pullPolicy`                    | FreeRADIUS Prometheus exporter image pull policy                                                                         | `IfNotPresent`                 |
+| `metrics.image.pullSecrets`                   | FreeRADIUS Prometheus exporter image pull secrets                                                                        | `[]`                           |
+| `metrics.extraFlags`                          | FreeRADIUS Prometheus exporter additional command line flags                                                             | `[]`                           |
+| `metrics.resources.limits`                    | The resources limits for the container                                                                                   | `{}`                           |
+| `metrics.resources.requests`                  | The requested resources for the container                                                                                | `{}`                           |
+| `metrics.service.type`                        | Prometheus exporter service type                                                                                         | `ClusterIP`                    |
+| `metrics.service.port`                        | Prometheus exporter service port                                                                                         | `9104`                         |
+| `metrics.service.annotations`                 | Prometheus exporter service annotations                                                                                  | `{}`                           |
+| `metrics.service.loadBalancerIP`              | Load Balancer IP if the Prometheus metrics server type is `LoadBalancer`                                                 | `""`                           |
+| `metrics.service.clusterIP`                   | Prometheus metrics service Cluster IP                                                                                    | `""`                           |
+| `metrics.service.loadBalancerSourceRanges`    | Prometheus metrics service Load Balancer sources                                                                         | `[]`                           |
+| `metrics.service.externalTrafficPolicy`       | Prometheus metrics service external traffic policy                                                                       | `Cluster`                      |
+| `metrics.serviceMonitor.enabled`              | if `true`, creates a Prometheus Operator ServiceMonitor (also requires `metrics.enabled` to be `true`)                   | `false`                        |
+| `metrics.serviceMonitor.namespace`            | Optional namespace which Prometheus is running in                                                                        | `""`                           |
+| `metrics.serviceMonitor.jobLabel`             | The name of the label on the target service to use as the job name in prometheus.                                        | `""`                           |
+| `metrics.serviceMonitor.interval`             | How frequently to scrape metrics (use by default, falling back to Prometheus' default)                                   | `""`                           |
+| `metrics.serviceMonitor.scrapeTimeout`        | Timeout after which the scrape is ended                                                                                  | `""`                           |
+| `metrics.serviceMonitor.selector`             | ServiceMonitor selector labels                                                                                           | `{}`                           |
+| `metrics.serviceMonitor.relabelings`          | RelabelConfigs to apply to samples before scraping                                                                       | `[]`                           |
+| `metrics.serviceMonitor.metricRelabelings`    | MetricRelabelConfigs to apply to samples before ingestion                                                                | `[]`                           |
+| `metrics.serviceMonitor.honorLabels`          | honorLabels chooses the metric's labels on collisions with target labels                                                 | `false`                        |
+| `metrics.serviceMonitor.labels`               | ServiceMonitor extra labels                                                                                              | `{}`                           |
+| `metrics.prometheusRules.enabled`             | if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)  | `false`                   |
+| `metrics.prometheusRules.additionalLabels`    | Additional labels to add to the PrometheusRule so it is picked up by the operator                                        | `{}`                           |
+| `metrics.prometheusRules.rules`               | PrometheusRule rules to configure                                                                                                                                                             | `{}`                      |
 
 
 ### Custom FreeRADIUS application parameters
 
-| Name                                       | Description                                                                                       | Value             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------- |
-| `modsEnabled.sql.enabled`                  |                                                                                                   | `false`            |
-| `sitesEnabled.status.port`                 | Git image registry                                                                                | `18121`           |
-| `sitesEnabled.status.secret`               | Git image repository                                                                              | `adminsecret`     |
+| Name                                       | Description                                                                     | Value             |
+| ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
+| `modsEnabled.sql.enabled`                  | Enable FreeRADIUS SQL module                                                    | `false`           |
+| `sitesEnabled.status.port`                 | FreeRADIUS status port                                                          | `18121`           |
+| `sitesEnabled.status.secret`               | FreRADIUS status secret                                                         | `adminsecret`     |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,

@@ -4,19 +4,15 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ include "common.names.fullname" . }}
-  {{- if .Values.metrics.serviceMonitor.namespace }}
-  namespace: {{ .Values.metrics.serviceMonitor.namespace | quote }}
-  {{- else }}
-  namespace: {{ .Release.Namespace | quote }}
-  {{- end }}
+  namespace: {{ include "unifi.serviceMonitor.namespace" . }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
     {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
     {{- if .Values.metrics.serviceMonitor.labels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.labels "context" $) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.labels "context" $) | nindent 4 }}
     {{- end }}
-  app.kubernetes.io/component: metrics
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -26,7 +22,7 @@ spec:
     matchLabels: {{ include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: metrics
       {{- if .Values.metrics.serviceMonitor.selector }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
       {{- end }}
   endpoints:
     - port: metrics
@@ -48,6 +44,6 @@ spec:
       {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ .Release.Namespace | quote }}
+      - {{ include "common.names.namespace" . | quote }}
 {{- end }}
 {{- end }}

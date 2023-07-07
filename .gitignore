@@ -10,7 +10,7 @@
 .hg/
 .hgignore
 .svn/
-.vscode/
+/.vscode
 # Common backup files
 *.swp
 *.bak

@@ -1,0 +1,176 @@
+## ref: https://raw.githubusercontent.com/openebs/mayastor-control-plane/master/deploy/csi-deployment.yaml
+
+{{- if .Values.csiController.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mayastor.csiController.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: csi-controller
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: csi-controller
+  template:
+    metadata:
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: csi-controller
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      hostNetwork: true
+      {{- include "mayastor.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.ioEngine.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.ioEngine.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      priorityClassName: {{ printf "%s-critical" (include "mayastor.csiController.fullname" .) }}
+      serviceAccountName: {{ include "mayastor.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: api-rest-probe
+          image: {{ include "mayastor.probe.image" . }}
+          command:
+            - sh
+          args:
+            - -c
+            - |
+              trap "exit 1" TERM
+              until nc -vzw 5 {{ include "mayastor.apiRest.fullname" . }} {{ .Values.apiRest.service.ports.https }}
+              do
+                date
+                echo "$(date) Waiting for REST API endpoint to become available"
+                sleep 1
+              done
+      containers:
+        - name: csi-provisioner
+          image: {{ include "mayastor.csiController.provisioner.image" . }}
+          imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--feature-gates=Topology=true"
+            - "--strict-topology=false"
+            - "--default-fstype=ext4"
+            - "--v=5"
+            {{- if .Values.csiController.attacher.metrics.enabled }}
+            - "--http-endpoint=:{{ .Values.csiController.attacher.containerPorts.metrics }}"
+            {{- end }}
+          env:
+            - name: ADDRESS
+              value: {{ .Values.csiController.csiSocketAddress | quote }}
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: csi-provisioner
+              containerPort: {{ .Values.csiController.attacher.containerPorts.metrics }}
+              protocol: TCP
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- if .Values.csiController.attacher.enabled }}
+        - name: csi-attacher
+          image: {{ include "mayastor.csiController.attacher.image" . }}
+          imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--v=5"
+          env:
+            - name: ADDRESS
+              value: {{ .Values.csiController.csiSocketAddress | quote }}
+            - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
+              value: full
+              {{- else }}
+              value: "1"
+              {{- end }}
+            - name: RUST_LOG
+              value: {{ .Values.csiController.logLevel }}
+          {{- if .Values.csiController.attacher.resources }}
+          resources: {{ toYaml .Values.csiController.attacher.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- end }}
+        {{- if .Values.csiController.healthMonitor.enabled }}
+        - name: csi-health-monitor
+          image: {{ include "mayastor.csiController.healthMonitor.image" . }}
+          imagePullPolicy: {{ .Values.csiController.healthMonitor.image.pullPolicy | quote }}
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--v=5"
+          env:
+            - name: ADDRESS
+              value: {{ .Values.csiController.csiSocketAddress | quote }}
+            - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
+              value: full
+              {{- else }}
+              value: full
+              {{- end }}
+            - name: RUST_LOG
+              value: {{ .Values.csiController.logLevel }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- end }}
+        - name: csi-controller
+          image: {{ include "mayastor.csiController.image" . }}
+          imagePullPolicy: {{ .Values.csiController.image.pullPolicy | quote }}
+          args:
+            - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
+            - "--rest-endpoint=http://{{ include "mayastor.apiRest.fullname" . }}:{{ .Values.apiRest.service.ports.https }}"
+            {{- range $key, $val := .Values.ioEngine.nodeSelector }}
+            - "--io-engine-selector={{ $key }}:{{ $val }}"
+            {{- end }}
+          env:
+            - name: RUST_BACKTRACE
+              {{- if .Values.diagnosticMode.enabled }}
+              value: full
+              {{- else }}
+              value: full
+              {{- end }}
+            - name: RUST_LOG
+              value: {{ .Values.csiController.logLevel }}
+          {{- if .Values.csiController.resources }}
+          resources: {{ toYaml .Values.csiController.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+      volumes:
+        - name: socket-dir
+          emptyDir: {}
+{{- end }}
