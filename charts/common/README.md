@@ -6,8 +6,8 @@ A [Helm Library Chart](https://helm.sh/docs/topics/library_charts/#helm) for gro
 
 ```yaml
 dependencies:
-  - name: common
-    version: x.x.x
+  - name: st-common
+    version: "*"
     repository: https://startechnica.github.io/apps
 ```
 
@@ -47,7 +47,7 @@ The following table lists the helpers available in the library which are scoped 
 ## Example of use
 
 ```yaml
-{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
+{{- if (include "common.capabilities.istioNetworking.apiVersion" .) }}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:
