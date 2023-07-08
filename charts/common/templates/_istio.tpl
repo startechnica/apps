@@ -29,7 +29,9 @@
 
 {{/* Return the appropriate apiVersion for Istio Security. */}}
 {{- define "common.capabilities.istioSecurity.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "security.istio.io/v1beta1" -}}
+{{- if .Capabilities.APIVersions.Has "security.istio.io/v1" -}}
+  {{- print "security.istio.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "security.istio.io/v1beta1" -}}
   {{- print "security.istio.io/v1beta1" -}}
 {{- else -}}
   {{- false -}}
