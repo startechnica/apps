@@ -149,11 +149,11 @@ service:
   ## @param service.type Adminer Kubernetes service type
   ##
   type: ClusterIP
-  ## @param service.ports.auth Adminer Kubernetes service port
+  ## @param service.ports.http Adminer Kubernetes service port
   ##
   ports:
     http: 8080
-  ## @param service.nodePorts.mysql Adminer Kubernetes service node port
+  ## @param service.nodePorts.http Adminer Kubernetes service node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
   nodePorts:
