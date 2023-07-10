@@ -5,14 +5,20 @@ metadata:
   name: {{ $gateway.name }}
   namespace: {{ include "common.names.namespace" . | quote }}
   annotations:
-    {{- range $key, $val := $gateway.serviceAnnotations }}
-    {{ $key }}: {{ $val | quote }}
+    {{- if .Values.commonAnnotations }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
     {{- end }}
-  labels:
+    {{- if $gateway.service.annotations }}
+      {{- include "common.tplvalues.render" ( dict "value" $gateway.service.annotations "context" $) | nindent 4 }}
+    {{- end }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
     release: {{ .Release.Name }}
-    istio.io/rev: {{ .Values.revision | default "default" }}
+    istio.io/rev: {{ $gateway.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: "IngressGateways"
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
 spec:
   type: {{ $gateway.service.type }}
   {{- if and $gateway.service.clusterIP (eq $gateway.service.type "ClusterIP") }}
