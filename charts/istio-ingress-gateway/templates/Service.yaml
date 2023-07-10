@@ -63,10 +63,6 @@ spec:
       nodePort: null
       {{- end }}
     {{- end }}
-    {{- range $app := $gateway.ingressPorts }}
-    - name: {{ $app.name }}
-      port: {{ $app.port }}
-    {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
   {{ $gateway.labels | toYaml | indent 4 }}
