@@ -556,6 +556,29 @@ gateways:
     ##
     extraEnvVarsSecret: ""
 
+    ## @param gateways.$gateway.podAffinityPreset Pod affinity preset. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAffinityPreset: ""
+    ## @param gateways.$gateway.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAntiAffinityPreset: soft
+    ## Node affinity preset
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+    ## @param gateways.$gateway.nodeAffinityPreset.type Node affinity preset type. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
+    ## @param gateways.$gateway.nodeAffinityPreset.key Node label key to match. Ignored if `gateways.$gateway.affinity` is set
+    ## @param gateways.$gateway.nodeAffinityPreset.values Node label values to match. Ignored if `gateways.$gateway.affinity` is set
+    ##
+    nodeAffinityPreset:
+      type: ""
+      key: ""
+      ## E.g.
+      ## values:
+      ##   - e2e-az1
+      ##   - e2e-az2
+      ##
+      values: []
     ## @param affinity Affinity for Adminer pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
     ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
