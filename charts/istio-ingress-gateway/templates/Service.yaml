@@ -1,0 +1,69 @@
+{{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $gateway.name }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  annotations:
+    {{- range $key, $val := $gateway.serviceAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  labels:
+{{ $gateway.labels | toYaml | indent 4 }}
+    release: {{ .Release.Name }}
+    istio.io/rev: {{ .Values.revision | default "default" }}
+    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
+    operator.istio.io/component: "IngressGateways"
+spec:
+  type: {{ $gateway.service.type }}
+  {{- if and $gateway.service.clusterIP (eq $gateway.service.type "ClusterIP") }}
+  clusterIP: {{ $gateway.service.clusterIP }}
+  {{- end }}
+  {{- if and $gateway.service.externalTrafficPolicy (or (eq $gateway.service.type "LoadBalancer") (eq $gateway.service.type "NodePort")) }}
+  externalTrafficPolicy: {{ $gateway.service.externalTrafficPolicy | quote }}
+  {{- end }}
+  ipFamilyPolicy: {{ $gateway.service.ipFamilyPolicy }}
+  {{- if and (eq $gateway.service.type "LoadBalancer") (not (empty $gateway.service.loadBalancerClass)) }}
+  loadBalancerClass: {{ $gateway.service.loadBalancerClass }}
+  {{- end }}
+  {{- if (and (eq $gateway.service.type "LoadBalancer") (not (empty $gateway.service.loadBalancerIP))) }}
+  loadBalancerIP: {{ $gateway.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq $gateway.service.type "LoadBalancer") (not (empty $gateway.service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ $gateway.service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if $gateway.service.sessionAffinity }}
+  sessionAffinity: {{ $gateway.service.sessionAffinity }}
+  {{- end }}
+  {{- if $gateway.service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" $gateway.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  selector:
+{{ $gateway.labels | toYaml | indent 4 }}
+  ports:
+  {{- if $gateway.networkGateway }}
+  - name: status-port
+    port: 15021
+    targetPort: 15021
+  - name: tls
+    port: 15443
+    targetPort: 15443
+  - name: tls-istiod
+    port: 15012
+    targetPort: 15012
+  - name: tls-webhook
+    port: 15017
+    targetPort: 15017
+  {{- else }}
+    {{- range $key, $val := $gateway.ports }}
+    -
+      {{- range $pkey, $pval := $val }}
+      {{ $pkey}}: {{ $pval }}
+      {{- end }}
+    {{- end }}
+  {{ range $app := $gateway.ingressPorts }}
+    - name: {{ $app.name }}
+      port: {{ $app.port }}
+  {{- end }}
+  {{- end }}
+---

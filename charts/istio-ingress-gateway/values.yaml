@@ -229,6 +229,65 @@ gateways:
       name: https
       protocol: TCP
 
+    ## @section Traffic Exposure Parameters
+
+    ## Istio Ingress Gateway service parameters
+    ##
+    service:
+      ## @param service.type Istio Ingress Gateway Kubernetes service type
+      ##
+      type: LoadBalancer
+      ## @param service.ports.http Istio Ingress Gateway Kubernetes service port
+      ##
+      ports:
+        http: 8080
+      ## @param service.nodePorts.http Istio Ingress Gateway Kubernetes service node port
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      ##
+      nodePorts:
+        http: ""
+      ## @param service.clusterIP Istio Ingress Gateway Kubernetes service clusterIP IP
+      ##
+      clusterIP: ""
+      ## @param service.loadBalancerIP Istio Ingress Gateway loadBalancerIP if service type is `LoadBalancer`
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+      ##
+      loadBalancerIP: ""
+      ## @param service.ipFamilyPolicy Istio Ingress Gateway Kubernetes service ipFamilyPolicy policy
+      ##
+      ipFamilyPolicy: SingleStack
+      ## @param service.externalTrafficPolicy Enable client source IP preservation
+      ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+      ##
+      externalTrafficPolicy: Cluster
+      ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+      ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+      ##
+      loadBalancerClass: ""
+      ## @param service.loadBalancerSourceRanges Address that are allowed when Istio Ingress Gateway service is LoadBalancer
+      ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+      ## E.g.
+      ## loadBalancerSourceRanges:
+      ##   - 10.10.10.0/24
+      ##
+      loadBalancerSourceRanges: []
+      ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+      ##
+      extraPorts: []
+      ## @param service.annotations Provide any additional annotations which may be required
+      ##
+      annotations: {}
+      ## @param service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+      ## If "ClientIP", consecutive client requests will be directed to the same Pod
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+      ##
+      sessionAffinity: None
+      ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
+      ## sessionAffinityConfig:
+      ##   clientIP:
+      ##     timeoutSeconds: 300
+      sessionAffinityConfig: {}
+
     # Scalability tuning
     # replicaCount: 1
     rollingMaxSurge: 100%
@@ -248,17 +307,15 @@ gateways:
         cpu: 2000m
         memory: 1024Mi
 
-    loadBalancerIP: ""
-    loadBalancerSourceRanges: []
-    serviceAnnotations: {}
-
     # To generate an internal load balancer:
     # --set serviceAnnotations.cloud.google.com/load-balancer-type=internal
     #serviceAnnotations:
     #    cloud.google.com/load-balancer-type: "internal"
 
     podAnnotations: {}
-    type: LoadBalancer #change to NodePort, ClusterIP or LoadBalancer if need be
+
+    # If specified, the gateway will act as a network gateway for the given network.
+    networkGateway: ""
 
     ##############
     secretVolumes:
@@ -268,9 +325,6 @@ gateways:
     - name: ingressgateway-ca-certs
       secretName: istio-ingressgateway-ca-certs
       mountPath: /etc/istio/ingressgateway-ca-certs
-
-    customService: false
-    externalTrafficPolicy: ""
 
     ingressPorts: []
     additionalContainers: []
