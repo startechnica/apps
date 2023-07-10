@@ -447,7 +447,7 @@ gateways:
     ## @param containerSecurityContext.runAsNonRoot Set Controller container's Security Context runAsNonRoot
     ##
     containerSecurityContext:
-      enabled: enable
+      enabled: true
       allowPrivilegeEscalation: false
       capabilities:
         drop:
