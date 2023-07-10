@@ -65,6 +65,5 @@ spec:
     {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
-  {{ $gateway.labels | toYaml | indent 4 }}
-  {{- end }}
+    istio: {{ $gateway.name }}
 ---
