@@ -295,18 +295,15 @@ meshConfig:
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
   ##
   pdb:
-    ## @param primary.pdb.create Enable/disable a Pod Disruption Budget creation for Istio Gateway pods
+    ## @param pdb.create Enable/disable a Pod Disruption Budget creation for Istio Gateway pods
     ##
     create: false
-    ## @param primary.pdb.minAvailable Minimum number/percentage of Istio Gateway pods that must still be available after the eviction
+    ## @param pdb.minAvailable Minimum number/percentage of Istio Gateway pods that must still be available after the eviction
     ##
     minAvailable: 1
-    ## @param primary.pdb.maxUnavailable Maximum number/percentage of Istio Gateway pods that can be unavailable after the eviction
+    ## @param pdb.maxUnavailable Maximum number/percentage of Istio Gateway pods that can be unavailable after the eviction
     ##
     maxUnavailable: ""
-  ## @param primary.revisionHistoryLimit Maximum number of revisions that will be maintained in the StatefulSet
-  ##
-  revisionHistoryLimit: 10
 
 ## @section Other Parameters
 ##
