@@ -87,10 +87,59 @@ spec:
             {{- if $gateway.extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" $gateway.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
+          {{- if or $gateway.extraEnvVarsCM $gateway.extraEnvVarsSecret }}
+          envFrom:
+            {{- if $gateway.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" $gateway.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if $gateway.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" $gateway.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- end }}
           ports:
             - containerPort: 15090
               protocol: TCP
               name: http-envoy-prom
+          {{- if $gateway.customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if $gateway.startupProbe.enabled }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit $gateway.startupProbe "enabled") "context" $) | nindent 12 }}
+            tcpSocket:
+              port: http
+          {{- end }}
+          {{- if $gateway.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if $gateway.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: {{ $gateway.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ $gateway.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ $gateway.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ $gateway.livenessProbe.failureThreshold }}
+            successThreshold: {{ $gateway.livenessProbe.successThreshold }}
+          {{- end }}
+          {{- if $gateway.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if $gateway.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: {{ $gateway.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ $gateway.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ $gateway.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ $gateway.readinessProbe.failureThreshold }}
+            successThreshold: {{ $gateway.readinessProbe.successThreshold }}
+          {{- end }}
+          {{- end }}
           {{- if $gateway.resources }}
           resources: {{- toYaml $gateway.resources | nindent 12 }}
           {{- end }}
+          volumeMounts:
+            {{- if .Values.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
