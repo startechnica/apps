@@ -1,6 +1,6 @@
 {{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
-kind: "Deployment"
+kind: Deployment
 metadata:
   name: {{ $gateway.name }}
   namespace: {{ include "common.names.namespace" . | quote }}
@@ -127,19 +127,53 @@ spec:
           {{- else if $gateway.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: /login
-              port: http
+              path: {{ $gateway.readinessProbe.httpGet.path }}
+              port: {{ $gateway.readinessProbe.httpGet.port }}
+              scheme: {{ $gateway.readinessProbe.httpGet.scheme }}
             initialDelaySeconds: {{ $gateway.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ $gateway.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ $gateway.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ $gateway.readinessProbe.failureThreshold }}
             successThreshold: {{ $gateway.readinessProbe.successThreshold }}
           {{- end }}
-          {{- end }}
           {{- if $gateway.resources }}
           resources: {{- toYaml $gateway.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
+            - name: workload-socket
+              mountPath: /var/run/secrets/workload-spiffe-uds
+            - name: credential-socket
+              mountPath: /var/run/secrets/credential-uds
+            - name: workload-certs
+              mountPath: /var/run/secrets/workload-spiffe-credentials
+            - name: istio-envoy
+              mountPath: /etc/istio/proxy
+            - name: config-volume
+              mountPath: /etc/istio/config
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
+      volumes:
+        - name: workload-socket
+          emptyDir: {}
+        - name: credential-socket
+          emptyDir: {}
+        - name: workload-certs
+          emptyDir: {}
+        - name: istio-envoy
+          emptyDir: {}
+        - name: istio-data
+          emptyDir: {}
+        - name: podinfo
+          downwardAPI:
+            items:
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+              - path: "annotations"
+                fieldRef:
+                  fieldPath: metadata.annotations
+        - name: config-volume
+          configMap:
+            name: istio{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+            optional: true
