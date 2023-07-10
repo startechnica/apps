@@ -9,7 +9,6 @@ metadata:
     {{ $key }}: {{ $val | quote }}
     {{- end }}
   labels:
-{{ $gateway.labels | toYaml | indent 4 }}
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
@@ -38,32 +37,38 @@ spec:
   {{- if $gateway.service.sessionAffinityConfig }}
   sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" $gateway.service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
-  selector:
-{{ $gateway.labels | toYaml | indent 4 }}
   ports:
   {{- if $gateway.networkGateway }}
-  - name: status-port
-    port: 15021
-    targetPort: 15021
-  - name: tls
-    port: 15443
-    targetPort: 15443
-  - name: tls-istiod
-    port: 15012
-    targetPort: 15012
-  - name: tls-webhook
-    port: 15017
-    targetPort: 15017
+    - name: status-port
+      port: 15021
+      targetPort: 15021
+    - name: tls
+      port: 15443
+      targetPort: 15443
+    - name: tls-istiod
+      port: 15012
+      targetPort: 15012
+    - name: tls-webhook
+      port: 15017
+      targetPort: 15017
   {{- else }}
-    {{- range $key, $val := $gateway.ports }}
-    -
-      {{- range $pkey, $pval := $val }}
-      {{ $pkey}}: {{ $pval }}
+    {{- range $key, $val := $gateway.service.ports }}
+    - name: {{ $key }}
+      port: {{ $val }}
+      protocol: TCP
+      targetPort: {{ $gateway.containerPorts.$val }}
+      {{- if (and (or (eq $gateway.service.type "NodePort") (eq $gateway.service.type "LoadBalancer")) (coalesce $gateway.service.nodePorts.http $gateway.service.nodePort)) }}
+      nodePort: {{ coalesce $gateway.service.nodePorts.http $gateway.service.nodePort }}
+      {{- else if eq $gateway.service.type "ClusterIP" }}
+      nodePort: null
       {{- end }}
     {{- end }}
-  {{ range $app := $gateway.ingressPorts }}
+    {{- range $app := $gateway.ingressPorts }}
     - name: {{ $app.name }}
       port: {{ $app.port }}
+    {{- end }}
   {{- end }}
+  selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
+  {{ $gateway.labels | toYaml | indent 4 }}
   {{- end }}
 ---

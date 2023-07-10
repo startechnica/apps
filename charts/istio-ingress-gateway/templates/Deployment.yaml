@@ -1,0 +1,111 @@
+{{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: "Deployment"
+metadata:
+  name: {{ $gateway.name }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    istio: {{ $gateway.name }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      istio: {{ $gateway.name }}
+  replicas: {{ $gateway.replicaCount }}``
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: gateway
+        {{- if $gateway.podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" $gateway.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        sidecar.istio.io/inject: "true"
+        {{- with $gateway.revision }}
+        istio.io/rev: {{ . }}
+        {{- end }}
+        {{- if $gateway.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" $gateway.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "gateway.imagePullSecrets" . | nindent 6 }}
+      {{- if $gateway.podSecurityContext.enabled }}
+      securityContext: {{- omit $gateway.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+            {{- if $gateway.schedulerName }}
+      schedulerName: {{ $gateway.schedulerName }}
+      {{- end }}
+      {{- if $gateway.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" $gateway.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if $gateway.priorityClassName }}
+      priorityClassName: {{ $gateway.priorityClassName | quote }}
+      {{- end }}
+      {{- if $gateway.runtimeClassName }}
+      runtimeClassName: {{ $gateway.runtimeClassName }}
+      {{- end }}
+      {{- if $gateway.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" $gateway.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" $gateway.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" $gateway.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" $gateway.nodeAffinityPreset.type "key" $gateway.nodeAffinityPreset.key "values" $gateway.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if $gateway.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" $gateway.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $gateway.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" $gateway.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $gateway.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" $gateway.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      initContainers:
+        {{- if $gateway.initContainers }}
+        {{- include "common.tplvalues.render" (dict "value" $gateway.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+      serviceAccountName: {{ template "gateway.serviceAccountName" . }}
+      containers:
+        - name: istio-proxy
+          # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
+          image: auto
+          imagePullPolicy: {{ $gateway.image.pullPolicy | quote }}
+          {{- if $gateway.containerSecurityContext.enabled }}
+          securityContext: {{- omit $gateway.controller.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          env:
+            {{- with $gateway.networkGateway }}
+            - name: ISTIO_META_REQUESTED_NETWORK_VIEW
+              value: "{{{{.}}}}"
+            {{- end }}
+            {{- if $gateway.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.controller.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: 15090
+              protocol: TCP
+              name: http-envoy-prom
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

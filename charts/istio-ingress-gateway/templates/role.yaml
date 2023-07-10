@@ -6,7 +6,7 @@ metadata:
   namespace: {{ include "common.names.namespace" . | quote }}
   labels:
     release: {{ .Release.Name }}
-    istio.io/rev: {{ .Values.revision | default "default" }}
+    istio.io/rev: {{ $gateway.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: "IngressGateways"
 rules:
