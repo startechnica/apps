@@ -82,7 +82,7 @@ spec:
           env:
             {{- with $gateway.networkGateway }}
             - name: ISTIO_META_REQUESTED_NETWORK_VIEW
-              value: "{{{{.}}}}"
+              value: "{{{.}}}"
             {{- end }}
             {{- if $gateway.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.controller.extraEnvVars "context" $) | nindent 12 }}
