@@ -71,7 +71,7 @@ spec:
         {{- if $gateway.initContainers }}
         {{- include "common.tplvalues.render" (dict "value" $gateway.initContainers "context" $) | nindent 8 }}
         {{- end }}
-      serviceAccountName: {{ template "gateway.serviceAccountName" . }}
+      serviceAccountName: {{ $gateway.name }}-sa
       containers:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
