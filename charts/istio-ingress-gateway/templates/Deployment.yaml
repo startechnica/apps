@@ -16,7 +16,7 @@ spec:
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       istio: {{ $gateway.name }}
-  replicas: {{ $gateway.replicaCount }}``
+  replicas: {{ $gateway.replicaCount }}
   template:
     metadata:
       annotations:
