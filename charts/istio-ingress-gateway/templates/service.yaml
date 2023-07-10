@@ -24,7 +24,7 @@ spec:
 {{ toYaml $gateway.loadBalancerSourceRanges | indent 4 }}
 {{- end }}
 {{- if $gateway.externalTrafficPolicy }}
-  externalTrafficPolicy: {{$gateway.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ $gateway.externalTrafficPolicy }}
 {{- end }}
   type: {{ $gateway.type }}
   selector:

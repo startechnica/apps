@@ -6,8 +6,12 @@ annotations:
     - name: Upstream Project
       url: https://github.com/istio/istio/tree/master/manifests/charts/gateways/istio-ingress
 apiVersion: v2
-appVersion: 1.13.4
+appVersion: 1.18.0
 dependencies:
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: "*"
+    alias: startechnica-common
   - name: common
     repository: https://charts.bitnami.com/bitnami
     tags:
@@ -19,10 +23,12 @@ description: Istio Ingress Gateway provides more extensive customization and fle
 home: https://github.com/startechnica/apps/tree/main/charts/istio-ingress-gateway
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
+  - gateway
   - istio
   - ingress
   - ingressgateway
-kubeVersion: ">=1.19.0-0"
+  - ingress-gateway
+kubeVersion: ">=1.20.0-0"
 maintainers:
   - name: firmansyahn
     email: firmansyah@nainggolan.id
