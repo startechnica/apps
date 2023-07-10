@@ -7,7 +7,7 @@ is true or default otherwise.
 */}}
 {{- define "gateway.serviceAccountName" -}}
     {{- if .Values.serviceAccount.create -}}
-        {{ default (printf "%s" (include "common.names.fullname" .)) $gateway.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+        {{ default (printf "%s" (include "common.names.fullname" .)) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" }}
     {{- else -}}
         {{ default "default" .Values.serviceAccount.name }}
     {{- end -}}
