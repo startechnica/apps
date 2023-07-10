@@ -25,6 +25,7 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" $gateway.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
+        istio: {{ $gateway.name }}
         sidecar.istio.io/inject: "true"
         {{- with $gateway.revision }}
         istio.io/rev: {{ . }}

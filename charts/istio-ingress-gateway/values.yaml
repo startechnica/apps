@@ -291,19 +291,19 @@ meshConfig:
     #        subjectAltNames: []
     # - tracer.somedomain
 
-  ## Istio Gateway Pod Disruption Budget configuration
-  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+## Istio Gateway Pod Disruption Budget configuration
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+##
+pdb:
+  ## @param pdb.create Enable/disable a Pod Disruption Budget creation for Istio Gateway pods
   ##
-  pdb:
-    ## @param pdb.create Enable/disable a Pod Disruption Budget creation for Istio Gateway pods
-    ##
-    create: false
-    ## @param pdb.minAvailable Minimum number/percentage of Istio Gateway pods that must still be available after the eviction
-    ##
-    minAvailable: 1
-    ## @param pdb.maxUnavailable Maximum number/percentage of Istio Gateway pods that can be unavailable after the eviction
-    ##
-    maxUnavailable: ""
+  create: false
+  ## @param pdb.minAvailable Minimum number/percentage of Istio Gateway pods that must still be available after the eviction
+  ##
+  minAvailable: 1
+  ## @param pdb.maxUnavailable Maximum number/percentage of Istio Gateway pods that can be unavailable after the eviction
+  ##
+  maxUnavailable: ""
 
 ## @section Other Parameters
 ##
