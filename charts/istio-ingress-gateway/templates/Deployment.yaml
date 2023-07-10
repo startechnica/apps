@@ -77,7 +77,7 @@ spec:
           image: auto
           imagePullPolicy: {{ $gateway.image.pullPolicy | quote }}
           {{- if $gateway.containerSecurityContext.enabled }}
-          securityContext: {{- omit $gateway.controller.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          securityContext: {{- omit $gateway.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           env:
             {{- with $gateway.networkGateway }}
@@ -85,27 +85,12 @@ spec:
               value: "{{.}}"
             {{- end }}
             {{- if $gateway.extraEnvVars }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.controller.extraEnvVars "context" $) | nindent 12 }}
+              {{- include "common.tplvalues.render" (dict "value" $gateway.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           ports:
             - containerPort: 15090
               protocol: TCP
               name: http-envoy-prom
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.topologySpreadConstraints }}
-      topologySpreadConstraints:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+          {{- if $gateway.resources }}
+          resources: {{- toYaml $gateway.resources | nindent 12 }}
+          {{- end }}
