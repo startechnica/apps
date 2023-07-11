@@ -114,8 +114,6 @@ spec:
           startupProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customStartupProbe "context" $) | nindent 12 }}
           {{- else if $gateway.startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit $gateway.startupProbe "enabled") "context" $) | nindent 12 }}
-            tcpSocket:
-              port: http
           {{- end }}
           {{- if $gateway.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customLivenessProbe "context" $) | nindent 12 }}
@@ -133,16 +131,7 @@ spec:
           {{- if $gateway.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customReadinessProbe "context" $) | nindent 12 }}
           {{- else if $gateway.readinessProbe.enabled }}
-          readinessProbe:
-            httpGet:
-              path: {{ $gateway.readinessProbe.httpGet.path }}
-              port: {{ $gateway.readinessProbe.httpGet.port | int }}
-              scheme: {{ $gateway.readinessProbe.httpGet.scheme }}
-            initialDelaySeconds: {{ $gateway.readinessProbe.initialDelaySeconds | int }}
-            periodSeconds: {{ $gateway.readinessProbe.periodSeconds | int }}
-            timeoutSeconds: {{ $gateway.readinessProbe.timeoutSeconds | int }}
-            failureThreshold: {{ $gateway.readinessProbe.failureThreshold | int }}
-            successThreshold: {{ $gateway.readinessProbe.successThreshold | int }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $gateway.readinessProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
           {{- if $gateway.resources }}
           resources: {{- toYaml $gateway.resources | nindent 12 }}

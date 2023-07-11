@@ -611,11 +611,15 @@ gateways:
     ## @param startupProbe.successThreshold Success threshold for startupProbe
     ##
     startupProbe:
-      enabled: false
-      initialDelaySeconds: 120
-      periodSeconds: 15
-      timeoutSeconds: 5
-      failureThreshold: 10
+      enabled: true
+      failureThreshold: 30
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+        scheme: HTTP
+      initialDelaySeconds: 1
+      timeoutSeconds: 1
+      periodSeconds: 1
       successThreshold: 1
     ## Configure extra options for liveness probe
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
@@ -631,7 +635,7 @@ gateways:
       initialDelaySeconds: 120
       periodSeconds: 60
       timeoutSeconds: 2
-      failureThreshold: 3
+      failureThreshold: 4
       successThreshold: 1
     ## @param readinessProbe.enabled Enable readinessProbe
     ## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
@@ -642,15 +646,15 @@ gateways:
     ##
     readinessProbe:
       enabled: true
-      initialDelaySeconds: 1
-      periodSeconds: 2
-      timeoutSeconds: 1
       failureThreshold: 30
-      successThreshold: 1
       httpGet:
         path: /healthz/ready
         port: 15021
         scheme: HTTP
+      initialDelaySeconds: 1
+      periodSeconds: 15
+      timeoutSeconds: 1
+      successThreshold: 1
     ## @param customStartupProbe Override default startup probe for Istio Gateway containers
     ##
     customStartupProbe: {}
