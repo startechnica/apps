@@ -14,7 +14,7 @@ metadata:
   {{- end }}
 spec:
   {{- if .Values.pdb.create }}
-  replicas: {{ $gateway.replicaCount }}
+  replicas: {{ default 1 $gateway.replicaCount | int }}
   {{- end }}
   selector:
     matchLabels:
@@ -32,8 +32,8 @@ spec:
       labels: {{- include "common.labels.standard" . | nindent 8 }}
         istio: {{ $gateway.name }}
         sidecar.istio.io/inject: "true"
-        {{- with $gateway.revision }}
-        istio.io/rev: {{ . }}
+        {{- if $gateway.revision }}
+        istio.io/rev: {{ $gateway.revision | quote }}
         {{- end }}
         {{- if $gateway.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" $gateway.podLabels "context" $) | nindent 8 }}
@@ -124,11 +124,11 @@ spec:
             httpGet:
               path: /login
               port: http
-            initialDelaySeconds: {{ $gateway.livenessProbe.initialDelaySeconds }}
-            periodSeconds: {{ $gateway.livenessProbe.periodSeconds }}
-            timeoutSeconds: {{ $gateway.livenessProbe.timeoutSeconds }}
-            failureThreshold: {{ $gateway.livenessProbe.failureThreshold }}
-            successThreshold: {{ $gateway.livenessProbe.successThreshold }}
+            initialDelaySeconds: {{ $gateway.livenessProbe.initialDelaySeconds | int }}
+            periodSeconds: {{ $gateway.livenessProbe.periodSeconds | int }}
+            timeoutSeconds: {{ $gateway.livenessProbe.timeoutSeconds |int }}
+            failureThreshold: {{ $gateway.livenessProbe.failureThreshold | int }}
+            successThreshold: {{ $gateway.livenessProbe.successThreshold | int }}
           {{- end }}
           {{- if $gateway.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" $gateway.customReadinessProbe "context" $) | nindent 12 }}
@@ -136,18 +136,18 @@ spec:
           readinessProbe:
             httpGet:
               path: {{ $gateway.readinessProbe.httpGet.path }}
-              port: {{ $gateway.readinessProbe.httpGet.port }}
+              port: {{ $gateway.readinessProbe.httpGet.port | int }}
               scheme: {{ $gateway.readinessProbe.httpGet.scheme }}
-            initialDelaySeconds: {{ $gateway.readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ $gateway.readinessProbe.periodSeconds }}
-            timeoutSeconds: {{ $gateway.readinessProbe.timeoutSeconds }}
-            failureThreshold: {{ $gateway.readinessProbe.failureThreshold }}
-            successThreshold: {{ $gateway.readinessProbe.successThreshold }}
+            initialDelaySeconds: {{ $gateway.readinessProbe.initialDelaySeconds | int }}
+            periodSeconds: {{ $gateway.readinessProbe.periodSeconds | int }}
+            timeoutSeconds: {{ $gateway.readinessProbe.timeoutSeconds | int }}
+            failureThreshold: {{ $gateway.readinessProbe.failureThreshold | int }}
+            successThreshold: {{ $gateway.readinessProbe.successThreshold | int }}
           {{- end }}
           {{- if $gateway.resources }}
           resources: {{- toYaml $gateway.resources | nindent 12 }}
           {{- end }}
           {{- if .Values.extraVolumeMounts }}
           volumeMounts:
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
-            {{- end }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
