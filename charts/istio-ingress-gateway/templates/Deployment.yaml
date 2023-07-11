@@ -13,7 +13,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if or .Values.pdb.create $gateway.pdb.create }}
+  {{- if .Values.pdb.create }}
   replicas: {{ $gateway.replicaCount }}
   {{- end }}
   selector:
