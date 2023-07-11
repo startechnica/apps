@@ -230,9 +230,6 @@ revision: ""
 # For Helm compatibility.
 ownerName: ""
 
-autoscaling:
-  enabled: false
-
 proxy:
   ## @param proxy.image.registry Proxy image registry
   ## @param proxy.image.repository Proxy image repository
@@ -292,13 +289,27 @@ meshConfig:
 pdb:
   ## @param pdb.create Enable/disable a Pod Disruption Budget creation for Istio Gateway pods
   ##
-  create: false
+  create: true
   ## @param pdb.minAvailable Minimum number/percentage of Istio Gateway pods that must still be available after the eviction
   ##
   minAvailable: 1
   ## @param pdb.maxUnavailable Maximum number/percentage of Istio Gateway pods that can be unavailable after the eviction
   ##
   maxUnavailable: ""
+## Enable HorizontalPodAutoscaler for worker pods
+## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+## @param autoscaling.enabled Whether enable horizontal pod autoscaler
+## @param autoscaling.minReplicas Configure a minimum amount of pods
+## @param autoscaling.maxReplicas Configure a maximum amount of pods
+## @param autoscaling.targetCPU Define the CPU target to trigger the scaling actions (utilization percentage)
+## @param autoscaling.targetMemory Define the memory target to trigger the scaling actions (utilization percentage)
+##
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPU: 80
+  targetMemory: 80
 
 ## @section Other Parameters
 ##
@@ -352,9 +363,76 @@ metrics:
     prometheus.io/port: "15020"
     prometheus.io/scrape: "true"
     prometheus.io/path: "/stats/prometheus"
+  ## Prometheus Service Monitor
+  ## ref: https://github.com/coreos/prometheus-operator
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace which Prometheus is running in
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped
+    ##
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
+    ## e.g:
+    ## scrapeTimeout: 30s
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.selector ServiceMonitor selector labels
+    ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
+    ##
+    ## selector:
+    ##   prometheus: my-prometheus
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor
+    ##
+    labels: {}
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true` and `metrics.prometheusRule.rules`)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace for the PrometheusRule Resource (defaults to the Release Namespace)
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.additionalLabels Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    ##
+    additionalLabels: {}
+    ## @param metrics.prometheusRule.rules Prometheus Rule definitions
+    ##  - alert: MariaDB-Down
+    ##    expr: absent(up{job="mariadb"} == 1)
+    ##    for: 5m
+    ##    labels:
+    ##      severity: warning
+    ##      service: mariadb
+    ##    annotations:
+    ##      message: 'MariaDB instance {{ `{{` }} $labels.instance {{ `}}` }} is down'
+    ##      summary: MariaDB instance is down
+    ##
+    rules: []
 
 gateways:
   istio-ingressgateway:
+    enabled: true
     ## @param gateways.$gateway.name Istio Gateway name
     name: ingressgateway
     ## @param gateways.$gateway.revision Revision is set as 'version' label and part of the resource names when installing multiple control planes.
@@ -391,6 +469,19 @@ gateways:
       ## Set to true if you would like to see extra information on logs
       ##
       debug: false
+
+    ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
+    ##
+    extraVolumes: []
+    ## @param primary.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the MariaDB Primary container(s)
+    ##
+    extraVolumeMounts: []
+    ## @param primary.initContainers Add additional init containers for the MariaDB Primary pod(s)
+    ##
+    initContainers: []
+    ## @param primary.sidecars Add additional sidecar containers for the MariaDB Primary pod(s)
+    ##
+    sidecars: []
 
     ## @section Traffic Exposure Parameters
 
@@ -600,6 +691,26 @@ gateways:
     ##
     extraEnvVarsSecret: ""
 
+    ## @param gateways.$gateway.updateStrategy.type Istio Gateway statefulset strategy type
+    ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+    ##
+    updateStrategy:
+      ## StrategyType
+      ## Can be set to RollingUpdate or OnDelete
+      ##
+      type: RollingUpdate
+    ## @param gateways.$gateway.rollingUpdatePartition Partition update strategy for Istio Gateway statefulset
+    ## https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#partitions
+    ##
+    rollingUpdatePartition: ""
+    ## @param gateways.$gateway.podAnnotations Additional pod annotations for Istio Gateway pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    ##
+    podAnnotations: {}
+    ## @param gateways.$gateway.podLabels Extra labels for Istio Gateway pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    podLabels: {}
     ## @param gateways.$gateway.podAffinityPreset Pod affinity preset. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
     ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
     ##
@@ -652,11 +763,11 @@ gateways:
     ##     whenUnsatisfiable: DoNotSchedule
     ##
     topologySpreadConstraints: {}
-    ## @param primary.priorityClassName Priority class for MariaDB primary pods assignment
+    ## @param primary.priorityClassName Priority class for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
     ##
     priorityClassName: ""
-    ## @param primary.runtimeClassName Runtime Class for MariaDB primary pods
+    ## @param primary.runtimeClassName Runtime Class for Istio Gateway pods
     ## Ref: https://kubernetes.io/docs/concepts/containers/runtime-class/
     ##
     runtimeClassName: ""
@@ -668,16 +779,6 @@ gateways:
     autoscaleEnabled: true
     autoscaleMin: 1
     autoscaleMax: 5
-
-    cpu:
-      targetAverageUtilization: 80
-
-    # To generate an internal load balancer:
-    # --set serviceAnnotations.cloud.google.com/load-balancer-type=internal
-    #serviceAnnotations:
-    #    cloud.google.com/load-balancer-type: "internal"
-
-    podAnnotations: {}
 
     # If specified, the gateway will act as a network gateway for the given network.
     networkGateway: ""
@@ -692,7 +793,6 @@ gateways:
       mountPath: /etc/istio/ingressgateway-ca-certs
 
     ingressPorts: []
-    additionalContainers: []
     configVolumes: []
 
     ## Specifies whether a ServiceAccount should be created
@@ -712,37 +812,8 @@ gateways:
       ##
       annotations: {}
 
-    ## @section Other Parameters
-    ##
 
 
-
-    ### Advanced options ############
-    env: {}
-
-    # Specify the pod anti-affinity that allows you to constrain which nodes
-    # your pod is eligible to be scheduled based on labels on pods that are
-    # already running on the node rather than based on labels on nodes.
-    # There are currently two types of anti-affinity:
-    #    "requiredDuringSchedulingIgnoredDuringExecution"
-    #    "preferredDuringSchedulingIgnoredDuringExecution"
-    # which denote "hard" vs. "soft" requirements, you can define your values
-    # in "podAntiAffinityLabelSelector" and "podAntiAffinityTermLabelSelector"
-    # correspondingly.
-    # For example:
-    # podAntiAffinityLabelSelector:
-    # - key: security
-    #   operator: In
-    #   values: S1,S2
-    #   topologyKey: "kubernetes.io/hostname"
-    # This pod anti-affinity rule says that the pod requires not to be scheduled
-    # onto a node if that node is already running a pod with label having key
-    # "security" and value "S1".
-    podAntiAffinityLabelSelector: []
-    podAntiAffinityTermLabelSelector: []
-
-    # whether to run the gateway in a privileged container
-    runAsRoot: false
 
 
 

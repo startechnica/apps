@@ -1,32 +1,41 @@
 {{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
-{{- if and (.Values.autoscaling.enabled) (eq .Values.kind "Deployment") }}
-{{- if (semverCompare ">=1.23-0" .Capabilities.KubeVersion.GitVersion)}}
-apiVersion: autoscaling/v2
-{{- else }}
-apiVersion: autoscaling/v2beta2
-{{- end }}
+{{- if .Values.autoscaling.enabled }}
+apiVersion: {{ include "common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ $gateway.name }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels:
-    {{- include "gateway.labels" . | nindent 4 }}
-  annotations:
-    {{- .Values.annotations | toYaml | nindent 4 }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    istio: {{ $gateway.name }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
 spec:
   scaleTargetRef:
-    apiVersion: apps/v1
-    kind: "Deployment"
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+    kind: Deployment
     name: {{ $gateway.name }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
-    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
+        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
+        targetAverageUtilization: {{ .Values.autoscaling.targetCPU }}
+        {{- else }}
         target:
-          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
           type: Utilization
-    {{- end }}
+          averageUtilization: {{ .Values.autoscaling.targetCPU }}
+        {{- end }}
+    - type: Resource
+      resource:
+        name: memory
+        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
+        targetAverageUtilization: {{ .Values.autoscaling.targetMemory }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemory }}
+        {{- end }}
 {{- end }}
