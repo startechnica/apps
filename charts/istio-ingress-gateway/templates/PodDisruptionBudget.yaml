@@ -10,19 +10,19 @@ metadata:
     istio.io/rev: {{ .Values.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ .Values.operator.component }}
-    {{- if .Values.commonLabels -}}
+    {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end -}}
-  {{- if .Values.commonAnnotations -}}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
-  {{- end -}}
+  {{- end }}
 spec:
-  {{- if .Values.pdb.minAvailable -}}
+  {{- if .Values.pdb.minAvailable }}
   minAvailable: {{ .Values.pdb.minAvailable }}
-  {{- end -}}
-  {{- if .Values.pdb.minAvailable -}}
+  {{- end }}
+  {{- if .Values.pdb.minAvailable }}
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}
-  {{- end -}}
+  {{- end }}
   selector:
     matchLabels: {{ include "common.labels.matchLabels" . | nindent 6 }}
       istio: {{ .Values.name }}
