@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  {{- $mergedAnnotations := merge $.Values.service.annotations $.Values.commonAnnotations }}
+  {{- $mergedAnnotations := merge .service.annotations $.Values.commonAnnotations }}
   {{- if $mergedAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" $mergedAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
