@@ -264,6 +264,9 @@ proxy:
     ##
     debug: false
 
+operator:
+  component: "IngressGateways"
+
 meshConfig:
   enablePrometheusMerge: true
 

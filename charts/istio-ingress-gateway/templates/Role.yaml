@@ -1,15 +1,14 @@
 {{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
-{{- if and .Values.rbac.create }}
+{{- if .Values.rbac.create }}
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
-  name: {{ $gateway.name }}
+  name: {{ include "common.names.fullname" . | quote }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels:
     release: {{ .Release.Name }}
-    istio.io/rev: {{ $gateway.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
-    operator.istio.io/component: "IngressGateways"
+    operator.istio.io/component: {{ .Values.operator.component }}
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}

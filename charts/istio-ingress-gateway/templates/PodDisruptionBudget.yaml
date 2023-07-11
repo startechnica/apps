@@ -9,7 +9,7 @@ metadata:
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
-    operator.istio.io/component: "IngressGateways"
+    operator.istio.io/component: {{ .Values.operator.component }}
     {{- if .Values.commonLabels -}}
       {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end -}}
