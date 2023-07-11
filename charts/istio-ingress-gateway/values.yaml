@@ -355,13 +355,11 @@ metrics:
 
 gateways:
   istio-ingressgateway:
-  
+    ## @param gateways.$gateway.name Istio Gateway name
     name: ingressgateway
-
-    # Revision is set as 'version' label and part of the resource names when installing multiple control planes.
+    ## @param gateways.$gateway.revision Revision is set as 'version' label and part of the resource names when installing multiple control planes.
     revision: ""
-
-    ## @param gateways.$gateway.replicaCount Number of Controller replicas
+    ## @param gateways.$gateway.replicaCount Number of Istio Gateway replicas
     ##
     replicaCount: 1
     ## @param gateways.$gateway.image.registry Proxy image registry
@@ -413,7 +411,7 @@ gateways:
       ##
       ports:
         status-port: 15021
-        http2: 8080
+        http2: 80
         https: 443
       ## @param service.nodePorts.http Istio Ingress Gateway Kubernetes service node port
       ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
@@ -468,7 +466,7 @@ gateways:
     ##
     containerPorts:
       status-port: 15021
-      http2: 8080
+      http2: 80
       https: 443
     ## Istio Gateway Pod security context
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
