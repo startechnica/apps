@@ -819,3 +819,5 @@ gateways:
   istio-webapps:
     enabled: true
     name: webapps
+    service:
+      type: LoadBalancer
