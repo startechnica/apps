@@ -17,17 +17,17 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end -}}
 spec:
-  {{- if $gateway.pdb.minAvailable -}}
-  minAvailable: {{ $gateway.pdb.minAvailable }}
+  {{- if .Values.pdb.minAvailable -}}
+  minAvailable: {{ .Values.pdb.minAvailable }}
   {{- else if .Values.pdb.minAvailable -}}
   minAvailable: {{ .Values.pdb.minAvailable }}
   {{- end -}}
-  {{- if $gateway.pdb.minAvailable -}}
-  maxUnavailable: {{ $gateway.pdb.maxUnavailable }}
+  {{- if .Values.pdb.minAvailable -}}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- else if .Values.pdb.maxUnavailable -}}
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- end -}}
   selector:
     matchLabels: {{ include "common.labels.matchLabels" . | nindent 6 }}
-      istio: {{ $gateway.name }}
+      istio: {{ .Values.name }}
 {{- end -}}
