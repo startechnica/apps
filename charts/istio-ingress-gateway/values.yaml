@@ -474,7 +474,7 @@ gateways:
     ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
     ##
     podSecurityContext:
-      enabled: false
+      enabled: true
       sysctls:
         - name: net.ipv4.ip_unprivileged_port_start
           value: "0"
