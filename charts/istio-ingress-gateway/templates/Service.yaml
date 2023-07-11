@@ -61,7 +61,7 @@ spec:
   {{- else }}
     {{- range $key, $val := $gateway.service.ports }}
     - name: {{ $key }}
-      port: {{ $val }}
+      port: {{ $val|int }}
       protocol: TCP
       targetPort: {{ $val }}
       {{- if (and (or (eq $gateway.service.type "NodePort") (eq $gateway.service.type "LoadBalancer")) (coalesce $gateway.service.nodePorts.http $gateway.service.nodePort)) }}
