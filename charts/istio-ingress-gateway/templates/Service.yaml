@@ -1,51 +1,48 @@
-{{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
+{{- range $gateway, $val := .Values.gateways }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $gateway.name }}
+  name: {{ .name }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  annotations:
-    {{- if .Values.commonAnnotations }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if $gateway.service.annotations }}
-      {{- include "common.tplvalues.render" ( dict "value" $gateway.service.annotations "context" $) | nindent 4 }}
-    {{- end }}
+  {{- $mergedAnnotations := merge $.Values.service.annotations $.Values.commonAnnotations }}
+  {{- if $mergedAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $mergedAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    istio: {{ $gateway.name }}
-    release: {{ .Release.Name }}
-    istio.io/rev: {{ $gateway.revision | default "default" }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
-    operator.istio.io/component: "IngressGateways"
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    istio: {{ .name }}
+    release: {{ $.Release.Name }}
+    istio.io/rev: {{ .revision | default "default" }}
+    install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
+    operator.istio.io/component: {{ $.Values.operator.component }}
+    {{- if $.Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" $.Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
 spec:
-  type: {{ $gateway.service.type }}
-  {{- if and $gateway.service.clusterIP (eq $gateway.service.type "ClusterIP") }}
-  clusterIP: {{ $gateway.service.clusterIP }}
+  type: {{ default "LoadBalancer" .service.type }}
+  {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
+  clusterIP: {{ .service.clusterIP }}
   {{- end }}
-  {{- if and $gateway.service.externalTrafficPolicy (or (eq $gateway.service.type "LoadBalancer") (eq $gateway.service.type "NodePort")) }}
-  externalTrafficPolicy: {{ $gateway.service.externalTrafficPolicy | quote }}
+  {{- if and .service.externalTrafficPolicy (or (eq .service.type "LoadBalancer") (eq .service.type "NodePort")) }}
+  externalTrafficPolicy: {{ .service.externalTrafficPolicy | quote }}
   {{- end }}
-  ipFamilyPolicy: {{ $gateway.service.ipFamilyPolicy }}
-  {{- if and (eq $gateway.service.type "LoadBalancer") (not (empty $gateway.service.loadBalancerClass)) }}
-  loadBalancerClass: {{ $gateway.service.loadBalancerClass }}
+  ipFamilyPolicy: {{ default "SingleStack" .service.ipFamilyPolicy }}
+  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .service.loadBalancerClass }}
   {{- end }}
-  {{- if (and (eq $gateway.service.type "LoadBalancer") (not (empty $gateway.service.loadBalancerIP))) }}
-  loadBalancerIP: {{ $gateway.service.loadBalancerIP }}
+  {{- if (and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerIP))) }}
+  loadBalancerIP: {{ .service.loadBalancerIP }}
   {{- end }}
-  {{- if and (eq $gateway.service.type "LoadBalancer") (not (empty $gateway.service.loadBalancerSourceRanges)) }}
-  loadBalancerSourceRanges: {{ $gateway.service.loadBalancerSourceRanges }}
+  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ .service.loadBalancerSourceRanges }}
   {{- end }}
-  {{- if $gateway.service.sessionAffinity }}
-  sessionAffinity: {{ $gateway.service.sessionAffinity }}
+  {{- if .service.sessionAffinity }}
+  sessionAffinity: {{ default "None" .service.sessionAffinity }}
   {{- end }}
-  {{- if $gateway.service.sessionAffinityConfig }}
-  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" $gateway.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- if .service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
-  {{- if $gateway.networkGateway }}
+  {{- if .networkGateway }}
     - name: status-port
       port: 15021
       targetPort: 15021
@@ -59,18 +56,19 @@ spec:
       port: 15017
       targetPort: 15017
   {{- else }}
-    {{- range $key, $val := $gateway.service.ports }}
+    {{- range $key, $val := .service.ports }}
     - name: {{ $key }}
       port: {{ $val | int }}
       protocol: TCP
       targetPort: {{ $val }}
-      {{- if (and (or (eq $gateway.service.type "NodePort") (eq $gateway.service.type "LoadBalancer")) (coalesce $gateway.service.nodePorts.http $gateway.service.nodePort)) }}
-      nodePort: {{ coalesce $gateway.service.nodePorts.http $gateway.service.nodePort }}
-      {{- else if eq $gateway.service.type "ClusterIP" }}
+      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) (coalesce .service.nodePorts.http .service.nodePort)) }}
+      nodePort: {{ coalesce .service.nodePorts.http .service.nodePort }}
+      {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
-    istio: {{ $gateway.name }}
+    istio: {{ .name }}
 ---
+{{- end }}
