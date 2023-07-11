@@ -1,11 +1,11 @@
 {{- if .Values.pdb.create -}}
 {{- range $gateway, $val := .Values.gateways }}
-apiVersion: {{ include "common.capabilities.policy.apiVersion" $. }}
+apiVersion: {{ include "common.capabilities.policy.apiVersion" $ }}
 kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
-  namespace: {{ include "common.names.namespace" $. | quote }}
-  labels: {{ include "common.labels.standard" $. | nindent 4 }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{ include "common.labels.standard" $ | nindent 4 }}
     istio: {{ .name }}
     release: {{ $.Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" }}
@@ -19,13 +19,13 @@ metadata:
   {{- end }}
 spec:
   {{- if $.Values.pdb.minAvailable }}
-  minAvailable: {{ $.Values.pdb.minAvailable }}
+  minAvailable: {{ $.Values.pdb.minAvailable | int }}
   {{- end }}
   {{- if $.Values.pdb.minAvailable }}
   maxUnavailable: {{ $.Values.pdb.maxUnavailable }}
   {{- end }}
   selector:
-    matchLabels: {{ include "common.labels.matchLabels" $. | nindent 6 }}
+    matchLabels: {{ include "common.labels.matchLabels" $ | nindent 6 }}
       istio: {{ .name }}
 ---
 {{- end -}}
