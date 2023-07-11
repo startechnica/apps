@@ -19,12 +19,8 @@ metadata:
 spec:
   {{- if .Values.pdb.minAvailable -}}
   minAvailable: {{ .Values.pdb.minAvailable }}
-  {{- else if .Values.pdb.minAvailable -}}
-  minAvailable: {{ .Values.pdb.minAvailable }}
   {{- end -}}
   {{- if .Values.pdb.minAvailable -}}
-  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
-  {{- else if .Values.pdb.maxUnavailable -}}
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- end -}}
   selector:
