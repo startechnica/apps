@@ -12,6 +12,7 @@ metadata:
       {{- include "common.tplvalues.render" ( dict "value" $gateway.service.annotations "context" $) | nindent 4 }}
     {{- end }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
+    istio: {{ $gateway.name }}
     release: {{ .Release.Name }}
     istio.io/rev: {{ $gateway.revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
