@@ -433,7 +433,7 @@ metrics:
 gateways:
   istio-ingressgateway:
     enabled: true
-    ## @param gateways.$gateway.name Istio Gateway name
+    ## @param gateways.$gateway.name Unique label for the gateway. This is required to ensure Gateways can select this workload
     name: ingressgateway
     ## @param gateways.$gateway.revision Revision is set as 'version' label and part of the resource names when installing multiple control planes.
     revision: ""
@@ -816,8 +816,6 @@ gateways:
       ##
       annotations: {}
 
-
-
-
-
-
+  istio-webapps:
+    enabled: true
+    name: webapps
