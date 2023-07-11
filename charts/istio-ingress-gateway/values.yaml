@@ -52,18 +52,6 @@ global:
   # be scheduled to particular nodes with specified taints.
   defaultTolerations: []
 
-  # Default hub for Istio images.
-  # Releases are published to docker hub under 'istio' project.
-  # Dev builds from prow are on gcr.io
-  hub: gcr.io/istio-testing
-
-  # Default tag for Istio images.
-  tag: latest
-
-  # Specify image pull policy if default behavior isn't desired.
-  # Default behavior: latest images will be Always else IfNotPresent.
-  imagePullPolicy: ""
-
   # To output all istio components logs in json format by adding --log_as_json argument to each container argument
   logAsJson: false
 
@@ -227,6 +215,10 @@ diagnosticMode:
   ##
   args:
     - infinity
+
+
+istioNamespace: "istio-system"
+
 ## @param logLevel Set up Istio Gateway log level
 ##
 logLevel: 2
@@ -331,7 +323,7 @@ rbac:
 ## Specifies whether a ServiceAccount should be created
 ##
 serviceAccount:
-  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Adminer pods
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Istio Gateway pods
   ##
   create: true
   ## @param serviceAccount.name Name of the created ServiceAccount
@@ -344,6 +336,19 @@ serviceAccount:
   ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
   ##
   annotations: {}
+
+## Istio Gateway Prometheus exporter parameters
+##
+metrics:
+  ## @param metrics.enabled Start a side-car prometheus exporter
+  ##
+  enabled: true
+  ## @param metrics.annotations [object] Annotations for the Exporter pod
+  ##
+  annotations:
+    prometheus.io/port: "15020"
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/stats/prometheus"
 
 gateways:
   istio-ingressgateway:
@@ -456,15 +461,15 @@ gateways:
       ##     timeoutSeconds: 300
       sessionAffinityConfig: {}
 
-    ## @param containerPorts.http Adminer HTTP container port
+    ## @param containerPorts.http Istio Gateway HTTP container port
     ##
     containerPorts:
       status-port: 15021
       http2: 8080
       https: 443
-    ## Adminer Pod security context
+    ## Istio Gateway Pod security context
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-    ## @param podSecurityContext.enabled Enable security context for Adminer pods
+    ## @param podSecurityContext.enabled Enable security context for Istio Gateway pods
     ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
     ##
     podSecurityContext:
@@ -504,7 +509,7 @@ gateways:
         cpu: 100m
         memory: 128Mi
 
-    ## Configure extra options for Adminer containers' liveness, readiness and startup probes
+    ## Configure extra options for Istio Gateway containers' liveness, readiness and startup probes
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
     ## @param startupProbe.enabled Enable startupProbe
     ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
@@ -554,18 +559,18 @@ gateways:
         path: /healthz/ready
         port: 15021
         scheme: HTTP
-    ## @param customStartupProbe Override default startup probe for Adminer containers
+    ## @param customStartupProbe Override default startup probe for Istio Gateway containers
     ##
     customStartupProbe: {}
-    ## @param customLivenessProbe Override default liveness probe for Adminer containers
+    ## @param customLivenessProbe Override default liveness probe for Istio Gateway containers
     ##
     customLivenessProbe: {}
-    ## @param customReadinessProbe Override default readiness probe for Adminer containers
+    ## @param customReadinessProbe Override default readiness probe for Istio Gateway containers
     ##
     customReadinessProbe: {}
-    ## @param startupWaitOptions Override default builtin startup wait check options for Adminer containers
+    ## @param startupWaitOptions Override default builtin startup wait check options for Istio Gateway containers
     ## `bitnami/mariadb` Docker image has built-in startup check mechanism,
-    ## which periodically checks if Adminer service has started up and stops it
+    ## which periodically checks if Istio Gateway service has started up and stops it
     ## if all checks have failed after X tries. Use these to control these checks.
     ## ref: https://github.com/bitnami/bitnami-docker-mariadb/pull/240
     ## Example (with default options):
@@ -574,23 +579,23 @@ gateways:
     ##   waitTime: 2
     ##
     startupWaitOptions: {}
-    ## @param extraFlags Adminer additional command line flags
+    ## @param extraFlags Istio Gateway additional command line flags
     ## Can be used to specify command line flags, for example:
     ## E.g.
     ## extraFlags: "--max-connect-errors=1000 --max_connections=155"
     ##
     extraFlags: ""
-    ## @param extraEnvVars Extra environment variables to be set on Adminer containers
+    ## @param extraEnvVars Extra environment variables to be set on Istio Gateway containers
     ## E.g.
     ## extraEnvVars:
     ##  - name: TZ
     ##    value: "Europe/Paris"
     ##
     extraEnvVars: []
-    ## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Adminer containers
+    ## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsCM: ""
-    ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Adminer containers
+    ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsSecret: ""
 
@@ -609,28 +614,35 @@ gateways:
     ## @param gateways.$gateway.nodeAffinityPreset.values Node label values to match. Ignored if `gateways.$gateway.affinity` is set
     ##
     nodeAffinityPreset:
+      ## @param gateways.$gateway.nodeAffinityPreset.type Istio Gateway node affinity preset type. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
+      ##
       type: ""
+      ## @param gateways.$gateway.nodeAffinityPreset.key Istio Gateway node label key to match Ignored if `gateways.$gateway.affinity` is set.
+      ## E.g.
+      ## key: "kubernetes.io/e2e-az-name"
+      ##
       key: ""
+      ## @param gateways.$gateway.nodeAffinityPreset.values Istio Gateway node label values to match. Ignored if `gateways.$gateway.affinity` is set.
       ## E.g.
       ## values:
       ##   - e2e-az1
       ##   - e2e-az2
       ##
       values: []
-    ## @param affinity Affinity for Adminer pods assignment
+    ## @param affinity Affinity for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
     ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
     ##
     affinity: {}
-    ## @param nodeSelector Node labels for Adminer pods assignment
+    ## @param nodeSelector Node labels for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
     ##
     nodeSelector: {}
-    ## @param tolerations Tolerations for Adminer pods assignment
+    ## @param tolerations Tolerations for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
     tolerations: []
-    ## @param topologySpreadConstraints Topology Spread Constraints for Adminer pods assignment
+    ## @param topologySpreadConstraints Topology Spread Constraints for Istio Gateway pods assignment
     ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
     ## E.g.
     ## topologySpreadConstraints:
@@ -639,6 +651,14 @@ gateways:
     ##     whenUnsatisfiable: DoNotSchedule
     ##
     topologySpreadConstraints: {}
+    ## @param primary.priorityClassName Priority class for MariaDB primary pods assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+    ##
+    priorityClassName: ""
+    ## @param primary.runtimeClassName Runtime Class for MariaDB primary pods
+    ## Ref: https://kubernetes.io/docs/concepts/containers/runtime-class/
+    ##
+    runtimeClassName: ""
 
     # Scalability tuning
     # replicaCount: 1
@@ -677,7 +697,7 @@ gateways:
     ## Specifies whether a ServiceAccount should be created
     ##
     serviceAccount:
-      ## @param serviceAccount.create Enable the creation of a ServiceAccount for Adminer pods
+      ## @param serviceAccount.create Enable the creation of a ServiceAccount for Istio Gateway pods
       ##
       create: true
       ## @param serviceAccount.name Name of the created ServiceAccount
