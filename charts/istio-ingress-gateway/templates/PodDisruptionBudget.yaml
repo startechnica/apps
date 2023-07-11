@@ -17,10 +17,14 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.pdb.minAvailable }}
+  {{- if $gateway.pdb.minAvailable }}
+  minAvailable: {{ $gateway.pdb.minAvailable }}
+  {{- else if .Values.pdb.minAvailable }}
   minAvailable: {{ .Values.pdb.minAvailable }}
   {{- end }}
-  {{- if .Values.pdb.maxUnavailable }}
+  {{- if $gateway.pdb.minAvailable }}
+  maxUnavailable: {{ $gateway.pdb.maxUnavailable }}
+  {{- else if .Values.pdb.maxUnavailable }}
   maxUnavailable: {{ .Values.pdb.maxUnavailable }}
   {{- end }}
   selector:
