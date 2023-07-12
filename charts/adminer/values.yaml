@@ -511,6 +511,11 @@ rbac:
   ##
   rules: []
 
+gateway:
+  enabled: true
+  name: ingressgateway
+  namespace: istio-ingress-gateway
+
 istio:
   enabled: false
   clusterName: cluster.local
