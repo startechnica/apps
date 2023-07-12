@@ -61,9 +61,9 @@ spec:
       port: {{ $val | int }}
       protocol: TCP
       targetPort: {{ $val }}
-      {{- if (and (or (eq $gateway.service.type "NodePort") (eq $gateway.service.type "LoadBalancer")) (coalesce $gateway.service.nodePorts.http2 $gateway.service.nodePort)) }}
+      {{- if (and (or (eq $.service.type "NodePort") (eq $.service.type "LoadBalancer")) (coalesce $.service.nodePorts.http2 $.service.nodePort)) }}
       nodePort: {{ coalesce .service.nodePorts.http2 .service.nodePort }}
-      {{- else if eq $gateway.service.type "ClusterIP" }}
+      {{- else if eq $.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
