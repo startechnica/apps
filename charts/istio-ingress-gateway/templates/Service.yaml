@@ -64,11 +64,11 @@ spec:
       targetPort: 15017
   {{- else }}
     - name: status-port
-      port: {{ $gatewayName.service.ports.status-port | int }}
+      port: {{ $gatewayName.service.ports.status | int }}
       protocol: TCP
-      targetPort: {{ $gatewayName.containerPorts.status-port | int }}
-      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.status-port) }}
-      nodePort: {{ $gatewayName.service.nodePorts.status-port | int }}
+      targetPort: {{ $gatewayName.containerPorts.status | int }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.status) }}
+      nodePort: {{ $gatewayName.service.nodePorts.status | int }}
       {{- else if eq $gatewayName.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}

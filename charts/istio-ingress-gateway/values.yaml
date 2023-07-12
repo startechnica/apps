@@ -509,14 +509,14 @@ gateways:
       ## checks always work. https://github.com/istio/istio/issues/12503
       ##
       ports:
-        status-port: 15021
+        status: 15021
         http2: 80
         https: 443
       ## @param service.nodePorts.http Istio Ingress Gateway Kubernetes service node port
       ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
       ##
       nodePorts:
-        status-port: ""
+        status: ""
         http2: ""
         https: ""
       ## @param service.clusterIP Istio Ingress Gateway Kubernetes service clusterIP IP
@@ -564,7 +564,7 @@ gateways:
     ## @param containerPorts.http Istio Gateway HTTP container port
     ##
     containerPorts:
-      status-port: 15021
+      status: 15021
       http2: 80
       https: 443
     ## Istio Gateway Pod security context
