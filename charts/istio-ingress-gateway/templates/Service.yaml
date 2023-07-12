@@ -1,4 +1,5 @@
-{{- range $gateway, $value := .Values.gateways }}
+{{- range $gateway, $gatewayName := .Values.gateways }}
+{{- if .enabled - }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -66,9 +67,9 @@ spec:
       port: {{ $port | int }}
       protocol: TCP
       targetPort: {{ $port }}
-      {{- if (and (or (eq $value.service.type "NodePort") (eq $value.service.type "LoadBalancer")) (coalesce $value.service.nodePorts.http2 $value.service.nodePort)) }}
-      nodePort: {{ coalesce $value.service.nodePorts.http2 $value.service.nodePort }}
-      {{- else if eq $value.service.type "ClusterIP" }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) (coalesce $gatewayName.service.nodePorts.http2 $gatewayName.service.nodePort)) }}
+      nodePort: {{ $gatewayName.service.nodePorts.http2 | int }}
+      {{- else if eq $gatewayName.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
@@ -76,4 +77,5 @@ spec:
   selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
     istio: {{ .name }}
 ---
+{{- end -}}
 {{- end }}

@@ -817,7 +817,7 @@ gateways:
       annotations: {}
 
   istio-webapps:
-    enabled: true
+    enabled: false
     name: webapps
     service:
       type: LoadBalancer
