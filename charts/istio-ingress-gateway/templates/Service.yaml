@@ -1,4 +1,4 @@
-{{- range $gateway, $val := .Values.gateways }}
+{{- range $gateway, $value := .Values.gateways }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -56,14 +56,14 @@ spec:
       port: 15017
       targetPort: 15017
   {{- else }}
-    {{- range $key, $val := .service.ports }}
+    {{- range $key, $port := .service.ports }}
     - name: {{ $key }}
-      port: {{ $val | int }}
+      port: {{ $port | int }}
       protocol: TCP
-      targetPort: {{ $val }}
-      {{- if (and (or (eq $.service.type "NodePort") (eq $.service.type "LoadBalancer")) (coalesce $.service.nodePorts.http2 $.service.nodePort)) }}
-      nodePort: {{ coalesce .service.nodePorts.http2 .service.nodePort }}
-      {{- else if eq $.service.type "ClusterIP" }}
+      targetPort: {{ $port }}
+      {{- if (and (or (eq $value.service.type "NodePort") (eq $value.service.type "LoadBalancer")) (coalesce $.service.nodePorts.http2 $.service.nodePort)) }}
+      nodePort: {{ coalesce $value.service.nodePorts.http2 $value.service.nodePort }}
+      {{- else if eq $value.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
