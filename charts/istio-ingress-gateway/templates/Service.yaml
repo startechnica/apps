@@ -68,7 +68,7 @@ spec:
       {{- end }}
     {{- end }}
   {{- end }}
-  selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
+  selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
     istio: {{ .name }}
 ---
 {{- end }}
