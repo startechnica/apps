@@ -1,6 +1,13 @@
 # A-la-carte istio ingress gateway.
 # Must be installed in a separate namespace, to minimize access to secrets.
 
+## @section Global parameters
+##
+
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+##
 global:
   ## @param global.imageRegistry Global Docker image registry
   ## @param global.imagePullSecrets Global Docker registry secret names as an array
@@ -216,7 +223,8 @@ diagnosticMode:
   args:
     - infinity
 
-
+## @param istioNamespace Used to locate istiod.
+##
 istioNamespace: "istio-system"
 
 ## @param logLevel Set up Istio Gateway log level

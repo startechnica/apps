@@ -6,6 +6,7 @@ metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
   labels: {{- include "common.labels.standard" $ | nindent 4 }}
+    app.kubernetes.io/component: gateway
     istio: {{ .name }}
     release: {{ $.Release.Name }}
     istio.io/rev: {{ .revision | default "default" }}
@@ -62,16 +63,35 @@ spec:
       port: 15017
       targetPort: 15017
   {{- else }}
-    {{- range $key, $port := .service.ports }}
-    - name: {{ $key }}
-      port: {{ $port | int }}
+    - name: status-port
+      port: {{ $gatewayName.service.ports.status-port | int }}
       protocol: TCP
-      targetPort: {{ $port }}
+      targetPort: {{ $gatewayName.containerPorts.status-port | int }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.status-port) }}
+      nodePort: {{ $gatewayName.service.nodePorts.status-port | int }}
+      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: http2
+      port: {{ $gatewayName.service.ports.http2 | int }}
+      protocol: TCP
+      targetPort: {{ $gatewayName.containerPorts.http2 | int }}
       {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.http2) }}
       nodePort: {{ $gatewayName.service.nodePorts.http2 | int }}
       {{- else if eq $gatewayName.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    - name: https
+      port: {{ $gatewayName.service.ports.https | int }}
+      protocol: TCP
+      targetPort: {{ $gatewayName.containerPorts.https | int }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.https) }}
+      nodePort: {{ $gatewayName.service.nodePorts.https | int }}
+      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- if $gatewayName.service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" $gatewayName.service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
