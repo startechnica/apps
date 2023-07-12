@@ -64,27 +64,27 @@ spec:
       targetPort: 15017
   {{- else }}
     - name: status-port
-      port: {{ $gatewayName.service.ports.status | int }}
+      port: {{ default 15021 $gatewayName.service.ports.status | int }}
       protocol: TCP
-      targetPort: {{ $gatewayName.containerPorts.status | int }}
+      targetPort: {{ default 15021 $gatewayName.containerPorts.status | int }}
       {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.status) }}
       nodePort: {{ $gatewayName.service.nodePorts.status | int }}
       {{- else if eq $gatewayName.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     - name: http2
-      port: {{ $gatewayName.service.ports.http2 | int }}
+      port: {{ default 80 $gatewayName.service.ports.http2 | int }}
       protocol: TCP
-      targetPort: {{ $gatewayName.containerPorts.http2 | int }}
+      targetPort: {{ default 80 $gatewayName.containerPorts.http2 | int }}
       {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.http2) }}
       nodePort: {{ $gatewayName.service.nodePorts.http2 | int }}
       {{- else if eq $gatewayName.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     - name: https
-      port: {{ $gatewayName.service.ports.https | int }}
+      port: {{ default 443 $gatewayName.service.ports.https | int }}
       protocol: TCP
-      targetPort: {{ $gatewayName.containerPorts.https | int }}
+      targetPort: {{ default 443 $gatewayName.containerPorts.https | int }}
       {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.https) }}
       nodePort: {{ $gatewayName.service.nodePorts.https | int }}
       {{- else if eq $gatewayName.service.type "ClusterIP" }}
@@ -95,7 +95,7 @@ spec:
     {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
-    istio: {{ .name }}
+    istio: {{ default "ingressgateway" .name }}
 ---
 {{- end -}}
 {{- end }}
