@@ -1,4 +1,4 @@
-{{ - if (include "common.capabilities.networkingGateway.apiVersion" $) }}
+{{- if (include "common.capabilities.networkingGateway.apiVersion" $) }}
 {{- range $gateway, $gatewayName := .Values.gateways }}
 apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
 kind: Gateway
