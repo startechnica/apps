@@ -4,7 +4,7 @@ apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
 kind: Gateway
 metadata:
   name: {{ .name }}
-  namespace: {{ include "common.names.namespace" . | quote }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
 spec:
   addresses:
     - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
