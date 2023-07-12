@@ -10,7 +10,7 @@ spec:
     - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname
   listeners:
-  - name: http
+  - name: http2
     port: 80
     protocol: HTTP
     allowedRoutes:
