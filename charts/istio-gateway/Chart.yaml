@@ -2,9 +2,13 @@ annotations:
   category: ServiceMesh
   artifacthub.io/links: |
     - name: Chart Source
-      url: https://github.com/startechnica/apps/tree/main/charts/istio-ingress-gateway
+      url: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
     - name: Upstream Project
       url: https://github.com/istio/istio/tree/master/manifests/charts/gateways/istio-ingress
+    - name: Istio Gateway
+      url: https://istio.io/latest/docs/concepts/traffic-management/#gateways
+    - name: Kubernetes Gateway
+      url: https://gateway-api.sigs.k8s.io/api-types/gateway/
 apiVersion: v2
 appVersion: 1.18.0
 dependencies:
@@ -17,10 +21,10 @@ dependencies:
     tags:
       - bitnami-common
     version: 1.x.x
-description: Istio Ingress Gateway provides more extensive customization and flexibility than 
+description: Istio Gateway provides more extensive customization and flexibility than 
   Kubernetes Ingress, and allows Istio features such as monitoring and route rules to be applied 
   to traffic entering the cluster.
-home: https://github.com/startechnica/apps/tree/main/charts/istio-ingress-gateway
+home: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
   - gateway
@@ -28,12 +32,13 @@ keywords:
   - ingress
   - ingressgateway
   - ingress-gateway
-kubeVersion: ">=1.20.0-0"
+  - kubernetes-gateway
+kubeVersion: ">=1.22.0-0"
 maintainers:
   - name: firmansyahn
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
-name: istio-ingress-gateway
+name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
