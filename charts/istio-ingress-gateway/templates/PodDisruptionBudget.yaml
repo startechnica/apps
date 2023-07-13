@@ -27,6 +27,7 @@ spec:
   selector:
     matchLabels: {{ include "common.labels.matchLabels" $ | nindent 6 }}
       istio: {{ .name }}
+      istio.io/gateway-name: {{ .name }}
 ---
-{{- end -}}
+{{- end }}
 {{- end -}}

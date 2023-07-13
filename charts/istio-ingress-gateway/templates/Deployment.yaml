@@ -6,6 +6,7 @@ metadata:
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     istio: {{ $gateway.name }}
+    istio.io/gateway-name: {{ $gateway.name }}
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
@@ -31,6 +32,7 @@ spec:
         {{- end }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
         istio: {{ $gateway.name }}
+        istio.io/gateway-name: {{ $gateway.name }}
         sidecar.istio.io/inject: "true"
         {{- if $gateway.revision }}
         istio.io/rev: {{ $gateway.revision | quote }}
