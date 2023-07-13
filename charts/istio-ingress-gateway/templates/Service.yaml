@@ -8,6 +8,7 @@ metadata:
   labels: {{- include "common.labels.standard" $ | nindent 4 }}
     app.kubernetes.io/component: gateway
     istio: {{ .name }}
+    istio.io/gateway-name: {{ .name }}
     release: {{ $.Release.Name }}
     istio.io/rev: {{ .revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}

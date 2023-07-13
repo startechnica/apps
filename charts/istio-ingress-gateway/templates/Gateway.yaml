@@ -1,4 +1,4 @@
-{{- if (include "common.capabilities.networkingGateway.apiVersion" $) }}
+{{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
 {{- range $gateway, $gatewayName := .Values.gateways }}
 {{- if .enabled -}}
 apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
