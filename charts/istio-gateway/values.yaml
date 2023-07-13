@@ -20,6 +20,9 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
+  ## @param global.namespaceOverride Override the namespace for resource deployed by the chart, but can itself be overridden by the local namespaceOverride
+  ##
+  namespaceOverride: ""
 
   # set the default set of namespaces to which services, service entries, virtual services, destination
   # rules should be exported to. Currently only one value can be provided in this list. This value
@@ -27,37 +30,6 @@ global:
   # * implies these objects are visible to all namespaces, enabling any sidecar to talk to any other sidecar.
   # . implies these objects are visible to only to sidecars in the same namespace, or if imported as a Sidecar.egress.host
   defaultConfigVisibilitySettings: []
-
-  # Default node selector to be applied to all deployments so that all pods can be
-  # constrained to run a particular nodes. Each component can overwrite these default
-  # values by adding its node selector block in the relevant section below and setting
-  # the desired values.
-  defaultNodeSelector: {}
-
-  # enable pod disruption budget for the control plane, which is used to
-  # ensure Istio control plane components are gradually upgraded or recovered.
-  defaultPodDisruptionBudget:
-    enabled: false
-
-  # A minimal set of requested resources to applied to all deployments so that
-  # Horizontal Pod Autoscaler will be able to function (if set).
-  # Each component can overwrite these default values by adding its own resources
-  # block in the relevant section below and setting the desired resources values.
-  defaultResources:
-    requests:
-    #   cpu: 10m
-    #   memory: 128Mi
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-
-  # Default node tolerations to be applied to all deployments so that all pods can be
-  # scheduled to a particular nodes with matching taints. Each component can overwrite
-  # these default values by adding its tolerations block in the relevant section below
-  # and setting the desired values.
-  # Configure this field in case that all pods of Istio control plane are expected to
-  # be scheduled to particular nodes with specified taints.
-  defaultTolerations: []
 
   # To output all istio components logs in json format by adding --log_as_json argument to each container argument
   logAsJson: false
@@ -78,6 +50,9 @@ global:
   # If empty, default scope and level will be used as configured in code
   logging:
     level: "default:info"
+    ## @param logging.logAsJson To output all istio components logs in json format by adding --log_as_json argument to each container argument
+    ##
+    logAsJson: false
 
   # Kubernetes >=v1.11.0 will create two PriorityClass, including system-cluster-critical and
   # system-node-critical, it is better to configure this in order to make sure your Istio pods
@@ -438,6 +413,9 @@ metrics:
     ##
     rules: []
 
+## @section Istio Gateway parameters
+##
+
 gateways:
   istio-ingressgateway:
     enabled: true
@@ -526,7 +504,7 @@ gateways:
       ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
       ##
       loadBalancerIP: ""
-      ## @param service.ipFamilyPolicy Istio Ingress Gateway Kubernetes service ipFamilyPolicy policy
+      ## @param service.ipFamilyPolicy Istio Gateway Kubernetes service ipFamilyPolicy policy
       ##
       ipFamilyPolicy: SingleStack
       ## @param service.externalTrafficPolicy Enable client source IP preservation

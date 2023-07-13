@@ -6,7 +6,7 @@
 
 Along with support for Kubernetes Ingress resources, Istio also allows you to configure ingress traffic using either an [Istio Gateway](https://istio.io/latest/docs/concepts/traffic-management/#gateways) or [Kubernetes Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource. A Gateway provides more extensive customization and flexibility than Ingress, and allows Istio features such as monitoring and route rules to be applied to traffic entering the cluster.
 
-This Helm chart configure Istio to expose a service outside of the service mesh using a Gateway.
+This Helm chart configure Istio to expose a service outside of the service mesh using a `Gateway`.
 
 [Overview of Istio Gateway](https://istio.io/latest/docs/tasks/traffic-management/ingress/ingress-control/)
 
@@ -16,7 +16,7 @@ This Helm chart configure Istio to expose a service outside of the service mesh 
 
 ```bash
 $ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install my-release startechnica/istio-gateway
+$ helm install istio-ingressgateway startechnica/istio-gateway
 ```
 
 ## Prerequisites
@@ -26,11 +26,11 @@ $ helm install my-release startechnica/istio-gateway
 
 ## Installing the Chart
 
-To install the chart with the release name `ingressgateway` on `istio-ingressgateway` namespace:
+To install the chart with the release name `istio-ingressgateway` on `istio-ingressgateway` namespace:
 
 ```bash
 $ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install ingressgateway startechnica/istio-gateway --namespace istio-ingressgateway --create-namespace
+$ helm install istio-ingressgateway startechnica/istio-gateway --namespace istio-ingressgateway --create-namespace
 ```
 
 These commands deploy Istio Gateway on the Kubernetes cluster in the default configuration.
@@ -39,10 +39,10 @@ These commands deploy Istio Gateway on the Kubernetes cluster in the default con
 
 ## Uninstalling the Chart
 
-To uninstall/delete the `ingressgateway` deployment:
+To uninstall/delete the `istio-ingressgateway` deployment:
 
 ```bash
-$ helm delete ingressgateway --namespace istio-ingressgateway
+$ helm delete istio-ingressgateway --namespace istio-ingressgateway
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
@@ -75,74 +75,81 @@ The command removes all the Kubernetes components associated with the chart and 
 | `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                           | `false`         |
 | `diagnosticMode.command`   | Command to override all containers in the deployment                                                              | `[]`            |
 | `diagnosticMode.args`      | Args to override all containers in the deployment                                                                 | `[]`            |
+| `istioNamespace`           | Istiod namespace                                                                                                  | `istio-system`  |
    
    
 ### Istio Gateway parameters
 
 | Name                                          | Description                                                                                                              | Value                          |
-| ----------------------------------------------| -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
-| `image.registry`                              | Istio Gateway image registry                                                                                                | `docker.io`                    |
-| `image.repository`                            | Istio Gateway image repository                                                                                              | `istio-gateway/istio-gateway-server` |
-| `image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                    | `3.2.0`                        |
-| `image.pullPolicy`                            | Istio Gateway image pull policy                                                                                             | `IfNotPresent`                 |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
+| `gateways.<gateway_identifier>`               | Create Istio Gateway scheme                                                                                              | `istio-ingressgateway`         |
+
+
+| Name                                          | Description                                                                                                              | Value                          |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
+| `enabled`                                     | Enable Istio Gateway                                                                                                     | `true`                    |
+| `image.registry`                              | Istio Gateway image registry                                                                                             | ``                    |
+| `image.repository`                            | Istio Gateway image repository                                                                                           | `` |
+| `image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                 | ``                        |
+| `image.digest`                                |                                                                                                                          | ``                        |
+| `image.pullPolicy`                            | Istio Gateway image pull policy                                                                                          | `IfNotPresent`                 |
 | `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
 | `image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
 | `hostAliases`                                 | Deployment pod host aliases                                                                                              | `[]`                           |
 | `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
 | `args`                                        | Override default container args (useful when using custom images)                                                        | `[]`                           |
-| `extraEnvVars`                                | Extra environment variables to be set on Istio Gateway containers                                                           | `[]`                           |
+| `extraEnvVars`                                | Extra environment variables to be set on Istio Gateway containers                                                        | `[]`                           |
 | `extraEnvVarsCM`                              | ConfigMap with extra environment variables                                                                               | `""`                           |
 | `extraEnvVarsSecret`                          | Secret with extra environment variables                                                                                  | `""`                           |
-| `service.type`                                | Kubernetes service type                                                                                                  | `ClusterIP`                    |
-| `service.clusterIP`                           | Specific cluster IP when service type is cluster IP. Use `None` for headless service                                     | `""`                           |
-| `service.ports.auth`                          | Istio Gateway Authentication and Authorization service port                                                                 | `1812`                         |
-| `service.ports.acct`                          | Istio Gateway Accounting service port                                                                                       | `1813`                         |
-| `service.ports.coa`                           | Istio Gateway CoA service port                                                                                              | `3799`                         |
-| `service.ports.radsec`                        | Istio Gateway RadSec service port                                                                                           | `2083`                         |
-| `service.ports.status`                        | Istio Gateway Status service port                                                                                           | `18121`                        |
-| `service.nodePorts.auth`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.acct`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.coa`                       | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.radsec`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.type`                                | Kubernetes service type                                                                                                  | `LoadBalancer`                 |
+| `service.ports.http2`                         | Istio Gateway HTTP/2 service port                                                                                        | `80`                           |
+| `service.ports.https`                         | Istio Gateway HTTPS/TLS service port                                                                                     | `443`                          |
+| `service.ports.status`                        | Istio Gateway Status service port                                                                                        | `15021`                        |
+| `service.nodePorts.http2`                     | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.https`                     | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
 | `service.nodePorts.status`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
 | `service.extraPorts`                          | Extra ports to expose (normally used with the `sidecar` value)                                                           | `[]`                           |
 | `service.externalIPs`                         | External IP list to use with ClusterIP service type                                                                      | `[]`                           |
+| `service.clusterIP`                           | Specific cluster IP when service type is cluster IP. Use `None` for headless service                                     | `""`                           |
 | `service.loadBalancerIP`                      | `loadBalancerIP` if service type is `LoadBalancer`                                                                       | `""`                           |
+| `service.ipFamilyPolicy`                      | Istio Gateway Kubernetes service ipFamilyPolicy policy                                                                   | `SingleStack`                           |
 | `service.loadBalancerSourceRanges`            | Addresses that are allowed when svc is `LoadBalancer`                                                                    | `[]`                           |
-| `service.externalTrafficPolicy`               | Istio Gateway service external traffic policy                                                                               | `Cluster`                      |
-| `service.annotations`                         | Additional annotations for Istio Gateway service                                                                            | `{}`                           |
+| `service.externalTrafficPolicy`               | Istio Gateway service external traffic policy                                                                            | `Cluster`                      |
+| `service.annotations`                         | Additional annotations for Istio Gateway service                                                                         | `{}`                           |
 | `service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
 | `service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
+| `rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
+| `rbac.rules`                                  |                                                                                                                          | `[]]`                          |
 | `serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
 | `serviceAccount.name`                         | Name of the service account to use. If not set and create is true, a name is generated using the fullname template.      | `""`                           |
 | `serviceAccount.automountServiceAccountToken` | Automount service account token for the server service account                                                           | `false`                        |
 | `serviceAccount.annotations`                  | Annotations for service account. Evaluated as a template. Only used if `create` is `true`.                               | `{}`                           |
 | `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
-| `extraEnvVars`                                | Array containing extra env vars to configure Istio Gateway                                                                  | `[]`                           |
-| `extraEnvVarsCM`                              | ConfigMap containing extra env vars to configure Istio Gateway                                                              | `""`                           |
-| `extraEnvVarsSecret`                          | Secret containing extra env vars to configure Istio Gateway                                                                 | `""`                           |
-| `rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
+| `extraEnvVars`                                | Array containing extra env vars to configure Istio Gateway                                                               | `[]`                           |
+| `extraEnvVarsCM`                              | ConfigMap containing extra env vars to configure Istio Gateway                                                           | `""`                           |
+| `extraEnvVarsSecret`                          | Secret containing extra env vars to configure Istio Gateway                                                              | `""`                           |
 | `podSecurityContext.enabled`                  | Enable security context                                                                                                  | `true`                         |
-| `podSecurityContext.fsGroup`                  | Group ID for the container filesystem                                                                                    | `101`                          |
-| `podSecurityContext.runAsUser`                | User ID for the container                                                                                                | `101`                          |
-| `containerSecurityContext.enabled`            | Enabled Istio Gateway container Security Context                                                                            | `true`                         |
-| `containerSecurityContext.runAsUser`          | Set Istio Gateway container Security Context runAsUser                                                                      | `101`                          |
-| `containerSecurityContext.runAsNonRoot`       | Set Istio Gateway container Security Context runAsNonRoot                                                                   | `true`                         |
+| `podSecurityContext.sysctls`                  |                                                                                                                          | `[]`                           |
+| `containerSecurityContext.enabled`            | Enabled Istio Gateway container Security Context                                                                         | `true`                         |
+| `containerSecurityContext.allowPrivilegeEscalation`   |                                                                                                                  | `false`                        |
+| `containerSecurityContext.capabilities`       |                                                                                                                          | `{}}`                          |
+| `containerSecurityContext.capabilities.drop`  |                                                                                                                          | `[ALL]`                        |
+| `containerSecurityContext.privileged`         |                                                                                                                          | `false`                        |
+| `containerSecurityContext.readOnlyRootFilesystem`     |                                                                                                                  | `true`                         |
+| `containerSecurityContext.runAsGroup`         | Set Istio Gateway container Security Context runAsGroup                                                                  | `1337`                         |
+| `containerSecurityContext.runAsUser`          | Set Istio Gateway container Security Context runAsUser                                                                   | `1337`                         |
+| `containerSecurityContext.runAsNonRoot`       | Set Istio Gateway container Security Context runAsNonRoot                                                                | `true`                         |
 | `tls.enabled`                                 | Enable TLS support for replication traffic                                                                               | `false`                        |
 | `tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
 | `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `""`                           |
 | `tls.certFilename`                            | Certificate filename                                                                                                     | `""`                           |
 | `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
 | `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
-| `configuration`                               | Configuration for the Istio Gateway server                                                                                  | `""`                           |
-| `configurationConfigMap`                      | ConfigMap with the Istio Gateway configuration files (Note: Overrides `configuration`). The value is evaluated as a template. | `""`                         |
-| `initdbScripts`                               | Specify dictionary of scripts to be run at first boot                                                                    | `{}`                           |
-| `initdbScriptsConfigMap`                      | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                      | `""`                           |
-| `extraFlags`                                  | Istio Gateway additional command line flags                                                                                 | `""`                           |
+| `extraFlags`                                  | Istio Gateway additional command line flags                                                                              | `""`                           |
 | `replicaCount`                                | Desired number of cluster nodes                                                                                          | `3`                            |
-| `updateStrategy.type`                         | updateStrategy for Istio Gateway Master StatefulSet                                                                         | `RollingUpdate`                |
-| `podLabels`                                   | Extra labels for Istio Gateway pods                                                                                         | `{}`                           |
-| `podAnnotations`                              | Annotations for Istio Gateway  pods                                                                                         | `{}`                           |
+| `updateStrategy.type`                         | updateStrategy for Istio Gateway Master StatefulSet                                                                      | `RollingUpdate`                |
+| `podLabels`                                   | Extra labels for Istio Gateway pods                                                                                      | `{}`                           |
+| `podAnnotations`                              | Annotations for Istio Gateway  pods                                                                                      | `{}`                           |
 | `podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
 | `podAntiAffinityPreset`                       | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                 | `soft`                         |
 | `nodeAffinityPreset.type`                     | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                | `""`                           |
@@ -153,28 +160,20 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tolerations`                                 | Tolerations for pod assignment                                                                                           | `[]`                           |
 | `topologySpreadConstraints`                   | Topology Spread Constraints for pods assignment                                                                          | `[]`                           |
 | `lifecycleHooks`                              | for the galera container(s) to automate configuration before or after startup                                            | `{}`                           |
-| `containerPorts.auth`                         | Auth database container port                                                                                             | `1812`                         |
-| `containerPorts.acct`                         | Acct cluster container port                                                                                              | `1813`                         |
-| `containerPorts.coa`                          | CoA container port                                                                                                       | `3799`                         |
-| `containerPorts.radsec`                       | RadSec container port                                                                                                    | `2083`                         |
-| `containerPorts.status`                       | Status container port                                                                                                    | `18121`                        |
-| `persistence.enabled`                         | Enable persistence using PVC                                                                                             | `true`                         |
-| `persistence.existingClaim`                   | Provide an existing `PersistentVolumeClaim`                                                                              | `""`                           |
-| `persistence.subPath`                         | Subdirectory of the volume to mount                                                                                      | `""`                           |
-| `persistence.mountPath`                       | Path to mount the volume at                                                                                              | `/etc/istio-gateway`              |
-| `persistence.selector`                        | Selector to match an existing Persistent Volume (this value is evaluated as a template)                                  | `{}`                           |
-| `persistence.storageClass`                    | Persistent Volume Storage Class                                                                                          | `""`                           |
-| `persistence.annotations`                     | Persistent Volume Claim annotations                                                                                      | `{}`                           |
-| `persistence.labels`                          | Persistent Volume Claim Labels                                                                                           | `{}`                           |
-| `persistence.accessModes`                     | Persistent Volume Access Modes                                                                                           | `["ReadWriteOnce"]`            |
-| `persistence.size`                            | Persistent Volume Size                                                                                                   | `8Gi`                          |
+| `containerPorts.http2`                        | HTTP/2 container port                                                                                                    | `80`                           |
+| `containerPorts.https`                        | HTTPS/TLS container port                                                                                                 | `443`                          |
+| `containerPorts.status`                       | Status container port                                                                                                    | `15021`                        |
 | `priorityClassName`                           | Priority Class Name for Statefulset                                                                                      | `""`                           |
 | `initContainers`                              | Additional init containers (this value is evaluated as a template)                                                       | `[]`                           |
 | `sidecars`                                    | Add additional sidecar containers (this value is evaluated as a template)                                                | `[]`                           |
 | `extraVolumes`                                | Extra volumes                                                                                                            | `[]`                           |
 | `extraVolumeMounts`                           | Mount extra volume(s)                                                                                                    | `[]`                           |
 | `resources.limits`                            | The resources limits for the container                                                                                   | `{}`                           |
+| `resources.limits.cpu`                        | CPU resources limits for the container                                                                                   | `2000m`                        |
+| `resources.limits.memory`                     | Memory resources limits for the container                                                                                | `1024Mi`                       |
 | `resources.requests`                          | The requested resources for the container                                                                                | `{}`                           |
+| `resources.requests.cpu`                      | CPU requested resources for the container                                                                                | `100m`                         |
+| `resources.requests.memory`                   | Memory requested resources for the container                                                                             | `128Mi`                        |
 | `livenessProbe.enabled`                       | Turn on and off liveness probe                                                                                           | `true`                         |
 | `livenessProbe.initialDelaySeconds`           | Delay before liveness probe is initiated                                                                                 | `120`                          |
 | `livenessProbe.periodSeconds`                 | How often to perform the probe                                                                                           | `10`                           |
@@ -193,28 +192,16 @@ The command removes all the Kubernetes components associated with the chart and 
 | `startupProbe.timeoutSeconds`                 | When the probe times out                                                                                                 | `1`                            |
 | `startupProbe.failureThreshold`               | Minimum consecutive failures for the probe                                                                               | `48`                           |
 | `startupProbe.successThreshold`               | Minimum consecutive successes for the probe                                                                              | `1`                            |
-| `customStartupProbe`                          | Custom liveness probe for the Web component                                                                              | `{}`                           |
-| `customLivenessProbe`                         | Custom liveness probe for the Web component                                                                              | `{}`                           |
-| `customReadinessProbe`                        | Custom rediness probe for the Web component                                                                              | `{}`                           |
-| `podDisruptionBudget.create`                  | Specifies whether a Pod disruption budget should be created                                                              | `false`                        |
-| `podDisruptionBudget.minAvailable`            | Minimum number / percentage of pods that should remain scheduled                                                         | `1`                            |
-| `podDisruptionBudget.maxUnavailable`          | Maximum number / percentage of pods that may be made unavailable                                                         | `""`                           |
+| `customStartupProbe`                          | Custom liveness probe for the Istio Gateway component                                                                    | `{}`                           |
+| `customLivenessProbe`                         | Custom liveness probe for the Istio Gateway component                                                                    | `{}`                           |
+| `customReadinessProbe`                        | Custom rediness probe for the Istio Gateway component                                                                    | `{}`                           |
+
+### Metrics parameters
+
+| Name                                          | Description                                                                                                              | Value                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
 | `metrics.enabled`                             | Start a side-car prometheus exporter                                                                                     | `false`                        |
-| `metrics.image.registry`                      | Istio Gateway Prometheus exporter image registry                                                                            | `""`                           |
-| `metrics.image.repository`                    | Istio Gateway Prometheus exporter image repository                                                                          | `""`                           |
-| `metrics.image.tag`                           | Istio Gateway Prometheus exporter image tag (immutable tags are recommended)                                                | `""`                           |
-| `metrics.image.pullPolicy`                    | Istio Gateway Prometheus exporter image pull policy                                                                         | `IfNotPresent`                 |
-| `metrics.image.pullSecrets`                   | Istio Gateway Prometheus exporter image pull secrets                                                                        | `[]`                           |
-| `metrics.extraFlags`                          | Istio Gateway Prometheus exporter additional command line flags                                                             | `[]`                           |
-| `metrics.resources.limits`                    | The resources limits for the container                                                                                   | `{}`                           |
-| `metrics.resources.requests`                  | The requested resources for the container                                                                                | `{}`                           |
-| `metrics.service.type`                        | Prometheus exporter service type                                                                                         | `ClusterIP`                    |
-| `metrics.service.port`                        | Prometheus exporter service port                                                                                         | `9104`                         |
 | `metrics.service.annotations`                 | Prometheus exporter service annotations                                                                                  | `{}`                           |
-| `metrics.service.loadBalancerIP`              | Load Balancer IP if the Prometheus metrics server type is `LoadBalancer`                                                 | `""`                           |
-| `metrics.service.clusterIP`                   | Prometheus metrics service Cluster IP                                                                                    | `""`                           |
-| `metrics.service.loadBalancerSourceRanges`    | Prometheus metrics service Load Balancer sources                                                                         | `[]`                           |
-| `metrics.service.externalTrafficPolicy`       | Prometheus metrics service external traffic policy                                                                       | `Cluster`                      |
 | `metrics.serviceMonitor.enabled`              | if `true`, creates a Prometheus Operator ServiceMonitor (also requires `metrics.enabled` to be `true`)                   | `false`                        |
 | `metrics.serviceMonitor.namespace`            | Optional namespace which Prometheus is running in                                                                        | `""`                           |
 | `metrics.serviceMonitor.jobLabel`             | The name of the label on the target service to use as the job name in prometheus.                                        | `""`                           |
@@ -230,19 +217,24 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.prometheusRules.rules`               | PrometheusRule rules to configure                                                                                                                                                             | `{}`                      |
 
 
-### Custom Istio Gateway application parameters
+### Other parameters
 
-| Name                                       | Description                                                                     | Value             |
-| ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
-| `modsEnabled.sql.enabled`                  | Enable Istio Gateway SQL module                                                    | `false`           |
-| `sitesEnabled.status.port`                 | Istio Gateway status port                                                          | `18121`           |
-| `sitesEnabled.status.secret`               | FreRADIUS status secret                                                         | `adminsecret`     |
+| Name                                       | Description                                                                        | Value             |
+| ------------------------------------------ | ---------------------------------------------------------------------------------- | ----------------- |
+| `pdb.create`                               | Specifies whether a Pod disruption budget should be created                        | `false`           |
+| `pdb.minAvailable`                         | Minimum number / percentage of pods that should remain scheduled                   | `1`               |
+| `pdb.maxUnavailable`                       | Maximum number / percentage of pods that may be made unavailable                   | `""`              |
+| `autoscaling.enabled`                      | Whether enable horizontal pod autoscaler                                           | `false`           |
+| `autoscaling.minReplicas`                  | Configure a minimum amount of pods                                                 | `1`               |
+| `autoscaling.maxReplicas`                  | Configure a maximum amount of pods                                                 | `""`              |
+| `autoscaling.targetCPU`                    | Define the CPU target to trigger the scaling actions (utilization percentage)      | `80`              |
+| `autoscaling.targetMemory`                 | Define the memory target to trigger the scaling actions (utilization percentage)   | `80`              |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
 ```bash
-$ helm install my-release \
+$ helm install istio-ingressgateway \
   --set imagePullPolicy=Always \
     startechnica/istio-gateway
 ```
@@ -252,7 +244,7 @@ The above command sets the `imagePullPolicy` to `Always`.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```bash
-$ helm install my-release startechnica/istio-gateway -f values.yaml
+$ helm install istio-ingressgateway startechnica/istio-gateway -f values.yaml
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
