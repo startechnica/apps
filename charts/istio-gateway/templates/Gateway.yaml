@@ -1,0 +1,39 @@
+{{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
+{{- range $gateway, $gatewayName := .Values.gateways }}
+{{- if .enabled -}}
+apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
+kind: Gateway
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  {{- if $.Values.commonLabels }}
+  labels: {{- include "common.tplvalues.render" ( dict "value" $.Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- end }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $.Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: istio
+  addresses:
+    - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
+      type: Hostname
+  listeners:
+  - name: http2
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: https
+    port: 443
+    protocol: HTTPS
+    allowedRoutes:
+      namespaces:
+        from: All
+  {{- if $gatewayName.service.extraPorts }}
+    {{- include "common.tplvalues.render" (dict "value" $gatewayName.service.extraPorts "context" $) | nindent 2 }}
+  {{- end }}
+---
+{{- end }}
+{{- end }}
+{{- end }}

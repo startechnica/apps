@@ -1,0 +1,102 @@
+{{- range $gateway, $gatewayName := .Values.gateways }}
+{{- if .enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "common.labels.standard" $ | nindent 4 }}
+    app.kubernetes.io/component: gateway
+    istio: {{ .name }}
+    istio.io/gateway-name: {{ .name }}
+    release: {{ $.Release.Name }}
+    istio.io/rev: {{ .revision | default "default" }}
+    install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
+    operator.istio.io/component: {{ $.Values.operator.component }}
+    {{- if $.Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" $.Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if or .service.annotations $.Values.commonAnnotations }}
+  annotations:
+    {{- if $.Values.commonAnnotations }}
+      {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+    {{- end }}
+    {{- if .service.annotations }}
+      {{- include "common.tplvalues.render" (dict "value" .service.annotations "context" $) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  type: {{ default "LoadBalancer" .service.type }}
+  {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
+  clusterIP: {{ .service.clusterIP }}
+  {{- end }}
+  {{- if and .service.externalTrafficPolicy (or (eq .service.type "LoadBalancer") (eq .service.type "NodePort")) }}
+  externalTrafficPolicy: {{ .service.externalTrafficPolicy | quote }}
+  {{- end }}
+  ipFamilyPolicy: {{ default "SingleStack" .service.ipFamilyPolicy }}
+  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .service.loadBalancerClass }}
+  {{- end }}
+  {{- if (and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerIP))) }}
+  loadBalancerIP: {{ .service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ .service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if .service.sessionAffinity }}
+  sessionAffinity: {{ default "None" .service.sessionAffinity }}
+  {{- end }}
+  {{- if .service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  ports:
+  {{- if .networkGateway }}
+    - name: status-port
+      port: 15021
+      targetPort: 15021
+    - name: tls
+      port: 15443
+      targetPort: 15443
+    - name: tls-istiod
+      port: 15012
+      targetPort: 15012
+    - name: tls-webhook
+      port: 15017
+      targetPort: 15017
+  {{- else }}
+    - name: status-port
+      port: {{ default 15021 $gatewayName.service.ports.status | int }}
+      protocol: TCP
+      targetPort: {{ default 15021 $gatewayName.containerPorts.status | int }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.status) }}
+      nodePort: {{ $gatewayName.service.nodePorts.status | int }}
+      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: http2
+      port: {{ default 80 $gatewayName.service.ports.http2 | int }}
+      protocol: TCP
+      targetPort: {{ default 80 $gatewayName.containerPorts.http2 | int }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.http2) }}
+      nodePort: {{ $gatewayName.service.nodePorts.http2 | int }}
+      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: https
+      port: {{ default 443 $gatewayName.service.ports.https | int }}
+      protocol: TCP
+      targetPort: {{ default 443 $gatewayName.containerPorts.https | int }}
+      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.https) }}
+      nodePort: {{ $gatewayName.service.nodePorts.https | int }}
+      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- if $gatewayName.service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" $gatewayName.service.extraPorts "context" $) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
+    istio: {{ default "ingressgateway" .name }}
+---
+{{- end -}}
+{{- end }}
