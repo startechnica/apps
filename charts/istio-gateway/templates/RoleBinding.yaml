@@ -1,5 +1,5 @@
 {{- range $gateway := .Values.gateways }}
-{{- if and $.Values.rbac.create }}
+{{- if and .enabled $.Values.rbac.create (and .rbac .rbac.create) }}
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" $ }}
 kind: RoleBinding
 metadata:
@@ -22,7 +22,7 @@ roleRef:
   name: {{ include "common.names.fullname" $ | quote }}
 subjects:
 - kind: ServiceAccount
-  name: {{ .name }}-sa
+  name: {{ printf "%s-sa" .name }}
 ---
 {{- end }}
 {{- end }}
