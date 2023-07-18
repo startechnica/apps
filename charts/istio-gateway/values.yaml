@@ -813,8 +813,7 @@ gateways:
       ##
       annotations: {}
 
-  - name: webapps
-    enabled: false
-    service:
-      type: LoadBalancer
+  - name: freeradius
+    enabled: true
+    service: {}
     
