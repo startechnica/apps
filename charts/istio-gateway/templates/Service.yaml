@@ -67,7 +67,7 @@ spec:
     - name: status
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
-      targetPort: {{ default 15021 .containerPorts.status | int }}
+      targetPort: {{ default 15021 .service.containerPorts.status | int }}
       {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.status) }}
       nodePort: {{ .service.nodePorts.status | int }}
       {{- else if eq .service.type "ClusterIP" }}
@@ -76,7 +76,7 @@ spec:
     - name: http2
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
-      targetPort: {{ default 80 .containerPorts.http2 | int }}
+      targetPort: {{ default 80 .service.containerPorts.http2 | int }}
       {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.http2) }}
       nodePort: {{ .service.nodePorts.http2 | int }}
       {{- else if eq .service.type "ClusterIP" }}
@@ -85,7 +85,7 @@ spec:
     - name: https
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
-      targetPort: {{ default 443 .containerPorts.https | int }}
+      targetPort: {{ default 443 .service.containerPorts.https | int }}
       {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.https) }}
       nodePort: {{ .service.nodePorts.https | int }}
       {{- else if eq .service.type "ClusterIP" }}
