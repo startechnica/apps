@@ -1,8 +1,8 @@
 <!--- app-name: Istio Gateway -->
 
-# Helm chart for Istio Gateway
+# Helm chart for Istio Gateway (Multi Gateway)
 
- Gateway used to manage inbound and outbound traffic for your mesh, letting you specify which traffic you want to enter or leave the mesh. Gateway configurations are applied to standalone Envoy proxies that are running at the edge of the mesh, rather than sidecar Envoy proxies running alongside your service workloads.
+Gateway used to manage inbound and outbound traffic for your mesh, letting you specify which traffic you want to enter or leave the mesh. Gateway configurations are applied to standalone Envoy proxies that are running at the edge of the mesh, rather than sidecar Envoy proxies running alongside your service workloads.
 
 Along with support for Kubernetes Ingress resources, Istio also allows you to configure ingress traffic using either an [Istio Gateway](https://istio.io/latest/docs/concepts/traffic-management/#gateways) or [Kubernetes Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource. A Gateway provides more extensive customization and flexibility than Ingress, and allows Istio features such as monitoring and route rules to be applied to traffic entering the cluster.
 
@@ -21,8 +21,8 @@ $ helm install istio-ingressgateway startechnica/istio-gateway
 
 ## Prerequisites
 
-- Kubernetes 1.22+
-- Helm 3.2.0+
+- Kubernetes 1.24+
+- Helm 3.10.0+
 
 ## Installing the Chart
 
@@ -87,115 +87,115 @@ The command removes all the Kubernetes components associated with the chart and 
 
 | Name                                          | Description                                                                                                              | Value                          |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| ------------------------------ |
-| `enabled`                                     | Enable Istio Gateway                                                                                                     | `true`                         |
-| `image.registry`                              | Istio Gateway image registry                                                                                             | `""`                           |
-| `image.repository`                            | Istio Gateway image repository                                                                                           | `""`                           |
-| `image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                 | `""`                           |
-| `image.digest`                                |                                                                                                                          | `""`                           |
-| `image.pullPolicy`                            | Istio Gateway image pull policy                                                                                          | `IfNotPresent`                 |
-| `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
-| `image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
-| `hostAliases`                                 | Deployment pod host aliases                                                                                              | `[]`                           |
-| `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
-| `args`                                        | Override default container args (useful when using custom images)                                                        | `[]`                           |
-| `extraEnvVars`                                | Extra environment variables to be set on Istio Gateway containers                                                        | `[]`                           |
-| `extraEnvVarsCM`                              | ConfigMap with extra environment variables                                                                               | `""`                           |
-| `extraEnvVarsSecret`                          | Secret with extra environment variables                                                                                  | `""`                           |
-| `service.type`                                | Kubernetes service type                                                                                                  | `LoadBalancer`                 |
-| `service.ports.http2`                         | Istio Gateway HTTP/2 service port                                                                                        | `80`                           |
-| `service.ports.https`                         | Istio Gateway HTTPS/TLS service port                                                                                     | `443`                          |
-| `service.ports.status`                        | Istio Gateway Status service port                                                                                        | `15021`                        |
-| `service.nodePorts.http2`                     | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
-| `service.nodePorts.https`                     | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
-| `service.nodePorts.status`                    | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
-| `service.extraPorts`                          | Extra ports to expose (normally used with the `sidecar` value)                                                           | `[]`                           |
-| `service.externalIPs`                         | External IP list to use with `ClusterIP` service type                                                                    | `[]`                           |
-| `service.clusterIP`                           | Specific cluster IP when service type is `ClusterIP`. Use `None` for headless service                                    | `""`                           |
-| `service.loadBalancerIP`                      | `loadBalancerIP` if service type is `LoadBalancer`                                                                       | `""`                           |
-| `service.ipFamilyPolicy`                      | Istio Gateway Kubernetes service `ipFamilyPolicy` policy                                                                 | `SingleStack`                  |
-| `service.loadBalancerSourceRanges`            | Addresses that are allowed when svc is `LoadBalancer`                                                                    | `[]`                           |
-| `service.externalTrafficPolicy`               | Istio Gateway service external traffic policy                                                                            | `Cluster`                      |
-| `service.annotations`                         | Additional annotations for Istio Gateway service                                                                         | `{}`                           |
-| `service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
-| `service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
-| `networkGateway`                              |                                                                                                                          | `false`                        |
-| `rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
-| `rbac.rules`                                  |                                                                                                                          | `[]`                           |
-| `serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
-| `serviceAccount.name`                         | Name of the service account to use. If not set and create is true, a name is generated using the fullname template.      | `""`                           |
-| `serviceAccount.automountServiceAccountToken` | Automount service account token for the server service account                                                           | `false`                        |
-| `serviceAccount.annotations`                  | Annotations for service account. Evaluated as a template. Only used if `create` is `true`.                               | `{}`                           |
-| `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
-| `extraEnvVars`                                | Array containing extra env vars to configure Istio Gateway                                                               | `[]`                           |
-| `extraEnvVarsCM`                              | ConfigMap containing extra env vars to configure Istio Gateway                                                           | `""`                           |
-| `extraEnvVarsSecret`                          | Secret containing extra env vars to configure Istio Gateway                                                              | `""`                           |
-| `podSecurityContext.enabled`                  | Enable security context                                                                                                  | `true`                         |
-| `podSecurityContext.sysctls`                  |                                                                                                                          | `[]`                           |
-| `containerSecurityContext.enabled`            | Enabled Istio Gateway container Security Context                                                                         | `true`                         |
-| `containerSecurityContext.allowPrivilegeEscalation`   |                                                                                                                  | `false`                        |
-| `containerSecurityContext.capabilities`       |                                                                                                                          | `{}}`                          |
-| `containerSecurityContext.capabilities.drop`  |                                                                                                                          | `[ALL]`                        |
-| `containerSecurityContext.privileged`         |                                                                                                                          | `false`                        |
-| `containerSecurityContext.readOnlyRootFilesystem`     |                                                                                                                  | `true`                         |
-| `containerSecurityContext.runAsGroup`         | Set Istio Gateway container Security Context runAsGroup                                                                  | `1337`                         |
-| `containerSecurityContext.runAsUser`          | Set Istio Gateway container Security Context runAsUser                                                                   | `1337`                         |
-| `containerSecurityContext.runAsNonRoot`       | Set Istio Gateway container Security Context runAsNonRoot                                                                | `true`                         |
-| `tls.enabled`                                 | Enable TLS support for replication traffic                                                                               | `false`                        |
-| `tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
-| `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `""`                           |
-| `tls.certFilename`                            | Certificate filename                                                                                                     | `""`                           |
-| `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
-| `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
-| `extraFlags`                                  | Istio Gateway additional command line flags                                                                              | `""`                           |
-| `replicaCount`                                | Desired number of cluster nodes                                                                                          | `1`                            |
-| `podLabels`                                   | Extra labels for Istio Gateway pods                                                                                      | `{}`                           |
-| `podAnnotations`                              | Annotations for Istio Gateway  pods                                                                                      | `{}`                           |
-| `podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
-| `podAntiAffinityPreset`                       | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                 | `soft`                         |
-| `nodeAffinityPreset.type`                     | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                | `""`                           |
-| `nodeAffinityPreset.key`                      | Node label key to match. Ignored if `affinity` is set.                                                                   | `""`                           |
-| `nodeAffinityPreset.values`                   | Node label values to match. Ignored if `affinity` is set.                                                                | `[]`                           |
-| `affinity`                                    | Affinity for pod assignment                                                                                              | `{}`                           |
-| `nodeSelector`                                | Node labels for pod assignment                                                                                           | `{}`                           |
-| `tolerations`                                 | Tolerations for pod assignment                                                                                           | `[]`                           |
-| `topologySpreadConstraints`                   | Topology Spread Constraints for pods assignment                                                                          | `[]`                           |
-| `lifecycleHooks`                              | for the galera container(s) to automate configuration before or after startup                                            | `{}`                           |
-| `containerPorts.http2`                        | HTTP/2 container port                                                                                                    | `80`                           |
-| `containerPorts.https`                        | HTTPS/TLS container port                                                                                                 | `443`                          |
-| `containerPorts.status`                       | Status container port                                                                                                    | `15021`                        |
-| `priorityClassName`                           | Priority Class Name for Deployment                                                                                       | `""`                           |
-| `runtimeClassName`                            | Runtime Class for Istio Gateway pods                                                                                     | `""`                           |
-| `initContainers`                              | Additional init containers (this value is evaluated as a template)                                                       | `[]`                           |
-| `sidecars`                                    | Add additional sidecar containers (this value is evaluated as a template)                                                | `[]`                           |
-| `extraVolumes`                                | Extra volumes                                                                                                            | `[]`                           |
-| `extraVolumeMounts`                           | Mount extra volume(s)                                                                                                    | `[]`                           |
-| `resources.limits`                            | The resources limits for the container                                                                                   | `{}`                           |
-| `resources.limits.cpu`                        | CPU resources limits for the container                                                                                   | `2000m`                        |
-| `resources.limits.memory`                     | Memory resources limits for the container                                                                                | `1024Mi`                       |
-| `resources.requests`                          | The requested resources for the container                                                                                | `{}`                           |
-| `resources.requests.cpu`                      | CPU requested resources for the container                                                                                | `100m`                         |
-| `resources.requests.memory`                   | Memory requested resources for the container                                                                             | `128Mi`                        |
-| `livenessProbe.enabled`                       | Turn on and off liveness probe                                                                                           | `false`                        |
-| `livenessProbe.initialDelaySeconds`           | Delay before liveness probe is initiated                                                                                 | `120`                          |
-| `livenessProbe.periodSeconds`                 | How often to perform the probe                                                                                           | `10`                           |
-| `livenessProbe.timeoutSeconds`                | When the probe times out                                                                                                 | `1`                            |
-| `livenessProbe.failureThreshold`              | Minimum consecutive failures for the probe                                                                               | `3`                            |
-| `livenessProbe.successThreshold`              | Minimum consecutive successes for the probe                                                                              | `1`                            |
-| `readinessProbe.enabled`                      | Turn on and off readiness probe                                                                                          | `true`                         |
-| `readinessProbe.initialDelaySeconds`          | Delay before readiness probe is initiated                                                                                | `30`                           |
-| `readinessProbe.periodSeconds`                | How often to perform the probe                                                                                           | `10`                           |
-| `readinessProbe.timeoutSeconds`               | When the probe times out                                                                                                 | `1`                            |
-| `readinessProbe.failureThreshold`             | Minimum consecutive failures for the probe                                                                               | `3`                            |
-| `readinessProbe.successThreshold`             | Minimum consecutive successes for the probe                                                                              | `1`                            |
-| `startupProbe.enabled`                        | Turn on and off startup probe                                                                                            | `true`                         |
-| `startupProbe.initialDelaySeconds`            | Delay before startup probe is initiated                                                                                  | `120`                          |
-| `startupProbe.periodSeconds`                  | How often to perform the probe                                                                                           | `10`                           |
-| `startupProbe.timeoutSeconds`                 | When the probe times out                                                                                                 | `1`                            |
-| `startupProbe.failureThreshold`               | Minimum consecutive failures for the probe                                                                               | `30`                           |
-| `startupProbe.successThreshold`               | Minimum consecutive successes for the probe                                                                              | `1`                            |
-| `customStartupProbe`                          | Custom startup probe for the Istio Gateway component                                                                     | `{}`                           |
-| `customLivenessProbe`                         | Custom liveness probe for the Istio Gateway component                                                                    | `{}`                           |
-| `customReadinessProbe`                        | Custom rediness probe for the Istio Gateway component                                                                    | `{}`                           |
+| `gateways.enabled`                                     | Enable Istio Gateway                                                                                                     | `true`                         |
+| `gateways.image.registry`                              | Istio Gateway image registry                                                                                             | `""`                           |
+| `gateways.image.repository`                            | Istio Gateway image repository                                                                                           | `""`                           |
+| `gateways.image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                 | `""`                           |
+| `gateways.image.digest`                                |                                                                                                                          | `""`                           |
+| `gateways.image.pullPolicy`                            | Istio Gateway image pull policy                                                                                          | `IfNotPresent`                 |
+| `gateways.image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
+| `gateways.image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
+| `gateways.hostAliases`                                 | Deployment pod host aliases                                                                                              | `[]`                           |
+| `gateways.command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
+| `gateways.args`                                        | Override default container args (useful when using custom images)                                                        | `[]`                           |
+| `gateways.extraEnvVars`                                | Extra environment variables to be set on Istio Gateway containers                                                        | `[]`                           |
+| `gateways.extraEnvVarsCM`                              | ConfigMap with extra environment variables                                                                               | `""`                           |
+| `gateways.extraEnvVarsSecret`                          | Secret with extra environment variables                                                                                  | `""`                           |
+| `gateways.service.type`                                | Kubernetes service type                                                                                                  | `LoadBalancer`                 |
+| `gateways.service.ports.http2`                         | Istio Gateway HTTP/2 service port                                                                                        | `80`                           |
+| `gateways.service.ports.https`                         | Istio Gateway HTTPS/TLS service port                                                                                     | `443`                          |
+| `gateways.service.ports.status`                        | Istio Gateway Status service port                                                                                        | `15021`                        |
+| `gateways.service.nodePorts.http2`                     | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
+| `gateways.service.nodePorts.https`                     | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
+| `gateways.service.nodePorts.status`                    | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
+| `gateways.service.extraPorts`                          | Extra ports to expose (normally used with the `sidecar` value)                                                           | `[]`                           |
+| `gateways.service.externalIPs`                         | External IP list to use with `ClusterIP` service type                                                                    | `[]`                           |
+| `gateways.service.clusterIP`                           | Specific cluster IP when service type is `ClusterIP`. Use `None` for headless service                                    | `""`                           |
+| `gateways.service.loadBalancerIP`                      | `loadBalancerIP` if service type is `LoadBalancer`                                                                       | `""`                           |
+| `gateways.service.ipFamilyPolicy`                      | Istio Gateway Kubernetes service `ipFamilyPolicy` policy                                                                 | `SingleStack`                  |
+| `gateways.service.loadBalancerSourceRanges`            | Addresses that are allowed when svc is `LoadBalancer`                                                                    | `[]`                           |
+| `gateways.service.externalTrafficPolicy`               | Istio Gateway service external traffic policy                                                                            | `Cluster`                      |
+| `gateways.service.annotations`                         | Additional annotations for Istio Gateway service                                                                         | `{}`                           |
+| `gateways.service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
+| `gateways.service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
+| `gateways.networkGateway`                              |                                                                                                                          | `false`                        |
+| `gateways.rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
+| `gateways.rbac.rules`                                  |                                                                                                                          | `[]`                           |
+| `gateways.serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
+| `gateways.serviceAccount.name`                         | Name of the service account to use. If not set and create is true, a name is generated using the fullname template.      | `""`                           |
+| `gateways.serviceAccount.automountServiceAccountToken` | Automount service account token for the server service account                                                           | `false`                        |
+| `gateways.serviceAccount.annotations`                  | Annotations for service account. Evaluated as a template. Only used if `create` is `true`.                               | `{}`                           |
+| `gateways.command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
+| `gateways.extraEnvVars`                                | Array containing extra env vars to configure Istio Gateway                                                               | `[]`                           |
+| `gateways.extraEnvVarsCM`                              | ConfigMap containing extra env vars to configure Istio Gateway                                                           | `""`                           |
+| `gateways.extraEnvVarsSecret`                          | Secret containing extra env vars to configure Istio Gateway                                                              | `""`                           |
+| `gateways.podSecurityContext.enabled`                  | Enable security context                                                                                                  | `true`                         |
+| `gateways.podSecurityContext.sysctls`                  |                                                                                                                          | `[]`                           |
+| `gateways.containerSecurityContext.enabled`            | Enabled Istio Gateway container Security Context                                                                         | `true`                         |
+| `gateways.containerSecurityContext.allowPrivilegeEscalation`   |                                                                                                                  | `false`                        |
+| `gateways.containerSecurityContext.capabilities`       |                                                                                                                          | `{}}`                          |
+| `gateways.containerSecurityContext.capabilities.drop`  |                                                                                                                          | `[ALL]`                        |
+| `gateways.containerSecurityContext.privileged`         |                                                                                                                          | `false`                        |
+| `gateways.containerSecurityContext.readOnlyRootFilesystem`     |                                                                                                                  | `true`                         |
+| `gateways.containerSecurityContext.runAsGroup`         | Set Istio Gateway container Security Context runAsGroup                                                                  | `1337`                         |
+| `gateways.containerSecurityContext.runAsUser`          | Set Istio Gateway container Security Context runAsUser                                                                   | `1337`                         |
+| `gateways.containerSecurityContext.runAsNonRoot`       | Set Istio Gateway container Security Context runAsNonRoot                                                                | `true`                         |
+| `gateways.tls.enabled`                                 | Enable TLS support for gateway traffic                                                                                   | `false`                        |
+| `gateways.tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
+| `gateways.tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `""`                           |
+| `gateways.tls.certFilename`                            | Certificate filename                                                                                                     | `""`                           |
+| `gateways.tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
+| `gateways.tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
+| `gateways.extraFlags`                                  | Istio Gateway additional command line flags                                                                              | `""`                           |
+| `gateways.replicaCount`                                | Desired number of cluster nodes                                                                                          | `1`                            |
+| `gateways.podLabels`                                   | Extra labels for Istio Gateway pods                                                                                      | `{}`                           |
+| `gateways.podAnnotations`                              | Annotations for Istio Gateway  pods                                                                                      | `{}`                           |
+| `gateways.podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
+| `gateways.podAntiAffinityPreset`                       | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                 | `soft`                         |
+| `gateways.nodeAffinityPreset.type`                     | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                | `""`                           |
+| `gateways.nodeAffinityPreset.key`                      | Node label key to match. Ignored if `affinity` is set.                                                                   | `""`                           |
+| `gateways.nodeAffinityPreset.values`                   | Node label values to match. Ignored if `affinity` is set.                                                                | `[]`                           |
+| `gateways.affinity`                                    | Affinity for pod assignment                                                                                              | `{}`                           |
+| `gateways.nodeSelector`                                | Node labels for pod assignment                                                                                           | `{}`                           |
+| `gateways.tolerations`                                 | Tolerations for pod assignment                                                                                           | `[]`                           |
+| `gateways.topologySpreadConstraints`                   | Topology Spread Constraints for pods assignment                                                                          | `[]`                           |
+| `gateways.lifecycleHooks`                              | for the galera container(s) to automate configuration before or after startup                                            | `{}`                           |
+| `gateways.containerPorts.http2`                        | HTTP/2 container port                                                                                                    | `80`                           |
+| `gateways.containerPorts.https`                        | HTTPS/TLS container port                                                                                                 | `443`                          |
+| `gateways.containerPorts.status`                       | Status container port                                                                                                    | `15021`                        |
+| `gateways.priorityClassName`                           | Priority Class Name for Deployment                                                                                       | `""`                           |
+| `gateways.runtimeClassName`                            | Runtime Class for Istio Gateway pods                                                                                     | `""`                           |
+| `gateways.initContainers`                              | Additional init containers (this value is evaluated as a template)                                                       | `[]`                           |
+| `gateways.sidecars`                                    | Add additional sidecar containers (this value is evaluated as a template)                                                | `[]`                           |
+| `gateways.extraVolumes`                                | Extra volumes                                                                                                            | `[]`                           |
+| `gateways.extraVolumeMounts`                           | Mount extra volume(s)                                                                                                    | `[]`                           |
+| `gateways.resources.limits`                            | The resources limits for the container                                                                                   | `{}`                           |
+| `gateways.resources.limits.cpu`                        | CPU resources limits for the container                                                                                   | `2000m`                        |
+| `gateways.resources.limits.memory`                     | Memory resources limits for the container                                                                                | `1024Mi`                       |
+| `gateways.resources.requests`                          | The requested resources for the container                                                                                | `{}`                           |
+| `gateways.resources.requests.cpu`                      | CPU requested resources for the container                                                                                | `100m`                         |
+| `gateways.resources.requests.memory`                   | Memory requested resources for the container                                                                             | `128Mi`                        |
+| `gateways.livenessProbe.enabled`                       | Turn on and off liveness probe                                                                                           | `false`                        |
+| `gateways.livenessProbe.initialDelaySeconds`           | Delay before liveness probe is initiated                                                                                 | `120`                          |
+| `gateways.livenessProbe.periodSeconds`                 | How often to perform the probe                                                                                           | `10`                           |
+| `gateways.livenessProbe.timeoutSeconds`                | When the probe times out                                                                                                 | `1`                            |
+| `gateways.livenessProbe.failureThreshold`              | Minimum consecutive failures for the probe                                                                               | `3`                            |
+| `gateways.livenessProbe.successThreshold`              | Minimum consecutive successes for the probe                                                                              | `1`                            |
+| `gateways.readinessProbe.enabled`                      | Turn on and off readiness probe                                                                                          | `true`                         |
+| `gateways.readinessProbe.initialDelaySeconds`          | Delay before readiness probe is initiated                                                                                | `30`                           |
+| `gateways.readinessProbe.periodSeconds`                | How often to perform the probe                                                                                           | `10`                           |
+| `gateways.readinessProbe.timeoutSeconds`               | When the probe times out                                                                                                 | `1`                            |
+| `gateways.readinessProbe.failureThreshold`             | Minimum consecutive failures for the probe                                                                               | `3`                            |
+| `gateways.readinessProbe.successThreshold`             | Minimum consecutive successes for the probe                                                                              | `1`                            |
+| `gateways.startupProbe.enabled`                        | Turn on and off startup probe                                                                                            | `true`                         |
+| `gateways.startupProbe.initialDelaySeconds`            | Delay before startup probe is initiated                                                                                  | `120`                          |
+| `gateways.startupProbe.periodSeconds`                  | How often to perform the probe                                                                                           | `10`                           |
+| `gateways.startupProbe.timeoutSeconds`                 | When the probe times out                                                                                                 | `1`                            |
+| `gateways.startupProbe.failureThreshold`               | Minimum consecutive failures for the probe                                                                               | `30`                           |
+| `gateways.startupProbe.successThreshold`               | Minimum consecutive successes for the probe                                                                              | `1`                            |
+| `gateways.customStartupProbe`                          | Custom startup probe for the Istio Gateway component                                                                     | `{}`                           |
+| `gateways.customLivenessProbe`                         | Custom liveness probe for the Istio Gateway component                                                                    | `{}`                           |
+| `gateways.customReadinessProbe`                        | Custom rediness probe for the Istio Gateway component                                                                    | `{}`                           |
 
 ### Metrics parameters
 
@@ -236,7 +236,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 
 ```bash
 $ helm install istio-ingressgateway \
-  --set imagePullPolicy=Always \
+    --set imagePullPolicy=Always \
     startechnica/istio-gateway
 ```
 

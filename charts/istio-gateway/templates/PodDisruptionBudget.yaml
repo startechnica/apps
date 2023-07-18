@@ -1,5 +1,5 @@
-{{- if .Values.pdb.create -}}
 {{- range $gateway := .Values.gateways }}
+{{- if and $gateway.enabled $.Values.pdb.create }}
 apiVersion: {{ include "common.capabilities.policy.apiVersion" $ }}
 kind: PodDisruptionBudget
 metadata:
@@ -30,4 +30,4 @@ spec:
       istio.io/gateway-name: {{ .name }}
 ---
 {{- end }}
-{{- end -}}
+{{- end }}
