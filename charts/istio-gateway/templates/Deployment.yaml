@@ -87,7 +87,7 @@ spec:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
           image: auto
-          imagePullPolicy: {{ .image.pullPolicy | default "Always" | quote }}
+          imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" | quote }}
           {{- if .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}

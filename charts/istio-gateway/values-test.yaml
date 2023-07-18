@@ -24,6 +24,9 @@ gateways:
       runAsUser: 1337
       runAsNonRoot: true
 
+    image:
+      pullPolicy: IfNotPresent
+
     nodeAffinityPreset: {}
 
     podSecurityContext:
