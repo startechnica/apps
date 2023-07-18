@@ -815,12 +815,12 @@ gateways:
 
   - name: freeradius
     enabled: true
+    containerPorts:
+      status: 15021
+      http2: 80
+      https: 443
     service:
       ports:
-        status: 15021
-        http2: 80
-        https: 443
-      containerPorts:
         status: 15021
         http2: 80
         https: 443
