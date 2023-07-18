@@ -1,0 +1,155 @@
+{{- range  := .Values.gateways }}
+{{- if .enabled }}
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "common.names.namespace" $ | quote }}
+  labels: {{- include "common.labels.standard" $ | nindent 4 }}
+    istio: {{ .name }}
+    istio.io/gateway-name: {{ .name }}
+    {{- if $.Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $.Values.pdb.create }}
+  replicas: {{ default 1 .replicaCount | int }}
+  {{- end }}
+  selector:
+    matchLabels:
+      istio: {{ .name }}
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: gateway
+        {{- if $.Values.metrics.enabled }}
+          {{- include "common.tplvalues.render" (dict "value" $.Values.metrics.annotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if .podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      labels: {{- include "common.labels.standard" $ | nindent 8 }}
+        istio: {{ .name }}
+        istio.io/gateway-name: {{ .name }}
+        sidecar.istio.io/inject: "true"
+        {{- if .revision }}
+        istio.io/rev: {{ .revision | quote }}
+        {{- end }}
+        {{- if .podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "gateway.imagePullSecrets" $ | nindent 6 }}
+      {{- if .hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .podSecurityContext.enabled }}
+      securityContext: {{- omit .podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .name }}-sa
+      {{- if .schedulerName }}
+      schedulerName: {{ .schedulerName }}
+      {{- end }}
+      {{- if .topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .priorityClassName }}
+      priorityClassName: {{ .priorityClassName | quote }}
+      {{- end }}
+      {{- if .runtimeClassName }}
+      runtimeClassName: {{ .runtimeClassName }}
+      {{- else if $.Values.runtimeClassName }}
+      runtimeClassName: {{ $.Values.runtimeClassName | quote }}
+      {{- end }}
+      {{- if .affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .nodeAffinityPreset.type "key" .nodeAffinityPreset.key "values" .nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .initContainers }}
+      initContainers:
+        {{- include "common.tplvalues.render" (dict "value" .initContainers "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: istio-proxy
+          # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
+          image: auto
+          imagePullPolicy: {{ .image.pullPolicy | default "Always" | quote }}
+          {{- if .containerSecurityContext.enabled }}
+          securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          env:
+            {{- with .networkGateway }}
+            - name: ISTIO_META_REQUESTED_NETWORK_VIEW
+              value: "{{.}}"
+            {{- end }}
+            {{- if .extraEnvVars }}
+              {{- include "common.tplvalues.render" (dict "value" .extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if or .extraEnvVarsCM .extraEnvVarsSecret }}
+          envFrom:
+            {{- if .extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if .extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - containerPort: 15090
+              protocol: TCP
+              name: http-envoy-prom
+          {{- if .customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" .customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .startupProbe.enabled }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: {{ .livenessProbe.initialDelaySeconds | int }}
+            periodSeconds: {{ .livenessProbe.periodSeconds | int }}
+            timeoutSeconds: {{ .livenessProbe.timeoutSeconds |int }}
+            failureThreshold: {{ .livenessProbe.failureThreshold | int }}
+            successThreshold: {{ .livenessProbe.successThreshold | int }}
+          {{- end }}
+          {{- if .customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .readinessProbe.enabled }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .resources }}
+          resources: {{- toYaml .resources | nindent 12 }}
+          {{- end }}
+          {{- if $.Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
+        {{- if $.Values.sidecars }}
+          {{- include "common.tplvalues.render" (dict "value" $.Values.sidecars "context" $) | trim | nindent 8 }}
+        {{- end }}
+      {{- if $.Values.extraVolumes }}
+      volumes:
+        {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}
+---
+{{- end }}
+{{- end }}
