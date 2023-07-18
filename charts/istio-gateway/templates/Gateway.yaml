@@ -1,5 +1,5 @@
 {{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
-{{- range $gateway, $gatewayName := .Values.gateways }}
+{{- range $gateway := .Values.gateways }}
 {{- if .enabled -}}
 apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
 kind: Gateway
@@ -24,8 +24,8 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    {{- if $gatewayName.service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" $gatewayName.service.extraPorts "context" $) | nindent 4 }}
+    {{- if .service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}
