@@ -24,12 +24,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    - name: https
-      port: 443
-      protocol: HTTPS
-      allowedRoutes:
-        namespaces:
-          from: All
     {{- if $gatewayName.service.extraPorts }}
       {{- include "common.tplvalues.render" (dict "value" $gatewayName.service.extraPorts "context" $) | nindent 4 }}
     {{- end }}

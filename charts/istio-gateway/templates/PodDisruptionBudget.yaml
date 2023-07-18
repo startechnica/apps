@@ -1,5 +1,5 @@
 {{- if .Values.pdb.create -}}
-{{- range $gateway, $val := .Values.gateways }}
+{{- range $gateway := .Values.gateways }}
 apiVersion: {{ include "common.capabilities.policy.apiVersion" $ }}
 kind: PodDisruptionBudget
 metadata:
@@ -12,10 +12,10 @@ metadata:
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" $.Values.commonLabels "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if $.Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   {{- if $.Values.pdb.minAvailable }}
