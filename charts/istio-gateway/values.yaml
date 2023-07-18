@@ -820,4 +820,7 @@ gateways:
         status: 15021
         http2: 80
         https: 443
-    
+      containerPorts:
+        status: 15021
+        http2: 80
+        https: 443
