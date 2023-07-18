@@ -762,16 +762,8 @@ gateways:
     ##
     runtimeClassName: ""
 
-    # Scalability tuning
-    # replicaCount: 1
-    rollingMaxSurge: 100%
-    rollingMaxUnavailable: 25%
-    autoscaleEnabled: true
-    autoscaleMin: 1
-    autoscaleMax: 5
-
     # If specified, the gateway will act as a network gateway for the given network.
-    networkGateway: ""
+    networkGateway: false
 
     ##############
     secretVolumes:

@@ -81,17 +81,17 @@ The command removes all the Kubernetes components associated with the chart and 
 ### Istio Gateway parameters
 
 | Name                                          | Description                                                                                                              | Value                          |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| ------------------------------ |
 | `gateways.<gateway_identifier>`               | Create Istio Gateway scheme                                                                                              | `istio-ingressgateway`         |
 
 
 | Name                                          | Description                                                                                                              | Value                          |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
-| `enabled`                                     | Enable Istio Gateway                                                                                                     | `true`                    |
-| `image.registry`                              | Istio Gateway image registry                                                                                             | ``                    |
-| `image.repository`                            | Istio Gateway image repository                                                                                           | `` |
-| `image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                 | ``                        |
-| `image.digest`                                |                                                                                                                          | ``                        |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| ------------------------------ |
+| `enabled`                                     | Enable Istio Gateway                                                                                                     | `true`                         |
+| `image.registry`                              | Istio Gateway image registry                                                                                             | `""`                           |
+| `image.repository`                            | Istio Gateway image repository                                                                                           | `""`                           |
+| `image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                 | `""`                           |
+| `image.digest`                                |                                                                                                                          | `""`                           |
 | `image.pullPolicy`                            | Istio Gateway image pull policy                                                                                          | `IfNotPresent`                 |
 | `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
 | `image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
@@ -105,21 +105,22 @@ The command removes all the Kubernetes components associated with the chart and 
 | `service.ports.http2`                         | Istio Gateway HTTP/2 service port                                                                                        | `80`                           |
 | `service.ports.https`                         | Istio Gateway HTTPS/TLS service port                                                                                     | `443`                          |
 | `service.ports.status`                        | Istio Gateway Status service port                                                                                        | `15021`                        |
-| `service.nodePorts.http2`                     | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.https`                     | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.status`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.http2`                     | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
+| `service.nodePorts.https`                     | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
+| `service.nodePorts.status`                    | Specify the nodePort value for the `LoadBalancer` and `NodePort` service types.                                          | `""`                           |
 | `service.extraPorts`                          | Extra ports to expose (normally used with the `sidecar` value)                                                           | `[]`                           |
-| `service.externalIPs`                         | External IP list to use with ClusterIP service type                                                                      | `[]`                           |
-| `service.clusterIP`                           | Specific cluster IP when service type is cluster IP. Use `None` for headless service                                     | `""`                           |
+| `service.externalIPs`                         | External IP list to use with `ClusterIP` service type                                                                    | `[]`                           |
+| `service.clusterIP`                           | Specific cluster IP when service type is `ClusterIP`. Use `None` for headless service                                    | `""`                           |
 | `service.loadBalancerIP`                      | `loadBalancerIP` if service type is `LoadBalancer`                                                                       | `""`                           |
-| `service.ipFamilyPolicy`                      | Istio Gateway Kubernetes service ipFamilyPolicy policy                                                                   | `SingleStack`                           |
+| `service.ipFamilyPolicy`                      | Istio Gateway Kubernetes service `ipFamilyPolicy` policy                                                                 | `SingleStack`                  |
 | `service.loadBalancerSourceRanges`            | Addresses that are allowed when svc is `LoadBalancer`                                                                    | `[]`                           |
 | `service.externalTrafficPolicy`               | Istio Gateway service external traffic policy                                                                            | `Cluster`                      |
 | `service.annotations`                         | Additional annotations for Istio Gateway service                                                                         | `{}`                           |
 | `service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
 | `service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
+| `networkGateway`                              |                                                                                                                          | `false`                        |
 | `rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
-| `rbac.rules`                                  |                                                                                                                          | `[]]`                          |
+| `rbac.rules`                                  |                                                                                                                          | `[]`                           |
 | `serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
 | `serviceAccount.name`                         | Name of the service account to use. If not set and create is true, a name is generated using the fullname template.      | `""`                           |
 | `serviceAccount.automountServiceAccountToken` | Automount service account token for the server service account                                                           | `false`                        |
@@ -146,8 +147,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
 | `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
 | `extraFlags`                                  | Istio Gateway additional command line flags                                                                              | `""`                           |
-| `replicaCount`                                | Desired number of cluster nodes                                                                                          | `3`                            |
-| `updateStrategy.type`                         | updateStrategy for Istio Gateway Master StatefulSet                                                                      | `RollingUpdate`                |
+| `replicaCount`                                | Desired number of cluster nodes                                                                                          | `1`                            |
 | `podLabels`                                   | Extra labels for Istio Gateway pods                                                                                      | `{}`                           |
 | `podAnnotations`                              | Annotations for Istio Gateway  pods                                                                                      | `{}`                           |
 | `podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
@@ -163,7 +163,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `containerPorts.http2`                        | HTTP/2 container port                                                                                                    | `80`                           |
 | `containerPorts.https`                        | HTTPS/TLS container port                                                                                                 | `443`                          |
 | `containerPorts.status`                       | Status container port                                                                                                    | `15021`                        |
-| `priorityClassName`                           | Priority Class Name for Statefulset                                                                                      | `""`                           |
+| `priorityClassName`                           | Priority Class Name for Deployment                                                                                       | `""`                           |
+| `runtimeClassName`                            | Runtime Class for Istio Gateway pods                                                                                     | `""`                           |
 | `initContainers`                              | Additional init containers (this value is evaluated as a template)                                                       | `[]`                           |
 | `sidecars`                                    | Add additional sidecar containers (this value is evaluated as a template)                                                | `[]`                           |
 | `extraVolumes`                                | Extra volumes                                                                                                            | `[]`                           |
@@ -174,7 +175,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `resources.requests`                          | The requested resources for the container                                                                                | `{}`                           |
 | `resources.requests.cpu`                      | CPU requested resources for the container                                                                                | `100m`                         |
 | `resources.requests.memory`                   | Memory requested resources for the container                                                                             | `128Mi`                        |
-| `livenessProbe.enabled`                       | Turn on and off liveness probe                                                                                           | `true`                         |
+| `livenessProbe.enabled`                       | Turn on and off liveness probe                                                                                           | `false`                        |
 | `livenessProbe.initialDelaySeconds`           | Delay before liveness probe is initiated                                                                                 | `120`                          |
 | `livenessProbe.periodSeconds`                 | How often to perform the probe                                                                                           | `10`                           |
 | `livenessProbe.timeoutSeconds`                | When the probe times out                                                                                                 | `1`                            |
@@ -186,13 +187,13 @@ The command removes all the Kubernetes components associated with the chart and 
 | `readinessProbe.timeoutSeconds`               | When the probe times out                                                                                                 | `1`                            |
 | `readinessProbe.failureThreshold`             | Minimum consecutive failures for the probe                                                                               | `3`                            |
 | `readinessProbe.successThreshold`             | Minimum consecutive successes for the probe                                                                              | `1`                            |
-| `startupProbe.enabled`                        | Turn on and off startup probe                                                                                            | `false`                        |
+| `startupProbe.enabled`                        | Turn on and off startup probe                                                                                            | `true`                         |
 | `startupProbe.initialDelaySeconds`            | Delay before startup probe is initiated                                                                                  | `120`                          |
 | `startupProbe.periodSeconds`                  | How often to perform the probe                                                                                           | `10`                           |
 | `startupProbe.timeoutSeconds`                 | When the probe times out                                                                                                 | `1`                            |
-| `startupProbe.failureThreshold`               | Minimum consecutive failures for the probe                                                                               | `48`                           |
+| `startupProbe.failureThreshold`               | Minimum consecutive failures for the probe                                                                               | `30`                           |
 | `startupProbe.successThreshold`               | Minimum consecutive successes for the probe                                                                              | `1`                            |
-| `customStartupProbe`                          | Custom liveness probe for the Istio Gateway component                                                                    | `{}`                           |
+| `customStartupProbe`                          | Custom startup probe for the Istio Gateway component                                                                     | `{}`                           |
 | `customLivenessProbe`                         | Custom liveness probe for the Istio Gateway component                                                                    | `{}`                           |
 | `customReadinessProbe`                        | Custom rediness probe for the Istio Gateway component                                                                    | `{}`                           |
 

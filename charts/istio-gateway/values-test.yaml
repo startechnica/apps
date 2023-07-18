@@ -1,24 +1,4 @@
 gateways:
-  istio-ingressgateway-app:
-    name: istio-ingressgateway-app
-    labels:
-      app: istio-ingressgateway
-      istio: ingressgateway-app
-    ports:
-    - port: 15021
-      targetPort: 15021
-      name: status-port
-      protocol: TCP
-    - port: 80
-      targetPort: 8080
-      name: http2
-      protocol: TCP
-    - port: 443
-      targetPort: 8443
-      name: https
-      protocol: TCP
+  webapps:
+    name: webeapps
 
-    serviceAnnotations: {}
-
-global:
-  autoscalingv2API: false
