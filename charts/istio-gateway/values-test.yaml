@@ -1,5 +1,5 @@
 gateways:
-  - name: ingress
+  - name: webapps
     enabled: true
     containerPorts:
       status: 15021
