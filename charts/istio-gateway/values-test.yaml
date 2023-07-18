@@ -24,39 +24,11 @@ gateways:
       runAsUser: 1337
       runAsNonRoot: true
 
-    podSecurityContext:
-      enabled: true
-      sysctls:
-        - name: net.ipv4.ip_unprivileged_port_start
-          value: "0"
-
-  - name: freeradius
-    enabled: true
-    containerPorts:
-      status: 15021
-      http2: 80
-      https: 443
-
-    service:
-      ports:
-        status: 15021
-        http2: 80
-        https: 443
-
-    containerSecurityContext:
-      enabled: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      privileged: false
-      readOnlyRootFilesystem: true
-      runAsGroup: 1337
-      runAsUser: 1337
-      runAsNonRoot: true
+    nodeAffinityPreset: {}
 
     podSecurityContext:
       enabled: true
       sysctls:
         - name: net.ipv4.ip_unprivileged_port_start
           value: "0"
+
