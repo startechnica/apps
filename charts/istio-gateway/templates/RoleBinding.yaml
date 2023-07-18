@@ -3,7 +3,7 @@
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
 kind: RoleBinding
 metadata:
-  name: {{ $gateway.name | quote }}
+  name: {{ .name | quote }}
   namespace: {{ include "common.names.namespace" $ | quote }}
   labels:
     release: {{ $.Release.Name }}
@@ -22,7 +22,7 @@ roleRef:
   name: {{ include "common.names.fullname" $ | quote }}
 subjects:
 - kind: ServiceAccount
-  name: {{ $gateway.name }}-sa
+  name: {{ .name }}-sa
 ---
 {{- end }}
 {{- end }}
