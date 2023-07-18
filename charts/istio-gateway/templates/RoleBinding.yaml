@@ -7,7 +7,7 @@ metadata:
   namespace: {{ include "common.names.namespace" $ | quote }}
   labels:
     release: {{ $.Release.Name }}
-    istio.io/rev: {{ $gateway.revision | default "default" }}
+    istio.io/rev: {{ .revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}
