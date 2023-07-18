@@ -764,6 +764,26 @@ gateways:
     # If specified, the gateway will act as a network gateway for the given network.
     networkGateway: false
 
+    ## Role Based Access Configuration
+    ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+    ##
+    rbac:
+      ## @param rbac.create Specify whether RBAC resources should be created and used
+      ##
+      create: true
+      ## @param rbac.rules Custom RBAC rules
+      ## Example:
+      ## rules:
+      ##   - apiGroups:
+      ##       - ""
+      ##     resources:
+      ##       - pods
+      ##     verbs:
+      ##       - get
+      ##       - list
+      ##
+      rules: []
+
     ##############
     secretVolumes:
     - name: ingressgateway-certs
@@ -797,3 +817,5 @@ gateways:
     enabled: false
     service:
       type: LoadBalancer
+    rbac: {}
+    

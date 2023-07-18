@@ -1,6 +1,6 @@
 {{- range $gateway := .Values.gateways }}
 {{- if and $.Values.rbac.create }}
-apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
+apiVersion: {{ include "common.capabilities.rbac.apiVersion" $ }}
 kind: RoleBinding
 metadata:
   name: {{ .name | quote }}

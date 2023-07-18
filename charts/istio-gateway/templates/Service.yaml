@@ -1,4 +1,4 @@
-{{- range $gateway, $gatewayName := .Values.gateways }}
+{{- range $gateway := .Values.gateways }}
 {{- if .enabled -}}
 apiVersion: v1
 kind: Service
@@ -65,38 +65,39 @@ spec:
       targetPort: 15017
   {{- else }}
     - name: status-port
-      port: {{ default 15021 $gatewayName.service.ports.status | int }}
+      port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
-      targetPort: {{ default 15021 $gatewayName.containerPorts.status | int }}
-      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.status) }}
-      nodePort: {{ $gatewayName.service.nodePorts.status | int }}
-      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      targetPort: {{ default 15021 .containerPorts.status | int }}
+      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.status) }}
+      nodePort: {{ .service.nodePorts.status | int }}
+      {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     - name: http2
-      port: {{ default 80 $gatewayName.service.ports.http2 | int }}
+      port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
-      targetPort: {{ default 80 $gatewayName.containerPorts.http2 | int }}
-      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.http2) }}
-      nodePort: {{ $gatewayName.service.nodePorts.http2 | int }}
-      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      targetPort: {{ default 80 .containerPorts.http2 | int }}
+      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.http2) }}
+      nodePort: {{ .service.nodePorts.http2 | int }}
+      {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     - name: https
-      port: {{ default 443 $gatewayName.service.ports.https | int }}
+      port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
-      targetPort: {{ default 443 $gatewayName.containerPorts.https | int }}
-      {{- if (and (or (eq $gatewayName.service.type "NodePort") (eq $gatewayName.service.type "LoadBalancer")) $gatewayName.service.nodePorts.https) }}
-      nodePort: {{ $gatewayName.service.nodePorts.https | int }}
-      {{- else if eq $gatewayName.service.type "ClusterIP" }}
+      targetPort: {{ default 443 .containerPorts.https | int }}
+      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.https) }}
+      nodePort: {{ .service.nodePorts.https | int }}
+      {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- if $gatewayName.service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" $gatewayName.service.extraPorts "context" $) | nindent 4 }}
+    {{- if .service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
     istio: {{ default "ingressgateway" .name }}
+    istio.io/gateway-name: {{ default "ingressgateway" .name }}
 ---
 {{- end -}}
 {{- end }}
