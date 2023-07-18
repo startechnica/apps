@@ -817,5 +817,4 @@ gateways:
     enabled: false
     service:
       type: LoadBalancer
-    rbac: {}
     
