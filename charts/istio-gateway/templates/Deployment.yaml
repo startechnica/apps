@@ -1,4 +1,4 @@
-{{- range  := .Values.gateways }}
+{{- range $gateway := .Values.gateways }}
 {{- if .enabled }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
 kind: Deployment
