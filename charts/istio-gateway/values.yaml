@@ -417,7 +417,7 @@ metrics:
 ##
 
 gateways:
-  - enabled: true
+  - enabled: false
     ## @param gateways.$gateway.name Unique label for the gateway. This is required to ensure Gateways can select this workload
     name: ingressgateway
     ## @param gateways.$gateway.revision Revision is set as 'version' label and part of the resource names when installing multiple control planes.
@@ -812,15 +812,3 @@ gateways:
       ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
       ##
       annotations: {}
-
-  - name: freeradius
-    enabled: true
-    containerPorts:
-      status: 15021
-      http2: 80
-      https: 443
-    service:
-      ports:
-        status: 15021
-        http2: 80
-        https: 443

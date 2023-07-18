@@ -15,12 +15,13 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if $.Values.pdb.create }}
+  {{- if not $.Values.pdb.create }}
   replicas: {{ default 1 .replicaCount | int }}
   {{- end }}
   selector:
     matchLabels:
       istio: {{ .name }}
+      istio.io/gateway-name: {{ .name }}
   template:
     metadata:
       annotations:
