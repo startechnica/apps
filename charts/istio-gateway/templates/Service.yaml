@@ -51,7 +51,7 @@ spec:
   {{- end }}
   ports:
   {{- if .networkGateway }}
-    - name: status-port
+    - name: status
       port: 15021
       targetPort: 15021
     - name: tls
@@ -64,7 +64,7 @@ spec:
       port: 15017
       targetPort: 15017
   {{- else }}
-    - name: status-port
+    - name: status
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
       targetPort: {{ default 15021 .containerPorts.status | int }}
