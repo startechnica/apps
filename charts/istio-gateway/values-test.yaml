@@ -1,19 +1,6 @@
 gateways:
   - name: webapps
     enabled: true
-    containerPorts:
-      status: 15021
-      http2: 80
-      https: 443
-
-    service:
-      ports:
-        status: 15021
-        http2: 80
-        https: 443
-
-    nodeAffinityPreset: {}
-
     rbac:
       create: true
 

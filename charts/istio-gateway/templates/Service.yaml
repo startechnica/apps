@@ -1,5 +1,5 @@
 {{- range $gateway := .Values.gateways }}
-{{- if .enabled -}}
+{{- if .enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -63,7 +63,7 @@ spec:
     - name: tls-webhook
       port: 15017
       targetPort: 15017
-  {{- else }}
+  {{- else if and .service .containerPorts }}
     - name: status
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
@@ -94,10 +94,26 @@ spec:
     {{- if .service.extraPorts }}
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
+  {{- else }}
+    - name: status
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: http2
+      port: 80
+      protocol: TCP
+      targetPort: 80
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+    {{- if .service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+    {{- end }}
   {{- end }}
   selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
     istio: {{ default "ingressgateway" .name }}
     istio.io/gateway-name: {{ default "ingressgateway" .name }}
 ---
-{{- end -}}
+{{- end }}
 {{- end }}
