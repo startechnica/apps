@@ -4,7 +4,8 @@ gateways:
     rbac:
       create: true
 
-    service: {}
+    service:
+      ipFamilyPolicy: PreferDualStack
 
     serviceAccount:
       create: true
@@ -28,6 +29,8 @@ gateways:
         - name: radsec
           port: 2083
           protocol: UDP
+
+      ipFamilyPolicy: PreferDualStack
 
     serviceAccount:
       create: true
