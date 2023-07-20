@@ -20,7 +20,7 @@ dependencies:
     repository: oci://registry-1.docker.io/bitnamicharts
     tags:
       - bitnami-common
-    version: 1.x.x
+    version: 2.x.x
 description: Istio Gateway provides more extensive customization and flexibility than 
   Kubernetes Ingress, and allows Istio features such as monitoring and route rules to be applied 
   to traffic entering the cluster.
@@ -28,6 +28,7 @@ home: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
   - gateway
+  - gateway-api
   - istio
   - ingress
   - ingressgateway
