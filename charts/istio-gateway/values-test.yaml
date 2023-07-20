@@ -1,24 +1,38 @@
 gateways:
-  istio-ingressgateway-app:
-    name: istio-ingressgateway-app
-    labels:
-      app: istio-ingressgateway
-      istio: ingressgateway-app
-    ports:
-    - port: 15021
-      targetPort: 15021
-      name: status-port
-      protocol: TCP
-    - port: 80
-      targetPort: 8080
-      name: http2
-      protocol: TCP
-    - port: 443
-      targetPort: 8443
-      name: https
-      protocol: TCP
+  - name: webapps
+    enabled: true
+    rbac:
+      create: true
 
-    serviceAnnotations: {}
+    service:
+      ipFamilyPolicy: PreferDualStack
 
-global:
-  autoscalingv2API: false
+    serviceAccount:
+      create: true
+  
+  - name: freeradius
+    enabled: true
+    rbac:
+      create: true
+
+    service:
+      extraPorts:
+        - name: acct
+          port: 1813
+          protocol: UDP
+        - name: auth
+          port: 1812
+          protocol: UDP
+        - name: coa
+          port: 3799
+          protocol: UDP
+        - name: radsec
+          port: 2083
+          protocol: UDP
+
+      ipFamilyPolicy: PreferDualStack
+
+    serviceAccount:
+      create: true
+
+  

@@ -10,7 +10,7 @@ annotations:
     - name: Kubernetes Gateway
       url: https://gateway-api.sigs.k8s.io/api-types/gateway/
 apiVersion: v2
-appVersion: 1.18.0
+appVersion: 1.18.1
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
@@ -20,7 +20,7 @@ dependencies:
     repository: oci://registry-1.docker.io/bitnamicharts
     tags:
       - bitnami-common
-    version: 1.x.x
+    version: 2.x.x
 description: Istio Gateway provides more extensive customization and flexibility than 
   Kubernetes Ingress, and allows Istio features such as monitoring and route rules to be applied 
   to traffic entering the cluster.
@@ -28,6 +28,7 @@ home: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
   - gateway
+  - gateway-api
   - istio
   - ingress
   - ingressgateway
@@ -42,4 +43,4 @@ name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
-version: 0.1.0
+version: 0.1.1
