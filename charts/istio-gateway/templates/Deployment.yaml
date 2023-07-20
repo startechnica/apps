@@ -87,11 +87,15 @@ spec:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
           image: auto
-          {{- if .image .image.pullPolicy }}
+          {{- if and .image .image.pullPolicy }}
           imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" | quote }}
           {{- end }}
-          {{- if .containerSecurityContext.enabled }}
+          {{- if and .containerSecurityContext .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- else }}
+            sysctls:
+              - name: net.ipv4.ip_unprivileged_port_start
+                value: "0"
           {{- end }}
           env:
             {{- with .networkGateway }}
