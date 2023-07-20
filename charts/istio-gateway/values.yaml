@@ -786,15 +786,12 @@ gateways:
 
     ##############
     secretVolumes:
-    - name: ingressgateway-certs
-      secretName: istio-ingressgateway-certs
-      mountPath: /etc/istio/ingressgateway-certs
-    - name: ingressgateway-ca-certs
-      secretName: istio-ingressgateway-ca-certs
-      mountPath: /etc/istio/ingressgateway-ca-certs
-
-    ingressPorts: []
-    configVolumes: []
+      - name: ingressgateway-certs
+        secretName: istio-ingressgateway-certs
+        mountPath: /etc/istio/ingressgateway-certs
+      - name: ingressgateway-ca-certs
+        secretName: istio-ingressgateway-ca-certs
+        mountPath: /etc/istio/ingressgateway-ca-certs
 
     ## Specifies whether a ServiceAccount should be created
     ##

@@ -14,7 +14,20 @@ gateways:
     rbac:
       create: true
 
-    service: {}
+    service:
+      extraPorts:
+        - name: acct
+          port: 1813
+          protocol: UDP
+        - name: auth
+          port: 1812
+          protocol: UDP
+        - name: coa
+          port: 3799
+          protocol: UDP
+        - name: radsec
+          port: 2083
+          protocol: UDP
 
     serviceAccount:
       create: true
