@@ -5,7 +5,7 @@ gateways:
       create: true
 
     service:
-      ipFamilyPolicy: PreferDualStack
+      # ipFamilyPolicy: PreferDualStack
 
     serviceAccount:
       create: true
