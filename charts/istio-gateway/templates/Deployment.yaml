@@ -97,6 +97,17 @@ spec:
           {{- end }}
           {{- if and .containerSecurityContext .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1337
+            runAsUser: 1337
+            runAsNonRoot: true
           {{- end }}
           env:
             {{- with .networkGateway }}
