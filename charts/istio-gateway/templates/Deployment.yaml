@@ -47,8 +47,12 @@ spec:
       {{- if .hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .podSecurityContext.enabled }}
+      {{- if and .podSecurityContext .podSecurityContext.enabled }}
       securityContext: {{- omit .podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- else }}
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
       {{- end }}
       serviceAccountName: {{ .name }}-sa
       {{- if .schedulerName }}
@@ -92,10 +96,6 @@ spec:
           {{- end }}
           {{- if and .containerSecurityContext .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
-          {{- else }}
-            sysctls:
-              - name: net.ipv4.ip_unprivileged_port_start
-                value: "0"
           {{- end }}
           env:
             {{- with .networkGateway }}
