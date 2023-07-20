@@ -50,11 +50,12 @@ spec:
       {{- if and .podSecurityContext .podSecurityContext.enabled }}
       securityContext: {{- omit .podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- else }}
+      securityContext:
         sysctls:
           - name: net.ipv4.ip_unprivileged_port_start
             value: "0"
       {{- end }}
-      serviceAccountName: {{ .name }}-sa
+      serviceAccountName: {{ printf "%s-sa" .name | quote }}
       {{- if .schedulerName }}
       schedulerName: {{ .schedulerName }}
       {{- end }}
@@ -125,6 +126,7 @@ spec:
           {{- else if and .startupProbe .startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .startupProbe "enabled") "context" $) | nindent 12 }}
           {{- else }}
+          startupProbe:
             failureThreshold: 30
             httpGet:
               path: /healthz/ready
@@ -153,6 +155,7 @@ spec:
           {{- else if and .readinessProbe .readinessProbe.enabled }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
           {{- else }}
+          readinessProbe:
             failureThreshold: 30
             httpGet:
               path: /healthz/ready
@@ -166,6 +169,7 @@ spec:
           {{- if .resources }}
           resources: {{- toYaml .resources | nindent 12 }}
           {{- else }}
+          resources:
             limits:
               cpu: 2000m
               memory: 1024Mi
