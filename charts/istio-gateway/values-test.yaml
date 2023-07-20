@@ -4,8 +4,8 @@ gateways:
     rbac:
       create: true
 
-    service: {}
-      # ipFamilyPolicy: PreferDualStack
+    service:
+      ipFamilyPolicy: PreferDualStack
 
     serviceAccount:
       create: true
