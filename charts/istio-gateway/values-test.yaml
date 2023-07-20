@@ -24,14 +24,10 @@ gateways:
       runAsUser: 1337
       runAsNonRoot: true
 
-    image:
-      pullPolicy: IfNotPresent
-
     nodeAffinityPreset: {}
 
-    podSecurityContext:
-      enabled: true
-      sysctls:
-        - name: net.ipv4.ip_unprivileged_port_start
-          value: "0"
+    rbac:
+      create: true
 
+    serviceAccount:
+      create: true

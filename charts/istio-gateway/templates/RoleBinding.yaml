@@ -1,5 +1,5 @@
 {{- range $gateway := .Values.gateways }}
-{{- if and .enabled $.Values.rbac.create (and .rbac .rbac.create) }}
+{{- if and .enabled $.Values.rbac.create (and .rbac (default "true" .rbac.create)) }}
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" $ }}
 kind: RoleBinding
 metadata:
