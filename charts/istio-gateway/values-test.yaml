@@ -4,5 +4,7 @@ gateways:
     rbac:
       create: true
 
+    service: {}
+
     serviceAccount:
       create: true
