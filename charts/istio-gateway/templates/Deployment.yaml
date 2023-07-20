@@ -87,7 +87,9 @@ spec:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
           image: auto
+          {{- if .image .image.pullPolicy }}
           imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" | quote }}
+          {{- end }}
           {{- if .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
@@ -116,12 +118,22 @@ spec:
               name: http-envoy-prom
           {{- if .customStartupProbe }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" .customStartupProbe "context" $) | nindent 12 }}
-          {{- else if .startupProbe.enabled }}
+          {{- else if and .startupProbe .startupProbe.enabled }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- else }}
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready
+              port: 15021
+              scheme: HTTP
+            initialDelaySeconds: 1
+            timeoutSeconds: 1
+            periodSeconds: 1
+            successThreshold: 1
           {{- end }}
           {{- if .customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .customLivenessProbe "context" $) | nindent 12 }}
-          {{- else if .livenessProbe.enabled }}
+          {{- else if and .livenessProbe .livenessProbe.enabled }}
           livenessProbe:
             httpGet:
               path: /login
@@ -134,11 +146,28 @@ spec:
           {{- end }}
           {{- if .customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .customReadinessProbe "context" $) | nindent 12 }}
-          {{- else if .readinessProbe.enabled }}
+          {{- else if and .readinessProbe .readinessProbe.enabled }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- else }}
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready
+              port: 15021
+              scheme: HTTP
+            initialDelaySeconds: 1
+            periodSeconds: 15
+            timeoutSeconds: 1
+            successThreshold: 1
           {{- end }}
           {{- if .resources }}
           resources: {{- toYaml .resources | nindent 12 }}
+          {{- else }}
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
           {{- end }}
           {{- if $.Values.extraVolumeMounts }}
           volumeMounts:
