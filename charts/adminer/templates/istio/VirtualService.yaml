@@ -46,6 +46,17 @@ spec:
             host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
             port:
               number: {{ .Values.service.ports.http }}
+  tls:
+    - match:
+        - port: 443
+          sniHosts:
+            - {{ .Values.ingress.hostname | quote }}
+            {{- range .Values.ingress.extraHosts }}
+            - {{ .name | quote }}
+            {{- end }}
+      route:
+      - destination:
+          host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
   {{- end }}
 {{- end }}
 {{- end }}

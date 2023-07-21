@@ -515,8 +515,8 @@ gateway:
   enabled: false
   dedicated: false
   gatewayApi: false
-  name: ingressgateway
-  namespace: istio-ingressgateway
+  name: ""
+  namespace: ""
   gatewayClassName: istio
   ## @param gateway.listeners
   ##
