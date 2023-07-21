@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{- if and .Values.rbac.create }}
-apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
-kind: ClusterRole
+{{ if and (or (.Files.Glob "files/daemon-config.json") .Values.daemonConfig) (not .Values.daemonConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: multus-daemon-config
+  namespace: {{ include "multus.namespace" . | quote }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -23,27 +24,11 @@ metadata:
   {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
-rules:
-  - apiGroups: ["k8s.cni.cncf.io"]
-    resources:
-      - '*'
-    verbs:
-      - '*'
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-      - pods/status
-    verbs:
-      - get
-      - update
-  - apiGroups:
-      - ""
-      - events.k8s.io
-    resources:
-      - events
-    verbs:
-      - create
-      - patch
-      - update
+data:
+{{- if (.Files.Glob "files/daemon-config.json") }}
+  {{ (.Files.Glob "files/daemon-config.json").AsConfig | indent 2 }}
+{{- else if .Values.daemonConfig }}
+  daemon-config.json: |-
+{{ .Values.daemonConfig | indent 4 }}
+{{- end }}
 {{- end }}

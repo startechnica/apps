@@ -62,15 +62,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* Return the proper Multus image name */}}
 {{- define "multus.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Prometheus metrics image name */}}
 {{- define "multus.metrics.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
+  {{ include "common.images.image" (dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Docker Image Registry Secret Names */}}
 {{- define "multus.imagePullSecrets" -}}
-{{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.metrics.image) "global" .Values.global) -}}
+  {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.metrics.image) "global" .Values.global) -}}
 {{- end -}}

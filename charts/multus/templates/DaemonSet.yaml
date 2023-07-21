@@ -14,7 +14,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ template "common.names.fullname" . }}-node
+  name: {{ include "common.names.fullname" . }}-node
   namespace: {{ include "multus.namespace" . | quote }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
@@ -38,7 +38,7 @@ spec:
     metadata:
       {{- if .Values.podAnnotations }}
       annotations: {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
-        checksum/config: {{ include (print $.Template.BasePath "/ConfigMap.yaml") . | sha256sum }}
+        checksum/daemon-config: {{ include (print $.Template.BasePath "/ConfigMap-daemon-config.yaml") . | sha256sum }}
       {{- end }}
       labels: {{- include "common.labels.matchLabels" . | nindent 8 }}
         {{- if .Values.podLabels }}
@@ -57,7 +57,15 @@ spec:
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
+      {{- if .Values.hostIPC }}
+      hostIPC: true
+      {{- end }}
+      {{- if .Values.hostNetwork }}
       hostNetwork: true
+      {{- end }}
+      {{- if .Values.hostPID }}
+      hostPID: true
+      {{- end }}
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
@@ -73,24 +81,20 @@ spec:
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
       {{- end }}
       containers:
-        - name: multus-cni
-          image: {{ template "multus.image" . }}
+        - name: kube-multus
+          image: {{ include "multus.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.command }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
           {{- else }}
-          command: ["/entrypoint.sh"]
+          command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
           {{- else if .Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
-          {{- else }}
-          args:
-            - "--multus-conf-file=auto"
-            - "--cni-version=0.3.1"
           {{- end }}
           env:
             - name: KUBERNETES_NODE_NAME
@@ -111,6 +115,12 @@ spec:
                 name: {{ .Values.extraEnvVarsSecret }}
             {{- end }}
           {{- end }}
+          {{- if .Values.metrics.enabled }}
+          ports:
+            - name: metric
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
@@ -119,29 +129,37 @@ spec:
           {{- end }}
           volumeMounts:
             - name: cni
-              mountPath: /host/etc/cni/net.d
-            - name: cnibin
-              mountPath: /host/opt/cni/bin
-            - name: multus-cfg
-              mountPath: /tmp/multus-conf
+              mountPath: {{ printf "%s/etc/cni/net.d" .Values.CNIMountPath }}
+            - name: host-run
+              mountPath: {{ printf "%s/run" .Values.CNIMountPath }}
+            - name: host-var-lib-cni-multus
+              mountPath: /var/lib/cni/multus
+            - name: host-var-lib-kubelet
+              mountPath: /var/lib/kubelet
+            - name: host-run-k8s-cni-cncf-io
+              mountPath: /run/k8s.cni.cncf.io
+            - name: host-run-netns
+              mountPath: /run/netns
+              mountPropagation: HostToContainer
+            - name: multus-daemon-config
+              mountPath: /etc/cni/net.d/multus.d
+              readOnly: true
+            - name: hostroot
+              mountPath: /hostroot
+              mountPropagation: HostToContainer
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
-        {{- if .Values.metrics.enabled }}
-        - name: metrics
-          image: {{ template "multus.metrics.image" . }}
-          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
-        {{- end }}
         {{- if .Values.sidecars }}
           {{- include "common.tplvalues.render" (dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
       initContainers:
         - name: install-multus-binary
-          image: {{ template "multus.image" . }}
+          image: {{ include "multus.image" . }}
           command:
             - "cp"
-            - "/usr/src/multus-cni/bin/multus"
-            - "/host/opt/cni/bin/multus"
+            - "/usr/src/multus-cni/bin/multus-shim"
+            - {{ printf "%s/opt/cni/bin/multus-shim" .Values.CNIMountPath }}
           resources:
             requests:
               cpu: "10m"
@@ -150,21 +168,39 @@ spec:
             privileged: true
           volumeMounts:
             - name: cnibin
-              mountPath: /host/opt/cni/bin
+              mountPath: {{ printf "%s/opt/cni/bin" .Values.CNIMountPath }}
               mountPropagation: Bidirectional
       volumes:
         - name: cni
           hostPath:
-            path: /etc/cni/net.d
+            path: {{ .Values.hostCNINetDir }}
         - name: cnibin
           hostPath:
-            path: /opt/cni/bin
-        - name: multus-cfg
+            path: {{ .Values.hostCNIBinDir }}
+        - name: hostroot
+          hostPath:
+            path: /
+        - name: multus-daemon-config
           configMap:
-            name: multus-cni-config
+            name: multus-daemon-config
             items:
-            - key: cni-conf.json
-              path: 70-multus.conf
+            - key: daemon-config.json
+              path: daemon-config.json
+        - name: host-run
+          hostPath:
+            path: /run
+        - name: host-var-lib-cni-multus
+          hostPath:
+            path: /var/lib/cni/multus
+        - name: host-var-lib-kubelet
+          hostPath:
+            path: /var/lib/kubelet
+        - name: host-run-k8s-cni-cncf-io
+          hostPath:
+            path: /run/k8s.cni.cncf.io
+        - name: host-run-netns
+          hostPath:
+            path: /run/netns/
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
