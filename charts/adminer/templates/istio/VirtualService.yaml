@@ -23,6 +23,7 @@ spec:
     {{- end }}
   http:
     {{- range .Values.ingress.extraHosts }}
+    {{- if not (empty .path) }}
     - match:
         - uri: 
             prefix: {{ .path | quote }}
@@ -31,6 +32,7 @@ spec:
             host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" $) (include "common.names.namespace" $) $.Values.clusterDomain }}
             port:
               number: {{ $.Values.service.ports.http }}
+    {{- end }}
     {{- end }}
     - match:
         {{- range .Values.ingress.extraPaths }}
