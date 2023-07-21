@@ -129,9 +129,9 @@ spec:
           {{- end }}
           volumeMounts:
             - name: cni
-              mountPath: /host/etc/cni/net.d
+              mountPath: {{ printf "%s/etc/cni/net.d" .Values.CNIMountPath }}
             - name: host-run
-              mountPath: /host/run
+              mountPath: {{ printf "%s/run" .Values.CNIMountPath }}
             - name: host-var-lib-cni-multus
               mountPath: /var/lib/cni/multus
             - name: host-var-lib-kubelet
@@ -159,7 +159,7 @@ spec:
           command:
             - "cp"
             - "/usr/src/multus-cni/bin/multus-shim"
-            - "/host/opt/cni/bin/multus-shim"
+            - {{ printf "%s/opt/cni/bin/multus-shim" .Values.CNIMountPath }}
           resources:
             requests:
               cpu: "10m"
