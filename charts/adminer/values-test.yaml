@@ -16,6 +16,8 @@ ingress:
   tls: true
   selfSigned: false
 
+ipFamilyPolicy: PreferDualStack
+
 gateway:
   enabled: true
   name: webapps
