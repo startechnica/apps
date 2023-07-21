@@ -46,15 +46,14 @@ spec:
   sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
-    - name: http
+    - name: metric
       port: {{ .Values.service.ports.metric }}
       protocol: TCP
-      targetPort: {{ .Values.metric.port }}
-      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (coalesce .Values.service.nodePorts.http .Values.service.nodePort)) }}
-      nodePort: {{ coalesce .Values.service.nodePorts.http .Values.service.nodePort }}
+      targetPort: {{ .Values.metrics.port }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (coalesce .Values.service.nodePorts.metric .Values.service.nodePort)) }}
+      nodePort: {{ coalesce .Values.service.nodePorts.metric .Values.service.nodePort }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
   selector: {{ include "common.labels.matchLabels" . | nindent 4 }}
-    app.kubernetes.io/component: multus-cni
 {{- end }}
