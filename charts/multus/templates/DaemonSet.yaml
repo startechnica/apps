@@ -115,12 +115,12 @@ spec:
                 name: {{ .Values.extraEnvVarsSecret }}
             {{- end }}
           {{- end }}
+          {{- if .Values.metrics.enabled }}
           ports:
-            {{- if .Values.metrics.enabled }}
             - name: metric
               containerPort: {{ .Values.metrics.port }}
               protocol: TCP
-            {{- end }}
+          {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
