@@ -121,12 +121,12 @@ spec:
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
-              path: {{ if .Values.config.base_url }}{{- with urlParse (tpl .Values.config.base_url .) }}{{ .path }}{{ end }}{{ end }}/health
+              path: {{ if .Values.config.baseUrl }}{{- with urlParse (tpl .Values.config.baseUrl .) }}{{ .path }}{{ end }}{{ end }}/health
               port: {{ .Values.containerPorts.http }}
-              {{- if .Values.config.base_url}}
+              {{- if .Values.config.baseUrl}}
               httpHeaders:
                 - name: Host
-                  value: {{ regexReplaceAll ":\\d+$" (urlParse (tpl .Values.config.base_url .)).host  "" }}
+                  value: {{ regexReplaceAll ":\\d+$" (urlParse (tpl .Values.config.baseUrl .)).host  "" }}
               {{- end }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
@@ -139,12 +139,12 @@ spec:
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: {{ if .Values.config.base_url }}{{- with urlParse (tpl .Values.config.base_url .) }}{{ .path }}{{ end }}{{ end }}/health
+              path: {{ if .Values.config.baseUrl }}{{- with urlParse (tpl .Values.config.baseUrl .) }}{{ .path }}{{ end }}{{ end }}/health
               port: {{ .Values.containerPorts.http }}
-              {{- if .Values.config.base_url}}
+              {{- if .Values.config.baseUrl}}
               httpHeaders:
                 - name: Host
-                  value: {{ regexReplaceAll ":\\d+$" (urlParse (tpl .Values.config.base_url .)).host  "" }}
+                  value: {{ regexReplaceAll ":\\d+$" (urlParse (tpl .Values.config.baseUrl .)).host  "" }}
               {{- end }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}

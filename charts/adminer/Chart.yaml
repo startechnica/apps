@@ -11,8 +11,8 @@ dependencies:
     version: "*"
     alias: startechnica-common
   - name: common
-    repository: https://charts.bitnami.com/bitnami
-    version: "*"
+    repository: oci://registry-1.docker.io/bitnamicharts
+    version: 2.x.x
     tags:
       - bitnami-common
     alias: bitnami-common

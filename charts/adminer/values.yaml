@@ -136,10 +136,22 @@ replicaCount: 1
 
 # See envs from https://hub.docker.com/_/adminer/
 config:
+  ## @param config.plugins Loading plugins
+  ## This image bundles all official Adminer plugins. You can find the list of plugins on
+  ## GitHub: https://github.com/vrana/adminer/tree/master/plugins.
+  ##
   plugins: ""
+  ## @param config.design Choosing a design
+  ## The image bundles all the designs that are available in the source package of adminer. You can
+  ## find the list of designs on GitHub: https://github.com/vrana/adminer/tree/master/designs.
+  ##
   design: "pepa-linha"
+  ## @param config.design Usage with external server
+  ## You can specify the default host with the ADMINER_DEFAULT_SERVER environment variable. This
+  ## is useful if you are connecting to an external server or a docker container named something other than the default db.
+  ##
   externalserver: ""
-  base_url: ""
+  baseUrl: ""
 
 ## @section Traffic Exposure Parameters
 

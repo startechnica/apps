@@ -1,4 +1,4 @@
-{{- if and .Values.gateway.enabled (not .Values.gateway.gatewayApi) }}
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) (not .Values.gateway.gatewayApi) }}
 {{- if (include "common.capabilities.istioNetworking.apiVersion" .) }}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
