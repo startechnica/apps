@@ -96,6 +96,7 @@ spec:
           {{- else if .Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- else }}
+          args:
             {{- if .Values.metrics.enabled }}
             - "--metrics-port={{ .Values.metrics.port }}"
             {{- end }}
