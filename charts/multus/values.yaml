@@ -37,6 +37,9 @@ hostNetwork: true
 ## @param hostIPC Specify if host IPC should be enabled for Multus CNI pod
 ##
 hostIPC: false
+## @param hostPID Specify if host PID should be enabled for Multus CNI pod
+##
+hostPID: true
 ## @param commonLabels Labels to add to all deployed objects
 ##
 commonLabels: {}
@@ -78,7 +81,7 @@ diagnosticMode:
 image:
   registry: ghcr.io
   repository: k8snetworkplumbingwg/multus-cni
-  tag: "snapshot-thick"
+  tag: "latest-thick"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -131,7 +134,7 @@ serviceAccount:
   name: ""
   ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
   ##
-  automountServiceAccountToken: false
+  automountServiceAccountToken: true
   ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
   ##
   annotations: {}
@@ -229,7 +232,7 @@ daemonConfig: |-
     "socketDir": "/host/run/multus/"
   }
 
-## @param configurationConfigMap ConfigMap with the Multus configuration files. The value is evaluated as a template.
+## @param configurationConfigMap ConfigMap with the Multus cni configuration files. The value is evaluated as a template.
 ##
 configurationConfigMap: ""
 ## @param daemonConfigMap ConfigMap with the Multus daemon configuration files. The value is evaluated as a template.
