@@ -18,6 +18,8 @@ ingress:
 
 gateway:
   enabled: true
+  name: webapps
+  namespace: istio-ingressgateway
 
 tolerations:
   - effect: NoSchedule
