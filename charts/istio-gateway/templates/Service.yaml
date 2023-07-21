@@ -64,6 +64,7 @@ spec:
       port: 15017
       targetPort: 15017
   {{- else if and .service .containerPorts }}
+    {{- if hasKey .service "status" }}
     - name: status
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
@@ -73,6 +74,8 @@ spec:
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    {{- end }}
+    {{- if hasKey .service "http2" }}
     - name: http2
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
@@ -82,6 +85,7 @@ spec:
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    {{- end }}
     - name: https
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
