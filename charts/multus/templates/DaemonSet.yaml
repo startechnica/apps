@@ -167,10 +167,10 @@ spec:
       volumes:
         - name: cni
           hostPath:
-            path: {{ .Values.hostCNINetDir }}
+            path: /etc/cni/net.d
         - name: cnibin
           hostPath:
-            path: {{ .Values.hostCNIBinDir }}
+            path: /opt/cni/bin
         - name: hostroot
           hostPath:
             path: /
