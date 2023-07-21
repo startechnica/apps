@@ -115,6 +115,12 @@ spec:
                 name: {{ .Values.extraEnvVarsSecret }}
             {{- end }}
           {{- end }}
+          {{- if .Values.metrics.enabled }}
+          ports:
+            - name: metric
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
@@ -162,15 +168,15 @@ spec:
             privileged: true
           volumeMounts:
             - name: cnibin
-              mountPath: /host/opt/cni/bin
+              mountPath: {{ printf "%s/opt/cni/bin" .Values.CNIMountPath }}
               mountPropagation: Bidirectional
       volumes:
         - name: cni
           hostPath:
-            path: /etc/cni/net.d
+            path: {{ .Values.hostCNINetDir }}
         - name: cnibin
           hostPath:
-            path: /opt/cni/bin
+            path: {{ .Values.hostCNIBinDir }}
         - name: hostroot
           hostPath:
             path: /
