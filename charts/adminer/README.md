@@ -4,7 +4,7 @@
 
 Adminer (formerly phpMinAdmin) is a full-featured database management tool written in PHP. Conversely to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer is available for MySQL, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB.
 
-[Overview of Adminer](https://istio.io/latest/docs/tasks/traffic-management/ingress/ingress-control/)
+[Overview of Adminer](https://www.adminer.org/)
 
 **This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
 
