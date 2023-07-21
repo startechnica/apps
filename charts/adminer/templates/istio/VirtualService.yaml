@@ -33,7 +33,7 @@ spec:
               number: {{ $.Values.service.ports.http }}
     {{- end }}
     - match:
-        {{- range .Values.server.ingress.extraPaths }}
+        {{- range .Values.ingress.extraPaths }}
         - uri: 
             prefix: {{ .path | quote }}
         {{- end }}
