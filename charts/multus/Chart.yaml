@@ -6,8 +6,12 @@ annotations:
     - name: Upstream Project
       url: https://github.com/k8snetworkplumbingwg/multus-cni
 apiVersion: v2
-appVersion: v3.8
+appVersion: 4.0.2
 dependencies:
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: x.x.x
+    alias: startechnica-common
   - name: common
     repository: https://charts.bitnami.com/bitnami
     tags:

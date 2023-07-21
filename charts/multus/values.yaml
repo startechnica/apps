@@ -227,6 +227,7 @@ daemonConfig: |-
     "cniVersion": "0.3.1",
     "logLevel": "verbose",
     "logToStderr": true,
+    "metricsPort": "15021"
     "multusAutoconfigDir": "/host/etc/cni/net.d",
     "multusConfigFile": "auto",
     "socketDir": "/host/run/multus/"
@@ -477,6 +478,7 @@ metrics:
   ## @param metrics.enabled Start a side-car prometheus exporter
   ##
   enabled: false
+  port: 15020
   ## Multus CNI Prometheus exporter image
   ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
   ## @param metrics.image.registry Multus Prometheus exporter image registry
