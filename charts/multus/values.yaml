@@ -483,7 +483,7 @@ service:
   ## @param service.ports.metric Multus CNI Kubernetes service port
   ##
   ports:
-    metric: 15020
+    metric: 15021
   ## @param service.nodePorts.http Multus CNI Kubernetes service node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
@@ -537,7 +537,7 @@ metrics:
   ## @param metrics.enabled Start a side-car prometheus exporter
   ##
   enabled: true
-  port: 15020
+  port: 15021
   ## Multus CNI Prometheus exporter image
   ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
   ## @param metrics.image.registry Multus Prometheus exporter image registry
