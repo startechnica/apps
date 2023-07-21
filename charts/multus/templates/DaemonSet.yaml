@@ -98,12 +98,12 @@ spec:
           {{- else }}
           args:
             {{- if .Values.metrics.enabled }}
-            - "--metrics-port={{ .Values.metrics.port }}"
+            - "-metrics-port={{ .Values.metrics.port }}"
             {{- end }}
             {{- if .Values.image.debug }}
-            - "--multus-log-level=debug"
+            - "-multus-log-level=debug"
             {{- else }}
-            - "--multus-log-level=verbose"
+            - "-multus-log-level=verbose"
             {{- end }}
           {{- end }}
           env:
