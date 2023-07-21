@@ -94,7 +94,8 @@ spec:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
           # image: {{ default "auto" (include "common.images.image" (dict "imageRoot" $gateway "global" $)) }}
-          image: "auto"
+          image: {{ include "gateway.image" (dict "imageRoot" . "global" $) }}
+          # image: "auto"
           {{- if and .image .image.pullPolicy }}
           imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" | quote }}
           {{- end }}
