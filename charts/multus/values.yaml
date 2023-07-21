@@ -102,7 +102,7 @@ image:
 
 ## @param CNIVersion CNI version
 ##
-CNIVersion: "0.3.0"
+CNIVersion: "0.3.1"
 ## @param hostCNIBinDir CNI binary dir in the host machine to mount
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/multus-cni#configuration
 ##
@@ -244,7 +244,7 @@ daemonConfig: |-
     "cniVersion": "0.3.1",
     "logLevel": "verbose",
     "logToStderr": true,
-    "metricsPort": "15021"
+    "metricsPort": "17020"
     "multusAutoconfigDir": "/host/etc/cni/net.d",
     "multusConfigFile": "auto",
     "socketDir": "/host/run/multus/"
