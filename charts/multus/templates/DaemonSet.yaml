@@ -118,7 +118,7 @@ spec:
           ports:
             {{- if .Values.metrics.enabled }}
             - name: metric
-              containerPort: {{ .Values.metric.port }}
+              containerPort: {{ .Values.metrics.port }}
               protocol: TCP
             {{- end }}
           {{- if .Values.resources }}
