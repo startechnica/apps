@@ -62,8 +62,6 @@ global:
   priorityClassName: ""
 
   proxy:
-    image: proxyv2
-
     # Per Component log level for proxy, applies to gateways and sidecars. If a component level is
     # not set, then the global "logLevel" will be used.
     componentLogLevel: "misc:error"
