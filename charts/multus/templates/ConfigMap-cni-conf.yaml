@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.multusConfiguration) (not .Values.configurationConfigMap) }}
+{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.cniConfiguration) (not .Values.cniConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -27,8 +27,8 @@ metadata:
 data:
 {{- if (.Files.Glob "files/cni-conf.json") }}
   {{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
-{{- else if .Values.multusConfiguration }}
+{{- else if .Values.cniConfiguration }}
   cni-conf.json: |-
-{{ .Values.multusConfiguration | indent 4 }}
+{{ .Values.cniConfiguration | indent 4 }}
 {{- end }}
 {{- end }}

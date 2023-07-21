@@ -78,7 +78,7 @@ diagnosticMode:
 image:
   registry: ghcr.io
   repository: k8snetworkplumbingwg/multus-cni
-  tag: "stable"
+  tag: "snapshot-thick"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -176,7 +176,17 @@ containerSecurityContext:
   # runAsNonRoot: true
   privileged: true
 
-multusConfiguration: |-
+## @param cniConfig
+## NOTE: If you'd prefer to manually apply a configuration file, you may create one here.
+## In the case you'd like to customize the Multus installation, you should change the arguments to the Multus pod
+## change the "args" line below from
+## - "--multus-conf-file=auto"
+## to:
+## "--multus-conf-file=/tmp/multus-conf/70-multus.conf"
+## Additionally -- you should ensure that the name "70-multus.conf" is the alphabetically first name in the
+## /etc/cni/net.d/ directory on each node, otherwise, it will not be used by the Kubelet.
+##
+cniConfig: |-
   {
     "name": "multus-cni-network",
     "type": "multus",
@@ -208,9 +218,23 @@ multusConfiguration: |-
     "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig"
   }
 
-## @param configurationConfigMap ConfigMap with the Multus configuration files (Note: Overrides `mariadbConfiguration`). The value is evaluated as a template.
+daemonConfig: |-
+  {
+    "chrootDir": "/hostroot",
+    "cniVersion": "0.3.1",
+    "logLevel": "verbose",
+    "logToStderr": true,
+    "multusAutoconfigDir": "/host/etc/cni/net.d",
+    "multusConfigFile": "auto",
+    "socketDir": "/host/run/multus/"
+  }
+
+## @param configurationConfigMap ConfigMap with the Multus configuration files. The value is evaluated as a template.
 ##
 configurationConfigMap: ""
+## @param daemonConfigMap ConfigMap with the Multus daemon configuration files. The value is evaluated as a template.
+##
+daemonConfigMap: ""
 ## initdb scripts
 ## @param initdbScripts Specify dictionary of scripts to be run at first boot
 ## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
