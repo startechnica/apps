@@ -512,29 +512,25 @@ rbac:
   rules: []
 
 gateway:
-  enabled: true
-  name: ingressgateway
-  namespace: istio-ingress-gateway
-
-istio:
   enabled: false
-  clusterName: cluster.local
-  ingressGateway: ingressgateway
-  ingressNamespace: istio-ingress
-
-  gateway:
-    enabled: true
-    servers:
-      - name: http-adminer
-        port: 80
-        protocol: HTTP
-      - name: https-adminer
-        port: 443
-        protocol: HTTPS
-    existingGateway: ~
-
-  virtualService:
-    enabled: true
-    existingVirtualService: ~
+  dedicated: false
+  gatewayApi: false
+  name: ingressgateway
+  namespace: istio-ingressgateway
+  gatewayClassName: istio
+  ## @param gateway.listeners
+  ##
+  listeners: []
+    # - name: http
+    #   port: 80
+    #   protocol: HTTP
+    # - name: https
+    #   port: 443
+    #   protocol: HTTPS
+  existingGateway: ~
+  existingVirtualService: ~
+  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
+  ##
+  extraRoute: []
 
 organization: Startechnica

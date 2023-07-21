@@ -1,5 +1,5 @@
-{{- if .Values.gateway.enabled }}
-{{- if (include "common.capabilities.networkingGateway.apiVersion" $) }}
+{{- if .Values.gateway.enabled .Values.gateway.gatewayApi }}
+{{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
@@ -8,7 +8,7 @@ metadata:
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: adminer
     {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
 spec:
   parentRefs:

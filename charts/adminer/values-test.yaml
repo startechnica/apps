@@ -16,9 +16,8 @@ ingress:
   tls: true
   selfSigned: true
 
-istio:
+gateway:
   enabled: true
-  ingressGateway: ingress-app
 
 tolerations:
   - effect: NoSchedule
