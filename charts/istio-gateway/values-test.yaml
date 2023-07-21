@@ -12,6 +12,9 @@ gateways:
   
   - name: freeradius
     enabled: true
+
+    containerPorts: {}
+
     rbac:
       create: true
 
