@@ -64,7 +64,7 @@ spec:
       port: 15017
       targetPort: 15017
   {{- else if and .service .containerPorts }}
-    {{- if hasKey .service "status" }}
+    {{- if hasKey .service.ports "status" }}
     - name: status
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
@@ -75,7 +75,7 @@ spec:
       nodePort: null
       {{- end }}
     {{- end }}
-    {{- if hasKey .service "http2" }}
+    {{- if hasKey .service.ports "http2" }}
     - name: http2
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
