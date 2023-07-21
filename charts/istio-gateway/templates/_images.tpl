@@ -22,7 +22,7 @@ Return the proper image name
     {{- else -}}
         {{- printf "%s%s%s"  $repositoryName $separator $termination -}}
     {{- end -}}
-    {{- end -}}
 {{- else -}}
     {{ print "auto" }}
+{{- end -}}
 {{- end -}}
