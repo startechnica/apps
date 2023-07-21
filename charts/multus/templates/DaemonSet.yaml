@@ -95,6 +95,15 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
           {{- else if .Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+            {{- if .Values.metrics.enabled }}
+            - "--metrics-port={{ .Values.metrics.port }}"
+            {{- end }}
+            {{- if .Values.image.debug }}
+            - "--multus-log-level=debug"
+            {{- else }}
+            - "--multus-log-level=verbose"
+            {{- end }}
           {{- end }}
           env:
             - name: KUBERNETES_NODE_NAME
@@ -173,10 +182,10 @@ spec:
       volumes:
         - name: cni
           hostPath:
-            path: /etc/cni/net.d
+            path: {{ .Values.hostCNINetDir }}
         - name: cnibin
           hostPath:
-            path: /opt/cni/bin
+            path: {{ .Values.hostCNIBinDir }}
         - name: hostroot
           hostPath:
             path: /

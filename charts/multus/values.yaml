@@ -99,6 +99,23 @@ image:
   ##
   debug: false
 
+
+## @param CNIVersion CNI version
+##
+CNIVersion: "0.3.0"
+## @param hostCNIBinDir CNI binary dir in the host machine to mount
+## ref: https://github.com/bitnami/containers/tree/main/bitnami/multus-cni#configuration
+##
+hostCNIBinDir: /opt/cni/bin
+## @param hostCNINetDir CNI net.d dir in the host machine to mount
+## ref: https://github.com/bitnami/containers/tree/main/bitnami/multus-cni#configuration
+##
+hostCNINetDir: /etc/cni/net.d
+## @param CNIMountPath Path inside the container to mount the CNI dirs
+## ref: https://github.com/bitnami/containers/tree/main/bitnami/multus-cni#configuration
+##
+CNIMountPath: /host
+
 ## @param command Override default container command (useful when using custom images)
 ##
 command: []
@@ -537,7 +554,7 @@ metrics:
   ## @param metrics.enabled Start a side-car prometheus exporter
   ##
   enabled: true
-  port: 15021
+  port: 17020
   ## Multus CNI Prometheus exporter image
   ## ref: https://hub.docker.com/r/bitnami/mysqld-exporter/tags/
   ## @param metrics.image.registry Multus Prometheus exporter image registry
