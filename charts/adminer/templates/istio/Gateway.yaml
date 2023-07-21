@@ -1,36 +1,45 @@
-{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" }}
-{{- if and .Values.istio.enabled .Values.istio.gateway.enabled }}
-apiVersion: networking.istio.io/v1beta1
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) (not .Values.gateway.gatewayApi) }}
+{{- if (include "common.capabilities.istioNetworking.apiVersion" .) }}
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:
   name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   selector:
-    istio: {{ .Values.istio.ingressGateway }}
+    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
   servers:
-    {{- range .Values.istio.gateway.servers }}
     - port:
-        name: {{ .name }}
-        number: {{ .port }}
-        protocol: {{ .protocol }}
+        name: http
+        number: 80
+        protocol: HTTP
+      {{- if .Values.ingress.hostname }}
       hosts:
-        - {{ $.Values.ingress.hostname | quote }}
-        {{- range $.Values.ingress.extraHosts }}
+        - {{ .Values.ingress.hostname | quote }}
+        {{- range .Values.ingress.extraHosts }}
         - {{ .name | quote }}
         {{- end }}
-      {{- if and (eq .protocol "HTTPS") (or $.Values.ingress.tls $.Values.ingress.extraTls) }}
-      tls:
-        credentialName: {{ printf "%s-tls" $.Values.ingress.hostname }}
-        mode: SIMPLE
       {{- end }}
+    {{- if (or .Values.ingress.tls .Values.ingress.extraTls) }}
+    - port:
+        name: https
+        number: {{ default 443 .Values.service.ports.https | int }}
+        protocol: HTTPS
+      hosts:
+        - {{ .Values.ingress.hostname | quote }}
+        {{- range .Values.ingress.extraHosts }}
+        - {{ .name | quote }}
+        {{- end }}
+      tls:
+        credentialName: {{ printf "%s-tls" .Values.ingress.hostname }}
+        mode: SIMPLE
     {{- end }}
 {{- end }}
 {{- end }}
