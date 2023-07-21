@@ -43,7 +43,8 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "gateway.imagePullSecrets" $ | nindent 6 }}
+      # {{- include "gateway.imagePullSecrets" $ | nindent 6 }}
+      {{ include "common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
       {{- if .hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -93,7 +94,6 @@ spec:
       containers:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
-          # image: {{ default "auto" (include "common.images.image" (dict "imageRoot" $gateway "global" $)) }}
           image: {{ include "gateway.image" (dict "imageRoot" .image "global" $) }}
           # image: "auto"
           {{- if and .image .image.pullPolicy }}
