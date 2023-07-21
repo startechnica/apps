@@ -22,14 +22,16 @@ description: Multus CNI is a container network interface (CNI) plugin for Kubern
 home: https://github.com/startechnica/apps/tree/main/charts/multus
 icon: https://github.com/k8snetworkplumbingwg/multus-cni/raw/master/docs/images/Multus.png
 keywords:
+  - cni
   - multus
+  - multus-cni
   - networkplumbing
 kubeVersion: ">=1.24.0-0"
 maintainers:
   - name: Firmansyah Nainggolan
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
-name: multus
+name: multus-cni
 sources:
   - https://github.com/k8snetworkplumbingwg/multus-cni
-version: 0.1.2
+version: 0.1.3

@@ -90,6 +90,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `image.pullPolicy`   | Multus CNI image pull policy                                                                             | `IfNotPresent`                        |
 | `image.pullSecrets`  | Specify docker-registry secret names as an array                                                         | `[]`                                  |
 | `image.debug`        | Set to true if you would like to see extra information on logs                                           | `false`                               |
+| `CNIVersion`         | CNI version                                                                                              | `0.3.1`                               |
+| `hostCNIBinDir`      | CNI binary dir in the host machine to mount                                                              | `/opt/cni/bin`                        |
+| `hostCNINetDir`      | CNI net.d dir in the host machine to mount                                                               | `/etc/cni/net.d`                      |
+| `CNIMountPath`       | Path inside the container to mount the CNI dirs                                                          | `/host`                               |
 | `hostAliases`        | Deployment pod host aliases                                                                              | `[]`                                  |
 | `command`            | Override default container command (useful when using custom images)                                     | `[]`                                  |
 | `args`               | Override default container args (useful when using custom images)                                        | `[]`                                  |

@@ -256,19 +256,6 @@ configurationConfigMap: ""
 ## @param daemonConfigMap ConfigMap with the Multus daemon configuration files. The value is evaluated as a template.
 ##
 daemonConfigMap: ""
-## initdb scripts
-## @param initdbScripts Specify dictionary of scripts to be run at first boot
-## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
-## e.g:
-## initdbScripts:
-##   my_init_script.sh: |
-##      #!/bin/sh
-##      echo "Do something."
-##
-initdbScripts: {}
-## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
-##
-initdbScriptsConfigMap: ""
 ## @param extraFlags Multus additional command line flags
 ## Can be used to specify command line flags, for example:
 ## e.g:
