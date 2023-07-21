@@ -56,8 +56,8 @@ spec:
             - {{ .name | quote }}
             {{- end }}
       route:
-      - destination:
-          host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
+        - destination:
+            host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
   {{- end }}
   {{- end }}
 {{- end }}

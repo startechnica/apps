@@ -14,7 +14,7 @@ ingress:
     - name: macam.macam.com
     - name: macam.macam.id
   tls: true
-  selfSigned: true
+  selfSigned: false
 
 gateway:
   enabled: true
