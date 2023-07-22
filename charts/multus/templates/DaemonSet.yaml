@@ -23,11 +23,12 @@ spec:
     {{- end }}
   template:
     metadata:
-      {{- if .Values.podAnnotations }}
       annotations: {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         checksum/cni-config: {{ include (print $.Template.BasePath "/ConfigMap/multus-cni-config.yaml") . | sha256sum }}
         checksum/daemon-config: {{ include (print $.Template.BasePath "/ConfigMap/multus-daemon-config.yaml") . | sha256sum }}
-      {{- end }}
+        {{- if .Values.podAnnotations }}
+
+        {{- end }}
       labels: {{- include "common.labels.matchLabels" . | nindent 8 }}
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
