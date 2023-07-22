@@ -815,6 +815,47 @@ entries:
   - annotations:
       artifacthub.io/links: |
         - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/multus-cni
+        - name: Upstream Project
+          url: https://github.com/k8snetworkplumbingwg/multus-cni
+      category: Networking
+    apiVersion: v2
+    appVersion: 4.0.2
+    created: "2023-07-22T09:04:38.387180862Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: x.x.x
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Multus CNI is a container network interface (CNI) plugin for Kubernetes
+      that enables attaching multiple network interfaces to pods.
+    digest: e22325b30a35b9283df46e3ba23dbdbc348892d6961bea770f4390c050f8c481
+    home: https://github.com/startechnica/apps/tree/main/charts/multus
+    icon: https://github.com/k8snetworkplumbingwg/multus-cni/raw/master/docs/images/Multus.png
+    keywords:
+    - cni
+    - multus
+    - multus-cni
+    - networkplumbing
+    kubeVersion: '>=1.24.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: multus-cni
+    sources:
+    - https://github.com/k8snetworkplumbingwg/multus-cni
+    urls:
+    - https://github.com/startechnica/apps/releases/download/multus-cni-0.1.4/multus-cni-0.1.4.tgz
+    version: 0.1.4
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
           url: https://github.com/startechnica/apps/tree/main/charts/multus
         - name: Upstream Project
           url: https://github.com/k8snetworkplumbingwg/multus-cni
@@ -1078,4 +1119,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2023-07-21T22:08:28.4676134Z"
+generated: "2023-07-22T09:04:38.387260366Z"
