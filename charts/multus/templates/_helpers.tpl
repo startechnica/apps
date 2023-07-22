@@ -71,6 +71,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/* Return the proper Docker Image Registry Secret Names */}}
-{{- define "multus.imagePullSecrets" -}}
+{{- define "multus-cni.imagePullSecrets" -}}
   {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.metrics.image) "global" .Values.global) -}}
 {{- end -}}
