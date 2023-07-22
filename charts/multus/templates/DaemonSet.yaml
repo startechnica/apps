@@ -69,7 +69,7 @@ spec:
       {{- end }}
       containers:
         - name: kube-multus
-          image: {{ include "multus.image" . }}
+          image: {{ include "multus-cni.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
