@@ -176,7 +176,6 @@ rbac:
   ##
   rules: []
 
-
 ## @param containerPorts.http Istio Gateway HTTP container port
 ##
 containerPorts:
@@ -258,7 +257,7 @@ daemonConfig: |-
 
 ## @param configurationConfigMap ConfigMap with the Multus cni configuration files. The value is evaluated as a template.
 ##
-configurationConfigMap: ""
+cniConfigMap: ""
 ## @param daemonConfigMap ConfigMap with the Multus daemon configuration files. The value is evaluated as a template.
 ##
 daemonConfigMap: ""
