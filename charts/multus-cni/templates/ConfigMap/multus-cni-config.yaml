@@ -1,0 +1,21 @@
+{{ if and (or (.Files.Glob "files/cni-conf.json") .Values.cniConfig) (not .Values.cniConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multus-cni-config
+  namespace: {{ include "multus-cni.namespace" . | quote }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- end }}
+data:
+{{- if (.Files.Glob "files/cni-conf.json") }}
+  {{ (.Files.Glob "files/cni-conf.json").AsConfig | indent 2 }}
+{{- else if .Values.cniConfig }}
+  cni-conf.json: |-
+{{ .Values.cniConfig | indent 4 }}
+{{- end }}
+{{- end }}

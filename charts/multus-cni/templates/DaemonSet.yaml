@@ -1,21 +1,8 @@
-# Copyright 2020 K8s Network Plumbing Group
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ include "common.names.fullname" . }}-node
-  namespace: {{ include "multus.namespace" . | quote }}
+  namespace: {{ include "multus-cni.namespace" . | quote }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
@@ -36,24 +23,26 @@ spec:
     {{- end }}
   template:
     metadata:
-      {{- if .Values.podAnnotations }}
-      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
-        checksum/daemon-config: {{ include (print $.Template.BasePath "/ConfigMap-daemon-config.yaml") . | sha256sum }}
-      {{- end }}
+      annotations:
+        checksum/cni-config: {{ include (print $.Template.BasePath "/ConfigMap/multus-cni-config.yaml") . | sha256sum }}
+        checksum/daemon-config: {{ include (print $.Template.BasePath "/ConfigMap/multus-daemon-config.yaml") . | sha256sum }}
+        {{- if .Values.podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
       labels: {{- include "common.labels.matchLabels" . | nindent 8 }}
         {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-      {{- include "multus.imagePullSecrets" . | nindent 6 }}
+      {{- include "multus-cni.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -67,7 +56,7 @@ spec:
       hostPID: true
       {{- end }}
       {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- if .Values.schedulerName }}
@@ -78,11 +67,11 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "multus.serviceAccountName" . }}
       {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
       {{- end }}
       containers:
         - name: kube-multus
-          image: {{ include "multus.image" . }}
+          image: {{ include "multus-cni.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
@@ -117,8 +106,8 @@ spec:
           {{- end }}
           {{- if .Values.metrics.enabled }}
           ports:
-            - name: metric
-              containerPort: {{ .Values.metrics.port }}
+            - name: metrics
+              containerPort: {{ .Values.containerPorts.metrics }}
               protocol: TCP
           {{- end }}
           {{- if .Values.resources }}
@@ -155,7 +144,7 @@ spec:
         {{- end }}
       initContainers:
         - name: install-multus-binary
-          image: {{ include "multus.image" . }}
+          image: {{ include "multus-cni.image" . }}
           command:
             - "cp"
             - "/usr/src/multus-cni/bin/multus-shim"

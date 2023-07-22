@@ -20,7 +20,7 @@ We recommend using the thick plugin in most environments.
 
 ```console
 helm repo add startechnica https://startechnica.github.io/apps
-helm install my-release startechnica/multus
+helm install my-release startechnica/multus-cni
 ```
 
 ## Prerequisites
@@ -34,7 +34,7 @@ To install the chart with the release name `my-release` on `my-release` namespac
 
 ```console
 helm repo add startechnica https://startechnica.github.io/apps
-helm install my-release startechnica/multus --namespace my-release --create-namespace
+helm install my-release startechnica/multus-cni --namespace my-release --create-namespace
 ```
 
 These commands deploy Multus CNI on the Kubernetes cluster in the default configuration.
@@ -65,18 +65,18 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Common parameters
 
-| Name                       | Description                                                                                | Value           |
-| -------------------        | ------------------------------------------------------------------------------------------ | --------------- |
-| `nameOverride`             | String to partially override multus.fullname template (will maintain the release name)     | `""`            |
-| `fullnameOverride`         | String to fully override multus.fullname template                                          | `""`            |
-| `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                       | `""`            |
-| `clusterDomain`            | Kubernetes Cluster Domain                                                                  | `cluster.local` |
-| `extraDeploy`              | Extra objects to deploy (value evaluated as a template)                                    | `[]`            |
-| `commonLabels`             | Add labels to all the deployed resources                                                   | `{}`            |
-| `commonAnnotations`        | Add annotations to all the deployed resources                                              | `{}`            |
-| `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)    | `false`         |
-| `diagnosticMode.command`   | Command to override all containers in the deployment                                       | `[]`            |
-| `diagnosticMode.args`      | Args to override all containers in the deployment                                          | `[]`            |
+| Name                       | Description                                                                                    | Value           |
+| -------------------        | ---------------------------------------------------------------------------------------------- | --------------- |
+| `nameOverride`             | String to partially override multus-cni.fullname template (will maintain the release name)     | `""`            |
+| `fullnameOverride`         | String to fully override multus-cni.fullname template                                          | `""`            |
+| `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                           | `""`            |
+| `clusterDomain`            | Kubernetes Cluster Domain                                                                      | `cluster.local` |
+| `extraDeploy`              | Extra objects to deploy (value evaluated as a template)                                        | `[]`            |
+| `commonLabels`             | Add labels to all the deployed resources                                                       | `{}`            |
+| `commonAnnotations`        | Add annotations to all the deployed resources                                                  | `{}`            |
+| `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)        | `false`         |
+| `diagnosticMode.command`   | Command to override all containers in the deployment                                           | `[]`            |
+| `diagnosticMode.args`      | Args to override all containers in the deployment                                              | `[]`            |
 
 
 ### Multus CNI parameters
@@ -160,7 +160,7 @@ The command removes all the Kubernetes components associated with the chart and 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
 ```console
-helm install my-release --set imagePullPolicy=Always startechnica/multus
+helm install my-release --set imagePullPolicy=Always startechnica/multus-cni
 ```
 
 The above command sets the `imagePullPolicy` to `Always`.
@@ -168,7 +168,7 @@ The above command sets the `imagePullPolicy` to `Always`.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release startechnica/multus -f values.yaml
+helm install my-release startechnica/multus-cni -f values.yaml
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)

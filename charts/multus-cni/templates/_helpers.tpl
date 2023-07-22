@@ -27,11 +27,11 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 
 {{/* Allow the release namespace to be overridden for multi-namespace deployments in combined charts. */}}
-{{- define "multus.namespace" -}}
+{{- define "multus-cni.namespace" -}}
 {{- if .Values.namespaceOverride -}}
   {{- .Values.namespaceOverride -}}
 {{- else -}}
-  {{- default "kube-system" .Release.Namespace }}
+  {{- default "kube-system" .Release.Namespace | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
@@ -61,16 +61,16 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/* Return the proper Multus image name */}}
-{{- define "multus.image" -}}
+{{- define "multus-cni.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Prometheus metrics image name */}}
-{{- define "multus.metrics.image" -}}
+{{- define "multus-cni.metrics.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
 {{- end -}}
 
 {{/* Return the proper Docker Image Registry Secret Names */}}
-{{- define "multus.imagePullSecrets" -}}
+{{- define "multus-cni.imagePullSecrets" -}}
   {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.metrics.image) "global" .Values.global) -}}
 {{- end -}}
