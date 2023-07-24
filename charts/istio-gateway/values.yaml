@@ -533,10 +533,10 @@ gateways:
     ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
     ##
     podSecurityContext:
-      enabled: true
-      sysctls:
-        - name: net.ipv4.ip_unprivileged_port_start
-          value: "0"
+      enabled: false
+      # sysctls:
+      #   - name: net.ipv4.ip_unprivileged_port_start
+      #     value: "0"
       # fsGroup: 101
       # runAsUser: 101
     ## Istio Gateway container security context
@@ -546,28 +546,28 @@ gateways:
     ## @param containerSecurityContext.runAsNonRoot Set Controller container's Security Context runAsNonRoot
     ##
     containerSecurityContext:
-      enabled: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      privileged: false
-      readOnlyRootFilesystem: true
-      runAsGroup: 1337
-      runAsUser: 1337
-      runAsNonRoot: true
+      enabled: false
+      # allowPrivilegeEscalation: false
+      # capabilities:
+      #   drop:
+      #     - ALL
+      # privileged: false
+      # readOnlyRootFilesystem: true
+      # runAsGroup: 1337
+      # runAsUser: 1337
+      # runAsNonRoot: true
 
     # We usually recommend not to specify default resources and to leave this as a conscious
     # choice for the user. This also increases chances charts run on environments with little
     # resources, such as Minikube. If you do want to specify resources, uncomment the following
     # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    resources:
-      limits:
-        cpu: 2000m
-        memory: 1024Mi
-      requests:
-        cpu: 100m
-        memory: 128Mi
+    resources: {}
+      # limits:
+      #   cpu: 2000m
+      #   memory: 1024Mi
+      # requests:
+      #   cpu: 100m
+      #   memory: 128Mi
 
     ## Configure extra options for Istio Gateway containers' liveness, readiness and startup probes
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
@@ -579,7 +579,7 @@ gateways:
     ## @param startupProbe.successThreshold Success threshold for startupProbe
     ##
     startupProbe:
-      enabled: true
+      enabled: false
       failureThreshold: 30
       httpGet:
         path: /healthz/ready
@@ -613,7 +613,7 @@ gateways:
     ## @param readinessProbe.successThreshold Success threshold for readinessProbe
     ##
     readinessProbe:
-      enabled: true
+      enabled: false
       failureThreshold: 30
       httpGet:
         path: /healthz/ready
