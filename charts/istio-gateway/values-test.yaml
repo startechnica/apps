@@ -12,6 +12,7 @@ gateways:
   
   - name: freeradius
     enabled: true
+
     rbac:
       create: true
 

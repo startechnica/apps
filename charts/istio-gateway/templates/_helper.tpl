@@ -18,11 +18,6 @@ is true or default otherwise.
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Return the proper Gateway image name */}}
-{{- define "gateway.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
-{{- end -}}
-
 {{/* Return the proper Docker Image Registry Secret Names */}}
 {{- define "proxy.imagePullSecrets" -}}
   {{- include "common.images.pullSecrets" (dict "images" (list .Values.proxy.image) "global" .Values.global) -}}

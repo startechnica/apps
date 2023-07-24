@@ -62,12 +62,6 @@ global:
   priorityClassName: ""
 
   proxy:
-    image: proxyv2
-
-    # CAUTION: It is important to ensure that all Istio helm charts specify the same clusterDomain value
-    # cluster domain. Default value is "cluster.local".
-    clusterDomain: "cluster.local"
-
     # Per Component log level for proxy, applies to gateways and sidecars. If a component level is
     # not set, then the global "logLevel" will be used.
     componentLogLevel: "misc:error"
@@ -178,6 +172,8 @@ commonLabels: {}
 ##
 commonAnnotations: {}
 ## @param clusterDomain Kubernetes cluster domain name
+## CAUTION: It is important to ensure that all Istio helm charts specify the same clusterDomain value
+## cluster domain. Default value is "cluster.local".
 ##
 clusterDomain: cluster.local
 ## @param extraDeploy Array of extra objects to deploy with the release
@@ -455,19 +451,6 @@ gateways:
       ##
       debug: false
 
-    ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
-    ##
-    extraVolumes: []
-    ## @param primary.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the MariaDB Primary container(s)
-    ##
-    extraVolumeMounts: []
-    ## @param primary.initContainers Add additional init containers for the MariaDB Primary pod(s)
-    ##
-    initContainers: []
-    ## @param primary.sidecars Add additional sidecar containers for the MariaDB Primary pod(s)
-    ##
-    sidecars: []
-
     ## @section Traffic Exposure Parameters
 
     ## Istio Ingress Gateway service parameters
@@ -550,10 +533,10 @@ gateways:
     ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
     ##
     podSecurityContext:
-      enabled: true
-      sysctls:
-        - name: net.ipv4.ip_unprivileged_port_start
-          value: "0"
+      enabled: false
+      # sysctls:
+      #   - name: net.ipv4.ip_unprivileged_port_start
+      #     value: "0"
       # fsGroup: 101
       # runAsUser: 101
     ## Istio Gateway container security context
@@ -563,28 +546,28 @@ gateways:
     ## @param containerSecurityContext.runAsNonRoot Set Controller container's Security Context runAsNonRoot
     ##
     containerSecurityContext:
-      enabled: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      privileged: false
-      readOnlyRootFilesystem: true
-      runAsGroup: 1337
-      runAsUser: 1337
-      runAsNonRoot: true
+      enabled: false
+      # allowPrivilegeEscalation: false
+      # capabilities:
+      #   drop:
+      #     - ALL
+      # privileged: false
+      # readOnlyRootFilesystem: true
+      # runAsGroup: 1337
+      # runAsUser: 1337
+      # runAsNonRoot: true
 
     # We usually recommend not to specify default resources and to leave this as a conscious
     # choice for the user. This also increases chances charts run on environments with little
     # resources, such as Minikube. If you do want to specify resources, uncomment the following
     # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    resources:
-      limits:
-        cpu: 2000m
-        memory: 1024Mi
-      requests:
-        cpu: 100m
-        memory: 128Mi
+    resources: {}
+      # limits:
+      #   cpu: 2000m
+      #   memory: 1024Mi
+      # requests:
+      #   cpu: 100m
+      #   memory: 128Mi
 
     ## Configure extra options for Istio Gateway containers' liveness, readiness and startup probes
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
@@ -596,7 +579,7 @@ gateways:
     ## @param startupProbe.successThreshold Success threshold for startupProbe
     ##
     startupProbe:
-      enabled: true
+      enabled: false
       failureThreshold: 30
       httpGet:
         path: /healthz/ready
@@ -630,7 +613,7 @@ gateways:
     ## @param readinessProbe.successThreshold Success threshold for readinessProbe
     ##
     readinessProbe:
-      enabled: true
+      enabled: false
       failureThreshold: 30
       httpGet:
         path: /healthz/ready
@@ -679,6 +662,19 @@ gateways:
     ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsSecret: ""
+
+    ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
+    ##
+    extraVolumes: []
+    ## @param primary.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the MariaDB Primary container(s)
+    ##
+    extraVolumeMounts: []
+    ## @param primary.initContainers Add additional init containers for the MariaDB Primary pod(s)
+    ##
+    initContainers: []
+    ## @param primary.sidecars Add additional sidecar containers for the MariaDB Primary pod(s)
+    ##
+    sidecars: []
 
     ## @param gateways.$gateway.updateStrategy.type Istio Gateway statefulset strategy type
     ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies

@@ -14,9 +14,9 @@ This Helm chart configure Istio to expose a service outside of the service mesh 
 
 ## TL;DR
 
-```bash
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install istio-ingressgateway startechnica/istio-gateway
+```console
+helm repo add startechnica https://startechnica.github.io/apps
+helm install istio-ingressgateway startechnica/istio-gateway
 ```
 
 ## Prerequisites
@@ -28,9 +28,9 @@ $ helm install istio-ingressgateway startechnica/istio-gateway
 
 To install the chart with the release name `istio-ingressgateway` on `istio-ingressgateway` namespace:
 
-```bash
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install istio-ingressgateway startechnica/istio-gateway --namespace istio-ingressgateway --create-namespace
+```console
+helm repo add startechnica https://startechnica.github.io/apps
+helm install istio-ingressgateway startechnica/istio-gateway --namespace istio-ingressgateway --create-namespace
 ```
 
 These commands deploy Istio Gateway on the Kubernetes cluster in the default configuration.
@@ -41,8 +41,8 @@ These commands deploy Istio Gateway on the Kubernetes cluster in the default con
 
 To uninstall/delete the `istio-ingressgateway` deployment:
 
-```bash
-$ helm delete istio-ingressgateway --namespace istio-ingressgateway
+```console
+helm delete istio-ingressgateway --namespace istio-ingressgateway
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
@@ -75,23 +75,27 @@ The command removes all the Kubernetes components associated with the chart and 
 | `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                           | `false`         |
 | `diagnosticMode.command`   | Command to override all containers in the deployment                                                              | `[]`            |
 | `diagnosticMode.args`      | Args to override all containers in the deployment                                                                 | `[]`            |
+
+
+### Istio common parameters
+
+| Name                       | Description                                                                                                       | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- |
 | `istioNamespace`           | Istiod namespace                                                                                                  | `istio-system`  |
    
    
 ### Istio Gateway parameters
 
-| Name                                          | Description                                                                                                              | Value                          |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| ------------------------------ |
-| `gateways.<gateway_identifier>`               | Create Istio Gateway scheme                                                                                              | `istio-ingressgateway`         |
-
-
-| Name                                          | Description                                                                                                              | Value                          |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------| ------------------------------ |
+| Name                                                   | Description                                                                                                              | Value                          |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------| ------------------------------ |
 | `gateways.enabled`                                     | Enable Istio Gateway                                                                                                     | `true`                         |
+| `gateways.name`                                        | Istio Gateway identifier                                                                                                 | `ingressgateway`               |
+| `gateways.revision`                                    | Revision is set as 'version' label and part of the resource names when installing multiple control planes.               | `""`                           |
+| `gateways.replicaCount`                                | Desired number of pods                                                                                                   | `1`                            |
 | `gateways.image.registry`                              | Istio Gateway image registry                                                                                             | `""`                           |
 | `gateways.image.repository`                            | Istio Gateway image repository                                                                                           | `""`                           |
 | `gateways.image.tag`                                   | Istio Gateway image tag (immutable tags are recommended)                                                                 | `""`                           |
-| `gateways.image.digest`                                |                                                                                                                          | `""`                           |
+| `gateways.image.digest`                                | Istio Gateway image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag.           | `""`                           |
 | `gateways.image.pullPolicy`                            | Istio Gateway image pull policy                                                                                          | `IfNotPresent`                 |
 | `gateways.image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
 | `gateways.image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
@@ -118,7 +122,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `gateways.service.annotations`                         | Additional annotations for Istio Gateway service                                                                         | `{}`                           |
 | `gateways.service.sessionAffinity`                     | Session Affinity for Kubernetes service, can be `None` or `ClientIP`                                                     | `None`                         |
 | `gateways.service.sessionAffinityConfig`               | Additional settings for the sessionAffinity                                                                              | `{}`                           |
-| `gateways.networkGateway`                              |                                                                                                                          | `false`                        |
+| `gateways.networkGateway`                              | If specified, the gateway will act as a network gateway for the given network.                                           | `false`                        |
 | `gateways.rbac.create`                                 | Specify whether RBAC resources should be created and used                                                                | `false`                        |
 | `gateways.rbac.rules`                                  |                                                                                                                          | `[]`                           |
 | `gateways.serviceAccount.create`                       | Specify whether a ServiceAccount should be created                                                                       | `false`                        |
@@ -130,7 +134,6 @@ The command removes all the Kubernetes components associated with the chart and 
 | `gateways.extraEnvVarsCM`                              | ConfigMap containing extra env vars to configure Istio Gateway                                                           | `""`                           |
 | `gateways.extraEnvVarsSecret`                          | Secret containing extra env vars to configure Istio Gateway                                                              | `""`                           |
 | `gateways.podSecurityContext.enabled`                  | Enable security context                                                                                                  | `true`                         |
-| `gateways.podSecurityContext.sysctls`                  |                                                                                                                          | `[]`                           |
 | `gateways.containerSecurityContext.enabled`            | Enabled Istio Gateway container Security Context                                                                         | `true`                         |
 | `gateways.containerSecurityContext.allowPrivilegeEscalation`   |                                                                                                                  | `false`                        |
 | `gateways.containerSecurityContext.capabilities`       |                                                                                                                          | `{}}`                          |
@@ -147,7 +150,6 @@ The command removes all the Kubernetes components associated with the chart and 
 | `gateways.tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
 | `gateways.tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
 | `gateways.extraFlags`                                  | Istio Gateway additional command line flags                                                                              | `""`                           |
-| `gateways.replicaCount`                                | Desired number of cluster nodes                                                                                          | `1`                            |
 | `gateways.podLabels`                                   | Extra labels for Istio Gateway pods                                                                                      | `{}`                           |
 | `gateways.podAnnotations`                              | Annotations for Istio Gateway  pods                                                                                      | `{}`                           |
 | `gateways.podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
@@ -232,10 +234,26 @@ The command removes all the Kubernetes components associated with the chart and 
 | `autoscaling.targetMemory`                 | Define the memory target to trigger the scaling actions (utilization percentage)   | `80`              |
 
 
+### NetworkPolicy parameters
+
+| Name                                                          | Description                                                                                                                            | Value   |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `networkPolicy.enabled`                                       | Enable network policies                                                                                                                | `false` |
+| `networkPolicy.metrics.enabled`                               | Enable network policy for metrics (prometheus)                                                                                         | `false` |
+| `networkPolicy.metrics.namespaceSelector`                     | Monitoring namespace selector labels. These labels will be used to identify the prometheus' namespace.                                 | `{}`    |
+| `networkPolicy.metrics.podSelector`                           | Monitoring pod selector labels. These labels will be used to identify the Prometheus pods.                                             | `{}`    |
+| `networkPolicy.ingressRules.accessOnlyFrom.enabled`           | Enable ingress rule that makes primary mariadb nodes only accessible from a particular origin.                                         | `false` |
+| `networkPolicy.ingressRules.accessOnlyFrom.namespaceSelector` | Namespace selector label that is allowed to access the primary node. This label will be used to identified the allowed namespace(s).   | `{}`    |
+| `networkPolicy.ingressRules.accessOnlyFrom.podSelector`       | Pods selector label that is allowed to access the primary node. This label will be used to identified the allowed pod(s).              | `{}`    |
+| `networkPolicy.ingressRules.accessOnlyFrom.customRules`       | Custom network policy for the primary node.                                                                                            | `[]`    |
+| `networkPolicy.egressRules.denyConnectionsToExternal`         | Enable egress rule that denies outgoing traffic outside the cluster, except for DNS (port 53).                                         | `false` |
+| `networkPolicy.egressRules.customRules`                       | Custom network policy rule                                                                                                             | `{}`    |
+
+
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
-```bash
-$ helm install istio-ingressgateway \
+```console
+helm install istio-ingressgateway \
     --set imagePullPolicy=Always \
     startechnica/istio-gateway
 ```
@@ -244,13 +262,34 @@ The above command sets the `imagePullPolicy` to `Always`.
 
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
-```bash
-$ helm install istio-ingressgateway startechnica/istio-gateway -f values.yaml
+```console
+helm install istio-ingressgateway startechnica/istio-gateway -f values.yaml
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
 
 ## Configuration and installation details
+
+### Rolling VS Immutable tags
+
+It is strongly recommended to use immutable tags in a production environment. This ensures your deployment does not change automatically if the same tag is updated with a different image.
+
+Istio will release a new chart updating its containers if a new version of the main container, significant changes, or critical vulnerabilities exist.
+
+
+### Change Istio Gateway version
+
+To modify the Istio Gateway version used in this chart you can specify a [valid image tag](https://hub.docker.com/r/istio/proxyv2/tags) using the `image.tag` parameter. For example, `image.tag=X.Y.Z`. This approach is also applicable to other images like exporters.
+
+
+### Sidecars and Init Containers
+
+If additional containers are needed in the same pod as Istio Gateway (such as additional metrics or logging exporters), they can be defined using the sidecars parameter.
+
+The Helm chart already includes sidecar containers for the Prometheus exporters. These can be activated by adding the `--set enable-metrics=true` parameter at deployment time. The `sidecars` parameter should therefore only be used for any extra sidecar containers.
+
+Similarly, additional containers can be added to Istio Gateway pods using the `initContainers` parameter.
+
 
 ### Adding extra environment variables
 
@@ -264,13 +303,16 @@ extraEnvVars:
 
 Alternatively, you can use a ConfigMap or a Secret with the environment variables. To do so, use the `extraEnvVarsCM` or the `extraEnvVarsSecret` values.
 
+
 ### Setting Pod's affinity
 
 This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod's affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
 
+
 ### Deploying extra resources
 
 There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
+
 
 ## Troubleshooting
 
