@@ -24,9 +24,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-env: {{ include (print $.Template.BasePath "/configmap/env.yaml") . | sha256sum }}
-        checksum/configmap-mods: {{ include (print $.Template.BasePath "/configmap/mods-enabled.yaml") . | sha256sum }}
-        checksum/configmap-sites: {{ include (print $.Template.BasePath "/configmap/sites-enabled.yaml") . | sha256sum }}
+        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/env.yaml") . | sha256sum }}
+        checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
+        checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
