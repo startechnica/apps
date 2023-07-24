@@ -71,7 +71,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: freeradius/freeradius-server
-  tag: "3.2.1"
+  tag: "3.2.3"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -254,7 +254,6 @@ schedulerName: ""
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
 ##
 podManagementPolicy: ""
-
 
 ## @param containerPorts.auth FreeRADIUS Auth container port
 ## @param containerPorts.acct FreeRADIUS Accounting container port
@@ -456,8 +455,8 @@ volumePermissions:
   ##
   image:
     registry: docker.io
-    repository: bitnami/bitnami-shell
-    tag: 11-debian-11-r48
+    repository: bitnami/os-shell
+    tag: "11"
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -874,23 +873,21 @@ tls:
   secretName: ~
   existingSecret: ""
 
-istio:
+gateway:
   enabled: false
-  clusterName: cluster.local
-  ingressGateway: ingressgateway
-  ingressNamespace: istio-ingress
-
-  gateway:
-    enabled: true
-    servers:
-      - name: tcp-radsec
-        port: 2083
-        protocol: TCP
-    existingGateway: ~
-
-  virtualService:
-    enabled: true
-    existingVirtualService: ~
+  dedicated: false
+  gatewayApi: false
+  name: ""
+  namespace: ""
+  gatewayClassName: istio
+  ## @param gateway.listeners
+  ##
+  listeners: []
+  existingGateway: ~
+  existingVirtualService: ~
+  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
+  ##
+  extraRoute: []
 
 ## Prometheus exporter configuration
 ##

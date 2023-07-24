@@ -1,0 +1,40 @@
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingVirtualService) }}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+kind: VirtualService
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  gateways:
+    - {{ printf "%s/%s" (include "common.names.namespace" .) (include "common.names.fullname" .) }}
+  {{- if .Values.ingress.hosts }}
+  hosts:
+    {{- range $host := .Values.ingress.hosts }}
+    - {{ $host | quote }}
+    {{- end }}
+  {{- end }}
+  tcp:
+    {{- if .Values.tls.enabled }}
+    - match:
+        - port: {{ .Values.service.ports.radsec }}
+      route:
+        - destination:
+            # host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
+            host: {{ printf "%s.%s.svc.cluster.local" (include "common.names.fullname" .) (include "common.names.namespace" .) }}
+            port:
+              number: {{ .Values.service.ports.radsec }}
+    {{- end }}
+{{- end }}
+{{- end }}
