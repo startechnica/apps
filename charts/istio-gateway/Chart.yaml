@@ -43,4 +43,4 @@ name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
-version: 0.1.2
+version: 0.1.3
