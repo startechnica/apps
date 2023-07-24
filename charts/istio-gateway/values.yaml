@@ -451,19 +451,6 @@ gateways:
       ##
       debug: false
 
-    ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
-    ##
-    extraVolumes: []
-    ## @param primary.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the MariaDB Primary container(s)
-    ##
-    extraVolumeMounts: []
-    ## @param primary.initContainers Add additional init containers for the MariaDB Primary pod(s)
-    ##
-    initContainers: []
-    ## @param primary.sidecars Add additional sidecar containers for the MariaDB Primary pod(s)
-    ##
-    sidecars: []
-
     ## @section Traffic Exposure Parameters
 
     ## Istio Ingress Gateway service parameters
@@ -675,6 +662,19 @@ gateways:
     ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsSecret: ""
+
+    ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
+    ##
+    extraVolumes: []
+    ## @param primary.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the MariaDB Primary container(s)
+    ##
+    extraVolumeMounts: []
+    ## @param primary.initContainers Add additional init containers for the MariaDB Primary pod(s)
+    ##
+    initContainers: []
+    ## @param primary.sidecars Add additional sidecar containers for the MariaDB Primary pod(s)
+    ##
+    sidecars: []
 
     ## @param gateways.$gateway.updateStrategy.type Istio Gateway statefulset strategy type
     ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
