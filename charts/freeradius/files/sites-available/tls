@@ -396,6 +396,7 @@ listen {
 						#  You should also delete all of the files
 						#  in the directory when the server starts.
 		#               tmpdir = /tmp/radiusd
+						tmpdir = /startechnica/freeradius/tmp
 
 						#  The command used to verify the client cert.
 						#  We recommend using the OpenSSL command-line

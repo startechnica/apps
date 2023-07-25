@@ -79,8 +79,9 @@ spec:
             - -ec
             - |
               whoami
-              chown -R "{{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }}" /etc/freeradius
-              chmod 2744 /etc/freeradius
+              ls -liah /etc/freeradius
+              printf '%s\n' "[system] Change permission" >&2
+              chmod 0711 /etc/freeradius
               ls -liah /etc
               ls -liah /etc/freeradius
           {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
