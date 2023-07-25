@@ -33,3 +33,10 @@ tls:
 
 volumePermissions:
   enabled: true
+
+gateway:
+  enabled: true
+  dedicated: false
+  gatewayApi: false
+  name: "freeradius"
+  namespace: "istio-ingress"
