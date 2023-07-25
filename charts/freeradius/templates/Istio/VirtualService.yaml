@@ -19,14 +19,12 @@ metadata:
 spec:
   gateways:
     - {{ printf "%s/%s" (include "common.names.namespace" .) (include "common.names.fullname" .) }}
-  {{- if .Values.ingress.hosts }}
   hosts:
-    {{- range $host := .Values.ingress.hosts }}
+    - {{ .Values.ingress.hostname }}
+    {{- range $host := .Values.ingress.extraHosts }}
     - {{ $host | quote }}
     {{- end }}
-  {{- end }}
   tcp:
-    {{- if .Values.tls.enabled }}
     - match:
         - port: {{ .Values.service.ports.radsec }}
       route:
@@ -35,6 +33,5 @@ spec:
             host: {{ printf "%s.%s.svc.cluster.local" (include "common.names.fullname" .) (include "common.names.namespace" .) }}
             port:
               number: {{ .Values.service.ports.radsec }}
-    {{- end }}
 {{- end }}
 {{- end }}
