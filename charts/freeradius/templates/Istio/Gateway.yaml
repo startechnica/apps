@@ -25,8 +25,10 @@ spec:
         protocol: UDP
       hosts:
         - {{ .Values.ingress.hostname }}
+        {{- if .Values.ingress.extraHosts }}
         {{- range $host := .Values.ingress.extraHosts }}
         - {{ $host.name | quote }}
+        {{- end }}
         {{- end }}
     - port:
         name: acct
@@ -34,8 +36,10 @@ spec:
         protocol: UDP
       hosts:
         - {{ .Values.ingress.hostname }}
+        {{- if .Values.ingress.extraHosts }}
         {{- range $host := .Values.ingress.extraHosts }}
         - {{ $host.name | quote }}
+        {{- end }}
         {{- end }}
     - port:
         name: coa
@@ -43,8 +47,10 @@ spec:
         protocol: UDP
       hosts:
         - {{ .Values.ingress.hostname }}
+        {{- if .Values.ingress.extraHosts }}
         {{- range $host := .Values.ingress.extraHosts }}
         - {{ $host.name | quote }}
+        {{- end }}
         {{- end }}
     - port:
         name: radsec
@@ -52,8 +58,10 @@ spec:
         protocol: TLS
       hosts:
         - {{ .Values.ingress.hostname }}
+        {{- if .Values.ingress.extraHosts }}
         {{- range $host := .Values.ingress.extraHosts }}
         - {{ $host.name | quote }}
+        {{- end }}
         {{- end }}
 {{- end }}
 {{- end }}
