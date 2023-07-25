@@ -264,7 +264,7 @@ listen {
 				# Set this option to specify the allowed
 				# TLS cipher suites.  The format is listed
 				# in "man 1 ciphers".
-				cipher_list = "DEFAULT"
+				cipher_list = $ENV{FREERADIUS_SITES_TLS_CIPHER}
 
 				# If enabled, OpenSSL will use server cipher list
 				# (possibly defined by cipher_list option above)
@@ -476,7 +476,7 @@ home_server tls {
 				#
 		#       hostname = "example.com"
 
-				private_key_password = whatever
+				private_key_password = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD}
 				private_key_file = ${certdir}/client.pem
 
 				#  If Private key & Certificate are located in
@@ -584,7 +584,7 @@ home_server tls {
 		#       check_cert_cn = %{User-Name}
 		#
 				# Set this option to specify the allowed TLS cipher suites.  The format is listed in "man 1 ciphers".
-				cipher_list = "DEFAULT"
+				cipher_list = $ENV{FREERADIUS_SITES_TLS_CIPHER}
 		}
 
 }

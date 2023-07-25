@@ -5,7 +5,8 @@
 
 listen {
 	type = coa
-	ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
+	# ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
+	ipaddr = *
 	port = $ENV{FREERADIUS_SITES_COA_PORT}
 	virtual_server = coa
 }
