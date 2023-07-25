@@ -79,9 +79,12 @@ spec:
             - -ec
             - |
               whoami
+              printf '%s\n' "[system] Ls /etc" >&2
+              ls -liah /etc
               ls -liah /etc/freeradius
               printf '%s\n' "[system] Change permission" >&2
               chmod 0711 /etc/freeradius
+              printf '%s\n' "[system] Ls /etc" >&2
               ls -liah /etc
               ls -liah /etc/freeradius
           {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
@@ -114,7 +117,7 @@ spec:
           {{- else if .Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{ else }}
-          args: ["-x","-l","/dev/stdout"]
+          args: ["-x","-l /dev/stdout"]
           {{- end }}
           env:
             {{- if .Values.modsEnabled.sql.enabled }}
