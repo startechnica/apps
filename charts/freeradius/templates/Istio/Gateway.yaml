@@ -55,7 +55,7 @@ spec:
     - port:
         name: radsec
         number: {{ .Values.service.ports.radsec }}
-        protocol: TLS
+        protocol: TCP
       hosts:
         - {{ .Values.ingress.hostname }}
         {{- if .Values.ingress.extraHosts }}
