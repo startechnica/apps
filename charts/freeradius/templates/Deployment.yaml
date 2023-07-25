@@ -227,12 +227,12 @@ spec:
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: raddb
-              mountPath: /etc/freeradius
+              mountPath: /etc/freeradiusX
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
             {{- end }}
-            {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+            {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
             - name: freeradius-config
               mountPath: /etc/freeradius/radiusd.conf
               subPath: radiusd.conf
@@ -266,10 +266,10 @@ spec:
             - name: freeradius-tls
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
+            {{- end }}
             - name: shared-certs
               mountPath: /opt/startechnica/freeradius/shared-certs
               readOnly: true
-            {{- end }}
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -294,10 +294,15 @@ spec:
         - name: freeradius-tls
           secret:
             secretName: {{ include "freeradius.tlsSecretName" . }}
+        {{- end }}
+        {{- if .Values.modsEnabled.sql.tls.enabled }}
+        - name: sql-tls
+          secret:
+            secretName: {{ include "freeradius.sqlTlsSecretName" . }}
+        {{- end }}
         - name: shared-certs
           emptyDir: {}
-        {{- end }}
-        {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+        {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
         - name: freeradius-config
           configMap:
             name: {{ include "freeradius.configurationCM" . }}
