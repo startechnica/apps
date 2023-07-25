@@ -247,8 +247,6 @@ spec:
             - name: freeradius-mods
               mountPath: /etc/freeradius/mods-enabled/sql
               subPath: sql
-            - name: sql-tls
-              mountPath: /opt/startechnica/freeradius/certs
             {{- end }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/default
@@ -268,6 +266,10 @@ spec:
             - name: freeradius-tls
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
+            {{- end }}
+            {{- if .Values.modsEnabled.sql.tls.enabled }}
+            - name: freeradius-sql-tls
+              mountPath: /opt/startechnica/freeradius/certs
             {{- end }}
             - name: shared-certs
               mountPath: /opt/startechnica/freeradius/shared-certs
@@ -304,16 +306,16 @@ spec:
             secretName: {{ include "freeradius.tlsSecretName" . }}
         {{- end }}
         {{- if .Values.modsEnabled.sql.tls.enabled }}
-        - name: sql-tls
+        - name: freeradius-sql-tls
           secret:
             secretName: {{ include "freeradius.sqlTlsSecretName" . }}
             items:
-            - key: tls.crt
-              path: sql-tls.crt
-            - key: tls.key
-              path: sql-tls.key
-            - key: ca.crt
-              path: sql-ca.crt
+              - key: tls.crt
+                path: sql-tls.crt
+              - key: tls.key
+                path: sql-tls.key
+              - key: ca.crt
+                path: sql-ca.crt
         {{- end }}
         {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
         - name: freeradius-config
