@@ -35,4 +35,4 @@ sources:
   - https://freeradius.org/
   - https://github.com/FreeRADIUS/freeradius-server
 type: application
-version: 0.1.9
+version: 1.0.0
