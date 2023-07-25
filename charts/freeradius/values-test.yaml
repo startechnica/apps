@@ -32,4 +32,4 @@ tls:
 #   type: Recreate
 
 volumePermissions:
-  enabled: false
+  enabled: true
