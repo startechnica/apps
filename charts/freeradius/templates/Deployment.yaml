@@ -24,9 +24,12 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap-env.yaml") . | sha256sum }}
-        checksum/configmap-mods: {{ include (print $.Template.BasePath "/configmap/mods-enabled.yaml") . | sha256sum }}
-        checksum/configmap-sites: {{ include (print $.Template.BasePath "/configmap/sites-enabled.yaml") . | sha256sum }}
+        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/env.yaml") . | sha256sum }}
+        checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
+        checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
+        checksum/secret-credentials: {{ include (print $.Template.BasePath "/Secret/credentials.yaml") . | sha256sum }}
+        checksum/secret-sql-tls: {{ include (print $.Template.BasePath "/Secret/sql-tls.yaml") . | sha256sum }}
+        checksum/secret-tls: {{ include (print $.Template.BasePath "/Secret/tls.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
@@ -37,7 +40,7 @@ spec:
         {{- end }}
     spec:
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
@@ -49,7 +52,7 @@ spec:
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName | quote }}
@@ -78,11 +81,9 @@ spec:
           args:
             - -ec
             - |
-              whoami
-              mkdir -p /etc/freeradius
-              chown -R "{{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }}" /etc/freeradius
-              chmod 2755 /etc/freeradius
-              ls -liah /etc
+              printf '%s\n' "[system] Change permission" >&2
+              chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.persistence.mountPath }}
+              chmod 0711 {{ .Values.persistence.mountPath }}
           {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
           securityContext: {{- omit .Values.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
           {{- else }}
@@ -92,8 +93,11 @@ spec:
           resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: raddb
-              mountPath: /etc/freeradius
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath }}
+              {{- end }}
         {{- end }}
       {{- end }}
       containers:
@@ -110,7 +114,7 @@ spec:
           {{- else if .Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{ else }}
-          args: ["-x","-l","/dev/stdout"]
+          args: ["-x", "-l", "/dev/stdout"]
           {{- end }}
           env:
             {{- if .Values.modsEnabled.sql.enabled }}
@@ -218,14 +222,12 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if .Values.persistence.enabled }}
-            - name: raddb
-              mountPath: /etc/freeradius
+            - name: data
+              mountPath: {{ default "/startechnica/freeradius" .Values.persistence.mountPath }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
-            {{- end }}
-            {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+            {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
             - name: freeradius-config
               mountPath: /etc/freeradius/radiusd.conf
               subPath: radiusd.conf
@@ -250,8 +252,6 @@ spec:
               mountPath: /etc/freeradius/sites-enabled/coa
               subPath: coa
             {{- end }}
-            - name: temp
-              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.tls.enabled }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/tls
@@ -259,10 +259,16 @@ spec:
             - name: freeradius-tls
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
+            {{- end }}
+            {{- if .Values.modsEnabled.sql.tls.enabled }}
+            - name: freeradius-sql-tls
+              mountPath: /opt/startechnica/freeradius/certs
+            {{- end }}
             - name: shared-certs
               mountPath: /opt/startechnica/freeradius/shared-certs
               readOnly: true
-            {{- end }}
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -278,19 +284,33 @@ spec:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
         - name: temp
           emptyDir: {}
-        {{- if .Values.persistence.enabled }}
-        - name: raddb
+        - name: shared-certs
+          emptyDir: {}
+        - name: data
+          {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "freeradius.claimName" . }}
-        {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
             secretName: {{ include "freeradius.tlsSecretName" . }}
-        - name: shared-certs
-          emptyDir: {}
         {{- end }}
-        {{- if or (.Files.Glob "files/radiusd.conf") .Values.freeradiusConfiguration .Values.configurationConfigMap }}
+        {{- if .Values.modsEnabled.sql.tls.enabled }}
+        - name: freeradius-sql-tls
+          secret:
+            secretName: {{ include "freeradius.sqlTlsSecretName" . }}
+            items:
+              - key: tls.crt
+                path: sql-tls.crt
+              - key: tls.key
+                path: sql-tls.key
+              - key: ca.crt
+                path: sql-ca.crt
+        {{- end }}
+        {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
         - name: freeradius-config
           configMap:
             name: {{ include "freeradius.configurationCM" . }}

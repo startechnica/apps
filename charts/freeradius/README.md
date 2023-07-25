@@ -10,23 +10,23 @@ FreeRADIUS is a modular, high performance free RADIUS suite developed and distri
 
 ## TL;DR
 
-```bash
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install my-release startechnica/freeradius
+```console
+helm repo add startechnica https://startechnica.github.io/apps
+helm install my-release startechnica/freeradius
 ```
 
 ## Prerequisites
 
-- Kubernetes 1.19+
-- Helm 3.2.0+
+- Kubernetes 1.22+
+- Helm 3.10.0+
 
 ## Installing the Chart
 
 To install the chart with the release name `my-release` on `my-release` namespace:
 
-```bash
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install my-release startechnica/freeradius --namespace my-release --create-namespace
+```console
+helm repo add startechnica https://startechnica.github.io/apps
+helm install my-release startechnica/freeradius --namespace my-release --create-namespace
 ```
 
 These commands deploy FreeRADIUS on the Kubernetes cluster in the default configuration.
@@ -37,8 +37,8 @@ These commands deploy FreeRADIUS on the Kubernetes cluster in the default config
 
 To uninstall/delete the `my-release` deployment:
 
-```bash
-$ helm delete my-release --namespace my-release
+```console
+helm delete my-release --namespace my-release
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
@@ -237,8 +237,8 @@ The command removes all the Kubernetes components associated with the chart and 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
-```bash
-$ helm install my-release \
+```console
+helm install my-release \
   --set imagePullPolicy=Always \
     startechnica/freeradius
 ```
@@ -247,8 +247,8 @@ The above command sets the `imagePullPolicy` to `Always`.
 
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
-```bash
-$ helm install my-release startechnica/freeradius -f values.yaml
+```console
+helm install my-release startechnica/freeradius -f values.yaml
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -283,7 +283,7 @@ Find more information about how to deal with common errors related to Startechni
 
 ## License
 
-Copyright &copy; 2022 Startechnica
+Copyright &copy; 2023 Startechnica
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

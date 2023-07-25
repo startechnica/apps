@@ -43,7 +43,8 @@
 
 listen {
 
-		ipaddr = $ENV{FREERADIUS_SITES_TLS_LISTEN}
+		# ipaddr = $ENV{FREERADIUS_SITES_TLS_LISTEN}
+		ipaddr = *
 		port = $ENV{FREERADIUS_SITES_TLS_PORT}
 
 		#
@@ -264,7 +265,7 @@ listen {
 				# Set this option to specify the allowed
 				# TLS cipher suites.  The format is listed
 				# in "man 1 ciphers".
-				cipher_list = "DEFAULT"
+				cipher_list = $ENV{FREERADIUS_SITES_TLS_CIPHER}
 
 				# If enabled, OpenSSL will use server cipher list
 				# (possibly defined by cipher_list option above)
@@ -396,6 +397,7 @@ listen {
 						#  You should also delete all of the files
 						#  in the directory when the server starts.
 		#               tmpdir = /tmp/radiusd
+						tmpdir = /startechnica/freeradius/tmp
 
 						#  The command used to verify the client cert.
 						#  We recommend using the OpenSSL command-line
@@ -476,7 +478,7 @@ home_server tls {
 				#
 		#       hostname = "example.com"
 
-				private_key_password = whatever
+				private_key_password = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD}
 				private_key_file = ${certdir}/client.pem
 
 				#  If Private key & Certificate are located in
@@ -584,7 +586,7 @@ home_server tls {
 		#       check_cert_cn = %{User-Name}
 		#
 				# Set this option to specify the allowed TLS cipher suites.  The format is listed in "man 1 ciphers".
-				cipher_list = "DEFAULT"
+				cipher_list = $ENV{FREERADIUS_SITES_TLS_CIPHER}
 		}
 
 }

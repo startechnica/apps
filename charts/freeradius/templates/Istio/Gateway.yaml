@@ -1,0 +1,28 @@
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) }}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+kind: Gateway
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.namespace" . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Values.argocd.server.name }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
+  servers:
+    - port:
+        name: radsec
+        number: {{ .Values.service.ports.radsec }}
+        protocol: HTTP
+      {{- if .Values.ingress.hosts }}
+      hosts:
+        {{- range $host := .Values.ingress.hosts }}
+        - {{ $host | quote }}
+        {{- end }}
+      {{- end }}
+{{- end }}
+{{- end }}

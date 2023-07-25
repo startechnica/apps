@@ -1,14 +1,14 @@
-{{- if and (include "freeradius.createTlsSecret" . ) .Values.tls.autoGenerator.certmanager.enabled }}
-{{- if .Capabilities.APIVersions.Has "cert-manager.io/v1" }}
+{{- if and (include "freeradius.createTlsSecret" .) .Values.tls.autoGenerator.certmanager.enabled }}
+{{- if not (eq (include "common.capabilities.certManager.apiVersion" .) "false") }}
 {{- $releaseNamespace := include "common.names.namespace" . }}
 {{- $clusterDomain := .Values.clusterDomain }}
 {{- $fullname := include "common.names.fullname" . }}
 {{- $serviceName := include "common.names.fullname" . }}
-{{- $altNames := list (printf "%s.%s.svc.%s" $fullname $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $fullname $releaseNamespace) (printf "%s.%s" $fullname $releaseNamespace) $fullname }}
+{{- $altNames := list (printf "%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 {{/*
 {{- $altNames := list (printf "*.%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 */}}
-apiVersion: cert-manager.io/v1
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "common.names.fullname" . }}-tls
@@ -38,7 +38,7 @@ spec:
       - {{ include "common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
-    {{- range $.Values.ingress.extraHosts }}
+    {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
     {{- with $altNames }}

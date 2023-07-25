@@ -8,7 +8,7 @@ metadata:
   {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
-  {{- if or .Values.service.annotations .Values.commonAnnotations }}
+  {{- if or .Values.service.annotations .Values.commonAnnotations .Values.metrics.annotations }}
   annotations:
     {{- if .Values.commonAnnotations }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
@@ -17,11 +17,11 @@ metadata:
       {{- include "common.tplvalues.render" (dict "value" .Values.service.annotations "context" $) | nindent 4 }}
     {{- end }}
     {{- if and .Values.metrics.enabled .Values.metrics.annotations }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.annotations "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.annotations "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ default "ClusterIP" .Values.service.type }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.allocateLoadBalancerNodePorts)) }}
   allocateLoadBalancerNodePorts: {{ .Values.service.allocateLoadBalancerNodePorts }}
   {{- end }}
