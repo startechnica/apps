@@ -19,7 +19,7 @@ spec:
   selector:
     istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
   servers:
-      - port:
+    - port:
         name: auth
         number: {{ .Values.service.ports.auth }}
         protocol: UDP
