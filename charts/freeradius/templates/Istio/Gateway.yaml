@@ -4,25 +4,56 @@ apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:
   name: {{ include "common.names.fullname" . }}
-  namespace: {{ include "common.namespace" . }}
+  namespace: {{ include "common.names.namespace" . }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: {{ .Values.argocd.server.name }}
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    {{- end }}
+  {{- end }}
 spec:
   selector:
     istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
   servers:
     - port:
+        name: auth
+        number: {{ .Values.service.ports.auth }}
+        protocol: UDP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+    - port:
+        name: acct
+        number: {{ .Values.service.ports.acct }}
+        protocol: UDP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+    - port:
+        name: coa
+        number: {{ .Values.service.ports.coa }}
+        protocol: UDP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+    - port:
         name: radsec
         number: {{ .Values.service.ports.radsec }}
-        protocol: HTTP
-      {{- if .Values.ingress.hosts }}
+        protocol: TCP
       hosts:
-        {{- range $host := .Values.ingress.hosts }}
-        - {{ $host | quote }}
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
         {{- end }}
-      {{- end }}
 {{- end }}
 {{- end }}
