@@ -27,6 +27,8 @@ spec:
         checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/env.yaml") . | sha256sum }}
         checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
         checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
+        checksum/secret-credentials: {{ include (print $.Template.BasePath "/Secret/credentials.yaml") . | sha256sum }}
+        checksum/secret-sql-tls: {{ include (print $.Template.BasePath "/Secret/sql-tls.yaml") . | sha256sum }}
         checksum/secret-tls: {{ include (print $.Template.BasePath "/Secret/tls.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
