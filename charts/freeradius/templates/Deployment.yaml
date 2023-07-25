@@ -27,6 +27,7 @@ spec:
         checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/env.yaml") . | sha256sum }}
         checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
         checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
+        checksum/secret-tls: {{ include (print $.Template.BasePath "/Secret/tls.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
@@ -83,7 +84,8 @@ spec:
               ls -liah /etc
               ls -liah /etc/freeradius
               printf '%s\n' "[system] Change permission" >&2
-              chmod 0711 /etc/freeradius
+              chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.persistence.mountPath }}
+              chmod 0711 {{ .Values.persistence.mountPath }}
               printf '%s\n' "[system] Ls /etc" >&2
               ls -liah /etc
               ls -liah /etc/freeradius
@@ -96,8 +98,8 @@ spec:
           resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: raddb
-              mountPath: /etc/freeradius
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
@@ -225,13 +227,11 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if .Values.persistence.enabled }}
-            - name: raddb
-              mountPath: /etc/freeradiusX
+            - name: data
+              mountPath: {{ default "/startechnica/freeradius" .Values.persistence.mountPath }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
-            {{- end }}
             {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
             - name: freeradius-config
               mountPath: /etc/freeradius/radiusd.conf
@@ -257,8 +257,6 @@ spec:
               mountPath: /etc/freeradius/sites-enabled/coa
               subPath: coa
             {{- end }}
-            - name: temp
-              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.tls.enabled }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/tls
@@ -267,9 +265,23 @@ spec:
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             {{- end }}
+            {{- if .Values.tls.enabled }}
+            - name: freeradius-sql-certs
+              secret:
+                secretName: {{ include "freeradius.sqlTlsSecretName" . }}
+                items:
+                - key: tls.crt
+                  path: sql-tls.crt
+                - key: tls.key
+                  path: sql-tls.key
+                - key: ca.crt
+                  path: sql-ca.crt
+            {{- end }}
             - name: shared-certs
               mountPath: /opt/startechnica/freeradius/shared-certs
               readOnly: true
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -285,11 +297,15 @@ spec:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
         - name: temp
           emptyDir: {}
-        {{- if .Values.persistence.enabled }}
-        - name: raddb
+        - name: shared-certs
+          emptyDir: {}
+        - name: data
+          {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "freeradius.claimName" . }}
-        {{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
@@ -300,8 +316,6 @@ spec:
           secret:
             secretName: {{ include "freeradius.sqlTlsSecretName" . }}
         {{- end }}
-        - name: shared-certs
-          emptyDir: {}
         {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
         - name: freeradius-config
           configMap:

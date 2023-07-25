@@ -412,7 +412,7 @@ persistence:
   subPath: ""
   ## @param persistence.mountPath Path to mount the volume at
   ##
-  mountPath: /etc/freeradius
+  mountPath: /startechnica/freeradius
   ## @param persistence.storageClass FreeRADIUS persistent volume storage Class
   ## If defined, storageClassName: <storageClass>
   ## If set to "-", storageClassName: "", which disables dynamic provisioning

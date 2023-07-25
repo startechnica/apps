@@ -43,7 +43,8 @@
 
 listen {
 
-		ipaddr = $ENV{FREERADIUS_SITES_TLS_LISTEN}
+		# ipaddr = $ENV{FREERADIUS_SITES_TLS_LISTEN}
+		ipaddr = *
 		port = $ENV{FREERADIUS_SITES_TLS_PORT}
 
 		#

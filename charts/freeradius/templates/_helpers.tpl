@@ -243,7 +243,7 @@ freeradius: tls.enabled
 {{- define "freeradius.claimName" -}}
 {{- if .Values.persistence.existingClaim }}
   {{- printf "%s" (tpl .Values.persistence.existingClaim $) -}}
-{{- else -}}
+{{- else }}
   {{- printf "%s" (include "common.names.fullname" .) -}}
-{{- end -}}
+{{- end }}
 {{- end -}}
