@@ -90,6 +90,7 @@ sql {
 #			certificate_file = $ENV{FREERADIUS_MODS_SQL_TLS_CERTIFICATE}
 #			private_key_file = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
 #			cipher = "DHE-RSA-AES256-SHA:AES128-SHA"
+#			cipher = $ENV{FREERADIUS_MODS_SQL_TLS_CIPHER}
 
 			tls_required = $ENV{FREERADIUS_MODS_SQL_TLS_ENABLE}
 			tls_check_cert = no
@@ -151,7 +152,7 @@ sql {
 			certificate_password = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
 			ca_file = $ENV{FREERADIUS_MODS_SQL_TLS_CACERT}
 			ca_dir = /startechnica/freeradius/certs-sql/
-			crl_file = /path/to/file
+			# crl_file = /path/to/file
 			weak_cert_validation = false
 			allow_invalid_hostname = false
 		}
