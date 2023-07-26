@@ -115,13 +115,9 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- else }}
           args:
-            {{- if .Values.sitesEnabled.tls.enabled }}
             - -fxx
             - -l
             - stdout
-            {{- else }}
-            - -X
-            {{- end }}
           {{- end }}
           env:
             {{- if .Values.modsEnabled.sql.enabled }}
