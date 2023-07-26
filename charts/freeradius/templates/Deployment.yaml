@@ -72,7 +72,6 @@ spec:
       {{- end }}
       {{- if or (and .Values.volumePermissions.enabled .Values.persistence.enabled) .Values.initContainers }}
       initContainers:
-        {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
         - name: volume-permissions
           image: {{ include "freeradius.volumePermissions.image" . }}
           imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
@@ -98,7 +97,6 @@ spec:
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
-        {{- end }}
       {{- end }}
       containers:
         - name: freeradius

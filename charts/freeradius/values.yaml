@@ -843,7 +843,6 @@ sitesEnabled:
     ## @param sitesEnabled.tls.enabled Enable TLS support for radsec traffic
     ##
     enabled: false
-    listen: "*"
     privateKeyPassword: ""
     cipher: "DEFAULT"
 
