@@ -116,7 +116,8 @@ spec:
           {{- else }}
           args:
             {{- if .Values.sitesEnabled.tls.enabled }}
-            - -fxx -l stdout
+            - -fxx
+            - "-l stdout"
             {{- else }}
             - -X
             {{- end }}
