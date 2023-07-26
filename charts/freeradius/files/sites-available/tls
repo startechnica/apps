@@ -479,7 +479,8 @@ home_server tls {
 		#       hostname = "example.com"
 
 				private_key_password = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD}
-				private_key_file = ${certdir}/client.pem
+				# private_key_file = ${certdir}/client.pem
+				private_key_file = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_FILE}
 
 				#  If Private key & Certificate are located in
 				#  the same file, then private_key_file &
@@ -491,7 +492,8 @@ home_server tls {
 				#  only the server certificate, but ALSO all
 				#  of the CA certificates used to sign the
 				#  server certificate.
-				certificate_file = ${certdir}/client.pem
+				# certificate_file = ${certdir}/client.pem
+				certificate_file = $ENV{FREERADIUS_SITES_TLS_CERTIFICATE_FILE}
 
 				#  Trusted Root CA list
 				#

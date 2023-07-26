@@ -844,7 +844,7 @@ sitesEnabled:
     ##
     enabled: false
     listen: "*"
-    privateKeyPassword: adminsecret
+    privateKeyPassword: ""
     cipher: "DEFAULT"
 
 clients:
