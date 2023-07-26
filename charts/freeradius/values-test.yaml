@@ -23,6 +23,8 @@ externalDatabase:
 sitesEnabled:
   coa:
     enabled: true
+  tls:
+    enabled: true
 
 tls:
   enabled: false
