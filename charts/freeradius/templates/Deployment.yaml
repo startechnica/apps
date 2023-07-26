@@ -117,7 +117,8 @@ spec:
           args:
             {{- if .Values.sitesEnabled.tls.enabled }}
             - -fxx
-            - "-l stdout"
+            - -l
+            - stdout
             {{- else }}
             - -X
             {{- end }}
