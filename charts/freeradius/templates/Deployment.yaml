@@ -114,7 +114,8 @@ spec:
           {{- else if .Values.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{ else }}
-          args: ["-x", "-l", "/dev/stdout"]
+          args:
+            - -X
           {{- end }}
           env:
             {{- if .Values.modsEnabled.sql.enabled }}
@@ -128,9 +129,6 @@ spec:
                   name: {{ include "freeradius.databaseSecretName" . }}
                   key: {{ include "freeradius.databaseSecretKey" . }}
                 {{- end }}
-            {{- if .Values.extraEnvVars }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
-            {{- end }}
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}
             - name: FREERADIUS_SITES_STATUS_SECRET
@@ -143,6 +141,21 @@ spec:
                   name: {{ $globalSecretName }}
                   key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
                 {{- end }}
+            {{- end }}
+            {{- if .Values.sitesEnabled.tls.enabled }}
+            - name: FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesTlsPrivKeyPassword "context" $)) $ }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesTlsPrivKeyPassword") }}
+                {{- else }}
+                  name: {{ $globalSecretName }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-tls-privkey-password") }}
+                {{- end }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           envFrom:
             - configMapRef:
