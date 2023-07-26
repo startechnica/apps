@@ -24,9 +24,14 @@ spec:
     {{- range $host := .Values.ingress.extraHosts }}
     - {{ $host | quote }}
     {{- end }}
-  tcp:
+  tls:
     - match:
         - port: {{ .Values.service.ports.radsec }}
+          sniHosts:
+            - {{ .Values.ingress.hostname }}
+            {{- range $host := .Values.ingress.extraHosts }}
+            - {{ $host | quote }}
+            {{- end }}
       route:
         - destination:
             # host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
