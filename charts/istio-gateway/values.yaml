@@ -493,6 +493,11 @@ gateways:
       ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
       ##
       externalTrafficPolicy: Cluster
+      ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+      ## bare metal / on-prem environments that rely on VIP based LB implementations.
+      ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
+      ##
+      allocateLoadBalancerNodePorts: false
       ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
       ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
       ##
