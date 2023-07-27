@@ -282,9 +282,14 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
+  allowPrivilegeEscalation: false
   capabilities:
     add:
       - SYS_PTRACE
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
   runAsUser: 101
   runAsNonRoot: true
 
