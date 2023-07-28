@@ -27,8 +27,8 @@ metadata:
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.allocateLoadBalancerNodePorts)) }}
-  allocateLoadBalancerNodePorts: {{ .Values.service.allocateLoadBalancerNodePorts }}
+  {{- if eq .Values.service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: {{ eq .Values.service.allocateLoadBalancerNodePorts "true" }}
   {{- end }}
   {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
   clusterIP: {{ .service.clusterIP }}
