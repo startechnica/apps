@@ -453,6 +453,15 @@ gateways:
 
     ## @section Traffic Exposure Parameters
 
+    ## Kubernetes Gateway API parameters
+    ## ref: https://gateway-api.sigs.k8s.io/
+
+    gatewayApi:
+      ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API Gateway
+      ##
+      create: true
+
+
     ## Istio Ingress Gateway service parameters
     ##
     service:

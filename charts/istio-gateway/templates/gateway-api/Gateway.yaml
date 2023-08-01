@@ -1,6 +1,6 @@
 {{- if not (eq (include "common.capabilities.networkingGateway.apiVersion" .) "false") }}
 {{- range $gateway := .Values.gateways }}
-{{- if .enabled -}}
+{{- if and .enabled (and .gatewayApi .gatewayApi.create) -}}
 apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
 kind: Gateway
 metadata:
