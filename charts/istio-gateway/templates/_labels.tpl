@@ -4,8 +4,6 @@ Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 */}}
 {{- define "gateway.labels.matchLabels" -}}
 {{- $gatewayName := .name -}}
-app.kubernetes.io/name: {{ include "common.names.name" $ }}
-app.kubernetes.io/instance: {{ .Release.Name }}
 istio: {{ $gatewayName }}
 istio.io/gateway-name: {{ $gatewayName }}
 {{- end -}}
