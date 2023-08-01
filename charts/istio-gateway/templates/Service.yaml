@@ -5,11 +5,8 @@ kind: Service
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: {{- include "common.labels.standard" $ | nindent 4 }}
+  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-    istio: {{ .name }}
-    istio.io/gateway-name: {{ .name }}
-    istio.io/rev: {{ .revision | default "default" }}
     release: {{ $.Release.Name }}
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ $.Values.operator.component }}
