@@ -19,16 +19,13 @@ spec:
     - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname
   listeners:
-    {{- if .service }}
+    {{- if and .service .service.ports }}
     - name: http2
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: HTTP
       allowedRoutes:
         namespaces:
           from: All
-    {{- if .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
-    {{- end }}
     {{- else }}
     - name: http2
       port: 80
@@ -36,6 +33,9 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+    {{- end }}
+    {{- if and .service .service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}
