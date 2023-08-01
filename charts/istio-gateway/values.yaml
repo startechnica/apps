@@ -404,8 +404,8 @@ metrics:
     ##      severity: warning
     ##      service: mariadb
     ##    annotations:
-    ##      message: 'MariaDB instance {{ `{{` }} $labels.instance {{ `}}` }} is down'
-    ##      summary: MariaDB instance is down
+    ##      message: 'Istio Gateway instance {{ `{{` }} $labels.instance {{ `}}` }} is down'
+    ##      summary: Istio Gateway instance is down
     ##
     rules: []
 
