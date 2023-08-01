@@ -1,9 +1,13 @@
 {{/*
 Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
-{{ include "gateway.labels.matchLabels" (dict "value" .name "context" $) }}
+{{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) }}
 */}}
 {{- define "gateway.labels.matchLabels" -}}
-{{- $gatewayName := .value -}}
+{{- $gatewayName := .name -}}
+app.kubernetes.io/name: {{ include "common.names.name" .context }}
 istio: {{ $gatewayName }}
 istio.io/gateway-name: {{ $gatewayName }}
+{{- if .revision }}
+istio.io/rev: {{ .revision | quote }}
+{{- end }}
 {{- end -}}
