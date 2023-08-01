@@ -117,6 +117,17 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
+    {{- if $.Values.metrics.enabled }}
+    - name: metrics
+      port: 15090
+      protocol: TCP
+      targetPort: http-envoy-prom
+      {{- if or (eq .service.type "NodePort") (eq .service.type "LoadBalancer") }}
+      nodePort: 15090
+      {{- else if eq .service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- end }}
   selector: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
 ---
 {{- end }}
