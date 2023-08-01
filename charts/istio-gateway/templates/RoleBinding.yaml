@@ -5,9 +5,8 @@ kind: RoleBinding
 metadata:
   name: {{ .name | quote }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  labels:
+  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     release: {{ $.Release.Name }}
-    istio.io/rev: {{ .revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}

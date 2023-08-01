@@ -5,12 +5,9 @@ kind: Service
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: {{- include "common.labels.standard" $ | nindent 4 }}
+  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-    istio: {{ .name }}
-    istio.io/gateway-name: {{ .name }}
     release: {{ $.Release.Name }}
-    istio.io/rev: {{ .revision | default "default" }}
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}
@@ -27,6 +24,9 @@ metadata:
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}
+  {{- if eq .service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: {{ eq .service.allocateLoadBalancerNodePorts "true" }}
+  {{- end }}
   {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
   clusterIP: {{ .service.clusterIP }}
   {{- end }}
@@ -86,6 +86,7 @@ spec:
       nodePort: null
       {{- end }}
     {{- end }}
+    {{- if hasKey .service.ports "https" }}
     - name: https
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
@@ -95,6 +96,7 @@ spec:
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    {{- end }}
     {{- if .service.extraPorts }}
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
@@ -115,9 +117,18 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-  selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
-    istio: {{ default "ingressgateway" .name }}
-    istio.io/gateway-name: {{ default "ingressgateway" .name }}
+    {{- if $.Values.metrics.enabled }}
+    - name: metrics
+      port: 15090
+      protocol: TCP
+      targetPort: http-envoy-prom
+      {{- if or (eq .service.type "NodePort") (eq .service.type "LoadBalancer") }}
+      nodePort: 15090
+      {{- else if eq .service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- end }}
+  selector: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
 ---
 {{- end }}
 {{- end }}

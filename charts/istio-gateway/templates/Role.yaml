@@ -4,7 +4,7 @@ kind: Role
 metadata:
   name: {{ include "common.names.fullname" . | quote }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels:
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
     release: {{ .Release.Name }}
     install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ .Values.operator.component }}

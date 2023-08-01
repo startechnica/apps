@@ -20,9 +20,6 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
-  ## @param global.namespaceOverride Override the namespace for resource deployed by the chart, but can itself be overridden by the local namespaceOverride
-  ##
-  namespaceOverride: ""
 
   # set the default set of namespaces to which services, service entries, virtual services, destination
   # rules should be exported to. Currently only one value can be provided in this list. This value
@@ -162,6 +159,9 @@ kubeVersion: ""
 ## @param nameOverride String to partially override common.names.fullname
 ##
 nameOverride: ""
+## @param namespaceOverride String to fully override common.names.namespace
+##
+namespaceOverride: ""
 ## @param fullnameOverride String to fully override common.names.fullname
 ##
 fullnameOverride: ""
@@ -221,7 +221,7 @@ proxy:
   image:
     registry: docker.io
     repository: istio/proxyv2
-    tag: 1.18.0
+    tag: 1.18.2
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -339,7 +339,7 @@ metrics:
   ## @param metrics.annotations [object] Annotations for the Exporter pod
   ##
   annotations:
-    prometheus.io/port: "15020"
+    prometheus.io/port: "15090"
     prometheus.io/scrape: "true"
     prometheus.io/path: "/stats/prometheus"
   ## Prometheus Service Monitor
@@ -404,8 +404,8 @@ metrics:
     ##      severity: warning
     ##      service: mariadb
     ##    annotations:
-    ##      message: 'MariaDB instance {{ `{{` }} $labels.instance {{ `}}` }} is down'
-    ##      summary: MariaDB instance is down
+    ##      message: 'Istio Gateway instance {{ `{{` }} $labels.instance {{ `}}` }} is down'
+    ##      summary: Istio Gateway instance is down
     ##
     rules: []
 
@@ -453,6 +453,15 @@ gateways:
 
     ## @section Traffic Exposure Parameters
 
+    ## Kubernetes Gateway API parameters
+    ## ref: https://gateway-api.sigs.k8s.io/
+
+    gatewayApi:
+      ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API Gateway
+      ##
+      create: true
+
+
     ## Istio Ingress Gateway service parameters
     ##
     service:
@@ -493,6 +502,11 @@ gateways:
       ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
       ##
       externalTrafficPolicy: Cluster
+      ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+      ## bare metal / on-prem environments that rely on VIP based LB implementations.
+      ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
+      ##
+      allocateLoadBalancerNodePorts: "false"
       ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
       ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
       ##

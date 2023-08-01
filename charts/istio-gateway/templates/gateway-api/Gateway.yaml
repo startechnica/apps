@@ -1,13 +1,12 @@
-{{- if not (include "common.capabilities.networkingGateway.apiVersion" .) }}
+{{- if not (eq (include "common.capabilities.networkingGateway.apiVersion" .) "false") }}
 {{- range $gateway := .Values.gateways }}
-{{- if .enabled -}}
+{{- if and .enabled (and .gatewayApi .gatewayApi.create) -}}
 apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
 kind: Gateway
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: 
-    istio.io/gateway-name: {{ .name }}
+  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
   {{- if $.Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
@@ -20,16 +19,13 @@ spec:
     - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname
   listeners:
-    {{- if .service }}
+    {{- if and .service .service.ports }}
     - name: http2
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: HTTP
       allowedRoutes:
         namespaces:
           from: All
-    {{- if .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
-    {{- end }}
     {{- else }}
     - name: http2
       port: 80
@@ -37,6 +33,9 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+    {{- end }}
+    {{- if and .service .service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}

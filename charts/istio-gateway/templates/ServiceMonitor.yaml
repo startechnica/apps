@@ -1,5 +1,6 @@
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
-apiVersion: monitoring.coreos.com/v1
+{{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
+apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
 kind: ServiceMonitor
 metadata:
   name: {{ include "common.names.fullname" . }}
@@ -8,7 +9,7 @@ metadata:
   {{- else }}
   namespace: {{ include "common.names.namespace" . | quote }}
   {{- end }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     {{- if .Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" .) | nindent 4 }}
     {{- end }}
@@ -41,8 +42,9 @@ spec:
     matchNames:
       - {{ include "common.names.namespace" . | quote }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+    matchLabels: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 6 }}
       {{- if .Values.metrics.serviceMonitor.selector }}
         {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" .) | nindent 6 }}
       {{- end }}
+{{- end }}
 {{- end }}
