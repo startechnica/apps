@@ -1,4 +1,4 @@
-{{- if not (include "common.capabilities.networkingGateway.apiVersion" .) }}
+{{- if not (eq (include "common.capabilities.networkingGateway.apiVersion" .) "false") }}
 {{- range $gateway := .Values.gateways }}
 {{- if .enabled -}}
 apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
@@ -6,8 +6,7 @@ kind: Gateway
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: 
-    istio.io/gateway-name: {{ .name }}
+  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
   {{- if $.Values.commonLabels }}
     {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}

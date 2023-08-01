@@ -20,9 +20,6 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
-  ## @param global.namespaceOverride Override the namespace for resource deployed by the chart, but can itself be overridden by the local namespaceOverride
-  ##
-  namespaceOverride: ""
 
   # set the default set of namespaces to which services, service entries, virtual services, destination
   # rules should be exported to. Currently only one value can be provided in this list. This value
@@ -162,6 +159,9 @@ kubeVersion: ""
 ## @param nameOverride String to partially override common.names.fullname
 ##
 nameOverride: ""
+## @param namespaceOverride String to fully override common.names.namespace
+##
+namespaceOverride: ""
 ## @param fullnameOverride String to fully override common.names.fullname
 ##
 fullnameOverride: ""
