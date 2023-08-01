@@ -120,7 +120,7 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-  selector: {{ include "gateway.labels.matchLabels" (dict "name" .name) | nindent 4 }}
+  selector: {{ include "gateway.labels.matchLabels" (dict "value" .name "context" $) | nindent 4 }}
 ---
 {{- end }}
 {{- end }}
