@@ -760,45 +760,6 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/istio-gateway-0.1.0/istio-gateway-0.1.0.tgz
     version: 0.1.0
-  istio-ingress-gateway:
-  - annotations:
-      artifacthub.io/links: |
-        - name: Chart Source
-          url: https://github.com/startechnica/apps/tree/main/charts/istio-ingress-gateway
-        - name: Upstream Project
-          url: https://github.com/istio/istio/tree/master/manifests/charts/gateways/istio-ingress
-      category: ServiceMesh
-    apiVersion: v2
-    appVersion: 1.13.4
-    created: "2022-06-06T06:12:10.661325136Z"
-    dependencies:
-    - name: common
-      repository: https://charts.bitnami.com/bitnami
-      tags:
-      - bitnami-common
-      version: 1.x.x
-    description: Istio Ingress Gateway provides more extensive customization and flexibility
-      than Kubernetes Ingress, and allows Istio features such as monitoring and route
-      rules to be applied to traffic entering the cluster.
-    digest: 7405667f02360b0859fd19721a72de2ab9314a77e21b740f0c3215ce6ffaa176
-    home: https://github.com/startechnica/apps/tree/main/charts/istio-ingress-gateway
-    icon: https://istio.io/latest/favicons/android-192x192.png
-    keywords:
-    - istio
-    - ingress
-    - ingressgateway
-    kubeVersion: '>=1.19.0-0'
-    maintainers:
-    - email: firmansyah@nainggolan.id
-      name: firmansyahn
-      url: https://firmansyah.nainggolan.id
-    name: istio-ingress-gateway
-    sources:
-    - http://github.com/istio/istio
-    type: application
-    urls:
-    - https://github.com/startechnica/apps/releases/download/istio-ingress-gateway-0.1.0/istio-ingress-gateway-0.1.0.tgz
-    version: 0.1.0
   mayastor:
   - annotations:
       category: Storage
