@@ -10,7 +10,7 @@ annotations:
     - name: Kubernetes Gateway
       url: https://gateway-api.sigs.k8s.io/api-types/gateway/
 apiVersion: v2
-appVersion: 1.18.1
+appVersion: 1.18.2
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps

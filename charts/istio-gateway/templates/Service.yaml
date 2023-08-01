@@ -9,8 +9,8 @@ metadata:
     app.kubernetes.io/component: gateway
     istio: {{ .name }}
     istio.io/gateway-name: {{ .name }}
-    release: {{ $.Release.Name }}
     istio.io/rev: {{ .revision | default "default" }}
+    release: {{ $.Release.Name }}
     install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
     operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}
@@ -27,8 +27,8 @@ metadata:
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}
-  {{- if eq .Values.service.type "LoadBalancer" }}
-  allocateLoadBalancerNodePorts: {{ eq .Values.service.allocateLoadBalancerNodePorts "true" }}
+  {{- if eq .service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: {{ eq .service.allocateLoadBalancerNodePorts "true" }}
   {{- end }}
   {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
   clusterIP: {{ .service.clusterIP }}
@@ -89,6 +89,7 @@ spec:
       nodePort: null
       {{- end }}
     {{- end }}
+    {{- if hasKey .service.ports "https" }}
     - name: https
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
@@ -98,6 +99,7 @@ spec:
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    {{- end }}
     {{- if .service.extraPorts }}
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
@@ -118,9 +120,7 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-  selector: {{ include "common.labels.matchLabels" $ | nindent 4 }}
-    istio: {{ default "ingressgateway" .name }}
-    istio.io/gateway-name: {{ default "ingressgateway" .name }}
+  selector: {{ include "gateway.labels.matchLabels" $ | nindent 4 }}
 ---
 {{- end }}
 {{- end }}

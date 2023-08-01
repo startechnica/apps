@@ -39,5 +39,6 @@ spec:
           type: Utilization
           averageUtilization: {{ $.Values.autoscaling.targetMemory }}
         {{- end }}
+---
 {{- end }}
 {{- end }}
