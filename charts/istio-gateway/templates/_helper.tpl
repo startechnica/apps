@@ -1,5 +1,3 @@
-{{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
-
 {{/*
 Returns the proper service account name depending if an explicit service account name is set
 in the values file. If the name is not set it will default to either common.names.fullname if $gateway.serviceAccount.create

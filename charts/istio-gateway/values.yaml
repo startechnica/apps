@@ -457,10 +457,9 @@ gateways:
     ## ref: https://gateway-api.sigs.k8s.io/
 
     gatewayApi:
-      ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API Gateway
+      ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API
       ##
       create: true
-
 
     ## Istio Ingress Gateway service parameters
     ##
