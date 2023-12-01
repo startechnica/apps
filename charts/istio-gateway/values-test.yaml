@@ -1,20 +1,13 @@
 gateways:
   - name: webapps
     enabled: true
-    rbac:
-      create: true
 
     service:
       ipFamilyPolicy: PreferDualStack
 
-    serviceAccount:
-      create: true
-  
+
   - name: freeradius
     enabled: true
-
-    rbac:
-      create: true
 
     service:
       extraPorts:
@@ -32,8 +25,5 @@ gateways:
           protocol: UDP
 
       ipFamilyPolicy: PreferDualStack
-
-    serviceAccount:
-      create: true
 
   
