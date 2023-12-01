@@ -10,7 +10,7 @@ annotations:
     - name: Kubernetes Gateway
       url: https://gateway-api.sigs.k8s.io/api-types/gateway/
 apiVersion: v2
-appVersion: 1.18.2
+appVersion: 1.20.0
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
@@ -34,7 +34,7 @@ keywords:
   - ingressgateway
   - ingress-gateway
   - kubernetes-gateway
-kubeVersion: ">=1.22.0-0"
+kubeVersion: ">=1.24.0-0"
 maintainers:
   - name: firmansyahn
     email: firmansyah@nainggolan.id
@@ -43,4 +43,4 @@ name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
-version: 1.0.0
+version: 1.0.1

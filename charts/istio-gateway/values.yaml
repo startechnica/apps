@@ -221,7 +221,7 @@ proxy:
   image:
     registry: docker.io
     repository: istio/proxyv2
-    tag: 1.18.2
+    tag: 1.20.0
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -646,10 +646,6 @@ gateways:
     ##
     customReadinessProbe: {}
     ## @param startupWaitOptions Override default builtin startup wait check options for Istio Gateway containers
-    ## `bitnami/mariadb` Docker image has built-in startup check mechanism,
-    ## which periodically checks if Istio Gateway service has started up and stops it
-    ## if all checks have failed after X tries. Use these to control these checks.
-    ## ref: https://github.com/bitnami/bitnami-docker-mariadb/pull/240
     ## Example (with default options):
     ## startupWaitOptions:
     ##   retries: 300
@@ -739,20 +735,20 @@ gateways:
       ##   - e2e-az2
       ##
       values: []
-    ## @param affinity Affinity for Istio Gateway pods assignment
+    ## @param gateways.$gateway.affinity Affinity for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
     ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
     ##
     affinity: {}
-    ## @param nodeSelector Node labels for Istio Gateway pods assignment
+    ## @param gateways.$gateway.nodeSelector Node labels for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
     ##
     nodeSelector: {}
-    ## @param tolerations Tolerations for Istio Gateway pods assignment
+    ## @param gateways.$gateway.tolerations Tolerations for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
     tolerations: []
-    ## @param topologySpreadConstraints Topology Spread Constraints for Istio Gateway pods assignment
+    ## @param gateways.$gateway.topologySpreadConstraints Topology Spread Constraints for Istio Gateway pods assignment
     ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
     ## E.g.
     ## topologySpreadConstraints:
@@ -761,26 +757,26 @@ gateways:
     ##     whenUnsatisfiable: DoNotSchedule
     ##
     topologySpreadConstraints: {}
-    ## @param primary.priorityClassName Priority class for Istio Gateway pods assignment
+    ## @param gateways.$gateway.priorityClassName Priority class for Istio Gateway pods assignment
     ## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
     ##
     priorityClassName: ""
-    ## @param primary.runtimeClassName Runtime Class for Istio Gateway pods
+    ## @param gateways.$gateway.runtimeClassName Runtime Class for Istio Gateway pods
     ## Ref: https://kubernetes.io/docs/concepts/containers/runtime-class/
     ##
     runtimeClassName: ""
 
-    # If specified, the gateway will act as a network gateway for the given network.
+    ## @param gateways.$gateway.networkGateway If specified, the gateway will act as a network gateway for the given network.
     networkGateway: false
 
     ## Role Based Access Configuration
     ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
     ##
     rbac:
-      ## @param rbac.create Specify whether RBAC resources should be created and used
+      ## @param gateways.$gateway.rbac.create Specify whether RBAC resources should be created and used
       ##
       create: true
-      ## @param rbac.rules Custom RBAC rules
+      ## @param gateways.$gateway.rbac.rules Custom RBAC rules
       ## Example:
       ## rules:
       ##   - apiGroups:
@@ -805,16 +801,16 @@ gateways:
     ## Specifies whether a ServiceAccount should be created
     ##
     serviceAccount:
-      ## @param serviceAccount.create Enable the creation of a ServiceAccount for Istio Gateway pods
+      ## @param gateways.$gateway.serviceAccount.create Enable the creation of a ServiceAccount for Istio Gateway pods
       ##
       create: true
-      ## @param serviceAccount.name Name of the created ServiceAccount
+      ## @param gateways.$gateway.serviceAccount.name Name of the created ServiceAccount
       ## If not set and create is true, a name is generated using the fullname template
       ##
       name: ""
-      ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+      ## @param gateways.$gateway.serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
       ##
       automountServiceAccountToken: false
-      ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
+      ## @param gateways.$gateway.serviceAccount.annotations Additional custom annotations for the ServiceAccount
       ##
       annotations: {}
