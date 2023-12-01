@@ -21,14 +21,14 @@ This chart provides a common template helpers which can be used to develop new c
 
 ## Prerequisites
 
-- Kubernetes 1.19+
+- Kubernetes 1.20+
 - Helm 3.2.0+
 
 ## Parameters
 
 The following table lists the helpers available in the library which are scoped in different sections.
 
-### Istio
+### istio
 
 | Helper identifier                                 | Description                                                              | Expected Input    |
 |---------------------------------------------------|--------------------------------------------------------------------------|-------------------|
@@ -43,6 +43,18 @@ The following table lists the helpers available in the library which are scoped 
 | Helper identifier                                 | Description                                                              | Expected Input    |
 |---------------------------------------------------|--------------------------------------------------------------------------|-------------------|
 | `common.capabilities.certManager.apiVersion`      | Return the appropriate apiVersion for cert-manager.                      | `.` Chart context |
+
+### Kubernetes Gateway API
+
+| Helper identifier                                   | Description                                                              | Expected Input    |
+|-----------------------------------------------------|--------------------------------------------------------------------------|-------------------|
+| `common.capabilities.networkingGateway.apiVersion`  | Return the appropriate apiVersion for Kubernetes Gateway API.            | `.` Chart context |
+
+### Prometheus
+
+| Helper identifier                                   | Description                                                              | Expected Input    |
+|-----------------------------------------------------|--------------------------------------------------------------------------|-------------------|
+| `common.capabilities.coreosMonitoring.apiVersion`   | Return the appropriate apiVersion for Prometheus.                        | `.` Chart context |
 
 ## Example of use
 
