@@ -3,8 +3,10 @@ annotations:
   artifacthub.io/changes: |
     - kind: changed
       description: Add Kubernetes Gateway API
+    - kind: changed
+      description: Add support for Kubernetes Gateway API v1.0.0
 apiVersion: v2
-appVersion: 0.1.3
+appVersion: 0.1.4
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
   This chart is not deployable by itself.
 home: https://github.com/startechnica/apps/tree/main/charts/common
@@ -14,7 +16,7 @@ keywords:
   - helper
   - template
   - function
-kubeVersion: ">=1.19.0-0"
+kubeVersion: ">=1.20.0-0"
 maintainers:
   - name: firmansyahn
     email: firmansyah@nainggolan.id
@@ -23,4 +25,4 @@ name: st-common
 sources:
   - https://startechnica.github.io/apps
 type: library
-version: 0.1.3
+version: 0.1.4
