@@ -487,6 +487,7 @@ gateways:
         status: ""
         http2: ""
         https: ""
+        metrics: ""
       ## @param service.clusterIP Istio Ingress Gateway Kubernetes service clusterIP IP
       ##
       clusterIP: ""

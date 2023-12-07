@@ -105,6 +105,12 @@ spec:
             runAsNonRoot: true
           {{- end }}
           env:
+            {{- if $.Values.clusterDomain }}
+            - name: ISTIO_META_MESH_ID
+              value: {{- $.Values.clusterDomain | quote }}
+            - name: TRUST_DOMAIN
+              value: {{- $.Values.clusterDomain | quote }}
+            {{- end }}
             {{- with .networkGateway }}
             - name: ISTIO_META_REQUESTED_NETWORK_VIEW
               value: "{{.}}"

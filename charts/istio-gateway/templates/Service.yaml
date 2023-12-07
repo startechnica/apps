@@ -122,8 +122,8 @@ spec:
       port: 15090
       protocol: TCP
       targetPort: http-envoy-prom
-      {{- if or (eq .service.type "NodePort") (eq .service.type "LoadBalancer") }}
-      nodePort: 15090
+      {{- if and (eq .service.allocateLoadBalancerNodePorts "true") (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.metrics }}
+      nodePort: {{ .service.nodePorts.metrics | int }}
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
