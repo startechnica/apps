@@ -10,6 +10,9 @@ maintainers:
 - name: Chris Boot
   email: bootc@boo.tc
   url: https://github.com/bootc
+- name: Firmansyah Nainggolan
+  email: firmansyah@nainggolan.id
+  url: https://firmansyah.nainggolan.id
 dependencies:
 - name: postgresql
   version: 13.x.x
@@ -19,3 +22,13 @@ dependencies:
   version: 18.x.x
   repository: oci://registry-1.docker.io/bitnamicharts
   condition: redis.enabled
+- name: common
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 2.x.x
+  tags:
+    - bitnami-common
+  alias: bitnami-common
+- name: st-common
+  repository: https://startechnica.github.io/apps
+  version: "*"
+  alias: startechnica-common

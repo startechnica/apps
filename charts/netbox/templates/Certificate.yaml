@@ -1,0 +1,67 @@
+{{- if and .Values.tls.enabled }}
+{{- if (include "common.capabilities.certManager.apiVersion" .) }}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+kind: Certificate
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ printf "%s-tls" (include "common.names.fullname" .) }}
+  issuerRef:
+    kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
+    name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
+  dnsNames:
+    {{- range .Values.netbox.ingress.hosts }}
+    - {{ .host | quote }}
+    {{- end }}
+---
+{{- if .Values.gateway.enabled }}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+kind: Certificate
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ .Values.gateway.namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ printf "%s-tls" (include "common.names.fullname" .) }}
+  issuerRef:
+    kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
+    name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
+  dnsNames:
+    {{- range .Values.netbox.ingress.hosts }}
+    - {{ .host | quote }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
