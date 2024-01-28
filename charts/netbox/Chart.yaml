@@ -1,0 +1,34 @@
+apiVersion: v2
+name: netbox
+version: 5.0.0
+appVersion: v3.6.4
+kubeVersion: ">=1.25.0"
+description: IP address management (IPAM) and data center infrastructure management (DCIM) tool
+home: https://github.com/bootc/netbox-chart
+icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+maintainers:
+- name: Chris Boot
+  email: bootc@boo.tc
+  url: https://github.com/bootc
+- name: Firmansyah Nainggolan
+  email: firmansyah@nainggolan.id
+  url: https://firmansyah.nainggolan.id
+dependencies:
+- name: postgresql
+  version: 13.x.x
+  repository: oci://registry-1.docker.io/bitnamicharts
+  condition: postgresql.enabled
+- name: redis
+  version: 18.x.x
+  repository: oci://registry-1.docker.io/bitnamicharts
+  condition: redis.enabled
+- name: common
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 2.x.x
+  tags:
+    - bitnami-common
+  alias: bitnami-common
+- name: st-common
+  repository: https://startechnica.github.io/apps
+  version: "*"
+  alias: startechnica-common
