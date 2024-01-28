@@ -1091,6 +1091,46 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/multus-cni-0.1.3/multus-cni-0.1.3.tgz
     version: 0.1.3
+  netbox:
+  - apiVersion: v2
+    appVersion: v3.6.4
+    created: "2024-01-28T18:35:18.31398018Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 18.x.x
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: '*'
+    description: IP address management (IPAM) and data center infrastructure management
+      (DCIM) tool
+    digest: 54079ef07b690586f83d3bbf7bf5bd4b328e4e9117da9997d1b6282c5608275d
+    home: https://github.com/bootc/netbox-chart
+    icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: bootc@boo.tc
+      name: Chris Boot
+      url: https://github.com/bootc
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: netbox
+    urls:
+    - https://github.com/startechnica/apps/releases/download/netbox-5.0.0/netbox-5.0.0.tgz
+    version: 5.0.0
   st-common:
   - annotations:
       artifacthub.io/changes: |
@@ -1348,4 +1388,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-01-28T06:07:55.085497621Z"
+generated: "2024-01-28T18:35:18.314048788Z"
