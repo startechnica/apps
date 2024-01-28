@@ -241,7 +241,7 @@ proxy:
     debug: false
 
 operator:
-  component: "IngressGateways"
+  component: "IngressGateway"
 
 meshConfig:
   enablePrometheusMerge: true
