@@ -4,6 +4,7 @@ Kubernetes standard labels
 */}}
 {{- define "gateway.labels.standard" -}}
 {{- $gatewayName := .name -}}
+app: {{ include "common.names.name" .context }}
 app.kubernetes.io/name: {{ include "common.names.name" .context }}
 helm.sh/chart: {{ include "common.names.chart" .context }}
 istio: {{ $gatewayName }}
@@ -19,6 +20,7 @@ Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 */}}
 {{- define "gateway.labels.matchLabels" -}}
 {{- $gatewayName := .name -}}
+app: {{ include "common.names.name" .context }}
 app.kubernetes.io/name: {{ include "common.names.name" .context }}
 istio: {{ $gatewayName }}
 istio.io/gateway-name: {{ $gatewayName }}

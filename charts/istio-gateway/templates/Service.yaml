@@ -124,7 +124,7 @@ spec:
       targetPort: http-envoy-prom
       {{- if and (eq .service.allocateLoadBalancerNodePorts "true") (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.metrics }}
       nodePort: {{ .service.nodePorts.metrics | int }}
-      {{- else if eq .service.type "ClusterIP" }}
+      {{- else }}
       nodePort: null
       {{- end }}
     {{- end }}
