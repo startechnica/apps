@@ -1,17 +1,21 @@
-# NetBox
+# Helm Chart for Netbox
 
 [NetBox](https://netbox.readthedocs.io/) is an IP address management (IPAM) and
 data center infrastructure management (DCIM) tool.
 
+Forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart)
+
+**This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
+
 ## TL;DR
 
-```shell
-$ helm repo add bootc https://charts.boo.tc
+```console
+$ helm repo add startechnica https://startechnica.github.io/apps
 $ helm install netbox \
   --set postgresql.auth.postgresPassword=[password1] \
   --set postgresql.auth.password=[password2] \
   --set redis.auth.password=[password3] \
-  bootc/netbox
+  startechnica/netbox
 ```
 ⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for real.
 
@@ -26,12 +30,12 @@ $ helm install netbox \
 To install the chart with the release name `my-release` and default configuration:
 
 ```shell
-$ helm repo add bootc https://charts.boo.tc
+$ helm repo add startechnica https://startechnica.github.io/apps
 $ helm install my-release \
   --set postgresql.auth.postgresPassword=[password1] \
   --set postgresql.auth.password=[password2] \
   --set redis.auth.password=[password3] \
-  bootc/netbox
+  startechnica/netbox
 ```
 
 The default configuration includes the required PostgreSQL and Redis database
@@ -75,11 +79,13 @@ affinity:
 
 ## Uninstalling the Chart
 
-To delete the chart:
+To uninstall/delete the `netbox` deployment on `netbox` namespace:
 
-```shell
-$ helm delete my-release
+```console
+$ helm delete netbox --namespace netbox
 ```
+
+The command removes all the Kubernetes components associated with the chart and deletes the release.
 
 ## Upgrading
 
