@@ -20,8 +20,7 @@ spec:
       app.kubernetes.io/component: server
       app.kubernetes.io/part-of: netbox
   {{ if .Values.updateStrategy -}}
-  strategy:
-    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
   {{ end -}}
   template:
     metadata:
@@ -43,11 +42,49 @@ spec:
           {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.podLabels "context" $ ) | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "netbox.imagePullSecrets" . | nindent 6 }}
-      serviceAccountName: {{ include "netbox.serviceAccountName" . }}
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
       automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      {{- if .Values.dnsConfig }}
+      dnsConfig: {{- include "common.tplvalues.render" (dict "value" .Values.dnsConfig "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.dnsPolicy }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      {{- end }}
+      {{- if semverCompare ">= 1.13" (include "common.capabilities.kubeVersion" .) }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
+      {{- end }}
+      {{- include "netbox.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- end }}
       {{- if .Values.podSecurityContext.enabled }}
       securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "netbox.serviceAccountName" . }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       containers:
         - name: netbox
@@ -260,23 +297,3 @@ spec:
           {{- if .Values.extraVolumes }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
           {{- end }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.hostAliases }}
-      hostAliases:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.topologySpreadConstraints }}
-      topologySpreadConstraints:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
