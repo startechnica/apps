@@ -170,7 +170,7 @@ spec:
                 items:
                 - key: {{ include "netbox.cachingRedis.secretKey" . | quote }}
                   path: redis_cache_password
-        # {{- include "netbox.extraConfig.volumes" . | nindent 6 -}}
+        {{- include "netbox.extraConfig.volumes" . | nindent 8 -}}
         - name: netbox-tmp
           emptyDir:
             medium: Memory

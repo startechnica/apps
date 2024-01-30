@@ -95,6 +95,7 @@ The command removes all the Kubernetes components associated with the chart and 
 ## Breaking Changes
   * The `extraEnvs` setting has been renamed to `extraEnvVars`.
   * The `extraContainers` setting has been renamed to `sidecars`.
+  * The `extraContainers` setting has been renamed to `sidecars`.
   * The `extraInitContainers` setting has been renamed to `initContainers`.
   * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`
   * The `worker.autoscaling.targetCPUUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetCPU`.
