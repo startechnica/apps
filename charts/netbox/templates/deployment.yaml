@@ -220,11 +220,13 @@ spec:
         {{- else }}
         emptyDir: {}
         {{- end }}
-      {{- if .Values.reportsPersistence.enabled }}
       - name: reports
+        {{- if .Values.reportsPersistence.enabled }}
         persistentVolumeClaim:
           claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
-      {{- end }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
       - name: scripts
         {{- if .Values.scriptsPersistence.enabled }}
         persistentVolumeClaim:

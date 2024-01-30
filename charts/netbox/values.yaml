@@ -673,6 +673,12 @@ reportsPersistence:
   ## @param reportsPersistence.enabled  Enable reportsPersistence using Persistent Volume Claims
   ##
   enabled: false
+  ## @param reportsPersistence.medium Provide a medium for `emptyDir` volumes.
+  ##
+  medium: ""
+  ## @param reportsPersistence.sizeLimit Set this to enable a size limit for `emptyDir` volumes.
+  ##
+  sizeLimit: ""
   ## @param reportsPersistence.storageClass  Persistent Volume storage class
   ## If defined, storageClassName: <storageClass>
   ## If set to "-", storageClassName: "", which disables dynamic provisioning
@@ -680,9 +686,6 @@ reportsPersistence:
   ##   (gp2 on AWS, standard on GKE, AWS & OpenStack)
   ##
   storageClass: ""
-  ## @param reportsPersistence.existingClaim  Use a existing PVC which must be created manually before bound
-  ##
-  existingClaim: ""
   ## @param reportsPersistence.subPath  Existing claim's subPath to use, e.g. "media" (optional)
   ##
   subPath: ""
@@ -704,6 +707,12 @@ reportsPersistence:
   ##     app: my-app
   ##
   selector: {}
+  ## @param reportsPersistence.dataSource Custom PVC data source
+  ##
+  dataSource: {}
+  ## @param reportsPersistence.existingClaim  Use a existing PVC which must be created manually before bound
+  ##
+  existingClaim: ""
 
 ## Storage configuration for scripts
 ##
