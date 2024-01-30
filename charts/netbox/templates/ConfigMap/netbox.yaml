@@ -79,15 +79,15 @@ data:
 
     DATABASE:
       {{ if .Values.postgresql.enabled -}}
-      HOST: {{ include "postgresql.v1.primary.fullname" .Subcharts.postgresql | quote }}
-      USER: {{ include "postgresql.v1.username" .Subcharts.postgresql | quote }}
-      NAME: {{ include "postgresql.v1.database" .Subcharts.postgresql | quote }}
-      PORT: {{ include "postgresql.v1.service.port" .Subcharts.postgresql | int }}
+      HOST: {{ include "netbox.databaseHost" . | quote }}
+      USER: {{ include "netbox.databaseUser" . | quote }}
+      NAME: {{ include "netbox.databaseName" . | quote }}
+      PORT: {{ include "netbox.databasePort" . | int }}
       {{- else -}}
-      HOST: {{ .Values.externalDatabase.host | quote }}
-      USER: {{ .Values.externalDatabase.username | quote }}
-      NAME: {{ .Values.externalDatabase.database | quote }}
-      PORT: {{ .Values.externalDatabase.port | int }}
+      HOST: {{ include "netbox.databaseHost" . | quote }}
+      USER: {{ include "netbox.databaseUser" . | quote }}
+      NAME: {{ include "netbox.databaseName" . | quote }}
+      PORT: {{ include "netbox.databasePort" . | int }}
       {{- end }}
       OPTIONS:
         sslmode: {{ .Values.externalDatabase.sslMode | quote }}

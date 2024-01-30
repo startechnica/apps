@@ -112,13 +112,31 @@ image:
   ##
   debug: false
 
-# You can also use an existing secret for the superuser password and API token
-# See `existingSecret` for details
+## You can also use an existing secret for the superuser password and API token
+## See `existingSecret` for details
+##
 superuser:
+  ## @param superuser.name Netbox administrator user
+  ##
   name: admin
+  ## @param superuser.email Netbox administrator email address
+  ##
   email: admin@example.com
+  ## @param superuser.password Netbox administrator password for the new superuser
+  ##
   password: admin
+  ## @param superuser.apiToken Netbox administrator superuser token
+  ##
   apiToken: 0123456789abcdef0123456789abcdef01234567
+  ## @param superuser.existingSecret Existing secret containing Netbox superuser password
+  ##
+  existingSecret: ""
+  ## @param superuser.passwordSecretKey Key where the Netbox superuser password is being stored inside the existing secret.
+  ##
+  passwordSecretKey: ""
+  ## @param superuser.annotations Additional custom annotations for Netbox superuser secret object
+  ##
+  annotations: {}
 
 # Skip the netbox-docker startup scripts which can pre-populate objects into a
 # fresh NetBox installation. By default these do nothing, but they take a while

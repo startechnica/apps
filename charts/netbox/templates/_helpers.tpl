@@ -350,6 +350,30 @@ Add environment variables to configure database values
     {{- end -}}
 {{- end -}}
 
+{{/*
+Return the secret containing the Netbox superuser password
+*/}}
+{{- define "netbox.secretName" -}}
+{{- $secretName := .Values.superuser.existingSecret -}}
+{{- if $secretName -}}
+    {{- printf "%s" (tpl $secretName $) -}}
+{{- else -}}
+    {{- printf "%s" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret key that contains the Netbox superuser password
+*/}}
+{{- define "netbox.secretKey" -}}
+{{- $secretName := .Values.superuser.existingSecret -}}
+{{- if and $secretName .Values.superuser.passwordSecretKey -}}
+    {{- printf "%s" .Values.superuser.passwordSecretKey -}}
+{{- else -}}
+    {{- print "superuser_password" -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Validate values of Netbox - database */}}
 {{- define "netbox.validateValues.database" -}}
 {{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) (and (not .Values.externalDatabase.password) (not .Values.externalDatabase.existingSecret)) -}}

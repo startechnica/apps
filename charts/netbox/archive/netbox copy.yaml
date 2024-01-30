@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ printf "%s" (include "netbox.fullname" .) }}
+  name: {{ include "netbox.fullname" . }}
   labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- if or .Values.externalDatabase.annotations .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.merge" (dict "values" (list .Values.externalDatabase.annotations .Values.commonAnnotations) "context" $) | nindent 4 }}
   {{- end }}
 type: Opaque
 data:
@@ -20,8 +20,7 @@ data:
   redis_cache_password: {{ .Values.cachingRedis.password | b64enc | quote }}
   {{ end -}}
   secret_key: {{ .Values.secretKey | default (randAscii 60) | b64enc }}
-  # superuser_password: {{ .Values.superuser.password | default (randAlphaNum 16) | b64enc }}
-  superuser_password: {{ include "common.secrets.passwords.manage" (dict "secret" (printf "%s" (include "netbox.fullname" .)) "key" "superuser_password" "length" 10 "providedValues" (list "superuser.password") "context" $) }}
+  superuser_password: {{ .Values.superuser.password | default (randAlphaNum 16) | b64enc }}
   superuser_api_token: {{ .Values.superuser.apiToken | default uuidv4 | b64enc }}
   {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
   ldap_bind_password: {{ .Values.remoteAuth.ldap.bindPassword | b64enc | quote }}
