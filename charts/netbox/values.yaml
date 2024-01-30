@@ -111,6 +111,270 @@ image:
   ## Set to true if you would like to see extra information on logs
   ##
   debug: false
+## @param command Override default container command (useful when using custom images)
+##
+command: []
+## @param args Override default container args (useful when using custom images)
+##
+args: []
+## @param preExecCmds Additional commands to run prior to starting Netbox worker
+##
+preExecCmds: []
+## @param extraFlags Array with additional command line flags for Netbox worker
+## e.g:
+## extraFlags:
+##  - "--maxmemory-policy volatile-ttl"
+##  - "--repl-backlog-size 1024mb"
+##
+extraFlags: []
+## @param extraEnvVars Array with extra environment variables to add to Netbox worker nodes
+## e.g:
+## extraEnvVars:
+##   - name: FOO
+##     value: "bar"
+##
+extraEnvVars: []
+## @params extraEnvs  Additional environment variables to set
+##  - name: FOO
+##    valueFrom:
+##      secretKeyRef:
+##        key: FOO
+##        name: secret-resource
+##
+extraEnvs: []
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox worker nodes
+##
+extraEnvVarsCM: ""
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox worker nodes
+##
+extraEnvVarsSecret: ""
+## @param containerPorts.redis Container port to open on Netbox worker nodes
+##
+containerPorts:
+  http: 8080
+## Configure extra options for Netbox containers' liveness and readiness probes
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+## @param startupProbe.enabled Enable startupProbe on Netbox worker nodes
+## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+## @param startupProbe.periodSeconds Period seconds for startupProbe
+## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
+## @param startupProbe.failureThreshold Failure threshold for startupProbe
+## @param startupProbe.successThreshold Success threshold for startupProbe
+##
+startupProbe:
+  enabled: false
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 60
+## @param livenessProbe.enabled Enable livenessProbe on Netbox worker nodes
+## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+## @param livenessProbe.periodSeconds Period seconds for livenessProbe
+## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
+## @param livenessProbe.successThreshold Success threshold for livenessProbe
+##
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 300
+  periodSeconds: 1
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 5
+## @param readinessProbe.enabled Enable readinessProbe on Netbox worker nodes
+## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+## @param readinessProbe.periodSeconds Period seconds for readinessProbe
+## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
+## @param readinessProbe.successThreshold Success threshold for readinessProbe
+##
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 5
+## @param customStartupProbe Custom startupProbe that overrides the default one
+##
+customStartupProbe: {}
+## @param customLivenessProbe Custom livenessProbe that overrides the default one
+##
+customLivenessProbe: {}
+## @param customReadinessProbe Custom readinessProbe that overrides the default one
+##
+customReadinessProbe: {}
+## Netbox worker resource requests and limits
+## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+## @param resources.limits The resources limits for the Netbox worker containers
+## @param resources.requests The requested resources for the Netbox worker containers
+##
+resources:
+  limits: {}
+  requests: {}
+## Configure Pods Security Context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+## @param podSecurityContext.enabled Enabled Netbox pods' Security Context
+## @param podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+## @param podSecurityContext.sysctls Set kernel settings using the sysctl interface
+## @param podSecurityContext.supplementalGroups Set filesystem extra groups
+## @param podSecurityContext.fsGroup Set Netbox worker pod's Security Context fsGroup
+##
+podSecurityContext:
+  enabled: true
+  fsGroup: 1000
+  fsGroupChangePolicy: Always
+  runAsNonRoot: true
+  # runAsUser: 1000
+  # runAsGroup: 1000
+  sysctls: []
+  supplementalGroups: []
+## Configure Container Security Context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+## @param containerSecurityContext.enabled Enabled Netbox worker containers' Security Context
+## @param containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+## @param containerSecurityContext.runAsUser Set Netbox worker containers' Security Context runAsUser
+## @param containerSecurityContext.runAsGroup Set Netbox worker containers' Security Context runAsGroup
+## @param containerSecurityContext.runAsNonRoot Set Netbox worker containers' Security Context runAsNonRoot
+## @param containerSecurityContext.allowPrivilegeEscalation Is it possible to escalate Netbox pod(s) privileges
+## @param containerSecurityContext.seccompProfile.type Set Netbox worker containers' Security Context seccompProfile
+## @param containerSecurityContext.capabilities.drop Set Netbox worker containers' Security Context capabilities to drop
+##
+containerSecurityContext:
+  enabled: true
+  seLinuxOptions: null
+  runAsUser: 1001
+  runAsGroup: 0
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  capabilities:
+    drop:
+      - ALL
+## @param schedulerName Alternate scheduler for Netbox worker pods
+## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+##
+schedulerName: ""
+## @param updateStrategy.type Netbox worker statefulset strategy type
+## @skip updateStrategy.rollingUpdate
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+##
+updateStrategy:
+  ## StrategyType
+  ## Can be set to RollingUpdate, OnDelete (statefulset), Recreate (deployment)
+  ##
+  type: RollingUpdate
+## @param minReadySeconds How many seconds a pod needs to be ready before killing the next, during update
+##
+minReadySeconds: 0
+## @param priorityClassName Netbox worker pods' priorityClassName
+##
+priorityClassName: ""
+## @param automountServiceAccountToken Mount Service Account token in pod
+##
+automountServiceAccountToken: false
+## @param podLabels Extra labels for Netbox worker pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+##
+podLabels: {}
+## @param podAnnotations Annotations for Netbox worker pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+##
+podAnnotations: {}
+## @param shareProcessNamespace Share a single process namespace between all of the containers in Netbox worker pods
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
+##
+shareProcessNamespace: false
+## @param podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAffinityPreset: ""
+## @param podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAntiAffinityPreset: soft
+## Node affinity preset
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+##
+nodeAffinityPreset:
+  ## @param nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ##
+  type: ""
+  ## @param nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set
+  ##
+  key: ""
+  ## @param nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set
+  ## E.g.
+  ## values:
+  ##   - e2e-az1
+  ##   - e2e-az2
+  ##
+  values: []
+## @param affinity Affinity for Netbox worker pods assignment
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## NOTE: `podAffinityPreset`, `podAntiAffinityPreset`, and `nodeAffinityPreset` will be ignored when it's set
+##
+affinity: {}
+## @param nodeSelector Node labels for Netbox worker pods assignment
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+##
+nodeSelector: {}
+## @param tolerations Tolerations for Netbox worker pods assignment
+## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+## @param topologySpreadConstraints Spread Constraints for Netbox worker pod assignment
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+## E.g.
+## topologySpreadConstraints:
+##   - maxSkew: 1
+##     topologyKey: node
+##     whenUnsatisfiable: DoNotSchedule
+##
+topologySpreadConstraints: []
+## @param lifecycleHooks for the Netbox worker container(s) to automate configuration before or after startup
+##
+lifecycleHooks: {}
+## @param extraVolumes Optionally specify extra list of additional volumes for the Netbox worker pod(s)
+##
+extraVolumes: []
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox worker container(s)
+##
+extraVolumeMounts: []
+## @param sidecars Add additional sidecar containers to the Netbox worker pod(s)
+## e.g:
+## sidecars:
+##   - name: your-image-name
+##     image: your-image
+##     imagePullPolicy: Always
+##     ports:
+##       - name: portname
+##         containerPort: 1234
+##
+sidecars: []
+## @param extraContainers  Additional containers to be added to the NetBox pod.
+##  - name: my-sidecar
+##    image: nginx:latest
+##
+extraContainers: []
+## @param worker.initContainers Add additional init containers to the Netbox worker pod(s)
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+## e.g:
+## initContainers:
+##  - name: your-image-name
+##    image: your-image
+##    imagePullPolicy: Always
+##    command: ['sh', '-c', 'echo "hello world"']
+##
+initContainers: []
+## @extraInitContainers  Containers which are run before the NetBox containers are started.
+##  - name: init-myservice
+##    image: busybox
+##    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+##
+extraInitContainers: []
 
 ## You can also use an existing secret for the superuser password and API token
 ## See `existingSecret` for details
@@ -781,10 +1045,6 @@ scriptsPersistence:
   ##
   existingClaim: ""
 
-podAnnotations: {}
-
-podLabels: {}
-
 ## @section Netbox deployment parameters
 
 ## @param replicaCount Number of Netbox replicas to deploy
@@ -793,111 +1053,10 @@ replicaCount: 1
 ## @param revisionHistoryLimitCount Number of controller revisions to keep
 ##
 revisionHistoryLimitCount: 10
-## @param containerPorts.http Netbox HTTP container port
-## @param containerPorts.https Netbox HTTPS container port
-##
-containerPorts:
-  http: 8080
-  https: 8443
 ## @param extraContainerPorts Optionally specify extra list of additional port-mappings for Netbox container
 ##
 extraContainerPorts: []
 
-## Netbox pods' SecurityContext
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-## @param podSecurityContext.enabled Enabled Netbox pods' Security Context
-## @param podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
-## @param podSecurityContext.sysctls Set kernel settings using the sysctl interface
-## @param podSecurityContext.supplementalGroups Set filesystem extra groups
-## @param podSecurityContext.fsGroup Set Netbox pod's Security Context fsGroup
-##
-podSecurityContext:
-  enabled: true
-  fsGroup: 1000
-  # fsGroupChangePolicy: Always
-  # sysctls: []
-  # supplementalGroups: []
-  runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-## Netbox containers' Security Context
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-## @param containerSecurityContext.enabled Enabled containers' Security Context
-## @param containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
-## @param containerSecurityContext.runAsUser Set containers' Security Context runAsUser
-## @param containerSecurityContext.runAsNonRoot Set container's Security Context runAsNonRoot
-## @param containerSecurityContext.privileged Set container's Security Context privileged
-## @param containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
-## @param containerSecurityContext.allowPrivilegeEscalation Set container's Security Context allowPrivilegeEscalation
-## @param containerSecurityContext.capabilities.drop List of capabilities to be dropped
-## @param containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
-##
-containerSecurityContext:
-  enabled: false
-  seLinuxOptions: null
-  runAsUser: 1000
-  runAsGroup: 1000
-  runAsNonRoot: true
-  privileged: false
-  readOnlyRootFilesystem: true
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop: ["ALL"]
-  seccompProfile:
-    type: "RuntimeDefault"
-## Netbox resource requests and limits
-## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-## @param resources.limits The resources limits for the Netbox containers
-## @param resources.requests The requested resources for the Netbox containers
-##
-resources:
-  limits: {}
-  requests: {}
-## Configure extra options for Netbox containers' liveness, readiness and startup probes
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes
-## @param livenessProbe.enabled Enable livenessProbe on Netbox containers
-## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-## @param livenessProbe.periodSeconds Period seconds for livenessProbe
-## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
-## @param livenessProbe.successThreshold Success threshold for livenessProbe
-##
-livenessProbe:
-  enabled: false
-  initialDelaySeconds: 300
-  periodSeconds: 1
-  timeoutSeconds: 5
-  failureThreshold: 3
-  successThreshold: 1
-## @param readinessProbe.enabled Enable readinessProbe on Netbox containers
-## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-## @param readinessProbe.periodSeconds Period seconds for readinessProbe
-## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
-## @param readinessProbe.successThreshold Success threshold for readinessProbe
-##
-readinessProbe:
-  enabled: true
-  initialDelaySeconds: 0
-  periodSeconds: 10
-  timeoutSeconds: 1
-  failureThreshold: 3
-  successThreshold: 1
-## When enabling this, make sure to set initialDelaySeconds to 0 for livenessProbe and readinessProbe
-## @param startupProbe.enabled Enable startupProbe on Netbox containers
-## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
-## @param startupProbe.periodSeconds Period seconds for startupProbe
-## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
-## @param startupProbe.failureThreshold Failure threshold for startupProbe
-## @param startupProbe.successThreshold Success threshold for startupProbe
-##
-startupProbe:
-  enabled: false
-  initialDelaySeconds: 30
-  periodSeconds: 5
-  timeoutSeconds: 1
-  failureThreshold: 60
-  successThreshold: 1
 
 ## @section Exposure parameters
 ##
@@ -924,17 +1083,6 @@ service:
   nodePorts:
     http: ""
     https: ""
-  ## @param service.sessionAffinity Control where client requests go, to the same pod or round-robin
-  ## Values: ClientIP or None
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/
-  ##
-  sessionAffinity: None
-  ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
-  ## sessionAffinityConfig:
-  ##   clientIP:
-  ##     timeoutSeconds: 300
-  ##
-  sessionAffinityConfig: {}
   ## @param service.clusterIP Keycloak service clusterIP IP
   ## e.g:
   ## clusterIP: None
@@ -966,7 +1114,17 @@ service:
   ## @param service.extraPorts Extra port to expose on Keycloak service
   ##
   extraPorts: []
-
+  ## @param service.sessionAffinity Control where client requests go, to the same pod or round-robin
+  ## Values: ClientIP or None
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/
+  ##
+  sessionAffinity: None
+  ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
+  ## sessionAffinityConfig:
+  ##   clientIP:
+  ##     timeoutSeconds: 300
+  ##
+  sessionAffinityConfig: {}
 
   port: 80
   nodePort: ""
@@ -1005,30 +1163,7 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-# Set this to true to automatically mount the service account token in the main container
-automountServiceAccountToken: false
 
-topologySpreadConstraints: []
-  #  - maxSkew: 1
-  #    topologyKey: topology.kubernetes.io/zone
-  #    whenUnsatisfiable: DoNotSchedule
-  #    labelSelector:
-  #      matchLabels:
-  #        "app.kubernetes.io/component": netbox
-  #        "app.kubernetes.io/name": netbox
-
-
-## @param initContainers Add additional init containers to the Netbox pods
-## Example:
-## initContainers:
-##   - name: your-image-name
-##     image: your-image
-##     imagePullPolicy: Always
-##     ports:
-##       - name: portname
-##         containerPort: 1234
-##
-initContainers: []
 init:
   image:
     repository: busybox
@@ -1045,17 +1180,6 @@ init:
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000  # Keep the same as securityContext.runAsGroup
-## @param sidecars Add additional sidecar containers to the Keycloak pods
-## Example:
-## sidecars:
-##   - name: your-image-name
-##     image: your-image
-##     imagePullPolicy: Always
-##     ports:
-##       - name: portname
-##         containerPort: 1234
-##
-sidecars: []
 
 test:
   image:
@@ -1065,52 +1189,21 @@ test:
 
   resources: {}
 
+## Netbox server deployment autoscaling
+## @param server.autoscaling.enabled Enable Netbox server deployment autoscaling
+## @param server.autoscaling.minReplicas Netbox server deployment autoscaling minimum number of replicas
+## @param server.autoscaling.maxReplicas Netbox server deployment autoscaling maximum number of replicas
+## @param server.autoscaling.targetCPU Netbox server deployment autoscaling target CPU percentage
+## @param server.autoscaling.targetMemory Netbox server deployment autoscaling target CPU memory
+##
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 100
+  targetCPU: 80
+  targetMemory: 80
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
-
-nodeSelector: {}
-
-tolerations: []
-
-updateStrategy: {}
-  # type: RollingUpdate
-
-affinity: {}
-
-## Additional environment variables to set
-extraEnvs: []
-#  - name: FOO
-#    valueFrom:
-#      secretKeyRef:
-#        key: FOO
-#        name: secret-resource
-
-## Additional volumes to mount
-extraVolumeMounts: []
-#  - name: extra-volume
-#    mountPath: /run/secrets/super-secret
-#    readOnly: true
-
-extraVolumes: []
-#  - name: extra-volume
-#    secret:
-#      secretName: super-secret
-
-## Additional containers to be added to the NetBox pod.
-extraContainers: []
-#  - name: my-sidecar
-#    image: nginx:latest
-
-## Containers which are run before the NetBox containers are started.
-extraInitContainers: []
-#  - name: init-myservice
-#    image: busybox
-#    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
-
 
 ## @section Netbox housekeeping parameters
 
@@ -1237,6 +1330,9 @@ worker:
   ## @param worker.enabled Whether to enable Netbox worker job
   ##
   enabled: true
+  ## @param worker.replicaCount Number of Netbox worker replicas to deploy
+  ##
+  replicaCount: 1
   ## Netbox worker image version
   ## ref: https://hub.docker.com/r/netboxcommunity/netbox/tags
   ## @param image.registry [default: REGISTRY_NAME] Netbox worker image registry
@@ -1535,7 +1631,7 @@ worker:
   ##
   initContainers: []
 
-  replicaCount: 1
+
 
   securityContext:
     capabilities:
@@ -1804,13 +1900,17 @@ redis:
   ## @param architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
-  ## Netbox Authentication parameters
-  ## ref: https://github.com/bitnami/containers/tree/main/bitnami/redis#setting-the-server-password-on-first-run
+  ## Use password authentication
+  ## @param redis.auth.enabled Enable Redis dependency authentication
+  ## @param redis.auth.existingSecret Existing secret to load redis dependency password
+  ## @param redis.auth.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   auth:
     ## @param auth.enabled Enable password authentication
     ##
     enabled: true
+    existingSecret: ""
+    existingSecretPasswordKey: 'redis-password'
   ## @section Redis master configuration parameters
   ##
   master:
@@ -1841,6 +1941,8 @@ tasksRedis:
   existingSecret: ""
   existingSecretName: ""
   existingSecretKey: redis-password
+  ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
+  ##
   existingSecretPasswordKey: ""
 
 cachingRedis:
@@ -1862,7 +1964,67 @@ cachingRedis:
   existingSecret: ""
   existingSecretName: ""
   existingSecretKey: redis-password
+  ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
+  ##
   existingSecretPasswordKey: ""
+
+##
+## External Redis&reg;
+##
+externalRedis:
+  ## Redis&reg; host
+  ## @param externalRedis.host External Redis host
+  ##
+  host: ""
+  ## Redis&reg; port
+  ## @param externalRedis.port External Redis port
+  ##
+  port: 6379
+  ## Redis&reg; password for authentication
+  ## Ignored if existingSecret is set
+  ## @param externalRedis.password External Redis password
+  ##
+  password: ""
+  ## Name of existing secret object containing the password
+  ## @param externalRedis.existingSecret Existing secret for the external redis
+  ##
+  existingSecret: ""
+  ## Password key to be retrieved from Redis&reg; secret
+  ## @param externalRedis.existingSecretPasswordKey Password key for the existing secret containing the external redis password
+  ##
+  existingSecretPasswordKey: 'redis-password'
+
+## Wait-for-redis init container configuration
+##
+redisWait:
+  ## @param redisWait.enabled Enables waiting for redis
+  ##
+  enabled: true
+  ## @param redisWait.extraArgs Additional arguments for the redis-cli call, such as TLS
+  ##
+  extraArgs: ''
+  ## @param redisWait.containerSecurityContext.enabled Enabled Argo CD repo server containers' Security Context
+  ## @param redisWait.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+  ## @param redisWait.containerSecurityContext.runAsUser Set Argo CD repo server containers' Security Context runAsUser
+  ## @param redisWait.containerSecurityContext.allowPrivilegeEscalation Set Argo CD repo server containers' Security Context allowPrivilegeEscalation
+  ## @param redisWait.containerSecurityContext.capabilities.drop Set Argo CD containers' repo server Security Context capabilities to be dropped
+  ## @param redisWait.containerSecurityContext.readOnlyRootFilesystem Set Argo CD containers' repo server Security Context readOnlyRootFilesystem
+  ## @param redisWait.containerSecurityContext.runAsNonRoot Set Argo CD repo server containers' Security Context runAsNonRoot
+  ## @param redisWait.containerSecurityContext.privileged Set redisWait container's Security Context privileged
+  ## @param redisWait.containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+  ##
+  containerSecurityContext:
+    enabled: true
+    seLinuxOptions: null
+    runAsUser: 1001
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
 
 gateway:
   enabled: false

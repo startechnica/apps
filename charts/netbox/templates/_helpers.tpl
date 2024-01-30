@@ -497,6 +497,70 @@ Add environment variables to configure database values
 {{- end -}}
 
 {{/*
+Return the Redis&reg; secret name
+*/}}
+{{- define "netbox.redis.secretName" -}}
+{{- if .Values.redis.enabled }}
+    {{- if .Values.redis.auth.existingSecret }}
+        {{- printf "%s" .Values.redis.auth.existingSecret -}}
+    {{- else -}}
+        {{- printf "%s" (include "netbox.redis.fullname" .) }}
+    {{- end -}}
+{{- else if .Values.externalRedis.existingSecret }}
+    {{- printf "%s" .Values.externalRedis.existingSecret -}}
+{{- else -}}
+    {{- printf "%s-redis" (include "netbox.redis.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the Redis&reg; secret key
+*/}}
+{{- define "netbox.redis.secretPasswordKey" -}}
+{{- if and .Values.redis.enabled .Values.redis.auth.existingSecret }}
+    {{- .Values.redis.auth.existingSecretPasswordKey | printf "%s" }}
+{{- else if and (not .Values.redis.enabled) .Values.externalRedis.existingSecret }}
+    {{- .Values.externalRedis.existingSecretPasswordKey | printf "%s" }}
+{{- else -}}
+    {{- printf "redis-password" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return whether Redis&reg; uses password authentication or not
+*/}}
+{{- define "netbox.redis.auth.enabled" -}}
+{{- if or (and .Values.redis.enabled .Values.redis.auth.enabled) (and (not .Values.redis.enabled) (or .Values.externalRedis.password .Values.externalRedis.existingSecret)) }}
+    {{- true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the Redis&reg; hostname
+*/}}
+{{- define "netbox.redisHost" -}}
+{{- if .Values.redis.enabled }}
+    {{- printf "%s-master" (include "netbox.redis.fullname" .) -}}
+{{- else if .Values.externalRedis.host -}}
+    {{- .Values.externalRedis.host -}}
+{{- else -}}
+    {{- required "If the redis dependency is disabled you need to add an external redis host" .Values.externalRedis.host -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the Redis&reg; port
+*/}}
+{{- define "netbox.redisPort" -}}
+{{- if .Values.redis.enabled }}
+    {{- .Values.redis.service.port -}}
+{{- else -}}
+    {{- .Values.externalRedis.port -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
 Return the secret containing the Netbox superuser password
 */}}
 {{- define "netbox.secretName" -}}
