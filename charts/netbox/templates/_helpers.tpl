@@ -85,14 +85,14 @@ Return the proper Netbox init image name
 {{/*
 Return the proper PostgreSQL image name
 */}}
-{{- define "argocd.postgresql.image" -}}
+{{- define "netbox.postgresql.image" -}}
 {{- include "common.images.image" ( dict "imageRoot" .Values.postgresql.image "global" .Values.global ) -}}
 {{- end -}}
 
 {{/*
 Return the proper Redis image name
 */}}
-{{- define "argocd.redis.image" -}}
+{{- define "netbox.redis.image" -}}
 {{- include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) -}}
 {{- end -}}
 
