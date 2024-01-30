@@ -1,23 +1,25 @@
 {{- if .Values.worker.enabled }}
-apiVersion: apps/v1
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
-  name: {{ include "netbox.fullname" . }}-worker
-  {{- with .Values.commonAnnotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  labels:
-    {{- include "netbox.labels" . | nindent 4 }}
+  name: {{ template "netbox.worker.fullname" . }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.worker.image "chart" .Chart ) ) }}  
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
 spec:
-  {{- if not .Values.worker.autoscaling.enabled }}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.worker.replicaCount }}
   {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
   selector:
-    matchLabels:
-      {{- include "netbox.selectorLabels" . | nindent 6 }}
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
       app.kubernetes.io/component: worker
+      app.kubernetes.io/part-of: netbox
   {{ if .Values.worker.updateStrategy -}}
   strategy:
     {{- toYaml .Values.worker.updateStrategy | nindent 4 }}
@@ -29,15 +31,12 @@ spec:
         {{- if (not .Values.existingSecret) }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         {{- end }}
-        {{- with .Values.worker.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
+        {{- if .Values.worker.podAnnotations }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
-      labels:
-        {{- include "netbox.selectorLabels" . | nindent 8 }}
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
         app.kubernetes.io/component: worker
-        {{- with .Values.worker.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        app.kubernetes.io/part-of: netbox
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -52,7 +51,7 @@ spec:
       {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
-      - name: {{ .Chart.Name }}-worker
+      - name: {{ template "netbox.worker.image" . }}
         securityContext:
           {{- toYaml .Values.worker.securityContext | nindent 10 }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -92,6 +91,11 @@ spec:
         - name: reports
           mountPath: /opt/netbox/netbox/reports
           subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
+        {{- end }}
+        {{- if .Values.scriptsPersistence.enabled }}
+        - name: scripts
+          mountPath: /opt/netbox/netbox/scripts
+          subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
         {{- end }}
         {{- with .Values.worker.extraVolumeMounts }}
         {{- toYaml . | nindent 8 }}
@@ -152,6 +156,11 @@ spec:
       - name: reports
         persistentVolumeClaim:
           claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+      {{- end }}
+      {{- if .Values.scriptsPersistence.enabled }}
+      - name: scripts
+        persistentVolumeClaim:
+          claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
       {{- end }}
       {{- with .Values.worker.extraVolumes }}
       {{- toYaml . | nindent 6 }}

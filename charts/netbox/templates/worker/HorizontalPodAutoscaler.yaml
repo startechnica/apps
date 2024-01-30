@@ -2,7 +2,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "netbox.fullname" . }}-worker
+  name: {{ template "netbox.worker.fullname" . }}
   {{- with .Values.commonAnnotations }}
   annotations:
     {{- toYaml . | nindent 4 }}

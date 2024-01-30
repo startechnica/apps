@@ -30,5 +30,5 @@ dependencies:
   alias: bitnami-common
 - name: st-common
   repository: https://startechnica.github.io/apps
-  version: "*"
+  version: 1.x.x
   alias: startechnica-common

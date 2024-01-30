@@ -328,8 +328,7 @@ storageConfig: {}
   # AWS_S3_ENDPOINT_URL: 'endpoint URL of S3 provider'
   # AWS_S3_REGION_NAME: 'eu-west-1'
 
-# Expose Prometheus monitoring metrics at the HTTP endpoint '/metrics'
-metricsEnabled: false
+
 
 # Determine how many objects to display per page within a list. (Default: 50)
 paginateCount: 50
@@ -1074,11 +1073,7 @@ extraInitContainers: []
 #    image: busybox
 #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
-serviceMonitor:
-  enabled: false
-  additionalLabels: {}
-  interval: 1m
-  scrapeTimeout: 10s
+
 
 # Configuration of Cron settings
 housekeeping:
@@ -1199,7 +1194,9 @@ worker:
     ## Set to true if you would like to see extra information on logs
     ##
     debug: false
-    
+  
+
+
   replicaCount: 1
 
   podAnnotations: {}
@@ -1236,10 +1233,34 @@ worker:
   #   memory: 128Mi
   resources: {}
 
+  ## Keycloak Pod Disruption Budget configuration
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+  ##
+  podDisruptionBudget:
+    ## @param podDisruptionBudget.create Enable/disable a Pod Disruption Budget creation
+    ##
+    create: false
+    ## @param podDisruptionBudget.minAvailable Minimum number/percentage of pods that should remain scheduled
+    ##
+    minAvailable: 1
+    ## @param podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that may be made unavailable
+    ##
+    maxUnavailable: ""
+  ## Netbox worker Autoscaling configuration
+  ## @param autoscaling.enabled Enable autoscaling for Netbox worker
+  ## @param autoscaling.minReplicas Minimum number of Netbox worker replicas
+  ## @param autoscaling.maxReplicas Maximum number of Netbox worker replicas
+  ## @param autoscaling.targetCPU Target CPU utilization percentage
+  ## @param autoscaling.targetMemory Target Memory utilization percentage
+  ## @param autoscaling.targetCPUUtilizationPercentage  (DEPRECATED) Target CPU utilization percentage
+  ## @param autoscaling.targetMemoryUtilizationPercentage  (DEPRECATED) Target Memory utilization percentage
+  ##
   autoscaling:
     enabled: false
     minReplicas: 1
-    maxReplicas: 100
+    maxReplicas: 11
+    targetCPU: ""
+    targetMemory: ""
     targetCPUUtilizationPercentage: 80
     # targetMemoryUtilizationPercentage: 80
 
@@ -1284,6 +1305,14 @@ worker:
   #    image: busybox
   #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
+  ## Netbox worker Service configuration
+  ##
+  service:
+    enabled: false
+    ## @param worker.service.type Kubernetes service type
+    ##
+    type: ClusterIP
+
 ## HTTPS settings
 ##
 tls:
@@ -1319,6 +1348,89 @@ tls:
   ## If "true", the Netbox chart will look for the files netbox.key and netbox.crt inside the secret provided with 'existingSecret'.
   ##
   usePem: false
+
+## @section Metrics Parameters
+
+## Prometheus Exporter / Metrics
+##
+## @param metricsEnabled  (DEPRECATED) Enable metrics
+##
+metricsEnabled: false
+metrics:
+  ## @param metrics.enabled Enable metrics
+  ##
+  enabled: false
+  ## Prometheus Operator ServiceMonitor configuration
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped.
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+    ##
+    interval: ""
+    ## @param metrics.serviceMonitor.scrapeTimeout Timeout after which the scrape is ended
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.labels Additional labels that can be used so ServiceMonitor will be discovered by Prometheus
+    ##
+    labels: {}
+    ## @param metrics.serviceMonitor.selector Prometheus instance selector labels
+    ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels Specify honorLabels parameter to add the scrape endpoint
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+  ## Prometheus Operator alert rules configuration
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled Create PrometheusRule Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace which Prometheus is running in
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.labels Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    ##
+    labels: {}
+    ## @param metrics.prometheusRule.groups Groups, containing the alert rules.
+    ## Example:
+    ##   groups:
+    ##     - name: Netbox
+    ##       rules:
+    ##         - alert: NetboxInstanceNotAvailable
+    ##           annotations:
+    ##             message: "Netbox instance in namespace {{ `{{` }} $labels.namespace {{ `}}` }} has not been available for the last 5 minutes."
+    ##           expr: |
+    ##             absent(kube_pod_status_ready{namespace="{{ include "common.names.namespace" . }}", condition="true"} * on (pod) kube_pod_labels{pod=~"{{ include "common.names.fullname" . }}-\\d+", namespace="{{ include "common.names.namespace" . }}"}) != 0
+    ##           for: 5m
+    ##           labels:
+    ##             severity: critical
+    groups: []
+## @param serviceMonitor  (DEPRECATED) Prometheus Operator ServiceMonitor configuration
+##
+serviceMonitor:
+  ## @param serviceMonitor.enabled  (DEPRECATED) Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
+  ##
+  enabled: false
+  additionalLabels: {}
+  interval: 1m
+  scrapeTimeout: 10s
 
 ## @section Database parameters
 

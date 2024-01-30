@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
   name: {{ include "netbox.fullname" . }}
@@ -6,17 +6,20 @@ metadata:
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  labels:
-    {{- include "netbox.labels" . | nindent 4 }}
-    app.kubernetes.io/component: netbox
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.image "chart" .Chart ) ) }}  
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: server
+    app.kubernetes.io/part-of: netbox
 spec:
 {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
 {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
   selector:
-    matchLabels:
-      {{- include "netbox.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: netbox
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: server
+      app.kubernetes.io/part-of: netbox
   {{ if .Values.updateStrategy -}}
   strategy:
     {{- toYaml .Values.updateStrategy | nindent 4 }}
@@ -31,9 +34,9 @@ spec:
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      labels:
-        {{- include "netbox.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: netbox
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: server
+        app.kubernetes.io/part-of: netbox
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -67,7 +70,7 @@ spec:
       - name: {{ .Chart.Name }}
         securityContext:
           {{- toYaml .Values.securityContext | nindent 10 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        image: {{ template "netbox.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: SUPERUSER_NAME
@@ -140,6 +143,11 @@ spec:
         - name: reports
           mountPath: /opt/netbox/netbox/reports
           subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
+        {{- end }}
+        {{- if .Values.scriptsPersistence.enabled }}
+        - name: scripts
+          mountPath: /opt/netbox/netbox/scripts
+          subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
         {{- end }}
         - name: optunit
           mountPath: /opt/unit
@@ -218,6 +226,11 @@ spec:
       - name: reports
         persistentVolumeClaim:
           claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+      {{- end }}
+      {{- if .Values.scriptsPersistence.enabled }}
+      - name: scripts
+        persistentVolumeClaim:
+          claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
       {{- end }}
       {{- with .Values.extraVolumes }}
       {{- toYaml . | nindent 6 }}

@@ -7,6 +7,20 @@ Expand the name of the chart.
 {{- end }}
 
 {{/*
+Return the proper Netbox worker fullname
+*/}}
+{{- define "netbox.worker.fullname" -}}
+{{- printf "%s-%s" (include "common.names.fullname" .) "worker" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Return the proper Netbox housekeeping fullname
+*/}}
+{{- define "netbox.housekeeping.fullname" -}}
+{{- printf "%s-%s" (include "common.names.fullname" .) "housekeeping" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
@@ -23,6 +37,20 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+Return the proper Netbox image name
+*/}}
+{{- define "netbox.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
+Return the proper Netbox worker image name
+*/}}
+{{- define "netbox.worker.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
+{{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.
@@ -57,9 +85,9 @@ Create the name of the service account to use
 */}}
 {{- define "netbox.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "netbox.fullname" .) .Values.serviceAccount.name }}
+  {{- default (include "netbox.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+  {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 

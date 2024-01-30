@@ -92,6 +92,14 @@ $ helm delete netbox --namespace netbox
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
+## Breaking Changes
+
+  * The `worker.autoscaling.targetCPUUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetCPU`.
+  * The `worker.autoscaling.targetMemoryUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetMemory`.
+  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
+  * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
+  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
+
 ## Upgrading
 
 ### Bundled PostgreSQL
