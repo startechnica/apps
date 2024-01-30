@@ -132,9 +132,9 @@ spec:
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.worker.podSecurityContext.enabled .Values.worker.containerSecurityContext.enabled }}
       {{- if or .Values.worker.initContainers $needsVolumePermissions }}
       initContainers:
-      {{- if .Values.worker.initContainers }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
-      {{- end }}
+        {{- if .Values.worker.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
+        {{- end }}
       {{- end }}
       volumes:
         - name: config
@@ -174,24 +174,28 @@ spec:
         - name: netbox-tmp
           emptyDir:
             medium: Memory
-        # - name: media
-        #   {{- if .Values.persistence.enabled }}
-        #   persistentVolumeClaim:
-        #     claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
-        #   {{- else }}
-        #   emptyDir: {}
-        #   {{- end }}
-        # {{- if .Values.reportsPersistence.enabled }}
-        # - name: reports
-        #   persistentVolumeClaim:
-        #     claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
-        # {{- end }}
-        # {{- if .Values.scriptsPersistence.enabled }}
-        # - name: scripts
-        #   persistentVolumeClaim:
-        #     claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
-        # {{- end }}
-        # {{- with .Values.worker.extraVolumes }}
-        # {{- toYaml . | nindent 8 }}
-        # {{- end }}
+        - name: media
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: reports
+          {{- if .Values.reportsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: scripts
+          {{- if .Values.scriptsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+          {{- if .Values.extraVolumes }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+          {{- end }}
 {{- end }}
