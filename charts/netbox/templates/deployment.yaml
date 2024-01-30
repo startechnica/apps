@@ -47,23 +47,7 @@ spec:
       {{- if .Values.podSecurityContext.enabled }}
       securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
-      initContainers:
-      - name: init-dirs
-        image: "{{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}"
-        imagePullPolicy: {{ .Values.init.image.pullPolicy }}
-        command: [/bin/sh, -c, mkdir -p /opt/unit/state /opt/unit/tmp]
-        {{- if .Values.init.resources }}
-        resources:
-          {{- toYaml .Values.init.resources | nindent 10 }}
-        {{- end }}
-        securityContext:
-          {{- toYaml .Values.init.securityContext | nindent 10 }}
-        volumeMounts:
-        - name: optunit
-          mountPath: /opt/unit
-      {{- with .Values.extraInitContainers }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
+
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -71,34 +55,34 @@ spec:
           image: {{ template "netbox.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-          - name: SUPERUSER_NAME
-            value: {{ .Values.superuser.name | quote }}
-          - name: SUPERUSER_EMAIL
-            value: {{ .Values.superuser.email | quote }}
-          - name: SKIP_STARTUP_SCRIPTS
-            value: {{ .Values.skipStartupScripts | quote }}
-          {{- if .Values.dbWaitDebug }}
-          - name: DB_WAIT_DEBUG
-            value: "1"
-          {{- end }}
-          {{- if .Values.overrideUnitConfig }}
-          - name: UNIT_CONFIG
-            value: /run/config/netbox/nginx-unit.json
-          {{- end }}
-          {{- with .Values.extraEnvs }}
-          {{- toYaml . | nindent 8 }}
-          {{- end }}
-          {{- if .Values.allowedHostsIncludesPodIp }}
-          - name: POD_IP
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: status.podIP
-          {{- end }}
+            - name: SUPERUSER_NAME
+              value: {{ .Values.superuser.name | quote }}
+            - name: SUPERUSER_EMAIL
+              value: {{ .Values.superuser.email | quote }}
+            - name: SKIP_STARTUP_SCRIPTS
+              value: {{ .Values.skipStartupScripts | quote }}
+            {{- if .Values.dbWaitDebug }}
+            - name: DB_WAIT_DEBUG
+              value: "1"
+            {{- end }}
+            {{- if .Values.overrideUnitConfig }}
+            - name: UNIT_CONFIG
+              value: /run/config/netbox/nginx-unit.json
+            {{- end }}
+            {{- if .Values.allowedHostsIncludesPodIp }}
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            {{- end }}
+            {{- with .Values.extraEnvs }}
+            {{- toYaml . | nindent 8 }}
+            {{- end }}
           ports:
-          - name: http
-            containerPort: {{ .Values.containerPorts.http }}
-            protocol: TCP
+            - name: http
+              containerPort: {{ .Values.containerPorts.http }}
+              protocol: TCP
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
@@ -106,16 +90,16 @@ spec:
               port: http
               {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
               httpHeaders:
-              - name: Host
-                value: {{ (index .Values.allowedHosts 0) | quote }}
+                - name: Host
+                  value: {{ (index .Values.allowedHosts 0) | quote }}
               {{- end }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
           {{- end }}
-          {{- if .Values.worker.resources }}
-          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
           - name: config
@@ -169,8 +153,21 @@ spec:
           {{- end }}
           {{- end }}
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
-      {{- if or .Values.initContainers $needsVolumePermissions }}
       initContainers:
+        - name: init-dirs
+          image: "{{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}"
+          imagePullPolicy: {{ .Values.init.image.pullPolicy }}
+          command: [/bin/sh, -c, mkdir -p /opt/unit/state /opt/unit/tmp]
+          {{- if .Values.init.resources }}
+          resources:
+            {{- toYaml .Values.init.resources | nindent 10 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.init.securityContext | nindent 10 }}
+          volumeMounts:
+            - name: optunit
+              mountPath: /opt/unit
+      {{- if or .Values.initContainers $needsVolumePermissions }}
       {{- if .Values.initContainers }}
         {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
       {{- end }}
