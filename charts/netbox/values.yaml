@@ -123,7 +123,7 @@ superuser:
 # Skip the netbox-docker startup scripts which can pre-populate objects into a
 # fresh NetBox installation. By default these do nothing, but they take a while
 # to run, so we skip them. See:
-# https://github.com/netbox-community/netbox-docker/tree/master/startup_scripts
+# https://github.com/netbox-community/netbox-docker/tree/worker/startup_scripts
 skipStartupScripts: true
 
 # This is a list of valid fully-qualified domain names (FQDNs) for the NetBox
@@ -1238,18 +1238,274 @@ worker:
     ## Set to true if you would like to see extra information on logs
     ##
     debug: false
-  
-  replicaCount: 1
-
-  podAnnotations: {}
-
-  podLabels: {}
-
+  ## @param worker.command Override default container command (useful when using custom images)
+  ##
+  command: []
+  ## @param worker.args Override default container args (useful when using custom images)
+  ##
+  args: []
+  ## @param worker.enableServiceLinks Whether information about services should be injected into pod's environment variable
+  ##
+  enableServiceLinks: true
+  ## @param worker.preExecCmds Additional commands to run prior to starting Netbox worker
+  ##
+  preExecCmds: []
+  ## @param worker.extraFlags Array with additional command line flags for Netbox worker
+  ## e.g:
+  ## extraFlags:
+  ##  - "--maxmemory-policy volatile-ttl"
+  ##  - "--repl-backlog-size 1024mb"
+  ##
+  extraFlags: []
+  ## @param worker.extraEnvVars Array with extra environment variables to add to Netbox worker nodes
+  ## e.g:
+  ## extraEnvVars:
+  ##   - name: FOO
+  ##     value: "bar"
+  ##
+  extraEnvVars: []
+  ## @param worker.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox worker nodes
+  ##
+  extraEnvVarsCM: ""
+  ## @param worker.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox worker nodes
+  ##
+  extraEnvVarsSecret: ""
+  ## @param worker.containerPorts.redis Container port to open on Netbox worker nodes
+  ##
+  containerPorts:
+    http: 8080
+  ## Configure extra options for Netbox containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param worker.startupProbe.enabled Enable startupProbe on Netbox worker nodes
+  ## @param worker.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param worker.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param worker.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param worker.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param worker.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  ## @param worker.livenessProbe.enabled Enable livenessProbe on Netbox worker nodes
+  ## @param worker.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param worker.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param worker.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param worker.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param worker.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  ## @param worker.readinessProbe.enabled Enable readinessProbe on Netbox worker nodes
+  ## @param worker.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param worker.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param worker.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param worker.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param worker.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 5
+    timeoutSeconds: 1
+    successThreshold: 1
+    failureThreshold: 5
+  ## @param worker.customStartupProbe Custom startupProbe that overrides the default one
+  ##
+  customStartupProbe: {}
+  ## @param worker.customLivenessProbe Custom livenessProbe that overrides the default one
+  ##
+  customLivenessProbe: {}
+  ## @param worker.customReadinessProbe Custom readinessProbe that overrides the default one
+  ##
+  customReadinessProbe: {}
+  ## Netbox worker resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param worker.resources.limits The resources limits for the Netbox worker containers
+  ## @param worker.resources.requests The requested resources for the Netbox worker containers
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Configure Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param worker.podSecurityContext.enabled Enabled Netbox worker pods' Security Context
+  ## @param worker.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+  ## @param worker.podSecurityContext.sysctls Set kernel settings using the sysctl interface
+  ## @param worker.podSecurityContext.supplementalGroups Set filesystem extra groups
+  ## @param worker.podSecurityContext.fsGroup Set Netbox worker pod's Security Context fsGroup
+  ##
   podSecurityContext:
-    fsGroup: 1000
+    enabled: true
+    fsGroupChangePolicy: Always
     runAsNonRoot: true
-    # runAsUser: 1000
-    # runAsGroup: 1000
+    sysctls: []
+    supplementalGroups: []
+    fsGroup: 1000
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param worker.containerSecurityContext.enabled Enabled Netbox worker containers' Security Context
+  ## @param worker.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+  ## @param worker.containerSecurityContext.runAsUser Set Netbox worker containers' Security Context runAsUser
+  ## @param worker.containerSecurityContext.runAsGroup Set Netbox worker containers' Security Context runAsGroup
+  ## @param worker.containerSecurityContext.runAsNonRoot Set Netbox worker containers' Security Context runAsNonRoot
+  ## @param worker.containerSecurityContext.allowPrivilegeEscalation Is it possible to escalate Netbox pod(s) privileges
+  ## @param worker.containerSecurityContext.seccompProfile.type Set Netbox worker containers' Security Context seccompProfile
+  ## @param worker.containerSecurityContext.capabilities.drop Set Netbox worker containers' Security Context capabilities to drop
+  ##
+  containerSecurityContext:
+    enabled: true
+    seLinuxOptions: null
+    runAsUser: 1001
+    runAsGroup: 0
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - ALL
+  ## @param worker.schedulerName Alternate scheduler for Netbox worker pods
+  ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+  ##
+  schedulerName: ""
+  ## @param worker.updateStrategy.type Netbox worker statefulset strategy type
+  ## @skip worker.updateStrategy.rollingUpdate
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  ##
+  updateStrategy:
+    ## StrategyType
+    ## Can be set to RollingUpdate, OnDelete (statefulset), Recreate (deployment)
+    ##
+    type: RollingUpdate
+  ## @param worker.minReadySeconds How many seconds a pod needs to be ready before killing the next, during update
+  ##
+  minReadySeconds: 0
+  ## @param worker.priorityClassName Netbox worker pods' priorityClassName
+  ##
+  priorityClassName: ""
+  ## @param worker.automountServiceAccountToken Mount Service Account token in pod
+  ##
+  automountServiceAccountToken: false
+  ## @param worker.hostAliases Netbox worker pods host aliases
+  ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  ##
+  hostAliases: []
+  ## @param worker.podLabels Extra labels for Netbox worker pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+  ## @param worker.podAnnotations Annotations for Netbox worker pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## @param worker.shareProcessNamespace Share a single process namespace between all of the containers in Netbox worker pods
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
+  ##
+  shareProcessNamespace: false
+  ## @param worker.podAffinityPreset Pod affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param worker.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: soft
+  ## Node worker.affinity preset
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
+  nodeAffinityPreset:
+    ## @param worker.nodeAffinityPreset.type Node affinity preset type. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param worker.nodeAffinityPreset.key Node label key to match. Ignored if `worker.affinity` is set
+    ##
+    key: ""
+    ## @param worker.nodeAffinityPreset.values Node label values to match. Ignored if `worker.affinity` is set
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
+  ## @param worker.affinity Affinity for Netbox worker pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## NOTE: `worker.podAffinityPreset`, `worker.podAntiAffinityPreset`, and `worker.nodeAffinityPreset` will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param worker.nodeSelector Node labels for Netbox worker pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+  ##
+  nodeSelector: {}
+  ## @param worker.tolerations Tolerations for Netbox worker pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param worker.topologySpreadConstraints Spread Constraints for Netbox worker pod assignment
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  ## E.g.
+  ## topologySpreadConstraints:
+  ##   - maxSkew: 1
+  ##     topologyKey: node
+  ##     whenUnsatisfiable: DoNotSchedule
+  ##
+  topologySpreadConstraints: []
+  ## @param worker.dnsPolicy DNS Policy for Netbox worker pod
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+  ## E.g.
+  ## dnsPolicy: ClusterFirst
+  ##
+  dnsPolicy: ""
+  ## @param worker.dnsConfig DNS Configuration for Netbox worker pod
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+  ## E.g.
+  ## dnsConfig:
+  ##   options:
+  ##   - name: ndots
+  ##     value: "4"
+  ##   - name: single-request-reopen
+  ##
+  dnsConfig: {}
+  ## @param worker.lifecycleHooks for the Netbox worker container(s) to automate configuration before or after startup
+  ##
+  lifecycleHooks: {}
+  ## @param worker.extraVolumes Optionally specify extra list of additional volumes for the Netbox worker pod(s)
+  ##
+  extraVolumes: []
+  ## @param worker.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox worker container(s)
+  ##
+  extraVolumeMounts: []
+  ## @param worker.sidecars Add additional sidecar containers to the Netbox worker pod(s)
+  ## e.g:
+  ## sidecars:
+  ##   - name: your-image-name
+  ##     image: your-image
+  ##     imagePullPolicy: Always
+  ##     ports:
+  ##       - name: portname
+  ##         containerPort: 1234
+  ##
+  sidecars: []
+  ## @param worker.initContainers Add additional init containers to the Netbox worker pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ## e.g:
+  ## initContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
+  initContainers: []
+
+  replicaCount: 1
 
   securityContext:
     capabilities:
@@ -1260,22 +1516,7 @@ worker:
     runAsUser: 1000
     runAsGroup: 1000
 
-  # Set this to true to automatically mount the service account token in the worker container
-  automountServiceAccountToken: false
-
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-  resources: {}
-
-  ## Keycloak Pod Disruption Budget configuration
+  ## Network worker Pod Disruption Budget configuration
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
   ##
   podDisruptionBudget:
@@ -1305,36 +1546,6 @@ worker:
     targetMemory: ""
     targetCPUUtilizationPercentage: 80
     # targetMemoryUtilizationPercentage: 80
-
-  nodeSelector: {}
-
-  tolerations: []
-
-  hostAliases: []
-
-  updateStrategy: {}
-    # type: RollingUpdate
-
-  affinity: {}
-
-  ## Additional environment variables to set
-  extraEnvs: []
-  #  - name: FOO
-  #    valueFrom:
-  #      secretKeyRef:
-  #        key: FOO
-  #        name: secret-resource
-
-  ## Additional volumes to mount
-  extraVolumeMounts: []
-  #  - name: extra-volume
-  #    mountPath: /run/secrets/super-secret
-  #    readOnly: true
-
-  extraVolumes: []
-  #  - name: extra-volume
-  #    secret:
-  #      secretName: super-secret
 
   ## Additional containers to be added to the NetBox pod.
   extraContainers: []
@@ -1412,11 +1623,11 @@ metrics:
     ##
     namespace: ""
     ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped.
-    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+    ## ref: https://github.com/coreos/prometheus-operator/blob/worker/Documentation/api.md#endpoint
     ##
     interval: ""
     ## @param metrics.serviceMonitor.scrapeTimeout Timeout after which the scrape is ended
-    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+    ## ref: https://github.com/coreos/prometheus-operator/blob/worker/Documentation/api.md#endpoint
     ##
     scrapeTimeout: ""
     ## @param metrics.serviceMonitor.labels Additional labels that can be used so ServiceMonitor will be discovered by Prometheus
@@ -1542,10 +1753,10 @@ redis:
   # To use an external Redis instance, set this to false and configure the
   # settings under *both* tasksRedis *and* cachingRedis
   enabled: true
-  ## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication`
+  ## @param architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
-  ## Redis&reg; Authentication parameters
+  ## Netbox Authentication parameters
   ## ref: https://github.com/bitnami/containers/tree/main/bitnami/redis#setting-the-server-password-on-first-run
   ##
   auth:

@@ -65,107 +65,115 @@ spec:
       {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
-      - name: {{ .Chart.Name }}
-        securityContext:
-          {{- toYaml .Values.securityContext | nindent 10 }}
-        image: {{ template "netbox.image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        env:
-        - name: SUPERUSER_NAME
-          value: {{ .Values.superuser.name | quote }}
-        - name: SUPERUSER_EMAIL
-          value: {{ .Values.superuser.email | quote }}
-        - name: SKIP_STARTUP_SCRIPTS
-          value: {{ .Values.skipStartupScripts | quote }}
-        {{- if .Values.dbWaitDebug }}
-        - name: DB_WAIT_DEBUG
-          value: "1"
-        {{- end }}
-        {{- if .Values.overrideUnitConfig }}
-        - name: UNIT_CONFIG
-          value: /run/config/netbox/nginx-unit.json
-        {{- end }}
-        {{- with .Values.extraEnvs }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.allowedHostsIncludesPodIp }}
-         - name: POD_IP
-           valueFrom:
-             fieldRef:
-               apiVersion: v1
-               fieldPath: status.podIP
-        {{- end }}
-        ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
-        {{- if .Values.readinessProbe.enabled }}
-        readinessProbe:
-          httpGet:
-            path: /{{ .Values.basePath }}login/
-            port: http
-            {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
-            httpHeaders:
-            - name: Host
-              value: {{ (index .Values.allowedHosts 0) | quote }}
-            {{- end }}
-          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-          successThreshold: {{ .Values.readinessProbe.successThreshold }}
-          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-        {{- end }}
-        volumeMounts:
-        - name: config
-          mountPath: /etc/netbox/config/configuration.py
-          subPath: configuration.py
-          readOnly: true
-        {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
-        - name: config
-          mountPath: /etc/netbox/config/ldap/ldap_config.py
-          subPath: ldap_config.py
-          readOnly: true
-        {{ end -}}
-        - name: config
-          mountPath: /run/config/netbox
-          readOnly: true
-        - name: secrets
-          mountPath: /run/secrets/netbox
-          readOnly: true
-        {{- include "netbox.extraConfig.volumeMounts" . | nindent 8 -}}
-        - name: netbox-tmp
-          mountPath: /tmp
-        - name: media
-          mountPath: /opt/netbox/netbox/media
-          subPath: {{ .Values.persistence.subPath | default "" | quote }}
-        {{- if .Values.reportsPersistence.enabled }}
-        - name: reports
-          mountPath: /opt/netbox/netbox/reports
-          subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
-        {{- end }}
-        {{- if .Values.scriptsPersistence.enabled }}
-        - name: scripts
-          mountPath: /opt/netbox/netbox/scripts
-          subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
-        {{- end }}
-        - name: optunit
-          mountPath: /opt/unit
-        - name: secrets
-          mountPath: /run/secrets/superuser_password
-          subPath: superuser_password
-          readOnly: true
-        - name: secrets
-          mountPath: /run/secrets/superuser_api_token
-          subPath: superuser_api_token
-          readOnly: true
-        {{- with .Values.extraVolumeMounts }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.resources }}
-        resources:
-          {{- toYaml .Values.resources | nindent 10 }}
-        {{- end }}
-      {{- with .Values.extraContainers }}
-      {{- toYaml . | nindent 6 }}
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 10 }}
+          image: {{ template "netbox.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: SUPERUSER_NAME
+            value: {{ .Values.superuser.name | quote }}
+          - name: SUPERUSER_EMAIL
+            value: {{ .Values.superuser.email | quote }}
+          - name: SKIP_STARTUP_SCRIPTS
+            value: {{ .Values.skipStartupScripts | quote }}
+          {{- if .Values.dbWaitDebug }}
+          - name: DB_WAIT_DEBUG
+            value: "1"
+          {{- end }}
+          {{- if .Values.overrideUnitConfig }}
+          - name: UNIT_CONFIG
+            value: /run/config/netbox/nginx-unit.json
+          {{- end }}
+          {{- with .Values.extraEnvs }}
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- if .Values.allowedHostsIncludesPodIp }}
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          {{- end }}
+          ports:
+          - name: http
+            containerPort: {{ .Values.containerPorts.http }}
+            protocol: TCP
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /{{ .Values.basePath }}login/
+              port: http
+              {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
+              httpHeaders:
+              - name: Host
+                value: {{ (index .Values.allowedHosts 0) | quote }}
+              {{- end }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.worker.resources }}
+          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+          - name: config
+            mountPath: /etc/netbox/config/configuration.py
+            subPath: configuration.py
+            readOnly: true
+          {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
+          - name: config
+            mountPath: /etc/netbox/config/ldap/ldap_config.py
+            subPath: ldap_config.py
+            readOnly: true
+          {{ end -}}
+          - name: config
+            mountPath: /run/config/netbox
+            readOnly: true
+          - name: secrets
+            mountPath: /run/secrets/netbox
+            readOnly: true
+          {{- include "netbox.extraConfig.volumeMounts" . | nindent 8 -}}
+          - name: netbox-tmp
+            mountPath: /tmp
+          - name: media
+            mountPath: /opt/netbox/netbox/media
+            subPath: {{ .Values.persistence.subPath | default "" | quote }}
+          {{- if .Values.reportsPersistence.enabled }}
+          - name: reports
+            mountPath: /opt/netbox/netbox/reports
+            subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
+          {{- end }}
+          {{- if .Values.scriptsPersistence.enabled }}
+          - name: scripts
+            mountPath: /opt/netbox/netbox/scripts
+            subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
+          {{- end }}
+          - name: optunit
+            mountPath: /opt/unit
+          - name: secrets
+            mountPath: /run/secrets/superuser_password
+            subPath: superuser_password
+            readOnly: true
+          - name: secrets
+            mountPath: /run/secrets/superuser_api_token
+            subPath: superuser_api_token
+            readOnly: true
+          {{- if .Values.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumeMounts "context" $ ) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.metrics.enabled }}
+          {{- if .Values.metrics.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.extraVolumeMounts "context" $ ) | nindent 12 }}
+          {{- end }}
+          {{- end }}
+      {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
+      {{- if or .Values.initContainers $needsVolumePermissions }}
+      initContainers:
+      {{- if .Values.initContainers }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+      {{- end }}
       {{- end }}
       volumes:
       - name: config
