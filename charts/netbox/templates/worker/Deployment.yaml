@@ -111,13 +111,19 @@ spec:
               mountPath: /tmp
             - name: media
               mountPath: /opt/netbox/netbox/media
-              subPath: {{ .Values.persistence.subPath | default "" | quote }}
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath | quote }}
+              {{- end }}
             - name: reports
               mountPath: {{ .Values.reportsPersistence.path  }}
-              subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
+              {{- if .Values.reportsPersistence.subPath }}
+              subPath: {{ .Values.reportsPersistence.subPath | quote }}
+              {{- end }}
             - name: scripts
               mountPath: {{ .Values.scriptsPersistence.path  }}
-              subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
+              {{- if .Values.scriptsPersistence.subPath }}
+              subPath: {{ .Values.scriptsPersistence.subPath | quote }}
+              {{- end }}
             {{- if .Values.worker.extraVolumeMounts }}
               {{- include "common.tplvalues.render" ( dict "value" .Values.worker.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
