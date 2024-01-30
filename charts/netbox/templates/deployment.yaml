@@ -90,9 +90,6 @@ spec:
           - name: UNIT_CONFIG
             value: /run/config/netbox/nginx-unit.json
           {{- end }}
-          {{- with .Values.extraEnvs }}
-          {{- toYaml . | nindent 8 }}
-          {{- end }}
           {{- if .Values.allowedHostsIncludesPodIp }}
           - name: POD_IP
             valueFrom:
@@ -121,6 +118,9 @@ spec:
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
           successThreshold: {{ .Values.readinessProbe.successThreshold }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.resources }}
+        resources: {{- toYaml .Values.resources | nindent 10 }}
         {{- end }}
         volumeMounts:
           - name: config
