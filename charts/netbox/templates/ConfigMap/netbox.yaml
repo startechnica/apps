@@ -82,12 +82,12 @@ data:
       HOST: {{ include "netbox.databaseHost" . | quote }}
       USER: {{ include "netbox.databaseUser" . | quote }}
       NAME: {{ include "netbox.databaseName" . | quote }}
-      PORT: {{ include "netbox.databasePort" . | int }}
+      PORT: {{ include "netbox.databasePort" . }}
       {{- else -}}
       HOST: {{ include "netbox.databaseHost" . | quote }}
       USER: {{ include "netbox.databaseUser" . | quote }}
       NAME: {{ include "netbox.databaseName" . | quote }}
-      PORT: {{ include "netbox.databasePort" . | int }}
+      PORT: {{ include "netbox.databasePort" . }}
       {{- end }}
       OPTIONS:
         sslmode: {{ .Values.externalDatabase.sslMode | quote }}
