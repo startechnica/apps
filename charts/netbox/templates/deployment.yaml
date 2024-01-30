@@ -148,13 +148,13 @@ spec:
         - name: optunit
           emptyDir:
             medium: Memory
-        - name: media
-          {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+        # - name: media
+        #   {{- if .Values.persistence.enabled }}
+        #   persistentVolumeClaim:
+        #     claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+        #   {{- else }}
+        #   emptyDir: {}
+        #   {{- end }}
         # - name: reports
         #   {{- if .Values.reportsPersistence.enabled }}
         #   persistentVolumeClaim:

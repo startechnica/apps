@@ -178,23 +178,23 @@ spec:
         - name: netbox-tmp
           emptyDir:
             medium: Memory
-        - name: media
-          {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
-        {{- if .Values.reportsPersistence.enabled }}
-        - name: reports
-          persistentVolumeClaim:
-            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
-        {{- end }}
-        {{- if .Values.scriptsPersistence.enabled }}
-        - name: scripts
-          persistentVolumeClaim:
-            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
-        {{- end }}
+        # - name: media
+        #   {{- if .Values.persistence.enabled }}
+        #   persistentVolumeClaim:
+        #     claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+        #   {{- else }}
+        #   emptyDir: {}
+        #   {{- end }}
+        # {{- if .Values.reportsPersistence.enabled }}
+        # - name: reports
+        #   persistentVolumeClaim:
+        #     claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+        # {{- end }}
+        # {{- if .Values.scriptsPersistence.enabled }}
+        # - name: scripts
+        #   persistentVolumeClaim:
+        #     claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+        # {{- end }}
         {{- with .Values.worker.extraVolumes }}
         {{- toYaml . | nindent 6 }}
         {{- end }}
