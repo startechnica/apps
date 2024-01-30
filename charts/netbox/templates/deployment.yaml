@@ -77,34 +77,37 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
-        - name: SUPERUSER_NAME
-          value: {{ .Values.superuser.name | quote }}
-        - name: SUPERUSER_EMAIL
-          value: {{ .Values.superuser.email | quote }}
-        - name: SKIP_STARTUP_SCRIPTS
-          value: {{ .Values.skipStartupScripts | quote }}
-        {{- if .Values.dbWaitDebug }}
-        - name: DB_WAIT_DEBUG
-          value: "1"
-        {{- end }}
-        {{- if .Values.overrideUnitConfig }}
-        - name: UNIT_CONFIG
-          value: /run/config/netbox/nginx-unit.json
-        {{- end }}
-        {{- with .Values.extraEnvs }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.allowedHostsIncludesPodIp }}
-         - name: POD_IP
-           valueFrom:
-             fieldRef:
-               apiVersion: v1
-               fieldPath: status.podIP
-        {{- end }}
+          - name: SUPERUSER_NAME
+            value: {{ .Values.superuser.name | quote }}
+          - name: SUPERUSER_EMAIL
+            value: {{ .Values.superuser.email | quote }}
+          - name: SKIP_STARTUP_SCRIPTS
+            value: {{ .Values.skipStartupScripts | quote }}
+          {{- if .Values.dbWaitDebug }}
+          - name: DB_WAIT_DEBUG
+            value: "1"
+          {{- end }}
+          {{- if .Values.overrideUnitConfig }}
+          - name: UNIT_CONFIG
+            value: /run/config/netbox/nginx-unit.json
+          {{- end }}
+          {{- with .Values.extraEnvs }}
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- if .Values.allowedHostsIncludesPodIp }}
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          {{- end }}
+          {{- if .Values.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+          {{- end }}
         ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
+          - name: http
+            containerPort: 8080
+            protocol: TCP
         {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
