@@ -1725,7 +1725,6 @@ serviceMonitor:
 ## @param postgresql.auth.password Password for the custom user to create
 ## @param postgresql.auth.database Name for a custom database to create
 ## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials
-## @param postgresql.architecture PostgreSQL architecture (`standalone` or `replication`)
 ##
 postgresql:
   enabled: true
@@ -1735,7 +1734,26 @@ postgresql:
     password: ""
     database: netbox
     existingSecret: ""
+    ## @param auth.secretKeys.adminPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param auth.secretKeys.userPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param auth.secretKeys.replicationPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ##
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+      replicationPasswordKey: replication-password
+  ## @param postgresql.architecture PostgreSQL architecture (`standalone` or `replication`)
+  ##
   architecture: standalone
+  ## @section PostgreSQL Primary parameters
+  ##
+  primary:
+    ## PostgreSQL Primary persistence configuration
+    ##
+    persistence:
+      ## @param postgresql.primary.persistence.enabled Enable PostgreSQL Primary data persistence using PVC
+      ##
+      enabled: false
 
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
