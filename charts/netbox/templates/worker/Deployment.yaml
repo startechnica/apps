@@ -70,7 +70,7 @@ spec:
           image: {{ template "netbox.worker.image" . }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy | quote }}
           {{- if .Values.worker.containerSecurityContext.enabled }}
-          securityContext: {{- omit .Values.worker.containerSecurityContext "enabled" | toYaml | nindent 8 }}
+          securityContext: {{- omit .Values.worker.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
@@ -82,9 +82,8 @@ spec:
             - /opt/netbox/netbox/manage.py
             - rqworker
           {{- end }}
-          {{- with .Values.worker.extraEnvs }}
-          env:
-          {{- toYaml . | nindent 8 }}
+          {{- if .Values.worker.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.worker.resources }}
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}
