@@ -36,17 +36,14 @@ spec:
         {{- if and .Values.metrics.enabled .Values.metrics.podAnnotations }}
           {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.podAnnotations "context" $ ) | nindent 8 }}
         {{- end }}
-      labels:
-        {{- include "netbox.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: netbox
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: server
+        app.kubernetes.io/part-of: netbox
+        {{- if and .Values.metrics.enabled .Values.metrics.podLabels }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.podLabels "context" $ ) | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
+      {{- include "netbox.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "netbox.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
       securityContext:
