@@ -1542,6 +1542,9 @@ redis:
   # To use an external Redis instance, set this to false and configure the
   # settings under *both* tasksRedis *and* cachingRedis
   enabled: true
+  ## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication`
+  ##
+  architecture: standalone
 
 tasksRedis:
   database: 0
