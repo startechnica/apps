@@ -41,10 +41,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
+      {{- include "netbox.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "netbox.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
       {{- if .Values.podSecurityContext.enabled }}

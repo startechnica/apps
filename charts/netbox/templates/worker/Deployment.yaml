@@ -38,29 +38,54 @@ spec:
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: netbox
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-      {{- toYaml . | nindent 6 }}
+      {{- include "netbox.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.worker.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.worker.hostAliases "context" $) | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "netbox.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.worker.automountServiceAccountToken }}
-      securityContext:
-        {{- toYaml .Values.worker.podSecurityContext | nindent 8 }}
+      {{- if .Values.worker.priorityClassName }}
+      priorityClassName: {{ .Values.worker.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.worker.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.worker.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.worker.podAffinityPreset "component" "worker" "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.worker.podAntiAffinityPreset "component" "worker" "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.worker.nodeAffinityPreset.type "key" .Values.worker.nodeAffinityPreset.key "values" .Values.worker.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.worker.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.worker.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.worker.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.worker.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.worker.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.worker.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ template "netbox.serviceAccountName" . }}
       {{- with .Values.worker.extraInitContainers }}
       initContainers:
       {{- toYaml . | nindent 6 }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
       containers:
       - name: {{ template "netbox.worker.fullname" . }}
-      {{- if .Values.worker.podSecurityContext.enabled }}
-      securityContext: {{- omit .Values.worker.podSecurityContext "enabled" | toYaml | nindent 8 }}
-      {{- end }}
         image: {{ template "netbox.worker.image" . }}
+        imagePullPolicy: {{ .Values.worker.image.pullPolicy | quote }}
+        {{- if .Values.worker.containerSecurityContext.enabled }}
+        securityContext: {{- omit .Values.worker.containerSecurityContext "enabled" | toYaml | nindent 8 }}
+        {{- end }}
+        {{- if .Values.diagnosticMode.enabled }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+        {{- else if .Values.worker.command }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.worker.command "context" $) | nindent 12 }}
+        {{- else }}
         command:
-        - /opt/netbox/venv/bin/python
-        - /opt/netbox/netbox/manage.py
-        - rqworker
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+          - /opt/netbox/venv/bin/python
+          - /opt/netbox/netbox/manage.py
+          - rqworker
+        {{- end }}
         {{- with .Values.worker.extraEnvs }}
         env:
         {{- toYaml . | nindent 8 }}
@@ -164,22 +189,6 @@ spec:
           claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
       {{- end }}
       {{- with .Values.worker.extraVolumes }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.worker.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.worker.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.worker.tolerations }}
-      tolerations:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.worker.hostAliases }}
-      hostAliases:
       {{- toYaml . | nindent 6 }}
       {{- end }}
 {{- end }}

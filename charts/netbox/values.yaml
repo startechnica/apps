@@ -328,8 +328,6 @@ storageConfig: {}
   # AWS_S3_ENDPOINT_URL: 'endpoint URL of S3 provider'
   # AWS_S3_REGION_NAME: 'eu-west-1'
 
-
-
 # Determine how many objects to display per page within a list. (Default: 50)
 paginateCount: 50
 
@@ -392,7 +390,6 @@ remoteAuth:
   ##
   existingSecret: ""
 
-
   # The following options are specific for backend "netbox.authentication.LDAPBackend"
   # you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
   # see https://django-auth-ldap.readthedocs.io
@@ -439,11 +436,13 @@ sessionCookieName: sessionid
 # Localization
 enableLocalization: false
 
-# Time zone (default: UTC)
+## @param timeZone  Time zone (default: UTC)
+##
 timeZone: UTC
 
-# Date/time formatting. See the following link for supported formats:
-# https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
+## Date/time formatting. See the following link for supported formats:
+## https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
+##
 dateFormat: 'N j, Y'
 shortDateFormat: 'Y-m-d'
 timeFormat: 'g:i a'
@@ -535,8 +534,6 @@ overrideUnitConfig: {}
   #       idle_timeout: 120
   #
   # access_log: /dev/stdout
-
-
 
 imagePullSecrets: []
 
