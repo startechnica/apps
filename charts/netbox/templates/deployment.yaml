@@ -1,4 +1,4 @@
-apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "netbox.fullname" . }}
@@ -106,7 +106,7 @@ spec:
           {{- end }}
         ports:
           - name: http
-            containerPort: {{ .Values.containerPorts.http }}
+            containerPort: 8080
             protocol: TCP
         {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
@@ -221,13 +221,11 @@ spec:
         {{- else }}
         emptyDir: {}
         {{- end }}
+      {{- if .Values.reportsPersistence.enabled }}
       - name: reports
-        {{- if .Values.reportsPersistence.enabled }}
         persistentVolumeClaim:
           claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
-        {{- else }}
-          emptyDir: {}
-        {{- end }}
+      {{- end }}
       {{- with .Values.extraVolumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
