@@ -11,13 +11,14 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-{{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-{{- end }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ default 1 .Values.replicaCount }}
+  {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
   selector:
-    matchLabels:
-      {{- include "netbox.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: netbox
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: server
+      app.kubernetes.io/part-of: netbox
   {{ if .Values.updateStrategy -}}
   strategy:
     {{- toYaml .Values.updateStrategy | nindent 4 }}
@@ -29,8 +30,11 @@ spec:
         {{- if (not .Values.existingSecret) }}
         checksum/secret: {{ include (print $.Template.BasePath "/Secret/netbox.yaml") . | sha256sum }}
         {{- end }}
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
+        {{- if .Values.podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.metrics.enabled .Values.metrics.podAnnotations }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.podAnnotations "context" $ ) | nindent 8 }}
         {{- end }}
       labels:
         {{- include "netbox.selectorLabels" . | nindent 8 }}
