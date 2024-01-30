@@ -47,7 +47,6 @@ spec:
       {{- if .Values.podSecurityContext.enabled }}
       securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
-
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -152,6 +151,9 @@ spec:
             {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.extraVolumeMounts "context" $ ) | nindent 12 }}
           {{- end }}
           {{- end }}
+        {{- if .Values.sidecars }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.sidecars "context" $) | nindent 8 }}
+        {{- end }}
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
       initContainers:
         - name: init-dirs
