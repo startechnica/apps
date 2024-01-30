@@ -151,11 +151,6 @@ spec:
             mountPath: /opt/netbox/netbox/reports
             subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
           {{- end }}
-          {{- if .Values.scriptsPersistence.enabled }}
-          - name: scripts
-            mountPath: /opt/netbox/netbox/scripts
-            subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
-          {{- end }}
           - name: optunit
             mountPath: /opt/unit
           - name: secrets
