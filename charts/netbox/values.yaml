@@ -1774,7 +1774,7 @@ redis:
   auth:
     ## @param auth.enabled Enable password authentication
     ##
-    enabled: false
+    enabled: true
 
 tasksRedis:
   database: 0
