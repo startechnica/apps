@@ -141,3 +141,31 @@ spec:
                   items:
                   - key: {{ include "netbox.cachingRedis.secretKey" . | quote }}
                     path: redis_cache_password
+        {{- include "netbox.extraConfig.volumes" . | nindent 6 -}}
+        - name: netbox-tmp
+          emptyDir:
+            medium: Memory
+        - name: optunit
+          emptyDir:
+            medium: Memory
+        - name: media
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: reports
+          {{- if .Values.reportsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: scripts
+          {{- if .Values.scriptsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
