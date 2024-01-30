@@ -216,9 +216,7 @@ spec:
           {{- if .Values.init.resources }}
           resources: {{- toYaml .Values.init.resources | nindent 10 }}
           {{- end }}
-          {{- if .Values.init.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.init.containerSecurityContext "enabled" | toYaml | nindent 10 }}
-          {{- end }}
           volumeMounts:
             - name: optunit
               mountPath: /opt/unit

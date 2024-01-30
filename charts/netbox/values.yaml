@@ -1172,15 +1172,28 @@ init:
 
   resources: {}
 
+  # containerSecurityContext:
+  #   enabled: true
+  #   capabilities:
+  #     drop:
+  #       - ALL
+  #   readOnlyRootFilesystem: true
+  #   runAsNonRoot: true
+  #   runAsUser: 1000
+  #   runAsGroup: 1000  # Keep the same as securityContext.runAsGroup
+
   containerSecurityContext:
     enabled: true
-    capabilities:
-      drop:
-        - ALL
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
+    seLinuxOptions: null
     runAsUser: 1000
-    runAsGroup: 1000  # Keep the same as securityContext.runAsGroup
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
 
 test:
   image:
