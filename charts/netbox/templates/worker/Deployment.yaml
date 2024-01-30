@@ -51,10 +51,10 @@ spec:
       {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
-      - name: {{ template "netbox.worker.image" . }}
+      - name: {{ template "netbox.worker.fullname" . }}
         securityContext:
           {{- toYaml .Values.worker.securityContext | nindent 10 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        image: {{ template "netbox.worker.image" . }}
         command:
         - /opt/netbox/venv/bin/python
         - /opt/netbox/netbox/manage.py

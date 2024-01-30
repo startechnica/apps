@@ -3,7 +3,7 @@
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: VirtualService
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
@@ -14,7 +14,7 @@ metadata:
   {{- end }}
 spec:
   gateways:
-    - {{ printf "%s/%s" (include "common.names.namespace" .) (include "common.names.fullname" .) }}
+    - {{ printf "%s/%s" (include "common.names.namespace" .) (include "netbox.fullname" .) }}
   {{- if .Values.netbox.ingress.hosts }}
   hosts:
     {{- range .Values.netbox.ingress.hosts }}

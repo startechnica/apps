@@ -53,6 +53,13 @@ Return the proper Netbox worker image name
 {{- end -}}
 
 {{/*
+Return the proper Netbox housekeeping image name
+*/}}
+{{- define "netbox.housekeeping.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "netbox.chart" -}}

@@ -1,37 +1,45 @@
 {{- if and .Values.worker.enabled .Values.worker.autoscaling.enabled }}
-apiVersion: autoscaling/v2
+apiVersion: {{ include "common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ template "netbox.worker.fullname" . }}
-  {{- with .Values.commonAnnotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  labels:
-    {{- include "netbox.labels" . | nindent 4 }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
 spec:
   scaleTargetRef:
-    apiVersion: apps/v1
+    apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
     kind: Deployment
-    name: {{ include "netbox.fullname" . }}-worker
+    name: {{ template "netbox.worker.fullname" . }}
   minReplicas: {{ .Values.worker.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.worker.autoscaling.maxReplicas }}
   metrics:
-  {{- if .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: {{ .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
-  {{- end }}
-  {{- if .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: {{ .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
-  {{- end }}
+    {{- if or .Values.worker.autoscaling.targetCPU .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
+        targetAverageUtilization: {{ coalesce .Values.worker.autoscaling.targetCPU .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ coalesce .Values.worker.autoscaling.targetCPU .Values.worker.autoscaling.targetCPUUtilizationPercentage }}
+        {{- end }}
+    {{- end }}
+    {{- if or .Values.worker.autoscaling.targetMemory .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
+        targetAverageUtilization: {{ coalesce .Values.worker.autoscaling.targetMemory .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ coalesce .Values.worker.autoscaling.targetMemory .Values.worker.autoscaling.targetMemoryUtilizationPercentage }}
+        {{- end }}
+    {{- end }}
 {{- end }}

@@ -363,8 +363,13 @@ preferIPv4: false
 rackElevationDefaultUnitHeight: 22
 rackElevationDefaultUnitWidth: 220
 
-# Remote authentication support
+## @section Authentication parameters
+
+## 
+##
 remoteAuth:
+  ## @param remoteAuth.enabled  Enable remote authentication support
+  ##
   enabled: false
   backends:
     - netbox.authentication.RemoteUserBackend
@@ -383,6 +388,10 @@ remoteAuth:
   staffGroups: []
   staffUsers: []
   groupSeparator: '|'
+  ## @param remoteAuth.existingSecret Existing secret containing remote authentication parameters
+  ##
+  existingSecret: ""
+
 
   # The following options are specific for backend "netbox.authentication.LDAPBackend"
   # you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
@@ -442,10 +451,11 @@ shortTimeFormat: 'H:i:s'
 dateTimeFormat: 'N j, Y g:i a'
 shortDateTimeFormat: 'Y-m-d H:i'
 
-## Extra configuration settings
-# You can pass additional YAML files to be loaded into NetBox's configuration.
-# These can be passed as arbitrary configuration values set in the chart, or
-# you can load arbitrary *.yaml keys from ConfigMaps and Secrets.
+## @param extraConfig  Extra configuration settings
+## You can pass additional YAML files to be loaded into NetBox's configuration.
+## These can be passed as arbitrary configuration values set in the chart, or
+## you can load arbitrary *.yaml keys from ConfigMaps and Secrets.
+##
 extraConfig: []
   # - values:
   #     EXTRA_SETTING_ONE: example
@@ -459,10 +469,11 @@ extraConfig: []
   #     items: []
   #     optional: false
 
-# If provided, this should be a 50+ character string of random characters. It
-# will be randomly generated if left blank.
-# You can also use an existing secret with "secret_key" instead of "secretKey"
-# See `existingSecret` for details
+## @param secretKey  If provided, this should be a 50+ character string of random characters. It
+##    will be randomly generated if left blank.
+## You can also use an existing secret with "secret_key" instead of "secretKey"
+## See `existingSecret` for details
+##
 secretKey: ""
 
 ## Provide passwords using existing secret
@@ -1074,10 +1085,46 @@ extraInitContainers: []
 #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
 
+## @section Netbox housekeeping parameters
 
-# Configuration of Cron settings
+## Configuration of Cron settings
+##
 housekeeping:
+  ## @param housekeeping.enabled Whether to enable Netbox housekeeping cron job
+  ##
   enabled: true
+  ## Netbox housekeeping image version
+  ## ref: https://hub.docker.com/r/netboxcommunity/netbox/tags
+  ## @param image.registry [default: REGISTRY_NAME] Netbox housekeeping image registry
+  ## @param image.repository [default: REPOSITORY_NAME/netbox] Netbox housekeeping image repository
+  ## @skip image.tag Netbox housekeeping image tag (immutable tags are recommended)
+  ## @param image.digest Netbox housekeeping image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param image.pullPolicy Netbox housekeeping image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: netboxcommunity/netbox
+    tag: "v3.7.1-2.8.0"
+    digest: ""
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+    ## Set to true if you would like to see extra information on logs
+    ##
+    debug: false
+  
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 5
   restartPolicy: OnFailure
@@ -1195,8 +1242,6 @@ worker:
     ##
     debug: false
   
-
-
   replicaCount: 1
 
   podAnnotations: {}
@@ -1259,7 +1304,7 @@ worker:
     enabled: false
     minReplicas: 1
     maxReplicas: 11
-    targetCPU: ""
+    targetCPU: 80
     targetMemory: ""
     targetCPUUtilizationPercentage: 80
     # targetMemoryUtilizationPercentage: 80

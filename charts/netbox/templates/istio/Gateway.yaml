@@ -3,7 +3,7 @@
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
