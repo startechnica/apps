@@ -106,3 +106,38 @@ spec:
         - name: config
           configMap:
             name: {{ include "netbox.fullname" . }}
+        - name: secrets
+          projected:
+            sources:
+              - secret:
+                  name: {{ .Values.existingSecret | default (include "netbox.fullname" .) | quote }}
+                  items:
+                  # Used by netbox-docker entry scripts
+                  - key: superuser_password
+                    path: superuser_password
+                  - key: superuser_api_token
+                    path: superuser_api_token
+                  # Used by our configuration
+                  - key: email_password
+                    path: email_password
+                  - key: secret_key
+                    path: secret_key
+                  {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
+                  - key: ldap_bind_password
+                    path: ldap_bind_password
+                  {{- end }}
+              - secret:
+                  name: {{ include "netbox.postgresql.secret" . | quote }}
+                  items:
+                  - key: {{ include "netbox.postgresql.secretKey" . | quote }}
+                    path: db_password
+              - secret:
+                  name: {{ include "netbox.tasksRedis.secret" . | quote }}
+                  items:
+                  - key: {{ include "netbox.tasksRedis.secretKey" . | quote }}
+                    path: redis_tasks_password
+              - secret:
+                  name: {{ include "netbox.cachingRedis.secret" . | quote }}
+                  items:
+                  - key: {{ include "netbox.cachingRedis.secretKey" . | quote }}
+                    path: redis_cache_password
