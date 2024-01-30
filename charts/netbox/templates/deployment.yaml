@@ -214,11 +214,11 @@ spec:
             - '-c'
             - mkdir -p /opt/unit/state /opt/unit/tmp
           {{- if .Values.init.resources }}
-          resources:
-            {{- toYaml .Values.init.resources | nindent 10 }}
+          resources: {{- toYaml .Values.init.resources | nindent 10 }}
           {{- end }}
-          securityContext:
-            {{- toYaml .Values.init.securityContext | nindent 10 }}
+          {{- if .Values.init.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.init.containerSecurityContext "enabled" | toYaml | nindent 10 }}
+          {{- end }}
           volumeMounts:
             - name: optunit
               mountPath: /opt/unit
