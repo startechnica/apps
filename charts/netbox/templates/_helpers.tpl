@@ -83,6 +83,20 @@ Return the proper Netbox init image name
 {{- end -}}
 
 {{/*
+Return the proper PostgreSQL image name
+*/}}
+{{- define "argocd.postgresql.image" -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.postgresql.image "global" .Values.global ) -}}
+{{- end -}}
+
+{{/*
+Return the proper Redis image name
+*/}}
+{{- define "argocd.redis.image" -}}
+{{- include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) -}}
+{{- end -}}
+
+{{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "netbox.imagePullSecrets" -}}
