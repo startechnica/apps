@@ -1740,6 +1740,14 @@ externalDatabase:
   database: netbox
   username: netbox
   password: ""
+  existingSecret: ""
+  existingSecretHostKey: ""
+  existingSecretPortKey: ""
+  existingSecretUserKey: ""
+  existingSecretDatabaseKey: ""
+  existingSecretPasswordKey: ""
+  annotations: {}
+
   existingSecretName: ""
   existingSecretKey: postgresql-password
 
@@ -1748,14 +1756,6 @@ externalDatabase:
   connMaxAge: 300
   disableServerSideCursors: false
   targetSessionAttrs: read-write
-
-  existingSecret: ""
-  existingSecretHostKey: ""
-  existingSecretPortKey: ""
-  existingSecretUserKey: ""
-  existingSecretDatabaseKey: ""
-  existingSecretPasswordKey: ""
-  annotations: {}
 
 ## @section Redis common configuration parameters
 ## https://github.com/bitnami/containers/tree/main/bitnami/redis#configuration
