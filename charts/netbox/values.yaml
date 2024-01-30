@@ -813,10 +813,10 @@ extraContainerPorts: []
 ##
 podSecurityContext:
   enabled: true
-  fsGroupChangePolicy: Always
-  sysctls: []
-  supplementalGroups: []
   fsGroup: 1000
+  # fsGroupChangePolicy: Always
+  # sysctls: []
+  # supplementalGroups: []
   runAsNonRoot: true
   # runAsUser: 1000
   # runAsGroup: 1000

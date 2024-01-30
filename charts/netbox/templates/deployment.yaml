@@ -150,7 +150,10 @@ spec:
         - name: init-dirs
           image: {{ template "netbox.init.image" . }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy }}
-          command: [/bin/sh, -c, mkdir -p /opt/unit/state /opt/unit/tmp]
+          command:
+            - /bin/sh
+            - '-c'
+            - mkdir -p /opt/unit/state /opt/unit/tmp
           {{- if .Values.init.resources }}
           resources:
             {{- toYaml .Values.init.resources | nindent 10 }}
