@@ -264,7 +264,7 @@ Return the Database hostname
 Return the Database port
 */}}
 {{- define "netbox.databasePort" -}}
-  {{- ternary "5432" .Values.externalDatabase.port .Values.postgresql.enabled | quote -}}
+  {{- ternary 5432 .Values.externalDatabase.port .Values.postgresql.enabled | int -}}
 {{- end -}}
 
 {{/*
