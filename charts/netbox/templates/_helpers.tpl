@@ -567,9 +567,11 @@ Return the Redis&reg; port
 */}}
 {{- define "netbox.redisPort" -}}
 {{- if .Values.redis.enabled }}
-    {{- .Values.redis.service.port -}}
-{{- else -}}
+    {{- .Values.redis.master.service.ports.redis -}}
+{{- else if .Values.externalRedis.port -}}
     {{- .Values.externalRedis.port -}}
+{{- else -}}
+    {{ 6379 | int }}
 {{- end -}}
 {{- end -}}
 
