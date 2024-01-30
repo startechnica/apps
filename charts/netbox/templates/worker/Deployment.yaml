@@ -52,8 +52,9 @@ spec:
       {{- end }}
       containers:
       - name: {{ template "netbox.worker.fullname" . }}
-        securityContext:
-          {{- toYaml .Values.worker.securityContext | nindent 10 }}
+      {{- if .Values.worker.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.worker.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
         image: {{ template "netbox.worker.image" . }}
         command:
         - /opt/netbox/venv/bin/python
