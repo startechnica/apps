@@ -83,6 +83,7 @@ spec:
             - rqworker
           {{- end }}
           {{- if .Values.worker.extraEnvVars }}
+          env:
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.worker.resources }}
@@ -111,16 +112,12 @@ spec:
             - name: media
               mountPath: /opt/netbox/netbox/media
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
-            {{- if .Values.reportsPersistence.enabled }}
             - name: reports
-              mountPath: /opt/netbox/netbox/reports
+              mountPath: {{ .Values.reportsPersistence.path  }}
               subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
-            {{- end }}
-            {{- if .Values.scriptsPersistence.enabled }}
             - name: scripts
-              mountPath: /opt/netbox/netbox/scripts
+              mountPath: {{ .Values.scriptsPersistence.path  }}
               subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
-            {{- end }}
             {{- if .Values.worker.extraVolumeMounts }}
               {{- include "common.tplvalues.render" ( dict "value" .Values.worker.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
@@ -195,6 +192,6 @@ spec:
         #     claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
         # {{- end }}
         {{- with .Values.worker.extraVolumes }}
-        {{- toYaml . | nindent 6 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
 {{- end }}

@@ -731,7 +731,6 @@ scriptsPersistence:
   ##   (gp2 on AWS, standard on GKE, AWS & OpenStack)
   ##
   storageClass: ""
-
   ## @param scriptsPersistence.path The path the volume will be mounted at on Netbox containers
   ## NOTE: Useful when using different Netbox images
   ##
