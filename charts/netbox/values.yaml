@@ -686,6 +686,10 @@ reportsPersistence:
   ##   (gp2 on AWS, standard on GKE, AWS & OpenStack)
   ##
   storageClass: ""
+  ## @param reportsPersistence.path The path the volume will be mounted at on Redis&reg; master containers
+  ## NOTE: Useful when using different Redis&reg; images
+  ##
+  path: /opt/netbox/netbox/reports
   ## @param reportsPersistence.subPath  Existing claim's subPath to use, e.g. "media" (optional)
   ##
   subPath: ""
@@ -727,9 +731,11 @@ scriptsPersistence:
   ##   (gp2 on AWS, standard on GKE, AWS & OpenStack)
   ##
   storageClass: ""
-  ## @param scriptsPersistence.existingClaim  Use a existing PVC which must be created manually before bound
+
+  ## @param scriptsPersistence.path The path the volume will be mounted at on Netbox containers
+  ## NOTE: Useful when using different Netbox images
   ##
-  existingClaim: ""
+  path: /opt/netbox/netbox/scripts
   ## @param scriptsPersistence.subPath  Existing claim's subPath to use, e.g. "media" (optional)
   ##
   subPath: ""
@@ -751,6 +757,12 @@ scriptsPersistence:
   ##     app: my-app
   ##
   selector: {}
+  ## @param scriptsPersistence.dataSource Custom PVC data source
+  ##
+  dataSource: {}
+  ## @param scriptsPersistence.existingClaim  Use a existing PVC which must be created manually before bound
+  ##
+  existingClaim: ""
 
 podAnnotations: {}
 

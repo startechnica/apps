@@ -145,11 +145,12 @@ spec:
           - name: media
             mountPath: /opt/netbox/netbox/media
             subPath: {{ .Values.persistence.subPath | default "" | quote }}
-          {{- if .Values.reportsPersistence.enabled }}
           - name: reports
-            mountPath: /opt/netbox/netbox/reports
+            mountPath: {{ .Values.reportsPersistence.path  }}
             subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
-          {{- end }}
+          - name: scripts
+            mountPath: {{ .Values.scriptsPersistence.path  }}
+            subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
           - name: optunit
             mountPath: /opt/unit
           - name: secrets
