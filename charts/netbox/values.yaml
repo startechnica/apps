@@ -1811,6 +1811,16 @@ redis:
     ## @param auth.enabled Enable password authentication
     ##
     enabled: true
+  ## @section Redis master configuration parameters
+  ##
+  master:
+    ## Persistence parameters
+    ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+    ##
+    persistence:
+      ## @param master.persistence.enabled Enable persistence on Redis master nodes using Persistent Volume Claims
+      ##
+      enabled: false
 
 tasksRedis:
   database: 0
