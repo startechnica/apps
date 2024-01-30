@@ -5,6 +5,9 @@ data center infrastructure management (DCIM) tool.
 
 Forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart)
 
+**Note:** This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions
+v5.0.0 and up are from this fork and will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
+
 **This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
 
 ## TL;DR
@@ -57,7 +60,9 @@ with Sentinel (e.g. using [Aaron Layfield](https://github.com/DandyDeveloper)'s
 [redis-ha chart](https://github.com/DandyDeveloper/charts/tree/master/charts/redis-ha)).
 
 Set `persistence.enabled` to `false` and use the S3 `storageBackend` for object
-storage. This works well with Minio or Ceph RGW as well as Amazon S3. See [Using extraConfig for S3 storage configuration](#using-extraconfig-for-s3-storage-configuration) and [Persistent storage pitfalls](#persistent-storage-pitfalls), below.
+storage. This works well with Minio or Ceph RGW as well as Amazon S3. See 
+[Using extraConfig for S3 storage configuration](#using-extraconfig-for-s3-storage-configuration) and 
+[Persistent storage pitfalls](#persistent-storage-pitfalls), below.
 
 Run multiple replicas of the NetBox web front-end to avoid interruptions during
 upgrades or at other times when the pods need to be restarted. There's no need

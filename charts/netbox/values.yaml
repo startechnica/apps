@@ -526,76 +526,7 @@ overrideUnitConfig: {}
   #
   # access_log: /dev/stdout
 
-postgresql:
-  ## Deploy PostgreSQL using bundled chart
-  # To use an external database, set this to false and configure the settings
-  # under externalDatabase
-  enabled: true
 
-  auth:
-    username: netbox
-    database: netbox
-
-## External database settings
-# These are used if postgresql.enabled is false, and are ignored otherwise
-externalDatabase:
-  host: localhost
-  port: 5432
-  database: netbox
-  username: netbox
-  password: ""
-  existingSecretName: ""
-  existingSecretKey: postgresql-password
-
-  # The following settings also apply when using the bundled PostgreSQL chart:
-  sslMode: prefer
-  connMaxAge: 300
-  disableServerSideCursors: false
-  targetSessionAttrs: read-write
-
-redis:
-  ## Deploy Redis using bundled chart
-  # To use an external Redis instance, set this to false and configure the
-  # settings under *both* tasksRedis *and* cachingRedis
-  enabled: true
-
-tasksRedis:
-  database: 0
-  ssl: false
-  insecureSkipTlsVerify: false
-  caCertPath: ""
-
-  # Used only when redis.enabled is false. host and port are not used if
-  # sentinels are given.
-  host: netbox-redis
-  port: 6379
-  sentinels: []
-  #  - mysentinel:26379
-  sentinelService: netbox-redis
-  sentinelTimeout: 300
-  username: ""
-  password: ""
-  existingSecretName: ""
-  existingSecretKey: redis-password
-
-cachingRedis:
-  database: 1
-  ssl: false
-  insecureSkipTlsVerify: false
-  caCertPath: ""
-
-  # Used only when redis.enabled is false. host and port are not used if
-  # sentinels are given.
-  host: netbox-redis
-  port: 6379
-  sentinels: []
-  #  - mysentinel:26379
-  sentinelService: netbox-redis
-  sentinelTimeout: 300
-  username: ""
-  password: ""
-  existingSecretName: ""
-  existingSecretKey: redis-password
 
 imagePullSecrets: []
 
@@ -759,6 +690,44 @@ reportsPersistence:
   ##
   size: 1Gi
   ## @param reportsPersistence.selector Selector to match an existing Persistent Volume for Ingester's data PVC
+  ## If set, the PVC can't have a PV dynamically provisioned for it
+  ## E.g.
+  ## selector:
+  ##   matchLabels:
+  ##     app: my-app
+  ##
+  selector: {}
+
+## Storage configuration for scripts
+##
+scriptsPersistence:
+  ## @param scriptsPersistence.enabled  Enable scriptsPersistence using Persistent Volume Claims
+  ##
+  enabled: false
+  ## @param scriptsPersistence.storageClass  Persistent Volume storage class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is set, choosing the default provisioner.
+  ##   (gp2 on AWS, standard on GKE, AWS & OpenStack)
+  ##
+  storageClass: ""
+  ## @param scriptsPersistence.existingClaim  Use a existing PVC which must be created manually before bound
+  ##
+  existingClaim: ""
+  ## @param scriptsPersistence.subPath  Existing claim's subPath to use, e.g. "media" (optional)
+  ##
+  subPath: ""
+  ## @param scriptsPersistence.annotations  Additional custom annotations for the PVC
+  ##
+  annotations: {}
+  ## @param scriptsPersistence.accessModes  [array] Persistent Volume access modes
+  ##
+  accessModes:
+    - ReadWriteOnce
+  ## @param scriptsPersistence.size Persistent Volume size
+  ##
+  size: 1Gi
+  ## @param scriptsPersistence.selector Selector to match an existing Persistent Volume for Ingester's data PVC
   ## If set, the PVC can't have a PV dynamically provisioned for it
   ## E.g.
   ## selector:
@@ -1191,12 +1160,46 @@ housekeeping:
   #    image: busybox
   #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
-## @param worker Worker for Netbox
+## @section Netbox worker parameters
+
 ## Only required for Netbox Jobs, e.g. Webhooks
 ##
 worker:
+  ## @param worker.enabled Whether to enable Netbox worker job
+  ##
   enabled: true
-
+  ## Netbox worker image version
+  ## ref: https://hub.docker.com/r/netboxcommunity/netbox/tags
+  ## @param image.registry [default: REGISTRY_NAME] Netbox worker image registry
+  ## @param image.repository [default: REPOSITORY_NAME/netbox] Netbox worker image repository
+  ## @skip image.tag Netbox worker image tag (immutable tags are recommended)
+  ## @param image.digest Netbox worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param image.pullPolicy Netbox worker image pull policy
+  ## @param image.pullSecrets Specify docker-registry secret names as an array
+  ## @param image.debug Specify if debug logs should be enabled
+  ##
+  image:
+    registry: docker.io
+    repository: netboxcommunity/netbox
+    tag: "v3.7.1-2.8.0"
+    digest: ""
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+    ## Set to true if you would like to see extra information on logs
+    ##
+    debug: false
+    
   replicaCount: 1
 
   podAnnotations: {}
@@ -1316,6 +1319,110 @@ tls:
   ## If "true", the Netbox chart will look for the files netbox.key and netbox.crt inside the secret provided with 'existingSecret'.
   ##
   usePem: false
+
+## @section Database parameters
+
+## PostgreSQL chart configuration
+## ref: https://github.com/bitnami/charts/blob/main/bitnami/postgresql/values.yaml
+## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
+## @param postgresql.auth.postgresPassword Password for the "postgres" admin user. Ignored if `auth.existingSecret` with key `postgres-password` is provided
+## @param postgresql.auth.username Name for a custom user to create
+## @param postgresql.auth.password Password for the custom user to create
+## @param postgresql.auth.database Name for a custom database to create
+## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials
+## @param postgresql.architecture PostgreSQL architecture (`standalone` or `replication`)
+##
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: ""
+    username: netbox
+    password: ""
+    database: netbox
+    existingSecret: ""
+  architecture: standalone
+
+## External PostgreSQL configuration
+## All of these values are only used when postgresql.enabled is set to false
+## @param externalDatabase.host Database host
+## @param externalDatabase.port Database port number
+## @param externalDatabase.user Non-root username for Keycloak
+## @param externalDatabase.password Password for the non-root username for Keycloak
+## @param externalDatabase.database Keycloak database name
+## @param externalDatabase.existingSecret Name of an existing secret resource containing the database credentials
+## @param externalDatabase.existingSecretHostKey Name of an existing secret key containing the database host name
+## @param externalDatabase.existingSecretPortKey Name of an existing secret key containing the database port
+## @param externalDatabase.existingSecretUserKey Name of an existing secret key containing the database user
+## @param externalDatabase.existingSecretDatabaseKey Name of an existing secret key containing the database name
+## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
+## @param externalDatabase.annotations Additional custom annotations for external database secret object
+##
+externalDatabase:
+  host: localhost
+  port: 5432
+  database: netbox
+  username: netbox
+  password: ""
+  existingSecretName: ""
+  existingSecretKey: postgresql-password
+
+  # The following settings also apply when using the bundled PostgreSQL chart:
+  sslMode: prefer
+  connMaxAge: 300
+  disableServerSideCursors: false
+  targetSessionAttrs: read-write
+
+  existingSecret: ""
+  existingSecretHostKey: ""
+  existingSecretPortKey: ""
+  existingSecretUserKey: ""
+  existingSecretDatabaseKey: ""
+  existingSecretPasswordKey: ""
+  annotations: {}
+
+redis:
+  ## Deploy Redis using bundled chart
+  # To use an external Redis instance, set this to false and configure the
+  # settings under *both* tasksRedis *and* cachingRedis
+  enabled: true
+
+tasksRedis:
+  database: 0
+  ssl: false
+  insecureSkipTlsVerify: false
+  caCertPath: ""
+
+  # Used only when redis.enabled is false. host and port are not used if
+  # sentinels are given.
+  host: netbox-redis
+  port: 6379
+  sentinels: []
+  #  - mysentinel:26379
+  sentinelService: netbox-redis
+  sentinelTimeout: 300
+  username: ""
+  password: ""
+  existingSecretName: ""
+  existingSecretKey: redis-password
+
+cachingRedis:
+  database: 1
+  ssl: false
+  insecureSkipTlsVerify: false
+  caCertPath: ""
+
+  # Used only when redis.enabled is false. host and port are not used if
+  # sentinels are given.
+  host: netbox-redis
+  port: 6379
+  sentinels: []
+  #  - mysentinel:26379
+  sentinelService: netbox-redis
+  sentinelTimeout: 300
+  username: ""
+  password: ""
+  existingSecretName: ""
+  existingSecretKey: redis-password
 
 gateway:
   enabled: false

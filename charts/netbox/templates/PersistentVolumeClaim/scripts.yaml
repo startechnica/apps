@@ -1,0 +1,29 @@
+{{- if and .Values.scriptsPersistence.enabled (not .Values.scriptsPersistence.existingClaim) -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "netbox.fullname" . }}-scripts
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "netbox.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.scriptsPersistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.scriptsPersistence.size | quote }}
+  {{- if .Values.scriptsPersistence.storageClass }}
+  {{- if (eq "-" .Values.scriptsPersistence.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.scriptsPersistence.storageClass | quote }}
+  {{- end }}
+  {{- end }}
+  {{- with .Values.scriptsPersistence.selector }}
+  selector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end -}}
