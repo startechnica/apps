@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
   name: {{ include "netbox.fullname" . }}
@@ -52,7 +52,7 @@ spec:
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
       initContainers:
         - name: init-dirs
-          image: "{{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}"
+          image: {{ template "netbox.init.image" . }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy }}
           command: [/bin/sh, -c, mkdir -p /opt/unit/state /opt/unit/tmp]
           {{- if .Values.init.resources }}
@@ -74,7 +74,6 @@ spec:
         image: {{ template "netbox.image" . }}
         securityContext:
           {{- toYaml .Values.securityContext | nindent 10 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
           - name: SUPERUSER_NAME

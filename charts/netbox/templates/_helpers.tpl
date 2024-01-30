@@ -60,6 +60,13 @@ Return the proper Netbox housekeeping image name
 {{- end -}}
 
 {{/*
+Return the proper Netbox init image name
+*/}}
+{{- define "netbox.init.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.init.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "netbox.imagePullSecrets" -}}
