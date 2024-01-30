@@ -39,6 +39,22 @@ Return the proper Netbox housekeeping fullname
 {{- end -}}
 
 {{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "netbox.postgresql.fullname" -}}
+{{- include "common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "netbox.redis.fullname" -}}
+{{- include "common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.postgresql "context" $) -}}
+{{- end -}}
+
+{{/*
 Return the proper Netbox image name
 */}}
 {{- define "netbox.image" -}}
@@ -111,6 +127,16 @@ Create the name of the service account to use
   {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Return the path Netbox is hosted on. This looks at httpRelativePath and returns it with a trailing slash. For example:
+    / -> / (the default httpRelativePath)
+    /auth -> /auth/ (trailing slash added)
+    /custom/ -> /custom/ (unchanged)
+*/}}
+{{- define "netbox.httpPath" -}}
+{{ ternary .Values.httpRelativePath (printf "%s%s" .Values.httpRelativePath "/") (hasSuffix "/" .Values.httpRelativePath) }}
+{{- end -}}
 
 {{/*
 Name of the Secret that contains the PostgreSQL password
