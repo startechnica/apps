@@ -105,7 +105,7 @@ spec:
           {{- end }}
         ports:
           - name: http
-            containerPort: 8080
+            containerPort: {{ .Values.containerPorts.http }}
             protocol: TCP
         {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
@@ -225,6 +225,13 @@ spec:
         persistentVolumeClaim:
           claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
       {{- end }}
+      - name: scripts
+        {{- if .Values.scriptsPersistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
       {{- with .Values.extraVolumes }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
