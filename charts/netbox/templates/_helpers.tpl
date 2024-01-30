@@ -165,6 +165,29 @@ Name of the key in Secret that contains the PostgreSQL password
 {{- end }}
 
 {{/*
+Return the Redis secret name
+*/}}
+{{- define "netbox.tasksRedis.secretName" -}}
+{{- if .Values.redis.enabled -}}
+    {{- if .Values.global.redis -}}
+        {{- if .Values.global.redis.auth -}}
+            {{- if .Values.global.redis.auth.existingSecret -}}
+                {{- tpl .Values.global.redis.auth.existingSecret $ -}}
+            {{- else -}}
+                {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
+            {{- end -}}
+        {{- else -}}
+            {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
+        {{- end -}}
+    {{- else -}}
+        {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
+    {{- end -}}
+{{- else -}}
+    {{- default (printf "%s-external-redis" .Release.Name) (tpl .Values.tasksRedis.existingSecret $) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the task Redis hostname
 */}}
 {{- define "netbox.tasksRedis.host" -}}
@@ -180,6 +203,25 @@ Return the task Redis port
 */}}
 {{- define "netbox.tasksRedis.port" -}}
   {{- ternary 6379 .Values.tasksRedis.port .Values.redis.enabled | int -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure tasks Redis values
+*/}}
+{{- define "netbox.tasksRedis.secretPasswordKey" -}}
+{{- if .Values.redis.enabled -}}
+    {{- print "redis-password" -}}
+{{- else -}}
+    {{- if .Values.tasksRedis.existingSecret -}}
+        {{- if .Values.tasksRedis.existingSecretPasswordKey -}}
+            {{- printf "%s" .Values.tasksRedis.existingSecretPasswordKey -}}
+        {{- else -}}
+            {{- print "redis-tasks-password" -}}
+        {{- end -}}
+    {{- else -}}
+        {{- print "redis-tasks-password" -}}
+    {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -209,6 +251,29 @@ Name of the key in Secret that contains the Redis tasks password
 {{- end }}
 
 {{/*
+Return the Redis secret name
+*/}}
+{{- define "netbox.cachingRedis.secretName" -}}
+{{- if .Values.redis.enabled -}}
+    {{- if .Values.global.redis -}}
+        {{- if .Values.global.redis.auth -}}
+            {{- if .Values.global.redis.auth.existingSecret -}}
+                {{- tpl .Values.global.redis.auth.existingSecret $ -}}
+            {{- else -}}
+                {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
+            {{- end -}}
+        {{- else -}}
+            {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
+        {{- end -}}
+    {{- else -}}
+        {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
+    {{- end -}}
+{{- else -}}
+    {{- default (printf "%s-external-redis" .Release.Name) (tpl .Values.cachingRedis.existingSecret $) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the cache Redis hostname
 */}}
 {{- define "netbox.cachingRedis.host" -}}
@@ -224,6 +289,25 @@ Return the cache Redis port
 */}}
 {{- define "netbox.cachingRedis.port" -}}
   {{- ternary 6379 .Values.cachingRedis.port .Values.redis.enabled | int -}}
+{{- end -}}
+
+{{/*
+Add environment variables to configure tasks Redis values
+*/}}
+{{- define "netbox.cachingRedis.secretPasswordKey" -}}
+{{- if .Values.redis.enabled -}}
+    {{- print "redis-password" -}}
+{{- else -}}
+    {{- if .Values.cachingRedis.existingSecret -}}
+        {{- if .Values.cachingRedis.existingSecretPasswordKey -}}
+            {{- printf "%s" .Values.cachingRedis.existingSecretPasswordKey -}}
+        {{- else -}}
+            {{- print "redis-cache-password" -}}
+        {{- end -}}
+    {{- else -}}
+        {{- print "redis-cache-password" -}}
+    {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -401,14 +485,14 @@ Add environment variables to configure database values
     {{- if .Values.externalDatabase.existingSecretUserKey -}}
         {{- printf "%s" .Values.externalDatabase.existingSecretUserKey -}}
     {{- else -}}
-        {{- print "db-port" -}}
+        {{- print "db-user" -}}
     {{- end -}}
 {{- end -}}
 {{- define "netbox.databaseSecretDatabaseKey" -}}
     {{- if .Values.externalDatabase.existingSecretDatabaseKey -}}
         {{- printf "%s" .Values.externalDatabase.existingSecretDatabaseKey -}}
     {{- else -}}
-        {{- print "db-port" -}}
+        {{- print "db-name" -}}
     {{- end -}}
 {{- end -}}
 

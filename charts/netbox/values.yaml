@@ -1828,8 +1828,10 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
+  existingSecret: ""
   existingSecretName: ""
   existingSecretKey: redis-password
+  existingSecretPasswordKey: ""
 
 cachingRedis:
   database: 1
@@ -1847,8 +1849,10 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
+  existingSecret: ""
   existingSecretName: ""
   existingSecretKey: redis-password
+  existingSecretPasswordKey: ""
 
 gateway:
   enabled: false

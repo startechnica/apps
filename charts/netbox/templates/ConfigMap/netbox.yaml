@@ -196,9 +196,9 @@ data:
         INSECURE_SKIP_TLS_VERIFY: {{ toJson .Values.cachingRedis.insecureSkipTlsVerify }}
         CA_CERT_PATH: {{ .Values.cachingRedis.caCertPath | quote }}
 
-    REPORTS_ROOT: /opt/netbox/netbox/reports
+    REPORTS_ROOT: {{ .Values.reportsPersistence.path  }}
     RQ_DEFAULT_TIMEOUT: {{ .Values.rqDefaultTimeout | int }}
-    SCRIPTS_ROOT: /opt/netbox/netbox/scripts
+    SCRIPTS_ROOT: {{ .Values.scriptsPersistence.path }}
     CSRF_COOKIE_NAME: {{ .Values.csrf.cookieName | quote }}
     SESSION_COOKIE_NAME: {{ .Values.sessionCookieName }}
     ENABLE_LOCALIZATION: {{ toJson .Values.enableLocalization }}

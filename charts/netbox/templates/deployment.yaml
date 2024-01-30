@@ -198,14 +198,14 @@ spec:
                 - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
                   path: db_password
             - secret:
-                name: {{ include "netbox.tasksRedis.secret" . | quote }}
+                name: {{ include "netbox.tasksRedis.secretName" . | quote }}
                 items:
-                - key: {{ include "netbox.tasksRedis.secretKey" . | quote }}
+                - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
                   path: redis_tasks_password
             - secret:
-                name: {{ include "netbox.cachingRedis.secret" . | quote }}
+                name: {{ include "netbox.cachingRedis.secretName" . | quote }}
                 items:
-                - key: {{ include "netbox.cachingRedis.secretKey" . | quote }}
+                - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
                   path: redis_cache_password
         {{- include "netbox.extraConfig.volumes" . | nindent 8 -}}
         - name: netbox-tmp
