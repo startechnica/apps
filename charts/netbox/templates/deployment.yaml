@@ -95,9 +95,9 @@ spec:
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
           {{- end }}
-          {{- if .Values.resources }}
-          resources: {{- toYaml .Values.resources | nindent 12 }}
-          {{- end }}
+          # {{- if .Values.resources }}
+          # resources: {{- toYaml .Values.resources | nindent 12 }}
+          # {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/netbox/config/configuration.py
