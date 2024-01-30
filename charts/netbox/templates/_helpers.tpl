@@ -171,7 +171,7 @@ Return the task Redis hostname
 {{- if eq .Values.redis.architecture "replication" }}
   {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}-master
 {{- else -}}
-  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}
+  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}-master
 {{- end -}}
 {{- end -}}
 
@@ -215,7 +215,7 @@ Return the cache Redis hostname
 {{- if eq .Values.redis.architecture "replication" }}
   {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}-master
 {{- else -}}
-  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}
+  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}-master
 {{- end -}}
 {{- end -}}
 
