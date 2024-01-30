@@ -82,6 +82,21 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPorts.http }}
               protocol: TCP
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /{{ .Values.basePath }}login/
+              port: http
+              {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
+              httpHeaders:
+                - name: Host
+                  value: {{ (index .Values.allowedHosts 0) | quote }}
+              {{- end }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/netbox/config/configuration.py
