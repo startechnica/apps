@@ -156,9 +156,9 @@ spec:
                   path: ldap_bind_password
                 {{- end }}
             - secret:
-                name: {{ include "netbox.postgresql.secret" . | quote }}
+                name: {{ include "netbox.databaseSecretName" . | quote }}
                 items:
-                - key: {{ include "netbox.postgresql.secretKey" . | quote }}
+                - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
                   path: db_password
             - secret:
                 name: {{ include "netbox.tasksRedis.secret" . | quote }}
