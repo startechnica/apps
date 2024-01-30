@@ -165,6 +165,24 @@ Name of the key in Secret that contains the PostgreSQL password
 {{- end }}
 
 {{/*
+Return the task Redis hostname
+*/}}
+{{- define "netbox.tasksRedis.host" -}}
+{{- if eq .Values.redis.architecture "replication" }}
+  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}-master
+{{- else -}}
+  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the task Redis port
+*/}}
+{{- define "netbox.tasksRedis.port" -}}
+  {{- ternary 6379 .Values.tasksRedis.port .Values.redis.enabled | int -}}
+{{- end -}}
+
+{{/*
 Name of the Secret that contains the Redis tasks password
 */}}
 {{- define "netbox.tasksRedis.secret" -}}
@@ -189,6 +207,24 @@ Name of the key in Secret that contains the Redis tasks password
     redis_tasks_password
   {{- end -}}
 {{- end }}
+
+{{/*
+Return the cache Redis hostname
+*/}}
+{{- define "netbox.cachingRedis.host" -}}
+{{- if eq .Values.redis.architecture "replication" }}
+  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}-master
+{{- else -}}
+  {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the cache Redis port
+*/}}
+{{- define "netbox.cachingRedis.port" -}}
+  {{- ternary 6379 .Values.cachingRedis.port .Values.redis.enabled | int -}}
+{{- end -}}
 
 {{/*
 Name of the Secret that contains the Redis cache password
