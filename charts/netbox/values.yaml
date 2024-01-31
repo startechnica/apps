@@ -162,8 +162,8 @@ containerPorts:
 ## @param startupProbe.successThreshold Success threshold for startupProbe
 ##
 startupProbe:
-  enabled: false
-  initialDelaySeconds: 30
+  enabled: true
+  initialDelaySeconds: 120
   periodSeconds: 5
   timeoutSeconds: 1
   successThreshold: 1
@@ -882,6 +882,10 @@ persistence:
   ## @param persistence.existingClaim  Use a existing PVC which must be created manually before bound
   ##
   existingClaim: ""
+  ## @param persistence.path The path the volume will be mounted at on Redis master containers
+  ## NOTE: Useful when using different Redis images
+  ##
+  path: /opt/netbox/netbox/reports
   ## @param persistence.subPath  Existing claim's subPath to use, e.g. "media" (optional)
   ##
   subPath: ""
@@ -1062,7 +1066,6 @@ revisionHistoryLimitCount: 10
 ##
 extraContainerPorts: []
 
-
 ## @section Exposure parameters
 ##
 
@@ -1079,12 +1082,14 @@ service:
   ## @param service.ports.http Netbox service HTTP port
   ## @param service.ports.https Netbox service HTTPS port
   ##
+  port: 80
   ports:
     http: 80
     https: 443
   ## @param service.nodePorts [object] Specify the nodePort values for the LoadBalancer and NodePort service types.
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
+  nodePort: ""
   nodePorts:
     http: ""
     https: ""
@@ -1093,10 +1098,28 @@ service:
   ## clusterIP: None
   ##
   clusterIP: ""
+  clusterIPs: []
+  externalIPs: []
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## bare metal / on-prem environments that rely on VIP based LB implementations.
+  ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
+  ##
+  allocateLoadBalancerNodePorts: "false"
+  ## @param service.externalTrafficPolicy Enable client source IP preservation
+  ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+  ##
+  externalTrafficPolicy: Cluster
+  ## @param service.ipFamilyPolicy Kubernetes service ipFamilyPolicy policy
+  ##
+  ipFamilyPolicy: SingleStack
   ## @param service.loadBalancerIP loadBalancerIP for the SuiteCRM Service (optional, cloud specific)
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
   ##
   loadBalancerIP: ""
+  ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
+  ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+  ##
+  loadBalancerClass: ""
   ## @param service.loadBalancerSourceRanges Address that are allowed when service is LoadBalancer
   ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
   ## Example:
@@ -1104,10 +1127,6 @@ service:
   ##   - 10.10.10.0/24
   ##
   loadBalancerSourceRanges: []
-  ## @param service.externalTrafficPolicy Enable client source IP preservation
-  ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
-  ##
-  externalTrafficPolicy: Cluster
   ## @param service.annotations Additional custom annotations for Keycloak service
   ## Example:
   ## annotations:
@@ -1130,12 +1149,6 @@ service:
   ##     timeoutSeconds: 300
   ##
   sessionAffinityConfig: {}
-
-  port: 80
-  nodePort: ""
-  clusterIPs: []
-  externalIPs: []
-  ipFamilyPolicy: ""
 
 ## Netbox ingress parameters
 ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
@@ -1372,16 +1385,21 @@ housekeeping:
   # Set this to true to automatically mount the service account token in the housekeeping container
   automountServiceAccountToken: false
 
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+  ## Netbox housekeeping resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
+  ## @param housekeeping.resources.requests The requested resources for the Netbox housekeeping containers
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## limits:
+  ##   cpu: 100m
+  ##   memory: 128Mi
+  ## requests:
+  ##   cpu: 100m
+  ##   memory: 128Mi
+  ##
   resources: {}
 
   nodeSelector: {}
@@ -1774,6 +1792,8 @@ worker:
   ## Netbox worker Service configuration
   ##
   service:
+    ## @param worker.service.enabled  Enable Netbox worker service
+    ##
     enabled: false
     ## @param worker.service.type Kubernetes service type
     ##

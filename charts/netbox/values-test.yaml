@@ -3,4 +3,4 @@ netbox:
     enabled: true
     auth:
       username: netbox_user
-      password: mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA
+      password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
