@@ -244,8 +244,8 @@ podSecurityContext:
 containerSecurityContext:
   enabled: true
   seLinuxOptions: null
-  runAsUser: 1001
-  runAsGroup: 0
+  runAsUser: 1000
+  runAsGroup: 1000
   runAsNonRoot: true
   allowPrivilegeEscalation: false
   seccompProfile:
@@ -1505,8 +1505,8 @@ worker:
   containerSecurityContext:
     enabled: true
     seLinuxOptions: null
-    runAsUser: 1001
-    runAsGroup: 0
+    runAsUser: 1000
+    runAsGroup: 1000
     runAsNonRoot: true
     allowPrivilegeEscalation: false
     seccompProfile:
@@ -1645,8 +1645,6 @@ worker:
   ##    command: ['sh', '-c', 'echo "hello world"']
   ##
   initContainers: []
-
-
 
   securityContext:
     capabilities:
