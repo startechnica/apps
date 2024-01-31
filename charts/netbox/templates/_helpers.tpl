@@ -607,6 +607,18 @@ Return the secret key that contains the Netbox superuser password
 {{- end -}}
 
 {{/*
+Return the secret name containing the Netbox superuser password
+*/}}
+{{- define "netbox.superuser.secretName" -}}
+{{- $secretName := .Values.superuser.existingSecret -}}
+{{- if $secretName -}}
+    {{- printf "%s" (tpl $secretName $) -}}
+{{- else -}}
+    {{- printf "%s-su" (include "netbox.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the secret key that contains the Netbox superuser password
 */}}
 {{- define "netbox.superuser.secretPasswordKey" -}}
@@ -622,7 +634,8 @@ Return the secret key that contains the Netbox superuser password
   {{- else -}}
       {{- printf "%s" "superuser_password" -}}
   {{- end -}}
-  {{- end -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Return the secret key that contains the Netbox superuser API token
@@ -640,6 +653,26 @@ Return the secret key that contains the Netbox superuser API token
   {{- else -}}
       {{- printf "%s" "superuser_api_token" -}}
   {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret key that contains the Netbox email password
+*/}}
+{{- define "netbox.email.secretPasswordKey" -}}
+{{- if .Values.existingSecretName -}}
+    {{- printf "%s" "email-password" -}}
+{{- else -}}
+  {{- if .Values.email.existingSecretName -}}
+      {{- if .Values.email.existingSecretPasswordKey -}}
+          {{- printf "%s" .Values.email.existingSecretPasswordKey -}}
+      {{- else -}}
+          {{- printf "%s" "email-password" -}}
+      {{- end -}}
+  {{- else -}}
+      {{- printf "%s" "email_password" -}}
+  {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/* Validate values of Netbox - database */}}
