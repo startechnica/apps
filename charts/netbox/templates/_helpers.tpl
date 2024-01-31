@@ -161,7 +161,7 @@ Name of the Secret that contains the PostgreSQL password
   {{- else if .Values.externalDatabase.existingSecretName }}
     {{- .Values.externalDatabase.existingSecretName }}
   {{- else }}
-    {{- .Values.existingSecret | default (include "netbox.fullname" .) }}
+    {{- .Values.existingSecretName | default (include "netbox.postgresql.fullname" .) }}
   {{- end }}
 {{- end }}
 
@@ -197,7 +197,7 @@ Return the Redis secret name
         {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
     {{- end -}}
 {{- else -}}
-    {{- default (printf "%s-external-redis" .Release.Name) (tpl .Values.tasksRedis.existingSecret $) -}}
+    {{- default (printf "%s-external-redis" .Release.Name) (tpl .Values.tasksRedis.existingSecretName $) -}}
 {{- end -}}
 {{- end -}}
 
@@ -226,7 +226,7 @@ Add environment variables to configure tasks Redis values
 {{- if .Values.redis.enabled -}}
     {{- print "redis-password" -}}
 {{- else -}}
-    {{- if .Values.tasksRedis.existingSecret -}}
+    {{- if .Values.tasksRedis.existingSecretName -}}
         {{- if .Values.tasksRedis.existingSecretPasswordKey -}}
             {{- printf "%s" .Values.tasksRedis.existingSecretPasswordKey -}}
         {{- else -}}
@@ -247,7 +247,7 @@ Name of the Secret that contains the Redis tasks password
   {{- else if .Values.tasksRedis.existingSecretName }}
     {{- .Values.tasksRedis.existingSecretName }}
   {{- else }}
-    {{- .Values.existingSecret | default (include "netbox.fullname" .) }}
+    {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
   {{- end }}
 {{- end }}
 
@@ -283,7 +283,7 @@ Return the Redis secret name
         {{- default (include "netbox.redis.fullname" .) (tpl .Values.redis.auth.existingSecret $) -}}
     {{- end -}}
 {{- else -}}
-    {{- default (printf "%s-external-redis" .Release.Name) (tpl .Values.cachingRedis.existingSecret $) -}}
+    {{- default (printf "%s-external-redis" .Release.Name) (tpl .Values.cachingRedis.existingSecretName $) -}}
 {{- end -}}
 {{- end -}}
 
@@ -312,7 +312,7 @@ Add environment variables to configure tasks Redis values
 {{- if .Values.redis.enabled -}}
     {{- print "redis-password" -}}
 {{- else -}}
-    {{- if .Values.cachingRedis.existingSecret -}}
+    {{- if .Values.cachingRedis.existingSecretName -}}
         {{- if .Values.cachingRedis.existingSecretPasswordKey -}}
             {{- printf "%s" .Values.cachingRedis.existingSecretPasswordKey -}}
         {{- else -}}
@@ -333,7 +333,7 @@ Name of the Secret that contains the Redis cache password
   {{- else if .Values.cachingRedis.existingSecretName }}
     {{- .Values.cachingRedis.existingSecretName }}
   {{- else }}
-    {{- .Values.existingSecret | default (include "netbox.fullname" .) }}
+    {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
   {{- end }}
 {{- end }}
 
@@ -449,16 +449,16 @@ Return the Database encrypted password
             {{- if .Values.global.postgresql.auth.existingSecret -}}
                 {{- tpl .Values.global.postgresql.auth.existingSecret $ -}}
             {{- else -}}
-                {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
+                {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecretName $) -}}
             {{- end -}}
         {{- else -}}
-            {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
+            {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecretName $) -}}
         {{- end -}}
     {{- else -}}
-        {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
+        {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecretName $) -}}
     {{- end -}}
 {{- else -}}
-    {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecret $) -}}
+    {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecretName $) -}}
 {{- end -}}
 {{- end -}}
 
@@ -469,7 +469,7 @@ Add environment variables to configure database values
 {{- if .Values.postgresql.enabled -}}
     {{- printf "%s" "password" -}}
 {{- else -}}
-    {{- if .Values.externalDatabase.existingSecret -}}
+    {{- if .Values.externalDatabase.existingSecretName -}}
         {{- if .Values.externalDatabase.existingSecretPasswordKey -}}
             {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
         {{- else -}}
@@ -520,8 +520,8 @@ Return the Redis secret name
     {{- else -}}
         {{- printf "%s" (include "netbox.redis.fullname" .) }}
     {{- end -}}
-{{- else if .Values.externalRedis.existingSecret }}
-    {{- printf "%s" .Values.externalRedis.existingSecret -}}
+{{- else if .Values.externalRedis.existingSecretName }}
+    {{- printf "%s" .Values.externalRedis.existingSecretName -}}
 {{- else -}}
     {{- printf "%s" (include "netbox.redis.fullname" .) -}}
 {{- end -}}
@@ -534,7 +534,7 @@ Return the Redis secret key
 {{- if .Values.redis.enabled -}}
     {{- printf "%s" "redis-password" -}}
 {{- else -}}
-    {{- if .Values.externalRedis.existingSecret -}}
+    {{- if .Values.externalRedis.existingSecretName -}}
         {{- if .Values.externalRedis.existingSecretPasswordKey -}}
             {{- printf "%s" .Values.externalRedis.existingSecretPasswordKey -}}
         {{- else -}}
@@ -550,7 +550,7 @@ Return the Redis secret key
 Return whether Redis uses password authentication or not
 */}}
 {{- define "netbox.redis.auth.enabled" -}}
-{{- if or (and .Values.redis.enabled .Values.redis.auth.enabled) (and (not .Values.redis.enabled) (or .Values.externalRedis.password .Values.externalRedis.existingSecret)) }}
+{{- if or (and .Values.redis.enabled .Values.redis.auth.enabled) (and (not .Values.redis.enabled) (or .Values.externalRedis.password .Values.externalRedis.existingSecretName)) }}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -586,7 +586,7 @@ Return the Redis port
 Return the secret containing the Netbox superuser password
 */}}
 {{- define "netbox.secretName" -}}
-{{- $secretName := .Values.superuser.existingSecret -}}
+{{- $secretName := .Values.superuser.existingSecretName -}}
 {{- if $secretName -}}
     {{- printf "%s" (tpl $secretName $) -}}
 {{- else -}}
@@ -598,9 +598,9 @@ Return the secret containing the Netbox superuser password
 Return the secret key that contains the Netbox superuser password
 */}}
 {{- define "netbox.secretKey" -}}
-{{- $secretName := .Values.superuser.existingSecret -}}
-{{- if and $secretName .Values.superuser.passwordSecretKey -}}
-    {{- printf "%s" .Values.superuser.passwordSecretKey -}}
+{{- $secretName := .Values.superuser.existingSecretName -}}
+{{- if and $secretName .Values.superuser.existingSecretPasswordKey -}}
+    {{- printf "%s" .Values.superuser.existingSecretPasswordKey -}}
 {{- else -}}
     {{- print "superuser_password" -}}
 {{- end -}}
@@ -610,7 +610,7 @@ Return the secret key that contains the Netbox superuser password
 Return the secret name containing the Netbox superuser password
 */}}
 {{- define "netbox.superuser.secretName" -}}
-{{- $secretName := .Values.superuser.existingSecret -}}
+{{- $secretName := .Values.superuser.existingSecretName -}}
 {{- if $secretName -}}
     {{- printf "%s" (tpl $secretName $) -}}
 {{- else -}}
@@ -622,10 +622,10 @@ Return the secret name containing the Netbox superuser password
 Return the secret key that contains the Netbox superuser password
 */}}
 {{- define "netbox.superuser.secretPasswordKey" -}}
-{{- if .Values.existingSecret -}}
+{{- if .Values.existingSecretName -}}
     {{- printf "%s" "superuser-password" -}}
 {{- else -}}
-  {{- if .Values.superuser.existingSecret -}}
+  {{- if .Values.superuser.existingSecretName -}}
       {{- if .Values.superuser.existingSecretPasswordKey -}}
           {{- printf "%s" .Values.superuser.existingSecretPasswordKey -}}
       {{- else -}}
@@ -641,10 +641,10 @@ Return the secret key that contains the Netbox superuser password
 Return the secret key that contains the Netbox superuser API token
 */}}
 {{- define "netbox.superuser.secretApiTokenKey" -}}
-{{- if .Values.existingSecret -}}
+{{- if .Values.existingSecretName -}}
     {{- printf "%s" "superuser-api-token" -}}
 {{- else -}}
-  {{- if .Values.superuser.existingSecret -}}
+  {{- if .Values.superuser.existingSecretName -}}
       {{- if .Values.superuser.existingSecretApiTokenKey -}}
           {{- printf "%s" .Values.superuser.existingSecretApiTokenKey -}}
       {{- else -}}
@@ -677,19 +677,19 @@ Return the secret key that contains the Netbox email password
 
 {{/* Validate values of Netbox - database */}}
 {{- define "netbox.validateValues.database" -}}
-{{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) (and (not .Values.externalDatabase.password) (not .Values.externalDatabase.existingSecret)) -}}
+{{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) (and (not .Values.externalDatabase.password) (not .Values.externalDatabase.existingSecretName)) -}}
 netbox: database
     You disabled the PostgreSQL sub-chart but did not specify an external PostgreSQL host.
     Either deploy the PostgreSQL sub-chart (--set postgresql.enabled=true),
     or set a value for the external database host (--set externalDatabase.host=FOO)
     and set a value for the external database password (--set externalDatabase.password=BAR)
-    or existing secret (--set externalDatabase.existingSecret=BAR).
+    or existing secret (--set externalDatabase.existingSecretName=BAR).
 {{- end -}}
 {{- end -}}
 
 {{/* Validate values of Netbox - TLS enabled */}}
 {{- define "netbox.validateValues.tls" -}}
-{{- if and .Values.tls.enabled (not .Values.tls.autoGenerated) (not .Values.tls.existingSecret) }}
+{{- if and .Values.tls.enabled (not .Values.tls.autoGenerated) (not .Values.tls.existingSecretName) }}
 netbox: tls.enabled
     In order to enable TLS, you also need to provide
     an existing secret containing the Keystore and Truststore or

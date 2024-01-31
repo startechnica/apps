@@ -201,7 +201,7 @@ The following table lists the configurable parameters for this chart and their d
 | `email.server`                                  | SMTP server to use to send emails                                   | `localhost`                                  |
 | `email.port`                                    | TCP port to connect to the SMTP server on                           | `25`                                         |
 | `email.username`                                | Optional username for SMTP authentication                           | `""`                                         |
-| `email.password`                                | Password for SMTP authentication (see also `existingSecret`)        | `""`                                         |
+| `email.password`                                | Password for SMTP authentication (see also `existingSecretName`)    | `""`                                         |
 | `email.useSSL`                                  | Use SSL when connecting to the server                               | `false`                                      |
 | `email.useTLS`                                  | Use TLS when connecting to the server                               | `false`                                      |
 | `email.sslCertFile`                             | SMTP SSL certificate file path (e.g. in a mounted volume)           | `""`                                         |
@@ -289,7 +289,7 @@ The following table lists the configurable parameters for this chart and their d
 | `shortDateTimeFormat`                           | Django date format for short-form date and time strongs             | `"Y-m-d H:i"`                                |
 | `extraConfig`                                   | Additional NetBox configuration (see `values.yaml`)                 | `[]`                                         |
 | `secretKey`                                     | Django secret key used for sessions and password reset tokens       | `""` (generated)                             |
-| `existingSecret`                                | Use an existing Kubernetes `Secret` for secret values (see below)   | `""` (use individual chart values)           |
+| `existingSecretName`                            | Use an existing Kubernetes `Secret` for secret values (see below)   | `""` (use individual chart values)           |
 | `overrideUnitConfig`                            | Override the NGINX Unit application server configuration            | `{}` (*see values.yaml*)                     |
 | `postgresql.enabled`                            | Deploy PostgreSQL using bundled Bitnami PostgreSQL chart            | `true`                                       |
 | `postgresql.auth.username`                      | Username to create for NetBox in bundled PostgreSQL instance        | `netbox`                                     |
@@ -299,7 +299,7 @@ The following table lists the configurable parameters for this chart and their d
 | `externalDatabase.port`                         | Port number for external PostgreSQL                                 | `5432`                                       |
 | `externalDatabase.database`                     | Database name for external PostgreSQL                               | `netbox`                                     |
 | `externalDatabase.username`                     | Username for external PostgreSQL                                    | `netbox`                                     |
-| `externalDatabase.password`                     | Password for external PostgreSQL (see also `existingSecret`)        | `""`                                         |
+| `externalDatabase.password`                     | Password for external PostgreSQL (see also `existingSecretName`)    | `""`                                         |
 | `externalDatabase.existingSecretName`           | Fetch password for external PostgreSQL from a different `Secret`    | `""`                                         |
 | `externalDatabase.existingSecretKey`            | Key to fetch the password in the above `Secret`                     | `postgresql-password`                        |
 | `externalDatabase.sslMode`                      | PostgreSQL client SSL Mode setting                                  | `prefer`                                     |
@@ -318,7 +318,7 @@ The following table lists the configurable parameters for this chart and their d
 | `tasksRedis.sentinelService`                    | Sentinel master service name                                        | `"netbox-redis"`                             |
 | `tasksRedis.sentinelTimeout`                    | Sentinel connection timeout, in seconds                             | `300` (5 minutes)                            |
 | `tasksRedis.username`                           | Username for external Redis                                         | `""`                                         |
-| `tasksRedis.password`                           | Password for external Redis (see also `existingSecret`)             | `""`                                         |
+| `tasksRedis.password`                           | Password for external Redis (see also `existingSecretName`)         | `""`                                         |
 | `tasksRedis.existingSecretName`                 | Fetch password for external Redis from a different `Secret`         | `""`                                         |
 | `tasksRedis.existingSecretKey`                  | Key to fetch the password in the above `Secret`                     | `redis-password`                             |
 | `cachingRedis.database`                         | Redis database number used for caching views                        | `1`                                          |
@@ -331,7 +331,7 @@ The following table lists the configurable parameters for this chart and their d
 | `cachingRedis.sentinelService`                  | Sentinel master service name                                        | `"netbox-redis"`                             |
 | `cachingRedis.sentinelTimeout`                  | Sentinel connection timeout, in seconds                             | `300` (5 minutes)                            |
 | `cachingRedis.username`                         | Username for external Redis                                         | `""`                                         |
-| `cachingRedis.password`                         | Password for external Redis (see also `existingSecret`)             | `""`                                         |
+| `cachingRedis.password`                         | Password for external Redis (see also `existingSecretName`)         | `""`                                         |
 | `cachingRedis.existingSecretName`               | Fetch password for external Redis from a different `Secret`         | `""`                                         |
 | `cachingRedis.existingSecretKey`                | Key to fetch the password in the above `Secret`                     | `redis-password`                             |
 | `imagePullSecrets`                              | List of `Secret` names containing private registry credentials      | `[]`                                         |

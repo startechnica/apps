@@ -26,7 +26,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/ConfigMap/netbox.yaml") . | sha256sum }}
-        {{- if (not .Values.existingSecret) }}
+        {{- if (not .Values.existingSecretName) }}
         checksum/secret: {{ include (print $.Template.BasePath "/Secret/netbox.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.podAnnotations }}
@@ -142,11 +142,11 @@ spec:
           readinessProbe:
             httpGet:
               path: /{{ .Values.basePath }}login/
-              port: http
+              port: {{ .Values.containerPorts.http }}
               {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
               httpHeaders:
-              - name: Host
-                value: {{ (index .Values.allowedHosts 0) | quote }}
+                - name: Host
+                  value: {{ (index .Values.allowedHosts 0) | quote }}
               {{- end }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
@@ -275,7 +275,7 @@ spec:
           projected:
             sources:
             - secret:
-                name: {{ .Values.existingSecret | default (include "netbox.fullname" .) | quote }}
+                name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
                 items:
                   # Used by netbox-docker entry scripts
                   - key: {{ include "netbox.superuser.secretPasswordKey" . | quote }}

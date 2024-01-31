@@ -109,10 +109,10 @@ spec:
             projected:
               sources:
               - secret:
-                  name: {{ .Values.existingSecret | default (include "netbox.fullname" .) | quote }}
+                  name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
                   items:
                   # Used by our configuration
-                  - key: email_password
+                  - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
                     path: email_password
                   - key: secret_key
                     path: secret_key

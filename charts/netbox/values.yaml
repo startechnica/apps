@@ -377,7 +377,7 @@ initContainers: []
 extraInitContainers: []
 
 ## You can also use an existing secret for the superuser password and API token
-## See `existingSecret` for details
+## See `existingSecretName` for details
 ##
 superuser:
   ## @param superuser.name Netbox administrator username
@@ -391,11 +391,9 @@ superuser:
   password: admin
   ## @param superuser.apiToken Netbox administrator superuser token
   ##
-  apiToken: 0123456789abcdef0123456789abcdef01234567
-  ## @param superuser.existingSecret Existing secret containing Netbox superuser password
+  apiToken: ""
   ## @param superuser.existingSecretName Existing secret containing Netbox superuser password
   ##
-  existingSecret: ""
   existingSecretName: ""
   ## @param superuser.passwordSecretKey Key where the Netbox superuser password is being stored inside the existing secret.
   ## @param superuser.existingSecretPasswordKey Key where the Netbox superuser password is being stored inside the existing secret.
@@ -513,7 +511,8 @@ debug: false
 # migrations.
 dbWaitDebug: false
 
-# Email settings
+## Email settings
+##
 email:
   server: localhost
   port: 25
@@ -525,6 +524,7 @@ email:
   sslKeyFile: ''
   timeout: 10  # seconds
   from: ''
+  existingSecretPasswordKey: ""
 
 # Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce
 # unique IP space within the global table (all prefixes and IP addresses not
@@ -672,9 +672,9 @@ remoteAuth:
   staffGroups: []
   staffUsers: []
   groupSeparator: '|'
-  ## @param remoteAuth.existingSecret Existing secret containing remote authentication parameters
+  ## @param remoteAuth.existingSecretName Existing secret containing remote authentication parameters
   ##
-  existingSecret: ""
+  existingSecretName: ""
 
   # The following options are specific for backend "netbox.authentication.LDAPBackend"
   # you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
@@ -757,11 +757,10 @@ extraConfig: []
 ## @param secretKey  If provided, this should be a 50+ character string of random characters. It
 ##    will be randomly generated if left blank.
 ## You can also use an existing secret with "secret_key" instead of "secretKey"
-## See `existingSecret` for details
+## See `existingSecretName` for details
 ##
 secretKey: ""
 
-## @param existingSecret  Provide passwords using existing secret
 ## @param existingSecretName  Provide passwords using existing secret
 ## If set, this Secret must contain the following keys:
 ## - db-password: database password (if postgresql.enabled is false and
@@ -776,7 +775,6 @@ secretKey: ""
 ## - superuser-password: Password for the initial super-user account
 ## - superuser-api-token: API token created for the initial super-user account
 ##
-existingSecret: ""
 existingSecretName: ""
 
 # Override the NGINX Unit configuration inside the container. When enabled, this
@@ -1809,11 +1807,11 @@ tls:
   certCAFilename: ""
 
   secretName: ~
-  ## @param tls.existingSecret Existing secret containing the TLS certificates per Netbox replica
+  ## @param tls.existingSecretName Existing secret containing the TLS certificates per Netbox replica
   ##
-  existingSecret: ""
+  existingSecretName: ""
   ## @param tls.usePem Use PEM certificates as input instead of PKS12/JKS stores
-  ## If "true", the Netbox chart will look for the files netbox.key and netbox.crt inside the secret provided with 'existingSecret'.
+  ## If "true", the Netbox chart will look for the files netbox.key and netbox.crt inside the secret provided with 'existingSecretName'.
   ##
   usePem: false
 
@@ -1987,7 +1985,7 @@ postgresql:
 ## @param externalDatabase.user Non-root username for Keycloak
 ## @param externalDatabase.password Password for the non-root username for Keycloak
 ## @param externalDatabase.database Keycloak database name
-## @param externalDatabase.existingSecret Name of an existing secret resource containing the database credentials
+## @param externalDatabase.existingSecretName Name of an existing secret resource containing the database credentials
 ## @param externalDatabase.existingSecretHostKey Name of an existing secret key containing the database host name
 ## @param externalDatabase.existingSecretPortKey Name of an existing secret key containing the database port
 ## @param externalDatabase.existingSecretUserKey Name of an existing secret key containing the database user
@@ -2001,7 +1999,7 @@ externalDatabase:
   database: netbox
   username: netbox
   password: ""
-  existingSecret: ""
+  existingSecretName: ""
   existingSecretHostKey: ""
   existingSecretPortKey: ""
   existingSecretUserKey: ""
@@ -2009,7 +2007,6 @@ externalDatabase:
   existingSecretPasswordKey: ""
   annotations: {}
 
-  existingSecretName: ""
   existingSecretKey: postgresql-password
 
   # The following settings also apply when using the bundled PostgreSQL chart:
@@ -2067,7 +2064,6 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecret: ""
   existingSecretName: ""
   existingSecretKey: redis-password
   ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
@@ -2090,7 +2086,6 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecret: ""
   existingSecretName: ""
   existingSecretKey: redis-password
   ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
@@ -2110,14 +2105,14 @@ externalRedis:
   ##
   port: 6379
   ## Redis password for authentication
-  ## Ignored if existingSecret is set
+  ## Ignored if existingSecretName is set
   ## @param externalRedis.password External Redis password
   ##
   password: ""
   ## Name of existing secret object containing the password
-  ## @param externalRedis.existingSecret Existing secret for the external redis
+  ## @param externalRedis.existingSecretName Existing secret for the external redis
   ##
-  existingSecret: ""
+  existingSecretName: ""
   ## Password key to be retrieved from Redis secret
   ## @param externalRedis.existingSecretPasswordKey Password key for the existing secret containing the external redis password
   ##
