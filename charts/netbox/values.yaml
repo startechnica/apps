@@ -2026,7 +2026,7 @@ postgresql:
   enabled: true
   auth:
     postgresPassword: ""
-    username: netbox_user
+    username: netbox
     password: netbox
     database: netbox
     existingSecret: ""
