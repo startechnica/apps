@@ -1,0 +1,32 @@
+{{- if and .Values.gateway.enabled .Values.gateway.gatewayApi }}
+{{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: {{ include "netbox.fullname" . }}
+  namespace: {{ include "common.names.namespace" . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: adminer
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+spec:
+  parentRefs:
+  - name: {{ default "ingressgateway" .Values.gateway.name }}
+    namespace: {{ default "istio-ingress" .Values.gateway.namespace }}
+  {{- if .Values.ingress.hosts }}
+  hostnames:
+    {{- range $host := $.Values.ingress.hosts }}
+    - {{ $host | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "netbox.fullname" . }}
+          port: {{ .Values.service.ports.http | int }}
+{{- end }}
+{{- end }}

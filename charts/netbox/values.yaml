@@ -2042,9 +2042,17 @@ redisWait:
       type: "RuntimeDefault"
 
 gateway:
+  ## @param gateway.enabled  Enable Istio Gateway and VirtualService
+  ##
   enabled: false
+  ## @param gateway.dedicated 
+  ## 
   dedicated: false
+  ## @param gateway.dedicated 
+  ## 
   gatewayApi:
+    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway
+    ## 
     create: false
   name: ""
   namespace: ""
