@@ -5,6 +5,9 @@ data center infrastructure management (DCIM) tool.
 
 Forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart)
 
+**Note:** This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions
+v5.0.0 and up are from this fork and will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
+
 **This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
 
 ## TL;DR
@@ -57,7 +60,9 @@ with Sentinel (e.g. using [Aaron Layfield](https://github.com/DandyDeveloper)'s
 [redis-ha chart](https://github.com/DandyDeveloper/charts/tree/master/charts/redis-ha)).
 
 Set `persistence.enabled` to `false` and use the S3 `storageBackend` for object
-storage. This works well with Minio or Ceph RGW as well as Amazon S3. See [Using extraConfig for S3 storage configuration](#using-extraconfig-for-s3-storage-configuration) and [Persistent storage pitfalls](#persistent-storage-pitfalls), below.
+storage. This works well with Minio or Ceph RGW as well as Amazon S3. See 
+[Using extraConfig for S3 storage configuration](#using-extraconfig-for-s3-storage-configuration) and 
+[Persistent storage pitfalls](#persistent-storage-pitfalls), below.
 
 Run multiple replicas of the NetBox web front-end to avoid interruptions during
 upgrades or at other times when the pods need to be restarted. There's no need
@@ -86,6 +91,21 @@ $ helm delete netbox --namespace netbox
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
+
+## Breaking Changes
+  * The `extraEnvs` setting has been renamed to `extraEnvVars`.
+  * The `extraContainers` setting has been renamed to `sidecars`.
+  * The `extraContainers` setting has been renamed to `sidecars`.
+  * The `extraInitContainers` setting has been renamed to `initContainers`.
+  * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
+  * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
+  * The `housekeeping.securityContext` setting has been renamed to `housekeeping.containerSecurityContext`
+  * The `worker.autoscaling.targetCPUUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetCPU`.
+  * The `worker.autoscaling.targetMemoryUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetMemory`.
+  * The `worker.extraEnvs` setting has been renamed to `worker.extraEnvVars`.
+  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
+  * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
+  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
 
 ## Upgrading
 
@@ -181,7 +201,7 @@ The following table lists the configurable parameters for this chart and their d
 | `email.server`                                  | SMTP server to use to send emails                                   | `localhost`                                  |
 | `email.port`                                    | TCP port to connect to the SMTP server on                           | `25`                                         |
 | `email.username`                                | Optional username for SMTP authentication                           | `""`                                         |
-| `email.password`                                | Password for SMTP authentication (see also `existingSecret`)        | `""`                                         |
+| `email.password`                                | Password for SMTP authentication (see also `existingSecretName`)    | `""`                                         |
 | `email.useSSL`                                  | Use SSL when connecting to the server                               | `false`                                      |
 | `email.useTLS`                                  | Use TLS when connecting to the server                               | `false`                                      |
 | `email.sslCertFile`                             | SMTP SSL certificate file path (e.g. in a mounted volume)           | `""`                                         |
@@ -269,7 +289,7 @@ The following table lists the configurable parameters for this chart and their d
 | `shortDateTimeFormat`                           | Django date format for short-form date and time strongs             | `"Y-m-d H:i"`                                |
 | `extraConfig`                                   | Additional NetBox configuration (see `values.yaml`)                 | `[]`                                         |
 | `secretKey`                                     | Django secret key used for sessions and password reset tokens       | `""` (generated)                             |
-| `existingSecret`                                | Use an existing Kubernetes `Secret` for secret values (see below)   | `""` (use individual chart values)           |
+| `existingSecretName`                            | Use an existing Kubernetes `Secret` for secret values (see below)   | `""` (use individual chart values)           |
 | `overrideUnitConfig`                            | Override the NGINX Unit application server configuration            | `{}` (*see values.yaml*)                     |
 | `postgresql.enabled`                            | Deploy PostgreSQL using bundled Bitnami PostgreSQL chart            | `true`                                       |
 | `postgresql.auth.username`                      | Username to create for NetBox in bundled PostgreSQL instance        | `netbox`                                     |
@@ -279,7 +299,7 @@ The following table lists the configurable parameters for this chart and their d
 | `externalDatabase.port`                         | Port number for external PostgreSQL                                 | `5432`                                       |
 | `externalDatabase.database`                     | Database name for external PostgreSQL                               | `netbox`                                     |
 | `externalDatabase.username`                     | Username for external PostgreSQL                                    | `netbox`                                     |
-| `externalDatabase.password`                     | Password for external PostgreSQL (see also `existingSecret`)        | `""`                                         |
+| `externalDatabase.password`                     | Password for external PostgreSQL (see also `existingSecretName`)    | `""`                                         |
 | `externalDatabase.existingSecretName`           | Fetch password for external PostgreSQL from a different `Secret`    | `""`                                         |
 | `externalDatabase.existingSecretKey`            | Key to fetch the password in the above `Secret`                     | `postgresql-password`                        |
 | `externalDatabase.sslMode`                      | PostgreSQL client SSL Mode setting                                  | `prefer`                                     |
@@ -298,7 +318,7 @@ The following table lists the configurable parameters for this chart and their d
 | `tasksRedis.sentinelService`                    | Sentinel master service name                                        | `"netbox-redis"`                             |
 | `tasksRedis.sentinelTimeout`                    | Sentinel connection timeout, in seconds                             | `300` (5 minutes)                            |
 | `tasksRedis.username`                           | Username for external Redis                                         | `""`                                         |
-| `tasksRedis.password`                           | Password for external Redis (see also `existingSecret`)             | `""`                                         |
+| `tasksRedis.password`                           | Password for external Redis (see also `existingSecretName`)         | `""`                                         |
 | `tasksRedis.existingSecretName`                 | Fetch password for external Redis from a different `Secret`         | `""`                                         |
 | `tasksRedis.existingSecretKey`                  | Key to fetch the password in the above `Secret`                     | `redis-password`                             |
 | `cachingRedis.database`                         | Redis database number used for caching views                        | `1`                                          |
@@ -311,7 +331,7 @@ The following table lists the configurable parameters for this chart and their d
 | `cachingRedis.sentinelService`                  | Sentinel master service name                                        | `"netbox-redis"`                             |
 | `cachingRedis.sentinelTimeout`                  | Sentinel connection timeout, in seconds                             | `300` (5 minutes)                            |
 | `cachingRedis.username`                         | Username for external Redis                                         | `""`                                         |
-| `cachingRedis.password`                         | Password for external Redis (see also `existingSecret`)             | `""`                                         |
+| `cachingRedis.password`                         | Password for external Redis (see also `existingSecretName`)         | `""`                                         |
 | `cachingRedis.existingSecretName`               | Fetch password for external Redis from a different `Secret`         | `""`                                         |
 | `cachingRedis.existingSecretKey`                | Key to fetch the password in the above `Secret`                     | `redis-password`                             |
 | `imagePullSecrets`                              | List of `Secret` names containing private registry credentials      | `[]`                                         |

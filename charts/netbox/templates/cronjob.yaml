@@ -2,14 +2,15 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "netbox.fullname" . }}-housekeeping
-  {{- with .Values.commonAnnotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  labels:
-    {{- include "netbox.labels" . | nindent 4 }}
+  name: {{ template "netbox.housekeeping.fullname" . }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.image "chart" .Chart ) ) }}  
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: housekeeping
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
 spec:
   concurrencyPolicy: {{ .Values.housekeeping.concurrencyPolicy }}
   failedJobsHistoryLimit: {{ .Values.housekeeping.failedJobsHistoryLimit }}
@@ -18,26 +19,22 @@ spec:
   suspend: {{ .Values.housekeeping.suspend }}
   jobTemplate:
     metadata:
-      labels:
-        {{- include "netbox.labels" . | nindent 8 }}
+      {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.housekeeping.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: housekeeping
+        app.kubernetes.io/part-of: netbox
     spec:
       template:
         metadata:
-          {{- with .Values.housekeeping.podAnnotations }}
+          {{- if .Values.podAnnotations }}
           annotations:
-            {{- toYaml . | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 12 }}
           {{- end }}
-          labels:
-            {{- include "netbox.selectorLabels" . | nindent 12 }}
+          labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 12 }}
             app.kubernetes.io/component: housekeeping
-            {{- with .Values.housekeeping.podLabels }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            app.kubernetes.io/part-of: netbox
         spec:
-          {{- with .Values.imagePullSecrets }}
-          imagePullSecrets:
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
+          {{- include "netbox.imagePullSecrets" . | nindent 10 }}
           serviceAccountName: {{ include "netbox.serviceAccountName" . }}
           automountServiceAccountToken: {{ .Values.housekeeping.automountServiceAccountToken }}
           securityContext:
@@ -47,15 +44,16 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
           containers:
-          - name: {{ .Chart.Name }}-housekeeping
-            securityContext:
-              {{- toYaml .Values.housekeeping.securityContext | nindent 14 }}
-            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          - name: housekeeping
+            {{- if .Values.containerSecurityContext.enabled }}
+            securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
+            {{- end }}
+            image: {{ template "netbox.housekeeping.image" . }}
             command:
-            - /opt/netbox/venv/bin/python
-            - /opt/netbox/netbox/manage.py
-            - housekeeping
-            imagePullPolicy: {{ .Values.image.pullPolicy }}
+              - /opt/netbox/venv/bin/python
+              - /opt/netbox/netbox/manage.py
+              - housekeeping
+            {{- include "netbox.imagePullSecrets" . | nindent 12 }}
             {{- with .Values.housekeeping.extraEnvs }}
             env:
             {{- toYaml . | nindent 12 }}
@@ -88,6 +86,11 @@ spec:
               mountPath: /opt/netbox/netbox/reports
               subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
             {{- end }}
+            {{- if .Values.scriptsPersistence.enabled }}
+            - name: scripts
+              mountPath: /opt/netbox/netbox/scripts
+              subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
+            {{- end }}
             {{- with .Values.housekeeping.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -106,10 +109,10 @@ spec:
             projected:
               sources:
               - secret:
-                  name: {{ .Values.existingSecret | default (include "netbox.fullname" .) | quote }}
+                  name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
                   items:
                   # Used by our configuration
-                  - key: email_password
+                  - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
                     path: email_password
                   - key: secret_key
                     path: secret_key
@@ -118,19 +121,19 @@ spec:
                     path: ldap_bind_password
                   {{- end }}
               - secret:
-                  name: {{ include "netbox.postgresql.secret" . | quote }}
+                  name: {{ include "netbox.databaseSecretName" . | quote }}
                   items:
-                  - key: {{ include "netbox.postgresql.secretKey" . | quote }}
+                  - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
                     path: db_password
               - secret:
-                  name: {{ include "netbox.tasksRedis.secret" . | quote }}
+                  name: {{ include "netbox.tasksRedis.secretName" . | quote }}
                   items:
-                  - key: {{ include "netbox.tasksRedis.secretKey" . | quote }}
+                  - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
                     path: redis_tasks_password
               - secret:
-                  name: {{ include "netbox.cachingRedis.secret" . | quote }}
+                  name: {{ include "netbox.cachingRedis.secretName" . | quote }}
                   items:
-                  - key: {{ include "netbox.cachingRedis.secretKey" . | quote }}
+                  - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
                     path: redis_cache_password
           {{- include "netbox.extraConfig.volumes" . | nindent 10 -}}
           - name: netbox-tmp
@@ -147,6 +150,11 @@ spec:
           - name: reports
             persistentVolumeClaim:
               claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+          {{- end }}
+          {{- if .Values.scriptsPersistence.enabled }}
+          - name: scripts
+            persistentVolumeClaim:
+              claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
           {{- end }}
           {{- with .Values.housekeeping.extraVolumes }}
           {{- toYaml . | nindent 10 }}

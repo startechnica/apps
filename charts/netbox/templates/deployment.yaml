@@ -1,244 +1,339 @@
-apiVersion: apps/v1
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
   name: {{ include "netbox.fullname" . }}
-  {{- with .Values.commonAnnotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.image "chart" .Chart ) ) }}  
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: server
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-  labels:
-    {{- include "netbox.labels" . | nindent 4 }}
-    app.kubernetes.io/component: netbox
 spec:
-{{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-{{- end }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ default 1 .Values.replicaCount }}
+  {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
   selector:
-    matchLabels:
-      {{- include "netbox.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: netbox
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: server
+      app.kubernetes.io/part-of: netbox
   {{ if .Values.updateStrategy -}}
-  strategy:
-    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
   {{ end -}}
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- if (not .Values.existingSecret) }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/ConfigMap/netbox.yaml") . | sha256sum }}
+        {{- if (not .Values.existingSecretName) }}
+        checksum/secret: {{ include (print $.Template.BasePath "/Secret/netbox.yaml") . | sha256sum }}
         {{- end }}
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
+        {{- if .Values.podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
-      labels:
-        {{- include "netbox.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: netbox
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
+        {{- if and .Values.metrics.enabled .Values.metrics.podAnnotations }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.podAnnotations "context" $ ) | nindent 8 }}
+        {{- end }}
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: server
+        app.kubernetes.io/part-of: netbox
+        {{- if and .Values.metrics.enabled .Values.metrics.podLabels }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.podLabels "context" $ ) | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-      {{- toYaml . | nindent 6 }}
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      {{- if .Values.dnsConfig }}
+      dnsConfig: {{- include "common.tplvalues.render" (dict "value" .Values.dnsConfig "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.dnsPolicy }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      {{- end }}
+      {{- if semverCompare ">= 1.13" (include "common.capabilities.kubeVersion" .) }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
+      {{- end }}
+      {{- include "netbox.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- end }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "netbox.serviceAccountName" . }}
-      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      initContainers:
-      - name: init-dirs
-        image: "{{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}"
-        imagePullPolicy: {{ .Values.init.image.pullPolicy }}
-        command: [/bin/sh, -c, mkdir -p /opt/unit/state /opt/unit/tmp]
-        {{- if .Values.init.resources }}
-        resources:
-          {{- toYaml .Values.init.resources | nindent 10 }}
-        {{- end }}
-        securityContext:
-          {{- toYaml .Values.init.securityContext | nindent 10 }}
-        volumeMounts:
-        - name: optunit
-          mountPath: /opt/unit
-      {{- with .Values.extraInitContainers }}
-      {{- toYaml . | nindent 6 }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       containers:
-      - name: {{ .Chart.Name }}
-        securityContext:
-          {{- toYaml .Values.securityContext | nindent 10 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        env:
-        - name: SUPERUSER_NAME
-          value: {{ .Values.superuser.name | quote }}
-        - name: SUPERUSER_EMAIL
-          value: {{ .Values.superuser.email | quote }}
-        - name: SKIP_STARTUP_SCRIPTS
-          value: {{ .Values.skipStartupScripts | quote }}
-        {{- if .Values.dbWaitDebug }}
-        - name: DB_WAIT_DEBUG
-          value: "1"
-        {{- end }}
-        {{- if .Values.overrideUnitConfig }}
-        - name: UNIT_CONFIG
-          value: /run/config/netbox/nginx-unit.json
-        {{- end }}
-        {{- with .Values.extraEnvs }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.allowedHostsIncludesPodIp }}
-         - name: POD_IP
-           valueFrom:
-             fieldRef:
-               apiVersion: v1
-               fieldPath: status.podIP
-        {{- end }}
-        ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
-        {{- if .Values.readinessProbe.enabled }}
-        readinessProbe:
-          httpGet:
-            path: /{{ .Values.basePath }}login/
-            port: http
-            {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
-            httpHeaders:
-            - name: Host
-              value: {{ (index .Values.allowedHosts 0) | quote }}
+        - name: netbox
+          image: {{ template "netbox.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: SUPERUSER_NAME
+              value: {{ .Values.superuser.name | quote }}
+            - name: SUPERUSER_EMAIL
+              value: {{ .Values.superuser.email | quote }}
+            - name: SKIP_STARTUP_SCRIPTS
+              value: {{ .Values.skipStartupScripts | quote }}
+            {{- if .Values.dbWaitDebug }}
+            - name: DB_WAIT_DEBUG
+              value: "1"
             {{- end }}
-          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-          successThreshold: {{ .Values.readinessProbe.successThreshold }}
-          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-        {{- end }}
-        volumeMounts:
-        - name: config
-          mountPath: /etc/netbox/config/configuration.py
-          subPath: configuration.py
-          readOnly: true
-        {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
-        - name: config
-          mountPath: /etc/netbox/config/ldap/ldap_config.py
-          subPath: ldap_config.py
-          readOnly: true
-        {{ end -}}
-        - name: config
-          mountPath: /run/config/netbox
-          readOnly: true
-        - name: secrets
-          mountPath: /run/secrets/netbox
-          readOnly: true
-        {{- include "netbox.extraConfig.volumeMounts" . | nindent 8 -}}
-        - name: netbox-tmp
-          mountPath: /tmp
-        - name: media
-          mountPath: /opt/netbox/netbox/media
-          subPath: {{ .Values.persistence.subPath | default "" | quote }}
-        {{- if .Values.reportsPersistence.enabled }}
-        - name: reports
-          mountPath: /opt/netbox/netbox/reports
-          subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
-        {{- end }}
-        - name: optunit
-          mountPath: /opt/unit
-        - name: secrets
-          mountPath: /run/secrets/superuser_password
-          subPath: superuser_password
-          readOnly: true
-        - name: secrets
-          mountPath: /run/secrets/superuser_api_token
-          subPath: superuser_api_token
-          readOnly: true
-        {{- with .Values.extraVolumeMounts }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.resources }}
-        resources:
-          {{- toYaml .Values.resources | nindent 10 }}
-        {{- end }}
-      {{- with .Values.extraContainers }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      volumes:
-      - name: config
-        configMap:
-          name: {{ include "netbox.fullname" . }}
-      - name: secrets
-        projected:
-          sources:
-          - secret:
-              name: {{ .Values.existingSecret | default (include "netbox.fullname" .) | quote }}
-              items:
-              # Used by netbox-docker entry scripts
-              - key: superuser_password
-                path: superuser_password
-              - key: superuser_api_token
-                path: superuser_api_token
-              # Used by our configuration
-              - key: email_password
-                path: email_password
-              - key: secret_key
-                path: secret_key
-              {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
-              - key: ldap_bind_password
-                path: ldap_bind_password
+            {{- if .Values.overrideUnitConfig }}
+            - name: UNIT_CONFIG
+              value: /run/config/netbox/nginx-unit.json
+            {{- end }}
+            {{- if .Values.allowedHostsIncludesPodIp }}
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ printf "%s-env-vars" (include "netbox.fullname" .) }}
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPorts.http }}
+              protocol: TCP
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /{{ .Values.basePath }}login/
+              port: {{ .Values.containerPorts.http }}
+              {{- if (not (eq (index .Values.allowedHosts 0) "*")) }}
+              httpHeaders:
+                - name: Host
+                  value: {{ (index .Values.allowedHosts 0) | quote }}
               {{- end }}
-          - secret:
-              name: {{ include "netbox.postgresql.secret" . | quote }}
-              items:
-              - key: {{ include "netbox.postgresql.secretKey" . | quote }}
-                path: db_password
-          - secret:
-              name: {{ include "netbox.tasksRedis.secret" . | quote }}
-              items:
-              - key: {{ include "netbox.tasksRedis.secretKey" . | quote }}
-                path: redis_tasks_password
-          - secret:
-              name: {{ include "netbox.cachingRedis.secret" . | quote }}
-              items:
-              - key: {{ include "netbox.cachingRedis.secretKey" . | quote }}
-                path: redis_cache_password
-      {{- include "netbox.extraConfig.volumes" . | nindent 6 -}}
-      - name: netbox-tmp
-        emptyDir:
-          medium: Memory
-      - name: optunit
-        emptyDir:
-          medium: Memory
-      - name: media
-        {{- if .Values.persistence.enabled }}
-        persistentVolumeClaim:
-          claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
-        {{- else }}
-        emptyDir: {}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/netbox/config/configuration.py
+              subPath: configuration.py
+              readOnly: true
+            {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
+            - name: config
+              mountPath: /etc/netbox/config/ldap/ldap_config.py
+              subPath: ldap_config.py
+              readOnly: true
+            {{ end -}}
+            - name: config
+              mountPath: /run/config/netbox
+              readOnly: true
+            - name: secrets
+              mountPath: /run/secrets/netbox
+              readOnly: true
+            {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 -}}
+            - name: netbox-tmp
+              mountPath: /tmp
+            - name: media
+              mountPath: /opt/netbox/netbox/media
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath | quote }}
+              {{- end }}
+            - name: reports
+              mountPath: {{ .Values.reportsPersistence.path  }}
+              {{- if .Values.reportsPersistence.subPath }}
+              subPath: {{ .Values.reportsPersistence.subPath | quote }}
+              {{- end }}
+            - name: scripts
+              mountPath: {{ .Values.scriptsPersistence.path  }}
+              {{- if .Values.scriptsPersistence.subPath }}
+              subPath: {{ .Values.scriptsPersistence.subPath | quote }}
+              {{- end }}
+            - name: optunit
+              mountPath: /opt/unit
+            - name: secrets
+              mountPath: /run/secrets/superuser_password
+              subPath: superuser_password
+              readOnly: true
+            - name: secrets
+              mountPath: /run/secrets/superuser_api_token
+              subPath: superuser_api_token
+              readOnly: true
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+        {{- if .Values.sidecars }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
-      {{- if .Values.reportsPersistence.enabled }}
-      - name: reports
-        persistentVolumeClaim:
-          claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
-      {{- end }}
-      {{- with .Values.extraVolumes }}
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.hostAliases }}
-      hostAliases:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.topologySpreadConstraints }}
-      topologySpreadConstraints:
-      {{- toYaml . | nindent 6 }}
-      {{- end }}
+      {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
+      initContainers:
+        - name: init-dirs
+          image: {{ template "netbox.init-dirs.image" . }}
+          imagePullPolicy: {{ .Values.initDirs.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - '-c'
+            - mkdir -p /opt/unit/state /opt/unit/tmp
+          {{- if .Values.initDirs.resources }}
+          resources: {{- toYaml .Values.initDirs.resources | nindent 10 }}
+          {{- end }}
+          securityContext: {{- omit .Values.initDirs.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          volumeMounts:
+            - name: optunit
+              mountPath: /opt/unit
+        {{- if .Values.redisWait.enabled }}
+        - name: wait-for-redis
+          image: {{ include "netbox.redis.image" . }}
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy | quote }}
+          securityContext: {{- omit .Values.redisWait.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |
+                #!/bin/bash
+
+                set -o errexit
+                set -o nounset
+                set -o pipefail
+
+                . /opt/bitnami/scripts/libos.sh
+                . /opt/bitnami/scripts/liblog.sh
+
+                check_redis_connection() {
+                  local result="$(redis-cli -h {{ include "netbox.redisHost" . }} -p {{ include "netbox.redisPort" . }} {{ .Values.redisWait.extraArgs }} PING)"
+                  if [[ "$result" != "PONG" ]]; then
+                    false
+                  fi
+                }
+
+                info "Checking redis connection..."
+                if ! retry_while "check_redis_connection"; then
+                    error "Could not connect to the Redis server"
+                    return 1
+                else
+                    info "Connected to the Redis instance"
+                fi
+          {{- if include "netbox.redis.auth.enabled" . }}
+          env:
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "netbox.redis.secretName" . }}
+                  key: {{ include "netbox.redis.secretPasswordKey" . }}
+          {{- end }}
+        {{- end }}
+        {{- if or .Values.initContainers $needsVolumePermissions }}
+        {{- if .Values.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 10 }}
+        {{- end }}
+        {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "netbox.fullname" . }}
+        - name: secrets
+          projected:
+            sources:
+            - secret:
+                name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
+                items:
+                  # Used by netbox-docker entry scripts
+                  - key: {{ include "netbox.superuser.secretPasswordKey" . | quote }}
+                    path: superuser_password
+                  - key: {{ include "netbox.superuser.secretApiTokenKey" . | quote }}
+                    path: superuser_api_token
+                  # Used by our configuration
+                  - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
+                    path: email_password
+                  - key: secret_key
+                    path: secret_key
+                  {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
+                  - key: ldap_bind_password
+                    path: ldap_bind_password
+                  {{- end }}
+            - secret:
+                name: {{ include "netbox.databaseSecretName" . | quote }}
+                items:
+                - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
+                  path: db_password
+            - secret:
+                name: {{ include "netbox.tasksRedis.secretName" . | quote }}
+                items:
+                - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
+                  path: redis_tasks_password
+            - secret:
+                name: {{ include "netbox.cachingRedis.secretName" . | quote }}
+                items:
+                - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
+                  path: redis_cache_password
+        {{- include "netbox.extraConfig.volumes" . | nindent 8 -}}
+        - name: netbox-tmp
+          emptyDir:
+            medium: Memory
+        - name: optunit
+          emptyDir:
+            medium: Memory
+        - name: media
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: reports
+          {{- if .Values.reportsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: scripts
+          {{- if .Values.scriptsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+          {{- if .Values.extraVolumes }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+          {{- end }}
