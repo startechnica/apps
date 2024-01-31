@@ -1864,7 +1864,7 @@ postgresql:
     persistence:
       ## @param postgresql.primary.persistence.enabled Enable PostgreSQL Primary data persistence using PVC
       ##
-      enabled: true
+      enabled: false
 
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
