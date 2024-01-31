@@ -1269,22 +1269,42 @@ housekeeping:
   podAnnotations: {}
 
   podLabels: {}
-
+  ## Configure Netbox housekeeping Pods Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param housekeeping.podSecurityContext.enabled Enabled Netbox housekeeping pods' Security Context
+  ## @param housekeeping.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+  ## @param housekeeping.podSecurityContext.sysctls Set kernel settings using the sysctl interface
+  ## @param housekeeping.podSecurityContext.supplementalGroups Set filesystem extra groups
+  ## @param housekeeping.podSecurityContext.fsGroup Set Netbox housekeeping pod's Security Context fsGroup
+  ##
   podSecurityContext:
     fsGroup: 1000
     runAsNonRoot: true
     # runAsUser: 1000
     # runAsGroup: 1000
-
+  ## Configure Netbox housekeeping container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param housekeeping.containerSecurityContext.enabled Enabled Netbox housekeeping containers' Security Context
+  ## @param housekeeping.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+  ## @param housekeeping.containerSecurityContext.runAsUser Set Netbox housekeeping containers' Security Context runAsUser
+  ## @param housekeeping.containerSecurityContext.runAsGroup Set Netbox housekeeping containers' Security Context runAsGroup
+  ## @param housekeeping.containerSecurityContext.runAsNonRoot Set Netbox housekeeping containers' Security Context runAsNonRoot
+  ## @param housekeeping.containerSecurityContext.allowPrivilegeEscalation Is it possible to escalate Netbox pod(s) privileges
+  ## @param housekeeping.containerSecurityContext.seccompProfile.type Set Netbox housekeeping containers' Security Context seccompProfile
+  ## @param housekeeping.containerSecurityContext.capabilities.drop Set Netbox housekeeping containers' Security Context capabilities to drop
+  ##
   containerSecurityContext:
     enabled: true
+    seLinuxOptions: null
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
     capabilities:
       drop:
         - ALL
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
 
   # Set this to true to automatically mount the service account token in the housekeeping container
   automountServiceAccountToken: false
