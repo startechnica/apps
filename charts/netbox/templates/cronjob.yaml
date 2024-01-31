@@ -34,10 +34,7 @@ spec:
             app.kubernetes.io/component: housekeeping
             app.kubernetes.io/part-of: netbox
         spec:
-          {{- with .Values.imagePullSecrets }}
-          imagePullSecrets:
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
+          {{- include "netbox.imagePullSecrets" . | nindent 10 }}
           serviceAccountName: {{ include "netbox.serviceAccountName" . }}
           automountServiceAccountToken: {{ .Values.housekeeping.automountServiceAccountToken }}
           securityContext:
@@ -48,14 +45,15 @@ spec:
           {{- end }}
           containers:
           - name: housekeeping
-            securityContext:
-              {{- toYaml .Values.housekeeping.securityContext | nindent 14 }}
+            {{- if .Values.containerSecurityContext.enabled }}
+            securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+            {{- end }}
             image: {{ template "netbox.housekeeping.image" . }}
             command:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
-            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- include "netbox.imagePullSecrets" . | nindent 12 }}
             {{- with .Values.housekeeping.extraEnvs }}
             env:
             {{- toYaml . | nindent 12 }}

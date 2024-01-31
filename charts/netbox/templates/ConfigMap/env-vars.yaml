@@ -9,7 +9,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 data:
-    {{- if not .Values.externalDatabase.existingSecretHostKey }}
+  {{- if not .Values.externalDatabase.existingSecretHostKey }}
   NETBOX_DATABASE_HOST: {{ include "netbox.databaseHost" . | quote }}
   {{- end }}
   {{- if not .Values.externalDatabase.existingSecretPortKey }}

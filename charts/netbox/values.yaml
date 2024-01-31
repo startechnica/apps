@@ -1276,7 +1276,8 @@ housekeeping:
     # runAsUser: 1000
     # runAsGroup: 1000
 
-  securityContext:
+  containerSecurityContext:
+    enabled: true
     capabilities:
       drop:
         - ALL

@@ -100,7 +100,7 @@ Return the proper Redis image name
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "netbox.imagePullSecrets" -}}
-{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image .Values.worker.image .Values.housekeeping.image .Values.init.image .Values.volumePermissions.image) "context" $) -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image .Values.worker.image .Values.housekeeping.image .Values.initDirs.image .Values.volumePermissions.image) "context" $) -}}
 {{- end -}}
 
 {{/*
