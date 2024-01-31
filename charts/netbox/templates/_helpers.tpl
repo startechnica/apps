@@ -78,8 +78,8 @@ Return the proper Netbox housekeeping image name
 {{/*
 Return the proper Netbox init image name
 */}}
-{{- define "netbox.init.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.init.image "global" .Values.global) }}
+{{- define "netbox.init-dirs.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.initDirs.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*

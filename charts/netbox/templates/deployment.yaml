@@ -207,16 +207,16 @@ spec:
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
       initContainers:
         - name: init-dirs
-          image: {{ template "netbox.init.image" . }}
-          imagePullPolicy: {{ .Values.init.image.pullPolicy }}
+          image: {{ template "netbox.init-dirs.image" . }}
+          imagePullPolicy: {{ .Values.initDirs.image.pullPolicy }}
           command:
             - /bin/sh
             - '-c'
             - mkdir -p /opt/unit/state /opt/unit/tmp
-          {{- if .Values.init.resources }}
-          resources: {{- toYaml .Values.init.resources | nindent 10 }}
+          {{- if .Values.initDirs.resources }}
+          resources: {{- toYaml .Values.initDirs.resources | nindent 10 }}
           {{- end }}
-          securityContext: {{- omit .Values.init.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          securityContext: {{- omit .Values.initDirs.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           volumeMounts:
             - name: optunit
               mountPath: /opt/unit

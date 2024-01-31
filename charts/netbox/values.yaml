@@ -1164,7 +1164,7 @@ ingress:
   #      - chart-example.local
 
 
-init:
+initDirs:
   image:
     repository: busybox
     tag: 1.36.1
