@@ -13,7 +13,7 @@ data:
   NETBOX_DATABASE_HOST: {{ include "netbox.databaseHost" . | quote }}
   {{- end }}
   {{- if not .Values.externalDatabase.existingSecretPortKey }}
-  NETBOX_DATABASE_PORT: {{ include "netbox.databasePort" . }}
+  NETBOX_DATABASE_PORT: {{ include "netbox.databasePort" . | int }}
   {{- end }}
   {{- if not .Values.externalDatabase.existingSecretDatabaseKey }}
   NETBOX_DATABASE_NAME: {{ include "netbox.databaseName" . | quote }}
