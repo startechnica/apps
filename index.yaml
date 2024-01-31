@@ -1092,6 +1092,50 @@ entries:
     - https://github.com/startechnica/apps/releases/download/multus-cni-0.1.3/multus-cni-0.1.3.tgz
     version: 0.1.3
   netbox:
+  - annotations:
+      images: |
+        - name: netbox
+          image: docker.io/netboxcommunity/netbox:v3.7-2.8.0
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: v3.7.1
+    created: "2024-01-31T12:49:16.99075743Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 18.x.x
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.x.x
+    description: IP address management (IPAM) and data center infrastructure management
+      (DCIM) tool
+    digest: 82bbca8daff01f9d22c25d07f20be04f0990d726418953f8acc281977a2e7201
+    home: https://github.com/bootc/netbox-chart
+    icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: bootc@boo.tc
+      name: Chris Boot
+      url: https://github.com/bootc
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: netbox
+    urls:
+    - https://github.com/startechnica/apps/releases/download/netbox-5.0.2/netbox-5.0.2.tgz
+    version: 5.0.2
   - apiVersion: v2
     appVersion: v3.6.4
     created: "2024-01-28T18:35:18.31398018Z"
@@ -1388,4 +1432,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-01-28T18:35:18.314048788Z"
+generated: "2024-01-31T12:49:16.990816119Z"
