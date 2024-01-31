@@ -1,0 +1,7 @@
+netbox:
+  postgresql:
+    enabled: true
+    auth:
+      postgresPassword: ""
+      username: netbox
+      password: mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA
