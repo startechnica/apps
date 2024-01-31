@@ -46,7 +46,7 @@ spec:
           containers:
           - name: housekeeping
             {{- if .Values.containerSecurityContext.enabled }}
-            securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+            securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
             {{- end }}
             image: {{ template "netbox.housekeeping.image" . }}
             command:
