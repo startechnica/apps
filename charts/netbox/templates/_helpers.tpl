@@ -444,19 +444,7 @@ Return the Database encrypted password
 */}}
 {{- define "netbox.databaseSecretName" -}}
 {{- if .Values.postgresql.enabled -}}
-    {{- if .Values.global.postgresql -}}
-        {{- if .Values.global.postgresql.auth -}}
-            {{- if .Values.global.postgresql.auth.existingSecret -}}
-                {{- tpl .Values.global.postgresql.auth.existingSecret $ -}}
-            {{- else -}}
-                {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecretName $) -}}
-            {{- end -}}
-        {{- else -}}
-            {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecretName $) -}}
-        {{- end -}}
-    {{- else -}}
-        {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecretName $) -}}
-    {{- end -}}
+    {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
 {{- else -}}
     {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecretName $) -}}
 {{- end -}}
