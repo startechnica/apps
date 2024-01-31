@@ -9,5 +9,15 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 data:
-  ALLOWED_HOSTS: {{ toJson .Values.allowedHosts }}
+    {{- if not .Values.externalDatabase.existingSecretHostKey }}
+  NETBOX_DATABASE_HOST: {{ include "netbox.databaseHost" . | quote }}
+  {{- end }}
+  {{- if not .Values.externalDatabase.existingSecretPortKey }}
+  NETBOX_DATABASE_PORT: {{ include "netbox.databasePort" . }}
+  {{- end }}
+  {{- if not .Values.externalDatabase.existingSecretDatabaseKey }}
+  NETBOX_DATABASE_NAME: {{ include "netbox.databaseName" . | quote }}
+  {{- end }}
+  {{- if not .Values.externalDatabase.existingSecretUserKey }}
+  NETBOX_DATABASE_USER: {{ include "netbox.databaseUser" . | quote }}
   {{- end }}
