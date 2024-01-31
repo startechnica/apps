@@ -408,7 +408,7 @@ Return the Database database name
 {{- if .Values.postgresql.enabled }}
     {{- if .Values.global.postgresql }}
         {{- if .Values.global.postgresql.auth }}
-            {{- coalesce .Values.global.postgresql.auth.database .Values.postgresql.auth.database -}}
+            {{- coalesce .Values.global.postgresql.auth.database .Values.postgresql.auth.database | quote -}}
         {{- else -}}
             {{- .Values.postgresql.auth.database -}}
         {{- end -}}
@@ -467,16 +467,16 @@ Add environment variables to configure database values
 */}}
 {{- define "netbox.databaseSecretPasswordKey" -}}
 {{- if .Values.postgresql.enabled -}}
-    {{- print "password" -}}
+    {{- printf "%s" "password" -}}
 {{- else -}}
     {{- if .Values.externalDatabase.existingSecret -}}
         {{- if .Values.externalDatabase.existingSecretPasswordKey -}}
             {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
         {{- else -}}
-            {{- print "db-password" -}}
+            {{- printf "%s" "db-password" -}}
         {{- end -}}
     {{- else -}}
-        {{- print "db-password" -}}
+        {{- printf "%s" "db-password" -}}
     {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -511,7 +511,7 @@ Add environment variables to configure database values
 {{- end -}}
 
 {{/*
-Return the Redis&reg; secret name
+Return the Redis secret name
 */}}
 {{- define "netbox.redis.secretName" -}}
 {{- if .Values.redis.enabled }}
@@ -523,25 +523,31 @@ Return the Redis&reg; secret name
 {{- else if .Values.externalRedis.existingSecret }}
     {{- printf "%s" .Values.externalRedis.existingSecret -}}
 {{- else -}}
-    {{- printf "%s-redis" (include "netbox.redis.fullname" .) -}}
+    {{- printf "%s" (include "netbox.redis.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Return the Redis&reg; secret key
+Return the Redis secret key
 */}}
 {{- define "netbox.redis.secretPasswordKey" -}}
-{{- if and .Values.redis.enabled .Values.redis.auth.existingSecret }}
-    {{- .Values.redis.auth.existingSecretPasswordKey | printf "%s" }}
-{{- else if and (not .Values.redis.enabled) .Values.externalRedis.existingSecret }}
-    {{- .Values.externalRedis.existingSecretPasswordKey | printf "%s" }}
+{{- if .Values.redis.enabled -}}
+    {{- printf "%s" "redis-password" -}}
 {{- else -}}
-    {{- printf "redis-password" -}}
+    {{- if .Values.externalRedis.existingSecret -}}
+        {{- if .Values.externalRedis.existingSecretPasswordKey -}}
+            {{- printf "%s" .Values.externalRedis.existingSecretPasswordKey -}}
+        {{- else -}}
+            {{- printf "%s" "redis-password" -}}
+        {{- end -}}
+    {{- else -}}
+        {{- printf "%s" "redis-password" -}}
+    {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Return whether Redis&reg; uses password authentication or not
+Return whether Redis uses password authentication or not
 */}}
 {{- define "netbox.redis.auth.enabled" -}}
 {{- if or (and .Values.redis.enabled .Values.redis.auth.enabled) (and (not .Values.redis.enabled) (or .Values.externalRedis.password .Values.externalRedis.existingSecret)) }}
@@ -550,7 +556,7 @@ Return whether Redis&reg; uses password authentication or not
 {{- end -}}
 
 {{/*
-Return the Redis&reg; hostname
+Return the Redis hostname
 */}}
 {{- define "netbox.redisHost" -}}
 {{- if .Values.redis.enabled }}
@@ -563,7 +569,7 @@ Return the Redis&reg; hostname
 {{- end -}}
 
 {{/*
-Return the Redis&reg; port
+Return the Redis port
 */}}
 {{- define "netbox.redisPort" -}}
 {{- if .Values.redis.enabled }}
@@ -598,6 +604,42 @@ Return the secret key that contains the Netbox superuser password
 {{- else -}}
     {{- print "superuser_password" -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret key that contains the Netbox superuser password
+*/}}
+{{- define "netbox.superuser.secretPasswordKey" -}}
+{{- if .Values.existingSecret -}}
+    {{- printf "%s" "superuser-password" -}}
+{{- else -}}
+  {{- if .Values.superuser.existingSecret -}}
+      {{- if .Values.superuser.existingSecretPasswordKey -}}
+          {{- printf "%s" .Values.superuser.existingSecretPasswordKey -}}
+      {{- else -}}
+          {{- printf "%s" "superuser-password" -}}
+      {{- end -}}
+  {{- else -}}
+      {{- printf "%s" "superuser_password" -}}
+  {{- end -}}
+  {{- end -}}
+
+{{/*
+Return the secret key that contains the Netbox superuser API token
+*/}}
+{{- define "netbox.superuser.secretApiTokenKey" -}}
+{{- if .Values.existingSecret -}}
+    {{- printf "%s" "superuser-api-token" -}}
+{{- else -}}
+  {{- if .Values.superuser.existingSecret -}}
+      {{- if .Values.superuser.existingSecretApiTokenKey -}}
+          {{- printf "%s" .Values.superuser.existingSecretApiTokenKey -}}
+      {{- else -}}
+          {{- printf "%s" "superuser-api-token" -}}
+      {{- end -}}
+  {{- else -}}
+      {{- printf "%s" "superuser_api_token" -}}
+  {{- end -}}
 {{- end -}}
 
 {{/* Validate values of Netbox - database */}}

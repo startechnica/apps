@@ -278,9 +278,9 @@ spec:
                 name: {{ .Values.existingSecret | default (include "netbox.fullname" .) | quote }}
                 items:
                 # Used by netbox-docker entry scripts
-                - key: superuser_password
+                - key: {{ include "netbox.superuser.secretPasswordKey" . | quote }}
                   path: superuser_password
-                - key: superuser_api_token
+                - key: {{ include "netbox.superuser.secretApiTokenKey" . | quote }}
                   path: superuser_api_token
                 # Used by our configuration
                 - key: email_password
