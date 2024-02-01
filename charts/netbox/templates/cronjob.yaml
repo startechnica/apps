@@ -61,9 +61,9 @@ spec:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
-            {{- if .Values.housekeping.extraEnvVars }}
+            {{- if .Values.houseekeeping.extraEnvVars }}
             env:
-              {{- include "common.tplvalues.render" (dict "value" .Values.housekeping.extraEnvVars "context" $) | nindent 12 }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
             volumeMounts:
             - name: config
