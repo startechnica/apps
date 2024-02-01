@@ -831,7 +831,7 @@ imagePullSecrets: []
 ## Specifies whether a ServiceAccount should be created
 ##
 serviceAccount:
-  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Keycloak pods
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Netbox pods
   ##
   create: true
   ## @param serviceAccount.name Name of the created ServiceAccount
@@ -1096,7 +1096,7 @@ service:
   nodePorts:
     http: ""
     https: ""
-  ## @param service.clusterIP Keycloak service clusterIP IP
+  ## @param service.clusterIP Netbox service clusterIP IP
   ## e.g:
   ## clusterIP: None
   ##
@@ -1130,7 +1130,7 @@ service:
   ##   - 10.10.10.0/24
   ##
   loadBalancerSourceRanges: []
-  ## @param service.annotations Additional custom annotations for Keycloak service
+  ## @param service.annotations Additional custom annotations for Netbox service
   ## Example:
   ## annotations:
   ##   service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
@@ -1138,7 +1138,7 @@ service:
   ##   service.beta.kubernetes.io/aws-load-balancer-ssl-ports: http
   ##
   annotations: {}
-  ## @param service.extraPorts Extra port to expose on Keycloak service
+  ## @param service.extraPorts Extra port to expose on Netbox service
   ##
   extraPorts: []
   ## @param service.sessionAffinity Control where client requests go, to the same pod or round-robin
@@ -1201,7 +1201,7 @@ ingress:
   ## @param ingress.extraHosts An array with additional hostname(s) to be covered with the ingress record
   ## e.g:
   ## extraHosts:
-  ##   - name: airflow.local
+  ##   - name: netbox.local
   ##     path: /
   ##
   extraHosts: []
@@ -1219,8 +1219,8 @@ ingress:
   ## e.g:
   ## extraTls:
   ## - hosts:
-  ##     - airflow.local
-  ##   secretName: airflow.local-tls
+  ##     - netbox.local
+  ##   secretName: netbox.local-tls
   ##
   extraTls: []
   ## @param ingress.secrets Custom TLS certificates as secrets
@@ -1232,7 +1232,7 @@ ingress:
   ## Please see README.md for more information
   ## e.g:
   ## secrets:
-  ##   - name: airflow.local-tls
+  ##   - name: netbox.local-tls
   ##     key: |-
   ##       -----BEGIN RSA PRIVATE KEY-----
   ##       ...
@@ -2090,9 +2090,9 @@ postgresql:
 ## All of these values are only used when postgresql.enabled is set to false
 ## @param externalDatabase.host Database host
 ## @param externalDatabase.port Database port number
-## @param externalDatabase.user Non-root username for Keycloak
-## @param externalDatabase.password Password for the non-root username for Keycloak
-## @param externalDatabase.database Keycloak database name
+## @param externalDatabase.user Non-root username for Netbox
+## @param externalDatabase.password Password for the non-root username for Netbox
+## @param externalDatabase.database Netbox database name
 ## @param externalDatabase.existingSecretName Name of an existing secret resource containing the database credentials
 ## @param externalDatabase.existingSecretHostKey Name of an existing secret key containing the database host name
 ## @param externalDatabase.existingSecretPortKey Name of an existing secret key containing the database port
