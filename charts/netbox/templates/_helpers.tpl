@@ -445,6 +445,8 @@ Return the Database encrypted password
 {{- define "netbox.databaseSecretName" -}}
 {{- if .Values.postgresql.enabled -}}
     {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
+{{- else if .Values.existingSecretName }}
+    {{- printf "%s" .Values.existingSecretName -}}
 {{- else -}}
     {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecretName $) -}}
 {{- end -}}
@@ -510,6 +512,8 @@ Return the Redis secret name
     {{- end -}}
 {{- else if .Values.externalRedis.existingSecretName }}
     {{- printf "%s" .Values.externalRedis.existingSecretName -}}
+{{- else if .Values.existingSecretName }}
+    {{- printf "%s" .Values.existingSecretName -}}
 {{- else -}}
     {{- printf "%s" (include "netbox.redis.fullname" .) -}}
 {{- end -}}
@@ -598,30 +602,26 @@ Return the secret key that contains the Netbox superuser password
 Return the secret name containing the Netbox superuser password
 */}}
 {{- define "netbox.superuser.secretName" -}}
-{{- $secretName := .Values.superuser.existingSecretName -}}
-{{- if $secretName -}}
-    {{- printf "%s" (tpl $secretName $) -}}
+{{- if .Values.superuser.existingSecretName -}}
+    {{- printf "%s" .Values.superuser.existingSecretName -}}
 {{- else -}}
-    {{- printf "%s-su" (include "netbox.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+    {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
 {{- end -}}
 
 {{/*
 Return the secret key that contains the Netbox superuser password
 */}}
 {{- define "netbox.superuser.secretPasswordKey" -}}
-{{- if .Values.existingSecretName -}}
+{{- if .Values.superuser.existingSecretName -}}
+    {{- if .Values.superuser.existingSecretPasswordKey -}}
+        {{- printf "%s" .Values.superuser.existingSecretPasswordKey -}}
+    {{- else -}}
+        {{- printf "%s" "superuser-password" -}}
+    {{- end -}}
+{{- else if .Values.existingSecretName -}}
     {{- printf "%s" "superuser-password" -}}
 {{- else -}}
-  {{- if .Values.superuser.existingSecretName -}}
-      {{- if .Values.superuser.existingSecretPasswordKey -}}
-          {{- printf "%s" .Values.superuser.existingSecretPasswordKey -}}
-      {{- else -}}
-          {{- printf "%s" "superuser-password" -}}
-      {{- end -}}
-  {{- else -}}
-      {{- printf "%s" "superuser_password" -}}
-  {{- end -}}
+    {{- printf "%s" "superuser_password" -}}
 {{- end -}}
 {{- end -}}
 
@@ -629,37 +629,43 @@ Return the secret key that contains the Netbox superuser password
 Return the secret key that contains the Netbox superuser API token
 */}}
 {{- define "netbox.superuser.secretApiTokenKey" -}}
-{{- if .Values.existingSecretName -}}
+{{- if .Values.superuser.existingSecretName -}}
+    {{- if .Values.superuser.existingSecretApiTokenKey -}}
+        {{- printf "%s" .Values.superuser.existingSecretApiTokenKey -}}
+    {{- else -}}
+        {{- printf "%s" "superuser-api-token" -}}
+    {{- end -}}
+{{- else if .Values.existingSecretName -}}
     {{- printf "%s" "superuser-api-token" -}}
 {{- else -}}
-  {{- if .Values.superuser.existingSecretName -}}
-      {{- if .Values.superuser.existingSecretApiTokenKey -}}
-          {{- printf "%s" .Values.superuser.existingSecretApiTokenKey -}}
-      {{- else -}}
-          {{- printf "%s" "superuser-api-token" -}}
-      {{- end -}}
-  {{- else -}}
-      {{- printf "%s" "superuser_api_token" -}}
-  {{- end -}}
+    {{- printf "%s" "superuser_api_token" -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret name containing email server
+*/}}
+{{- define "netbox.email.secretName" -}}
+{{- if .Values.email.existingSecretName -}}
+    {{- printf "%s" .Values.email.existingSecretName -}}
+{{- else -}}
+    {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
 {{- end -}}
 
 {{/*
 Return the secret key that contains the Netbox email password
 */}}
 {{- define "netbox.email.secretPasswordKey" -}}
-{{- if .Values.existingSecretName -}}
+{{- if .Values.email.existingSecretName -}}
+    {{- if .Values.email.existingSecretPasswordKey -}}
+        {{- printf "%s" .Values.email.existingSecretPasswordKey -}}
+    {{- else -}}
+        {{- printf "%s" "email-password" -}}
+    {{- end -}}
+{{- else if .Values.existingSecretName -}}
     {{- printf "%s" "email-password" -}}
 {{- else -}}
-  {{- if .Values.email.existingSecretName -}}
-      {{- if .Values.email.existingSecretPasswordKey -}}
-          {{- printf "%s" .Values.email.existingSecretPasswordKey -}}
-      {{- else -}}
-          {{- printf "%s" "email-password" -}}
-      {{- end -}}
-  {{- else -}}
-      {{- printf "%s" "email_password" -}}
-  {{- end -}}
+    {{- printf "%s" "email_password" -}}
 {{- end -}}
 {{- end -}}
 

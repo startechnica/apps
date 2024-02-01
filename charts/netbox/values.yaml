@@ -771,6 +771,8 @@ secretKey: ""
 ##     redis.enabled is false and tasksRedis.existingSecretName is blank)
 ## - redis-cache-password: Redis password for caching Redis instance (if
 ##     redis.enabled is false and cachingRedis.existingSecretName is blank)
+## - redis-password: Redis password for caching and tasks Redis instance (if
+##     redis.enabled is false, cachingRedis.existingSecretName and tasksRedis.existingSecretName is blank)
 ## - secret-key: session encryption token (50+ random characters)
 ## - superuser-password: Password for the initial super-user account
 ## - superuser-api-token: API token created for the initial super-user account
