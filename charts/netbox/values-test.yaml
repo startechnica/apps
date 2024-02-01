@@ -8,5 +8,6 @@ metrics:
   enabled: true
   serviceMonitor:
     enabled: true
+    interval: 30s
     labels:
       release: kube-prometheus-stack

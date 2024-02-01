@@ -35,7 +35,7 @@ spec:
   {{- end }}
   ports:
     {{- if .Values.worker.service.http.enabled }}
-    - name: http
+    - name: http-metrics
       port: {{ coalesce .Values.worker.service.ports.http .Values.worker.service.port }}
       protocol: TCP
       targetPort: http
