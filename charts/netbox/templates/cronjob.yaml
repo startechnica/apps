@@ -61,7 +61,7 @@ spec:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
-            {{- if .Values.houseekeeping.extraEnvVars }}
+            {{- if .Values.housekeeping.extraEnvVars }}
             env:
               {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
