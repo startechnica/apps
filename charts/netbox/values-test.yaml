@@ -8,5 +8,5 @@ metrics:
   enabled: true
   serviceMonitor:
     enabled: true
-    additionalLabels:
+    labels:
       release: kube-prometheus-stack
