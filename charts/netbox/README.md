@@ -95,17 +95,16 @@ The command removes all the Kubernetes components associated with the chart and 
 ## Breaking Changes
   * The `extraEnvs` setting has been renamed to `extraEnvVars`.
   * The `extraContainers` setting has been renamed to `sidecars`.
-  * The `extraContainers` setting has been renamed to `sidecars`.
   * The `extraInitContainers` setting has been renamed to `initContainers`.
   * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
-  * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
   * The `housekeeping.securityContext` setting has been renamed to `housekeeping.containerSecurityContext`
+  * The `init` setting has been renamed to `initDirs`.
+  * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
+  * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
+  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
   * The `worker.autoscaling.targetCPUUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetCPU`.
   * The `worker.autoscaling.targetMemoryUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetMemory`.
   * The `worker.extraEnvs` setting has been renamed to `worker.extraEnvVars`.
-  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
-  * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
-  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
 
 ## Upgrading
 

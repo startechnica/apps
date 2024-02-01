@@ -4,3 +4,7 @@ postgresql:
   #   username: netbox_user
   #   password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
 
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true

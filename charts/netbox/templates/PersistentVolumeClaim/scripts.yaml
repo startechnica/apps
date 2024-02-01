@@ -3,25 +3,20 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ include "netbox.fullname" . }}-scripts
-  {{- with .Values.commonAnnotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.scriptsPersistence.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.scriptsPersistence.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
-  labels:
-    {{- include "netbox.labels" . | nindent 4 }}
 spec:
   accessModes:
-    - {{ .Values.scriptsPersistence.accessMode | quote }}
+  {{- range .Values.scriptsPersistence.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
   resources:
     requests:
       storage: {{ .Values.scriptsPersistence.size | quote }}
-  {{- if .Values.scriptsPersistence.storageClass }}
-  {{- if (eq "-" .Values.scriptsPersistence.storageClass) }}
-  storageClassName: ""
-  {{- else }}
-  storageClassName: {{ .Values.scriptsPersistence.storageClass | quote }}
-  {{- end }}
-  {{- end }}
+  {{- include "common.storage.class" (dict "persistence" .Values.scriptsPersistence "global" .Values.global) | nindent 2 }}
   {{- with .Values.scriptsPersistence.selector }}
   selector:
     {{- toYaml . | nindent 4 }}

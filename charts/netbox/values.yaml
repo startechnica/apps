@@ -1852,6 +1852,13 @@ worker:
     ##
     type: ClusterIP
 
+  ## Netbox worker Prometheus Exporter / Metrics
+  ##
+  metrics:
+    ## @param worker.metrics.enabled Enable metrics
+    ##
+    enabled: false
+
 ## HTTPS settings
 ##
 tls:
@@ -1902,6 +1909,16 @@ metrics:
     ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
     ##
     enabled: false
+    ## @param metrics.serviceMonitor.port Metrics service HTTP port
+    ##
+    port: http
+    ## @param metrics.serviceMonitor.endpoints [array] The endpoint configuration of the ServiceMonitor. Path is mandatory. Interval, timeout and labellings can be overwritten.
+    ##
+    endpoints:
+      - path: /metrics
+    ## @param metrics.serviceMonitor.path Metrics service HTTP path. Deprecated: Use @param metrics.serviceMonitor.endpoints instead
+    ##
+    path: ""
     ## @param metrics.serviceMonitor.namespace Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)
     ##
     namespace: ""
