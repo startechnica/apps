@@ -12,17 +12,17 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "netbox.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- if .Values.fullnameOverride -}}
+    {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else -}}
+    {{- $name := default .Chart.Name .Values.nameOverride }}
+    {{- if contains $name .Release.Name -}}
+        {{- .Release.Name | trunc 63 | trimSuffix "-" }}
+    {{- else -}}
+        {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+    {{- end -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Return the proper Netbox worker fullname
@@ -108,7 +108,7 @@ Create chart name and version as used by the chart label.
 */}}
 {{- define "netbox.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- end -}}
 
 {{/*
 Common labels
@@ -121,7 +121,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with .Values.commonLabels }}
 {{ toYaml . }}
 {{- end }}
-{{- end }}
+{{- end -}}
 
 {{/*
 Selector labels
@@ -129,18 +129,18 @@ Selector labels
 {{- define "netbox.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "netbox.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
+{{- end -}}
 
 {{/*
 Create the name of the service account to use
 */}}
 {{- define "netbox.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
+{{- if .Values.serviceAccount.create -}}
   {{- default (include "netbox.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
+{{- else -}}
   {{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Return the path Netbox is hosted on. This looks at httpRelativePath and returns it with a trailing slash. For example:
@@ -156,13 +156,13 @@ Return the path Netbox is hosted on. This looks at httpRelativePath and returns 
 Name of the Secret that contains the PostgreSQL password
 */}}
 {{- define "netbox.postgresql.secret" -}}
-  {{- if .Values.postgresql.enabled }}
+  {{- if .Values.postgresql.enabled -}}
     {{- include "postgresql.v1.secretName" .Subcharts.postgresql -}}
-  {{- else if .Values.externalDatabase.existingSecretName }}
+  {{- else if .Values.externalDatabase.existingSecretName -}}
     {{- .Values.externalDatabase.existingSecretName }}
-  {{- else }}
+  {{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.postgresql.fullname" .) }}
-  {{- end }}
+  {{- end -}}
 {{- end -}}
 
 {{/*
@@ -260,7 +260,7 @@ Name of the key in Secret that contains the Redis tasks password
   {{- else if .Values.tasksRedis.existingSecretName -}}
     {{ .Values.tasksRedis.existingSecretKey }}
   {{- else -}}
-    redis_tasks_password
+    {{- print "redis_tasks_password" -}}
   {{- end -}}
 {{- end -}}
 
@@ -328,26 +328,26 @@ Add environment variables to configure tasks Redis values
 Name of the Secret that contains the Redis cache password
 */}}
 {{- define "netbox.cachingRedis.secret" -}}
-  {{- if .Values.redis.enabled }}
+{{- if .Values.redis.enabled -}}
     {{- include "redis.secretName" .Subcharts.redis -}}
-  {{- else if .Values.cachingRedis.existingSecretName }}
+{{- else if .Values.cachingRedis.existingSecretName -}}
     {{- .Values.cachingRedis.existingSecretName }}
-  {{- else }}
+{{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
-  {{- end }}
-{{- end }}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Name of the key in Secret that contains the Redis cache password
 */}}
 {{- define "netbox.cachingRedis.secretKey" -}}
-  {{- if .Values.redis.enabled -}}
+{{- if .Values.redis.enabled -}}
     {{- include "redis.secretPasswordKey" .Subcharts.redis -}}
-  {{- else if .Values.cachingRedis.existingSecretName -}}
+{{- else if .Values.cachingRedis.existingSecretName -}}
     {{ .Values.cachingRedis.existingSecretKey }}
-  {{- else -}}
+{{- else -}}
     redis_cache_password
-  {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -356,19 +356,19 @@ Volumes that need to be mounted for .Values.extraConfig entries
 {{- define "netbox.extraConfig.volumes" -}}
 {{- range $index, $config := .Values.extraConfig -}}
 - name: extra-config-{{ $index }}
-  {{- if $config.values }}
+  {{- if $config.values -}}
   configMap:
     name: {{ include "netbox.fullname" $ }}
     items:
     - key: extra-{{ $index }}.yaml
       path: extra-{{ $index }}.yaml
-  {{- else if $config.configMap }}
+  {{- else if $config.configMap -}}
   configMap:
     {{- toYaml $config.configMap | nindent 4 }}
-  {{- else if $config.secret }}
+  {{- else if $config.secret -}}
   secret:
     {{- toYaml $config.secret | nindent 4 }}
-  {{- end }}
+  {{- end -}}
 {{ end -}}
 {{- end -}}
 
@@ -387,7 +387,7 @@ Volume mounts for .Values.extraConfig entries
 Return the Database hostname
 */}}
 {{- define "netbox.databaseHost" -}}
-{{- if eq .Values.postgresql.architecture "replication" }}
+{{- if eq .Values.postgresql.architecture "replication" -}}
   {{- ternary (include "netbox.postgresql.fullname" .) (tpl .Values.externalDatabase.host $) .Values.postgresql.enabled -}}-primary
 {{- else -}}
   {{- ternary (include "netbox.postgresql.fullname" .) (tpl .Values.externalDatabase.host $) .Values.postgresql.enabled -}}
@@ -445,7 +445,7 @@ Return the Database encrypted password
 {{- define "netbox.databaseSecretName" -}}
 {{- if .Values.postgresql.enabled -}}
     {{- default (include "netbox.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
-{{- else if .Values.existingSecretName }}
+{{- else if .Values.existingSecretName -}}
     {{- printf "%s" .Values.existingSecretName -}}
 {{- else -}}
     {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecretName $) -}}
@@ -504,15 +504,15 @@ Add environment variables to configure database values
 Return the Redis secret name
 */}}
 {{- define "netbox.redis.secretName" -}}
-{{- if .Values.redis.enabled }}
-    {{- if .Values.redis.auth.existingSecret }}
+{{- if .Values.redis.enabled -}}
+    {{- if .Values.redis.auth.existingSecret -}}
         {{- printf "%s" .Values.redis.auth.existingSecret -}}
     {{- else -}}
         {{- printf "%s" (include "netbox.redis.fullname" .) }}
     {{- end -}}
-{{- else if .Values.externalRedis.existingSecretName }}
+{{- else if .Values.externalRedis.existingSecretName -}}
     {{- printf "%s" .Values.externalRedis.existingSecretName -}}
-{{- else if .Values.existingSecretName }}
+{{- else if .Values.existingSecretName -}}
     {{- printf "%s" .Values.existingSecretName -}}
 {{- else -}}
     {{- printf "%s" (include "netbox.redis.fullname" .) -}}
@@ -542,7 +542,7 @@ Return the Redis secret key
 Return whether Redis uses password authentication or not
 */}}
 {{- define "netbox.redis.auth.enabled" -}}
-{{- if or (and .Values.redis.enabled .Values.redis.auth.enabled) (and (not .Values.redis.enabled) (or .Values.externalRedis.password .Values.externalRedis.existingSecretName)) }}
+{{- if or (and .Values.redis.enabled .Values.redis.auth.enabled) (and (not .Values.redis.enabled) (or .Values.externalRedis.password .Values.externalRedis.existingSecretName)) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
