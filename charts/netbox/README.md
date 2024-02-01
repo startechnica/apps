@@ -20,7 +20,7 @@ $ helm install netbox \
   --set redis.auth.password=[password3] \
   startechnica/netbox
 ```
-⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for real.
+⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
 
 ## Prerequisites
 
@@ -32,12 +32,12 @@ $ helm install netbox \
 
 To install the chart with the release name `my-release` and default configuration:
 
-```shell
+```console
 $ helm repo add startechnica https://startechnica.github.io/apps
 $ helm install my-release \
-  --set postgresql.auth.postgresPassword=[password1] \
-  --set postgresql.auth.password=[password2] \
-  --set redis.auth.password=[password3] \
+  --set postgresql.auth.postgresPassword=<password1> \
+  --set postgresql.auth.password=<password2> \
+  --set redis.auth.password=<password3> \
   startechnica/netbox
 ```
 
@@ -96,12 +96,14 @@ The command removes all the Kubernetes components associated with the chart and 
   * The `extraEnvs` setting has been renamed to `extraEnvVars`.
   * The `extraContainers` setting has been renamed to `sidecars`.
   * The `extraInitContainers` setting has been renamed to `initContainers`.
-  * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
   * The `housekeeping.securityContext` setting has been renamed to `housekeeping.containerSecurityContext`
   * The `init` setting has been renamed to `initDirs`.
   * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
   * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
+  * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
   * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
+  * The `superuser.password: admin` setting has been changed to `superuser.password: ""`.
+  * The `superuser.passwordSecretKey` setting has been renamed to `superuser.existingSecretPasswordKey`.
   * The `worker.autoscaling.targetCPUUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetCPU`.
   * The `worker.autoscaling.targetMemoryUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetMemory`.
   * The `worker.extraEnvs` setting has been renamed to `worker.extraEnvVars`.

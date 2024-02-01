@@ -388,17 +388,15 @@ superuser:
   email: admin@example.com
   ## @param superuser.password Netbox administrator password for the new superuser
   ##
-  password: admin
+  password: ""
   ## @param superuser.apiToken Netbox administrator superuser token
   ##
   apiToken: ""
   ## @param superuser.existingSecretName Existing secret containing Netbox superuser password
   ##
   existingSecretName: ""
-  ## @param superuser.passwordSecretKey Key where the Netbox superuser password is being stored inside the existing secret.
   ## @param superuser.existingSecretPasswordKey Key where the Netbox superuser password is being stored inside the existing secret.
   ##
-  passwordSecretKey: ""
   existingSecretPasswordKey: ""
   ## @param superuser.annotations Additional custom annotations for Netbox superuser secret object
   ##
@@ -603,9 +601,10 @@ mapsUrl: 'https://maps.google.com/?q='
 # all objects by specifying "?limit=0".
 maxPageSize: 1000
 
-# By default uploaded media is stored in an attached volume. Using
-# Django-storages is also supported. Provide the class path of the storage
-# driver in storageBackend and any configuration options in storageConfig.
+## @param storageBackend  By default uploaded media is stored in an attached volume. Using
+##   Django-storages is also supported. Provide the class path of the storage
+##   driver in storageBackend and any configuration options in storageConfig.
+##
 storageBackend: null  # storages.backends.s3boto3.S3Boto3Storage
 storageConfig: {}
   # AWS_ACCESS_KEY_ID: 'Key ID'
@@ -649,8 +648,6 @@ rackElevationDefaultUnitWidth: 220
 
 ## @section Authentication parameters
 
-## 
-##
 remoteAuth:
   ## @param remoteAuth.enabled  Enable remote authentication support
   ##
@@ -676,42 +673,46 @@ remoteAuth:
   ##
   existingSecretName: ""
 
-  # The following options are specific for backend "netbox.authentication.LDAPBackend"
-  # you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
-  # see https://django-auth-ldap.readthedocs.io
-  #
-  # When enabling LDAP support please see "Using LDAP Authentication" in README.md and
-  # uncomment ALL of the configuration settings below, or your configuration will be invalid.
-  #
-  # ldap:
-  #   serverUri: 'ldap://domain.com'
-  #   startTls: true
-  #   ignoreCertErrors: false
-  #   bindDn: 'CN=Netbox,OU=EmbeddedDevices,OU=MyCompany,DC=domain,dc=com'
-  #   bindPassword: 'TopSecretPassword'
-  #   userDnTemplate: null
-  #   userSearchBaseDn: 'OU=Users,OU=MyCompany,DC=domain,dc=com'
-  #   userSearchAttr: 'sAMAccountName'
-  #   groupSearchBaseDn: 'OU=Groups,OU=MyCompany,DC=domain,dc=com'
-  #   groupSearchClass: 'group'
-  #   groupType: 'GroupOfNamesType'
-  #   requireGroupDn: ''
-  #   findGroupPerms: true
-  #   mirrorGroups: true
-  #   mirrorGroupsExcept: null
-  #   cacheTimeout: 3600
-  #   isAdminDn: 'CN=Network Configuration Operators,CN=Builtin,DC=domain,dc=com'
-  #   isSuperUserDn: 'CN=Domain Admins,CN=Users,DC=domain,dc=com'
-  #   attrFirstName: 'givenName'
-  #   attrLastName: 'sn'
-  #   attrMail: 'mail'
+  ## The following options are specific for backend "netbox.authentication.LDAPBackend"
+  ## you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
+  ## see https://django-auth-ldap.readthedocs.io
+  ##
+  ## When enabling LDAP support please see "Using LDAP Authentication" in README.md and
+  ## uncomment ALL of the configuration settings below, or your configuration will be invalid.
+  ##
+  ldap:
+    ## @param remoteAuth.ldap.enabled  Enable LDAP remote auth backend
+    ##
+    enabled: false
+    serverUri: 'ldap://domain.com'
+    startTls: true
+    ignoreCertErrors: false
+    bindDn: 'CN=Netbox,OU=EmbeddedDevices,OU=MyCompany,DC=domain,dc=com'
+    bindPassword: 'TopSecretPassword'
+    userDnTemplate: null
+    userSearchBaseDn: 'OU=Users,OU=MyCompany,DC=domain,dc=com'
+    userSearchAttr: 'sAMAccountName'
+    groupSearchBaseDn: 'OU=Groups,OU=MyCompany,DC=domain,dc=com'
+    groupSearchClass: 'group'
+    groupType: 'GroupOfNamesType'
+    requireGroupDn: ''
+    findGroupPerms: true
+    mirrorGroups: true
+    mirrorGroupsExcept: null
+    cacheTimeout: 3600
+    isAdminDn: 'CN=Network Configuration Operators,CN=Builtin,DC=domain,dc=com'
+    isSuperUserDn: 'CN=Domain Admins,CN=Users,DC=domain,dc=com'
+    attrFirstName: 'givenName'
+    attrLastName: 'sn'
+    attrMail: 'mail'
 
 releaseCheck:
-  # This repository is used to check whether there is a new release of NetBox
-  # available. Set to null to disable the version check or use the URL below to
-  # check for release in the official NetBox repository.
+  ## This repository is used to check whether there is a new release of NetBox
+  ## available. Set to null to disable the version check or use the URL below to
+  ## check for release in the official NetBox repository.
+  ## url: https://api.github.com/repos/netbox-community/netbox/releases
+  ##
   url: null
-  # url: https://api.github.com/repos/netbox-community/netbox/releases
 
 # Maximum execution time for background tasks, in seconds.
 rqDefaultTimeout: 300  # 5 mins
@@ -756,7 +757,7 @@ extraConfig: []
 
 ## @param secretKey  If provided, this should be a 50+ character string of random characters. It
 ##    will be randomly generated if left blank.
-## You can also use an existing secret with "secret_key" instead of "secretKey"
+## You can also use an existing secret with "secret-key" instead of "secretKey"
 ## See `existingSecretName` for details
 ##
 secretKey: ""
@@ -887,7 +888,7 @@ persistence:
   ## @param persistence.path The path the volume will be mounted at on Redis master containers
   ## NOTE: Useful when using different Redis images
   ##
-  path: /opt/netbox/netbox/reports
+  path: /opt/netbox/netbox/media
   ## @param persistence.subPath  Existing claim's subPath to use, e.g. "media" (optional)
   ##
   subPath: ""

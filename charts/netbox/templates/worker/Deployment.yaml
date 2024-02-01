@@ -191,33 +191,38 @@ spec:
         - name: secrets
           projected:
             sources:
-            - secret:
-                name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
-                items:
-                # Used by our configuration
-                - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
-                  path: email_password
-                - key: secret_key
-                  path: secret_key
-                {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
-                - key: ldap_bind_password
-                  path: ldap_bind_password
-                {{- end }}
-            - secret:
-                name: {{ include "netbox.databaseSecretName" . | quote }}
-                items:
-                - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
-                  path: db_password
-            - secret:
-                name: {{ include "netbox.tasksRedis.secretName" . | quote }}
-                items:
-                - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
-                  path: redis_tasks_password
-            - secret:
-                name: {{ include "netbox.cachingRedis.secretName" . | quote }}
-                items:
-                - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
-                  path: redis_cache_password
+              - secret:
+                  name: {{ include "netbox.secretName" . | quote }}
+                  items:
+                    # Used by our configuration
+                    - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
+                      path: email_password
+                    - key: secret_key
+                      path: secret_key
+              {{- if .Values.remoteAuth.enabled }}
+              - secret:
+                  name: {{ include "netbox.remoteAuth.secretName" . | quote }}
+                  items:
+                    {{- if and (eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend") .Values.remoteAuth.ldap.enabled }}
+                    - key: ldap_bind_password
+                      path: ldap_bind_password
+                    {{- end }}
+              {{- end }}
+              - secret:
+                  name: {{ include "netbox.databaseSecretName" . | quote }}
+                  items:
+                    - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
+                      path: db_password
+              - secret:
+                  name: {{ include "netbox.tasksRedis.secretName" . | quote }}
+                  items:
+                    - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
+                      path: redis_tasks_password
+              - secret:
+                  name: {{ include "netbox.cachingRedis.secretName" . | quote }}
+                  items:
+                    - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
+                      path: redis_cache_password
         {{- include "netbox.extraConfig.volumes" . | nindent 8 -}}
         - name: netbox-tmp
           emptyDir:

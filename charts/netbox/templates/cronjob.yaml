@@ -116,10 +116,15 @@ spec:
                     path: email_password
                   - key: secret_key
                     path: secret_key
-                  {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
-                  - key: ldap_bind_password
-                    path: ldap_bind_password
-                  {{- end }}
+              {{- if .Values.remoteAuth.enabled }}
+              - secret:
+                  name: {{ include "netbox.remoteAuth.secretName" . | quote }}
+                  items:
+                    {{- if and (eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend") .Values.remoteAuth.ldap.enabled }}
+                    - key: ldap_bind_password
+                      path: ldap_bind_password
+                    {{- end }}
+              {{- end }}
               - secret:
                   name: {{ include "netbox.databaseSecretName" . | quote }}
                   items:

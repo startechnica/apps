@@ -153,6 +153,13 @@ Return the path Netbox is hosted on. This looks at httpRelativePath and returns 
 {{- end -}}
 
 {{/*
+Return the Netbox secret name 
+*/}}
+{{- define "netbox.secretName" -}}
+    {{ default (include "netbox.fullname" .) .Values.existingSecretName }}
+{{- end -}}
+
+{{/*
 Name of the Secret that contains the PostgreSQL password
 */}}
 {{- define "netbox.postgresql.secret" -}}
@@ -574,30 +581,6 @@ Return the Redis port
 {{- end -}}
 
 {{/*
-Return the secret containing the Netbox superuser password
-*/}}
-{{- define "netbox.secretName" -}}
-{{- $secretName := .Values.superuser.existingSecretName -}}
-{{- if $secretName -}}
-    {{- printf "%s" (tpl $secretName $) -}}
-{{- else -}}
-    {{- printf "%s" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return the secret key that contains the Netbox superuser password
-*/}}
-{{- define "netbox.secretKey" -}}
-{{- $secretName := .Values.superuser.existingSecretName -}}
-{{- if and $secretName .Values.superuser.existingSecretPasswordKey -}}
-    {{- printf "%s" .Values.superuser.existingSecretPasswordKey -}}
-{{- else -}}
-    {{- print "superuser_password" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Return the secret name containing the Netbox superuser password
 */}}
 {{- define "netbox.superuser.secretName" -}}
@@ -667,6 +650,17 @@ Return the secret key that contains the Netbox email password
     {{- printf "%s" "email-password" -}}
 {{- else -}}
     {{- printf "%s" "email_password" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret name containing remote auth
+*/}}
+{{- define "netbox.remoteAuth.secretName" -}}
+{{- if .Values.remoteAuth.existingSecretName -}}
+    {{- printf "%s" .Values.remoteAuth.existingSecretName -}}
+{{- else -}}
+    {{ include "netbox.secretName" . }}
 {{- end -}}
 {{- end -}}
 
