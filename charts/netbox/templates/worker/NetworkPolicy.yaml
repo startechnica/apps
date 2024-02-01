@@ -24,6 +24,13 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+    # Allow to Redis and PostgreSQL
+    - ports:
+        - port: {{ include "netbox.redisPort" . }}
+          protocol: TCP
+    - ports:
+        - port: {{ include "netbox.databasePort" . }}
+          protocol: TCP
     # Allow outbound connections to other cluster pods
     - ports:
         - port: {{ .Values.service.ports.http }}
@@ -32,7 +39,7 @@ spec:
         - podSelector:
             matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 14 }}
     {{- if .Values.worker.networkPolicy.extraEgress }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
     {{- end }}
   ingress:
     - ports:

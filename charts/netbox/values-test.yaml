@@ -1,6 +1,6 @@
-netbox:
-  postgresql:
-    enabled: true
-    auth:
-      username: netbox_user
-      password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
+postgresql:
+  enabled: true
+  # auth:
+  #   username: netbox_user
+  #   password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
+
