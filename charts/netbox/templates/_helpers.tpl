@@ -607,6 +607,7 @@ Return the secret name containing the Netbox superuser password
 {{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
 {{- end -}}
+{{- end -}}
 
 {{/*
 Return the secret key that contains the Netbox superuser password
