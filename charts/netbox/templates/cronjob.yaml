@@ -79,16 +79,16 @@ spec:
             - name: netbox-tmp
               mountPath: /tmp
             - name: media
-              mountPath: /opt/netbox/netbox/media
+              mountPath: {{ .Values.persistence.path | quote }}
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
             {{- if .Values.reportsPersistence.enabled }}
             - name: reports
-              mountPath: /opt/netbox/netbox/reports
+              mountPath: {{ .Values.reportsPersistence.path  }}
               subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
             {{- end }}
             {{- if .Values.scriptsPersistence.enabled }}
             - name: scripts
-              mountPath: /opt/netbox/netbox/scripts
+              mountPath: {{ .Values.scriptsPersistence.path  }}
               subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
             {{- end }}
             {{- with .Values.housekeeping.extraVolumeMounts }}

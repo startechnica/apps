@@ -174,7 +174,7 @@ spec:
             - name: netbox-tmp
               mountPath: /tmp
             - name: media
-              mountPath: {{ .Values.persistence.subPath | quote }}
+              mountPath: {{ .Values.persistence.path | quote }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath | quote }}
               {{- end }}
