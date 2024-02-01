@@ -1906,6 +1906,21 @@ metrics:
   ## @param metrics.enabled Enable metrics
   ##
   enabled: false
+  ## Netbox metrics service parameters
+  ##
+  service:
+    ## @param metrics.service.ports.http Metrics service HTTP port
+    ##
+    ports:
+      http: 8080
+    ## @param metrics.service.annotations [object] Annotations for enabling prometheus to access the metrics endpoints
+    ##
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "{{ .Values.metrics.service.ports.http }}"
+    ## @param metrics.service.extraPorts [array] Add additional ports to the netbox metrics service (i.e. admin port 9000)
+    ##
+    extraPorts: []
   ## Prometheus Operator ServiceMonitor configuration
   ##
   serviceMonitor:
