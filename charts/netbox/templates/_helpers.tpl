@@ -43,7 +43,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "netbox.postgresql.fullname" -}}
-{{- include "common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) -}}
+{{ include "common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) }}
 {{- end -}}
 
 {{/*
@@ -51,7 +51,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "netbox.redis.fullname" -}}
-{{- include "common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) -}}
+{{ include "common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) }}
 {{- end -}}
 
 {{/*
@@ -86,14 +86,14 @@ Return the proper Netbox init image name
 Return the proper PostgreSQL image name
 */}}
 {{- define "netbox.postgresql.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.postgresql.image "global" .Values.global ) -}}
+{{ include "common.images.image" ( dict "imageRoot" .Values.postgresql.image "global" .Values.global ) }}
 {{- end -}}
 
 {{/*
 Return the proper Redis image name
 */}}
 {{- define "netbox.redis.image" -}}
-{{- include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) -}}
+{{ include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) }}
 {{- end -}}
 
 {{/*
@@ -156,13 +156,13 @@ Return the path Netbox is hosted on. This looks at httpRelativePath and returns 
 Name of the Secret that contains the PostgreSQL password
 */}}
 {{- define "netbox.postgresql.secret" -}}
-  {{- if .Values.postgresql.enabled -}}
-    {{- include "postgresql.v1.secretName" .Subcharts.postgresql -}}
-  {{- else if .Values.externalDatabase.existingSecretName -}}
+{{- if .Values.postgresql.enabled -}}
+    {{ include "postgresql.v1.secretName" .Subcharts.postgresql }}
+{{- else if .Values.externalDatabase.existingSecretName -}}
     {{- .Values.externalDatabase.existingSecretName }}
-  {{- else -}}
+{{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.postgresql.fullname" .) }}
-  {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -205,7 +205,7 @@ Return the Redis secret name
 Return the task Redis hostname
 */}}
 {{- define "netbox.tasksRedis.host" -}}
-{{- if eq .Values.redis.architecture "replication" }}
+{{- if eq .Values.redis.architecture "replication" -}}
   {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}-master
 {{- else -}}
   {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.tasksRedis.host $) .Values.redis.enabled -}}-master
@@ -216,7 +216,7 @@ Return the task Redis hostname
 Return the task Redis port
 */}}
 {{- define "netbox.tasksRedis.port" -}}
-  {{- ternary 6379 .Values.tasksRedis.port .Values.redis.enabled | int -}}
+    {{- ternary 6379 .Values.tasksRedis.port .Values.redis.enabled | int -}}
 {{- end -}}
 
 {{/*
@@ -242,26 +242,26 @@ Add environment variables to configure tasks Redis values
 Name of the Secret that contains the Redis tasks password
 */}}
 {{- define "netbox.tasksRedis.secret" -}}
-  {{- if .Values.redis.enabled -}}
+{{- if .Values.redis.enabled -}}
     {{- include "redis.secretName" .Subcharts.redis -}}
-  {{- else if .Values.tasksRedis.existingSecretName -}}
+{{- else if .Values.tasksRedis.existingSecretName -}}
     {{- .Values.tasksRedis.existingSecretName }}
-  {{- else -}}
+{{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
-  {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Name of the key in Secret that contains the Redis tasks password
 */}}
 {{- define "netbox.tasksRedis.secretKey" -}}
-  {{- if .Values.redis.enabled -}}
+{{- if .Values.redis.enabled -}}
     {{- include "redis.secretPasswordKey" .Subcharts.redis -}}
-  {{- else if .Values.tasksRedis.existingSecretName -}}
+{{- else if .Values.tasksRedis.existingSecretName -}}
     {{ .Values.tasksRedis.existingSecretKey }}
-  {{- else -}}
+{{- else -}}
     {{- print "redis_tasks_password" -}}
-  {{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -291,7 +291,7 @@ Return the Redis secret name
 Return the cache Redis hostname
 */}}
 {{- define "netbox.cachingRedis.host" -}}
-{{- if eq .Values.redis.architecture "replication" }}
+{{- if eq .Values.redis.architecture "replication" -}}
   {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}-master
 {{- else -}}
   {{- ternary (include "netbox.redis.fullname" .) (tpl .Values.cachingRedis.host $) .Values.redis.enabled -}}-master
@@ -329,7 +329,7 @@ Name of the Secret that contains the Redis cache password
 */}}
 {{- define "netbox.cachingRedis.secret" -}}
 {{- if .Values.redis.enabled -}}
-    {{- include "redis.secretName" .Subcharts.redis -}}
+    {{ include "redis.secretName" .Subcharts.redis }}
 {{- else if .Values.cachingRedis.existingSecretName -}}
     {{- .Values.cachingRedis.existingSecretName }}
 {{- else -}}
@@ -650,6 +650,7 @@ Return the secret name containing email server
     {{- printf "%s" .Values.email.existingSecretName -}}
 {{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
+{{- end -}}
 {{- end -}}
 
 {{/*
