@@ -1949,7 +1949,7 @@ metrics:
     enabled: false
     ## @param metrics.serviceMonitor.port Metrics service HTTP port
     ##
-    port: http
+    port: http-metrics
     ## @param metrics.serviceMonitor.endpoints [array] The endpoint configuration of the ServiceMonitor. Path is mandatory. Interval, timeout and labellings can be overwritten.
     ##
     endpoints:
