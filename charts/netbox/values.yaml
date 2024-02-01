@@ -1337,17 +1337,43 @@ housekeeping:
     ## Set to true if you would like to see extra information on logs
     ##
     debug: false
-  
-  concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 5
-  restartPolicy: OnFailure
-  schedule: '0 0 * * *'
-  successfulJobsHistoryLimit: 5
-  suspend: false
-
-  podAnnotations: {}
-
+  ## @param housekeeping.command Override default container command (useful when using custom images)
+  ##
+  command: []
+  ## @param housekeeping.args Override default container args (useful when using custom images)
+  ##
+  args: []
+  ## @param housekeeping.extraEnvVars Array with extra environment variables to add to Netbox worker nodes
+  ## e.g:
+  ## extraEnvVars:
+  ##   - name: FOO
+  ##     value: "bar"
+  ##
+  extraEnvVars: []
+  ## @param housekeeping.podLabels Extra labels for Netbox housekeeping pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
   podLabels: {}
+  ## @param housekeeping.podAnnotations Annotations for Netbox housekeeping pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## Netbox housekeeping resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
+  ## @param housekeeping.resources.requests The requested resources for the Netbox housekeeping containers
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## limits:
+  ##   cpu: 100m
+  ##   memory: 128Mi
+  ## requests:
+  ##   cpu: 100m
+  ##   memory: 128Mi
+  ##
+  resources: {}
   ## Configure Netbox housekeeping Pods Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
   ## @param housekeeping.podSecurityContext.enabled Enabled Netbox housekeeping pods' Security Context
@@ -1357,6 +1383,7 @@ housekeeping:
   ## @param housekeeping.podSecurityContext.fsGroup Set Netbox housekeeping pod's Security Context fsGroup
   ##
   podSecurityContext:
+    enabled: true
     fsGroup: 1000
     runAsNonRoot: true
     # runAsUser: 1000
@@ -1385,61 +1412,65 @@ housekeeping:
       drop:
         - ALL
 
-  # Set this to true to automatically mount the service account token in the housekeeping container
+  ## @param housekeeping.automountServiceAccountToken Mount Service Account token in pod
+  ##
   automountServiceAccountToken: false
 
-  ## Netbox housekeeping resource requests and limits
-  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
-  ## @param housekeeping.resources.requests The requested resources for the Netbox housekeeping containers
-  ## We usually recommend not to specify default resources and to leave this as a conscious
-  ## choice for the user. This also increases chances charts run on environments with little
-  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
-  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ## limits:
-  ##   cpu: 100m
-  ##   memory: 128Mi
-  ## requests:
-  ##   cpu: 100m
-  ##   memory: 128Mi
+  ## @param housekeeping.affinity Affinity for Netbox housekeeping pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## NOTE: `housekeeping.podAffinityPreset`, `housekeeping.podAntiAffinityPreset`, and `housekeeping.nodeAffinityPreset` will be ignored when it's set
   ##
-  resources: {}
-
-  nodeSelector: {}
-
-  tolerations: []
-
   affinity: {}
-
-  ## Additional environment variables to set
-  extraEnvs: []
-  #  - name: FOO
-  #    valueFrom:
-  #      secretKeyRef:
-  #        key: FOO
-  #        name: secret-resource
-
-  ## Additional volumes to mount
-  extraVolumeMounts: []
-  #  - name: extra-volume
-  #    mountPath: /run/secrets/super-secret
-  #    readOnly: true
-
+  ## @param housekeeping.nodeSelector Node labels for Netbox housekeeping pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+  ##
+  nodeSelector: {}
+  ## @param housekeeping.tolerations Tolerations for Netbox housekeeping pods assignment
+  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param housekeeping.extraVolumes Optionally specify extra list of additional volumes for the Netbox housekeeping pod(s)
+  ## extraVolumes:
+  ##   - name: extra-volume
+  ##     secret:
+  ##       secretName: super-secret
+  ##
   extraVolumes: []
-  #  - name: extra-volume
-  #    secret:
-  #      secretName: super-secret
+  ## @param housekeeping.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox housekeeping container(s)
+  ## extraVolumeMounts:
+  ##   - name: extra-volume
+  ##     mountPath: /run/secrets/super-secret
+  ##     readOnly: true
+  ##
+  extraVolumeMounts: []
+  ## @param housekeeping.sidecars Add additional sidecar containers to the Netbox housekeeping pod(s)
+  ## e.g:
+  ## sidecars:
+  ##   - name: your-image-name
+  ##     image: your-image
+  ##     imagePullPolicy: Always
+  ##     ports:
+  ##       - name: portname
+  ##         containerPort: 1234
+  ##
+  sidecars: []
+  ## @param housekeeping.initContainers Add additional init containers to the Netbox housekeeping pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ## e.g:
+  ## initContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
+  initContainers: []
 
-  ## Additional containers to be added to the NetBox pod.
-  extraContainers: []
-  #  - name: my-sidecar
-  #    image: nginx:latest
-
-  ## Containers which are run before the NetBox containers are started.
-  extraInitContainers: []
-  #  - name: init-myservice
-  #    image: busybox
-  #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 5
+  restartPolicy: OnFailure
+  schedule: '0 0 * * *'
+  successfulJobsHistoryLimit: 5
+  suspend: false
 
 ## @section Netbox worker parameters
 
@@ -1833,17 +1864,6 @@ worker:
     ##
     ingressNSMatchLabels: {}
     ingressNSPodMatchLabels: {}
-
-  ## Additional containers to be added to the NetBox pod.
-  extraContainers: []
-  #  - name: my-sidecar
-  #    image: nginx:latest
-
-  ## Containers which are run before the NetBox containers are started.
-  extraInitContainers: []
-  #  - name: init-myservice
-  #    image: busybox
-  #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
   ## Netbox worker Service configuration
   ##

@@ -28,20 +28,28 @@ spec:
         metadata:
           {{- if .Values.podAnnotations }}
           annotations:
-            {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.podAnnotations "context" $) | nindent 12 }}
           {{- end }}
           labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 12 }}
             app.kubernetes.io/component: housekeeping
             app.kubernetes.io/part-of: netbox
         spec:
-          {{- include "netbox.imagePullSecrets" . | nindent 10 }}
-          serviceAccountName: {{ include "netbox.serviceAccountName" . }}
           automountServiceAccountToken: {{ .Values.housekeeping.automountServiceAccountToken }}
-          securityContext:
-            {{- toYaml .Values.housekeeping.podSecurityContext | nindent 12 }}
-          {{- with .Values.housekeeping.extraInitContainers }}
+          {{- include "netbox.imagePullSecrets" . | nindent 10 }}
+          {{- if .Values.nodeSelector }}
+          nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 10 }}
+          {{- end }}
+          restartPolicy: {{ .Values.housekeeping.restartPolicy }}
+          {{- if .Values.housekeeping.podSecurityContext.enabled }}
+          securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "netbox.serviceAccountName" . }}
+          {{- if .Values.tolerations }}
+          tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 10 }}
+          {{- end }}
+          {{- if .Values.initContainers }}
           initContainers:
-          {{- toYaml . | nindent 10 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 10 }}
           {{- end }}
           containers:
           - name: housekeeping
@@ -53,10 +61,9 @@ spec:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
-            {{- include "netbox.imagePullSecrets" . | nindent 12 }}
-            {{- with .Values.housekeeping.extraEnvs }}
+            {{- if .Values.housekeping.extraEnvVars }}
             env:
-            {{- toYaml . | nindent 12 }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.housekeping.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
             volumeMounts:
             - name: config
@@ -95,11 +102,10 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
-            resources:
-              {{- toYaml .Values.housekeeping.resources | nindent 14 }}
+            resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
             {{- end }}
-          {{- with .Values.housekeeping.extraContainers }}
-          {{- toYaml . | nindent 10 }}
+          {{- if .Values.sidecars }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 10 }}
           {{- end }}
           volumes:
           - name: config
@@ -109,7 +115,7 @@ spec:
             projected:
               sources:
               - secret:
-                  name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
+                  name: {{ include "netbox.secretName" . | quote }}
                   items:
                   # Used by our configuration
                   - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
@@ -164,17 +170,9 @@ spec:
           {{- with .Values.housekeeping.extraVolumes }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
-          {{- with .Values.housekeeping.nodeSelector }}
-          nodeSelector:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           {{- with .Values.housekeeping.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.housekeeping.tolerations }}
-          tolerations:
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-          restartPolicy: {{ .Values.housekeeping.restartPolicy }}
+
 {{- end -}}
