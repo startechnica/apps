@@ -163,20 +163,20 @@ Name of the Secret that contains the PostgreSQL password
   {{- else }}
     {{- .Values.existingSecretName | default (include "netbox.postgresql.fullname" .) }}
   {{- end }}
-{{- end }}
+{{- end -}}
 
 {{/*
 Name of the key in Secret that contains the PostgreSQL password
 */}}
 {{- define "netbox.postgresql.secretKey" -}}
-  {{- if .Values.postgresql.enabled -}}
+{{- if .Values.postgresql.enabled -}}
     {{- include "postgresql.v1.userPasswordKey" .Subcharts.postgresql -}}
-  {{- else if .Values.externalDatabase.existingSecretName -}}
+{{- else if .Values.externalDatabase.existingSecretName -}}
     {{- .Values.externalDatabase.existingSecretKey -}}
-  {{- else -}}
-    db_password
-  {{- end -}}
-{{- end }}
+{{- else -}}
+    {{- print "db_password" -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Return the Redis secret name
@@ -242,14 +242,14 @@ Add environment variables to configure tasks Redis values
 Name of the Secret that contains the Redis tasks password
 */}}
 {{- define "netbox.tasksRedis.secret" -}}
-  {{- if .Values.redis.enabled }}
+  {{- if .Values.redis.enabled -}}
     {{- include "redis.secretName" .Subcharts.redis -}}
-  {{- else if .Values.tasksRedis.existingSecretName }}
+  {{- else if .Values.tasksRedis.existingSecretName -}}
     {{- .Values.tasksRedis.existingSecretName }}
-  {{- else }}
+  {{- else -}}
     {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
-  {{- end }}
-{{- end }}
+  {{- end -}}
+{{- end -}}
 
 {{/*
 Name of the key in Secret that contains the Redis tasks password
@@ -262,7 +262,7 @@ Name of the key in Secret that contains the Redis tasks password
   {{- else -}}
     redis_tasks_password
   {{- end -}}
-{{- end }}
+{{- end -}}
 
 {{/*
 Return the Redis secret name
@@ -348,7 +348,7 @@ Name of the key in Secret that contains the Redis cache password
   {{- else -}}
     redis_cache_password
   {{- end -}}
-{{- end }}
+{{- end -}}
 
 {{/*
 Volumes that need to be mounted for .Values.extraConfig entries
@@ -370,7 +370,7 @@ Volumes that need to be mounted for .Values.extraConfig entries
     {{- toYaml $config.secret | nindent 4 }}
   {{- end }}
 {{ end -}}
-{{- end }}
+{{- end -}}
 
 {{/*
 Volume mounts for .Values.extraConfig entries
@@ -381,7 +381,7 @@ Volume mounts for .Values.extraConfig entries
   mountPath: /run/config/extra/{{ $index }}
   readOnly: true
 {{ end -}}
-{{- end }}
+{{- end -}}
 
 {{/*
 Return the Database hostname
@@ -405,8 +405,8 @@ Return the Database port
 Return the Database database name
 */}}
 {{- define "netbox.databaseName" -}}
-{{- if .Values.postgresql.enabled }}
-    {{- if .Values.global.postgresql }}
+{{- if .Values.postgresql.enabled -}}
+    {{- if .Values.global.postgresql -}}
         {{- if .Values.global.postgresql.auth }}
             {{- coalesce .Values.global.postgresql.auth.database .Values.postgresql.auth.database | quote -}}
         {{- else -}}
@@ -551,7 +551,7 @@ Return whether Redis uses password authentication or not
 Return the Redis hostname
 */}}
 {{- define "netbox.redisHost" -}}
-{{- if .Values.redis.enabled }}
+{{- if .Values.redis.enabled -}}
     {{- printf "%s-master" (include "netbox.redis.fullname" .) -}}
 {{- else if .Values.externalRedis.host -}}
     {{- .Values.externalRedis.host -}}
@@ -564,7 +564,7 @@ Return the Redis hostname
 Return the Redis port
 */}}
 {{- define "netbox.redisPort" -}}
-{{- if .Values.redis.enabled }}
+{{- if .Values.redis.enabled -}}
     {{- .Values.redis.master.service.ports.redis -}}
 {{- else if .Values.externalRedis.port -}}
     {{- .Values.externalRedis.port -}}
@@ -572,7 +572,6 @@ Return the Redis port
     {{ 6379 | int }}
 {{- end -}}
 {{- end -}}
-
 
 {{/*
 Return the secret containing the Netbox superuser password
