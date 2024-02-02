@@ -654,6 +654,7 @@ remoteAuth:
   enabled: false
   backends:
     - netbox.authentication.RemoteUserBackend
+    - social_core.backends.keycloak.KeycloakOAuth2
   header: HTTP_REMOTE_USER
   userFirstName: HTTP_REMOTE_USER_FIRST_NAME
   userLastName: HTTP_REMOTE_USER_LAST_NAME
