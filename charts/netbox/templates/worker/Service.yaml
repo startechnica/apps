@@ -15,6 +15,9 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.worker.service.type }}
+  {{- if eq .Values.worker.service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: {{ eq .Values.worker.service.allocateLoadBalancerNodePorts "true" }}
+  {{- end }}
   {{- if and .Values.worker.service.clusterIP (eq .Values.worker.service.type "ClusterIP") }}
   clusterIP: {{ .Values.worker.service.clusterIP }}
   {{- end }}
@@ -47,7 +50,7 @@ spec:
     {{- end }}
     {{- if .Values.tls.enabled }}
     - name: https
-      port: {{ coalesce .Values.worker.service.ports.https .Values.worker.service.httpsPort }}
+      port: {{ default 443 .Values.worker.service.ports.https }}
       protocol: TCP
       targetPort: https
       {{- if (and (or (eq .Values.worker.service.type "NodePort") (eq .Values.worker.service.type "LoadBalancer")) (not (empty .Values.worker.service.nodePorts.https))) }}

@@ -14,8 +14,8 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.service.type }}
-  {{- if eq .service.type "LoadBalancer" }}
-  allocateLoadBalancerNodePorts: {{ eq .service.allocateLoadBalancerNodePorts "true" }}
+  {{- if eq .Values.service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: {{ eq .Values.service.allocateLoadBalancerNodePorts "true" }}
   {{- end }}
   {{- if and .Values.service.clusterIP (eq .Values.service.type "ClusterIP") }}
   clusterIP: {{ .Values.service.clusterIP }}
@@ -23,9 +23,9 @@ spec:
   {{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
-  ipFamilyPolicy: {{ default "SingleStack" .service.ipFamilyPolicy }}
-  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerClass)) }}
-  loadBalancerClass: {{ .service.loadBalancerClass }}
+  ipFamilyPolicy: {{ default "SingleStack" .Values.service.ipFamilyPolicy }}
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .Values.service.loadBalancerClass }}
   {{- end }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
