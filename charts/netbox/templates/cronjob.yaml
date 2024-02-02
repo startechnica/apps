@@ -174,5 +174,4 @@ spec:
           affinity:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-
 {{- end -}}
