@@ -209,7 +209,7 @@ data:
     SHORT_TIME_FORMAT: {{ .Values.shortTimeFormat | quote }}
     SHORT_DATETIME_FORMAT: {{ .Values.shortDateTimeFormat | quote }}
 
-  {{- if and (eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend") .Values.remoteAuth.ldap.enabled }}
+  {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
   ldap_config.py: |-
     from importlib import import_module
 

@@ -14,17 +14,24 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.service.type }}
+  {{- if eq .service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: {{ eq .service.allocateLoadBalancerNodePorts "true" }}
+  {{- end }}
   {{- if and .Values.service.clusterIP (eq .Values.service.type "ClusterIP") }}
   clusterIP: {{ .Values.service.clusterIP }}
   {{- end }}
   {{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
-  loadBalancerSourceRanges: {{ .Values.service.loadBalancerSourceRanges }}
+  ipFamilyPolicy: {{ default "SingleStack" .service.ipFamilyPolicy }}
+  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .service.loadBalancerClass }}
   {{- end }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ .Values.service.loadBalancerSourceRanges }}
   {{- end }}
   {{- if .Values.service.sessionAffinity }}
   sessionAffinity: {{ .Values.service.sessionAffinity }}
@@ -46,7 +53,7 @@ spec:
     {{- end }}
     {{- if .Values.tls.enabled }}
     - name: https
-      port: {{ coalesce .Values.service.ports.https .Values.service.httpsPort }}
+      port: {{ .Values.service.ports.https }}
       protocol: TCP
       targetPort: https
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.https))) }}

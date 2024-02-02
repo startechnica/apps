@@ -442,7 +442,7 @@ Return the Database user
         {{- .Values.postgresql.auth.username -}}
     {{- end -}}
 {{- else -}}
-    {{- .Values.externalDatabase.user -}}
+    {{- .Values.externalDatabase.username -}}
 {{- end -}}
 {{- end -}}
 
