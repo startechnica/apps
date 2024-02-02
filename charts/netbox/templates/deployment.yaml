@@ -158,12 +158,12 @@ spec:
               mountPath: /etc/netbox/config/configuration.py
               subPath: configuration.py
               readOnly: true
-            {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
+            {{- if .Values.remoteAuth.ldap.enabled }}
             - name: config
               mountPath: /etc/netbox/config/ldap/ldap_config.py
               subPath: ldap_config.py
               readOnly: true
-            {{ end -}}
+            {{- end }}
             - name: config
               mountPath: /run/config/netbox
               readOnly: true
@@ -174,7 +174,7 @@ spec:
             - name: netbox-tmp
               mountPath: /tmp
             - name: media
-              mountPath: /opt/netbox/netbox/media
+              mountPath: {{ .Values.persistence.path | quote }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath | quote }}
               {{- end }}
@@ -275,22 +275,30 @@ spec:
           projected:
             sources:
             - secret:
-                name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
+                name: {{ include "netbox.secretName" . | quote }}
+                items:
+                  # Used by our configuration
+                  - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
+                    path: email_password
+                  - key: secret_key
+                    path: secret_key
+            {{- if .Values.remoteAuth.enabled }}
+            - secret:
+                name: {{ include "netbox.remoteAuth.secretName" . | quote }}
+                items:
+                  {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
+                  - key: ldap_bind_password
+                    path: ldap_bind_password
+                  {{- end }}
+            {{- end }}
+            - secret:
+                name: {{ include "netbox.superuser.secretName" . | quote }}
                 items:
                   # Used by netbox-docker entry scripts
                   - key: {{ include "netbox.superuser.secretPasswordKey" . | quote }}
                     path: superuser_password
                   - key: {{ include "netbox.superuser.secretApiTokenKey" . | quote }}
                     path: superuser_api_token
-                  # Used by our configuration
-                  - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
-                    path: email_password
-                  - key: secret_key
-                    path: secret_key
-                  {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
-                  - key: ldap_bind_password
-                    path: ldap_bind_password
-                  {{- end }}
             - secret:
                 name: {{ include "netbox.databaseSecretName" . | quote }}
                 items:

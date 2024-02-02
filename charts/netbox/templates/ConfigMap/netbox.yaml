@@ -203,14 +203,13 @@ data:
     ENABLE_LOCALIZATION: {{ toJson .Values.enableLocalization }}
     TIME_ZONE: {{ .Values.timeZone | quote }}
     DATE_FORMAT: {{ .Values.dateFormat | quote }}
-    SHORT_DATE_FORMAT: {{ .Values.shortDateFormat | quote }}
     TIME_FORMAT: {{ .Values.timeFormat | quote }}
-    SHORT_TIME_FORMAT: {{ .Values.shortTimeFormat | quote }}
     DATETIME_FORMAT: {{ .Values.dateTimeFormat | quote }}
+    SHORT_DATE_FORMAT: {{ .Values.shortDateFormat | quote }}
+    SHORT_TIME_FORMAT: {{ .Values.shortTimeFormat | quote }}
     SHORT_DATETIME_FORMAT: {{ .Values.shortDateTimeFormat | quote }}
 
-  {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
-
+  {{- if and (eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend") .Values.remoteAuth.ldap.enabled }}
   ldap_config.py: |-
     from importlib import import_module
 
@@ -288,15 +287,16 @@ data:
     AUTH_LDAP_MIRROR_GROUPS_EXCEPT: {{ toJson .Values.remoteAuth.ldap.mirrorGroupsExcept }}
     AUTH_LDAP_CACHE_TIMEOUT: {{ int .Values.remoteAuth.ldap.cacheTimeout }}
   {{- end }}
-  {{- if .Values.overrideUnitConfig }}
 
+  {{- if .Values.overrideUnitConfig -}}
   nginx-unit.json: |-
     {{- toPrettyJson .Values.overrideUnitConfig | nindent 4 }}
-  {{- end }}
+  {{- end -}}
+
   {{- range $index, $config := .Values.extraConfig -}}
   {{- if $config.values }}
 
   extra-{{ $index }}.yaml: |-
     {{- toYaml $config.values | nindent 4 }}
   {{- end }}
-  {{ end -}}
+  {{- end -}}

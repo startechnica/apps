@@ -3,10 +3,8 @@
 [NetBox](https://netbox.readthedocs.io/) is an IP address management (IPAM) and
 data center infrastructure management (DCIM) tool.
 
-Forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart)
-
 **Note:** This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions
-v5.0.0 and up are from this fork and will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
+v5.0.0 and up are from this fork will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
 
 **This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
 
@@ -15,12 +13,12 @@ v5.0.0 and up are from this fork and will have diverged from any changes in the 
 ```console
 $ helm repo add startechnica https://startechnica.github.io/apps
 $ helm install netbox \
-  --set postgresql.auth.postgresPassword=[password1] \
-  --set postgresql.auth.password=[password2] \
-  --set redis.auth.password=[password3] \
-  startechnica/netbox
+    --set postgresql.auth.postgresPassword=<posgres-password> \
+    --set postgresql.auth.password=<db-password> \
+    --set redis.auth.password=<redis-password> \
+    startechnica/netbox
 ```
-⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for real.
+⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
 
 ## Prerequisites
 
@@ -32,12 +30,12 @@ $ helm install netbox \
 
 To install the chart with the release name `my-release` and default configuration:
 
-```shell
+```console
 $ helm repo add startechnica https://startechnica.github.io/apps
 $ helm install my-release \
-  --set postgresql.auth.postgresPassword=[password1] \
-  --set postgresql.auth.password=[password2] \
-  --set redis.auth.password=[password3] \
+  --set postgresql.auth.postgresPassword=<password1> \
+  --set postgresql.auth.password=<password2> \
+  --set redis.auth.password=<password3> \
   startechnica/netbox
 ```
 
@@ -76,9 +74,9 @@ affinity:
     requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:
+            app.kubernetes.io/component: server
             app.kubernetes.io/instance: netbox
             app.kubernetes.io/name: netbox
-            app.kubernetes.io/component: netbox
         topologyKey: kubernetes.io/hostname
 ```
 
@@ -95,17 +93,18 @@ The command removes all the Kubernetes components associated with the chart and 
 ## Breaking Changes
   * The `extraEnvs` setting has been renamed to `extraEnvVars`.
   * The `extraContainers` setting has been renamed to `sidecars`.
-  * The `extraContainers` setting has been renamed to `sidecars`.
   * The `extraInitContainers` setting has been renamed to `initContainers`.
-  * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
-  * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
   * The `housekeeping.securityContext` setting has been renamed to `housekeeping.containerSecurityContext`
+  * The `init` setting has been renamed to `initDirs`.
+  * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
+  * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
+  * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
+  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
+  * The `superuser.password: admin` setting has been changed to `superuser.password: ""`.
+  * The `superuser.passwordSecretKey` setting has been renamed to `superuser.existingSecretPasswordKey`.
   * The `worker.autoscaling.targetCPUUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetCPU`.
   * The `worker.autoscaling.targetMemoryUtilizationPercentage` setting has been renamed to `worker.autoscaling.targetMemory`.
   * The `worker.extraEnvs` setting has been renamed to `worker.extraEnvVars`.
-  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
-  * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
-  * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
 
 ## Upgrading
 
@@ -166,6 +165,36 @@ PostgreSQL chart was upgraded from 5.x.x to 7.x.x, and Redis from 8.x.x to
 ## Configuration
 
 The following table lists the configurable parameters for this chart and their default values.
+
+### Global parameters
+
+| Name                       | Description                                                                                                             | Value |
+| -------------------------  | ----------------------------------------------------------------------------------------------------------------------- | ----- |
+| `global.imageRegistry`     | Global Docker image registry                                                                                            | `""`  |
+| `global.imagePullSecrets`  | Global Docker registry secret names as an array                                                                         | `[]`  |
+| `global.storageClass`      | Global StorageClass for Persistent Volume(s)                                                                            | `""`  |
+| `global.namespaceOverride` | Override the namespace for resource deployed by the chart, but can itself be overridden by the local namespaceOverride  | `""`  |
+
+
+### Common parameters
+
+| Name                       | Description                                                                                                       | Value           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- |
+| `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                                              | `""`            |
+| `nameOverride`             | String to partially override common.names.fullname template with a string (will prepend the release name)         | `""`            |
+| `namespaceOverride`        | String to fully override common.names.namespace                                                                   | `""`            |
+| `fullnameOverride`         | String to fully override common.names.fullname template with a string                                             | `""`            |
+| `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
+| `commonLabels`             | Labels to add to all deployed objects                                                                             | `{}`            |
+| `schedulerName`            | Name of the Kubernetes scheduler (other than default)                                                             | `""`            |
+| `clusterDomain`            | Kubernetes DNS Domain name to use                                                                                 | `cluster.local` |
+| `extraDeploy`              | Array of extra objects to deploy with the release (evaluated as a template)                                       | `[]`            |
+| `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                           | `false`         |
+| `diagnosticMode.command`   | Command to override all containers in the deployment                                                              | `[]`            |
+| `diagnosticMode.args`      | Args to override all containers in the deployment                                                                 | `[]`            |
+
+
+### Netbox parameters
 
 | Parameter                                       | Description                                                         | Default                                      |
 | ------------------------------------------------|---------------------------------------------------------------------|----------------------------------------------|

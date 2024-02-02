@@ -28,20 +28,28 @@ spec:
         metadata:
           {{- if .Values.podAnnotations }}
           annotations:
-            {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.podAnnotations "context" $) | nindent 12 }}
           {{- end }}
           labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 12 }}
             app.kubernetes.io/component: housekeeping
             app.kubernetes.io/part-of: netbox
         spec:
-          {{- include "netbox.imagePullSecrets" . | nindent 10 }}
-          serviceAccountName: {{ include "netbox.serviceAccountName" . }}
           automountServiceAccountToken: {{ .Values.housekeeping.automountServiceAccountToken }}
-          securityContext:
-            {{- toYaml .Values.housekeeping.podSecurityContext | nindent 12 }}
-          {{- with .Values.housekeeping.extraInitContainers }}
+          {{- include "netbox.imagePullSecrets" . | nindent 10 }}
+          {{- if .Values.nodeSelector }}
+          nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 10 }}
+          {{- end }}
+          restartPolicy: {{ .Values.housekeeping.restartPolicy }}
+          {{- if .Values.housekeeping.podSecurityContext.enabled }}
+          securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "netbox.serviceAccountName" . }}
+          {{- if .Values.tolerations }}
+          tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 10 }}
+          {{- end }}
+          {{- if .Values.initContainers }}
           initContainers:
-          {{- toYaml . | nindent 10 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 10 }}
           {{- end }}
           containers:
           - name: housekeeping
@@ -53,22 +61,21 @@ spec:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
-            {{- include "netbox.imagePullSecrets" . | nindent 12 }}
-            {{- with .Values.housekeeping.extraEnvs }}
+            {{- if .Values.housekeeping.extraEnvVars }}
             env:
-            {{- toYaml . | nindent 12 }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
             volumeMounts:
             - name: config
               mountPath: /etc/netbox/config/configuration.py
               subPath: configuration.py
               readOnly: true
-            {{ if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" -}}
+            {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
             - name: config
               mountPath: /etc/netbox/config/ldap/ldap_config.py
               subPath: ldap_config.py
               readOnly: true
-            {{ end -}}
+            {{- end }}
             - name: config
               mountPath: /run/config/netbox
               readOnly: true
@@ -79,27 +86,26 @@ spec:
             - name: netbox-tmp
               mountPath: /tmp
             - name: media
-              mountPath: /opt/netbox/netbox/media
+              mountPath: {{ .Values.persistence.path | quote }}
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
             {{- if .Values.reportsPersistence.enabled }}
             - name: reports
-              mountPath: /opt/netbox/netbox/reports
+              mountPath: {{ .Values.reportsPersistence.path  }}
               subPath: {{ .Values.reportsPersistence.subPath | default "" | quote }}
             {{- end }}
             {{- if .Values.scriptsPersistence.enabled }}
             - name: scripts
-              mountPath: /opt/netbox/netbox/scripts
+              mountPath: {{ .Values.scriptsPersistence.path  }}
               subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
             {{- end }}
             {{- with .Values.housekeeping.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
-            resources:
-              {{- toYaml .Values.housekeeping.resources | nindent 14 }}
+            resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
             {{- end }}
-          {{- with .Values.housekeeping.extraContainers }}
-          {{- toYaml . | nindent 10 }}
+          {{- if .Values.sidecars }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 10 }}
           {{- end }}
           volumes:
           - name: config
@@ -109,17 +115,22 @@ spec:
             projected:
               sources:
               - secret:
-                  name: {{ .Values.existingSecretName | default (include "netbox.fullname" .) | quote }}
+                  name: {{ include "netbox.secretName" . | quote }}
                   items:
                   # Used by our configuration
                   - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
                     path: email_password
                   - key: secret_key
                     path: secret_key
-                  {{- if eq .Values.remoteAuth.backend "netbox.authentication.LDAPBackend" }}
-                  - key: ldap_bind_password
-                    path: ldap_bind_password
-                  {{- end }}
+              {{- if .Values.remoteAuth.enabled }}
+              - secret:
+                  name: {{ include "netbox.remoteAuth.secretName" . | quote }}
+                  items:
+                    {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
+                    - key: ldap_bind_password
+                      path: ldap_bind_password
+                    {{- end }}
+              {{- end }}
               - secret:
                   name: {{ include "netbox.databaseSecretName" . | quote }}
                   items:
@@ -156,20 +167,11 @@ spec:
             persistentVolumeClaim:
               claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
           {{- end }}
-          {{- with .Values.housekeeping.extraVolumes }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-          {{- with .Values.housekeeping.nodeSelector }}
-          nodeSelector:
-            {{- toYaml . | nindent 12 }}
+          {{- if .Values.extraVolumes }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
           {{- end }}
           {{- with .Values.housekeeping.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.housekeeping.tolerations }}
-          tolerations:
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-          restartPolicy: {{ .Values.housekeeping.restartPolicy }}
 {{- end -}}

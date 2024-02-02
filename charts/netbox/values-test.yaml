@@ -1,6 +1,13 @@
-netbox:
-  postgresql:
+postgresql:
+  enabled: true
+  # auth:
+  #   username: netbox_user
+  #   password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
+
+metrics:
+  enabled: true
+  serviceMonitor:
     enabled: true
-    auth:
-      username: netbox_user
-      password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
+    interval: 30s
+    labels:
+      release: kube-prometheus-stack
