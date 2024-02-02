@@ -5,7 +5,7 @@ annotations:
       image: docker.io/netboxcommunity/netbox:v3.7-2.8.0
 apiVersion: v2
 name: netbox
-version: 5.0.2
+version: 5.0.3
 appVersion: v3.7.1
 kubeVersion: ">=1.25.0"
 description: IP address management (IPAM) and data center infrastructure management (DCIM) tool
