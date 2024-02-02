@@ -86,6 +86,17 @@ spec:
           env:
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
           {{- end }}
+          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+          envFrom:
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- end }}
           {{- if .Values.worker.resources }}
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}

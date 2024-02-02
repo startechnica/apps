@@ -3,7 +3,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ template "netbox.housekeeping.fullname" . }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.image "chart" .Chart ) ) }}  
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.housekeeping.image "chart" .Chart ) ) }}  
   {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: housekeeping

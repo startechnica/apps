@@ -2083,12 +2083,12 @@ postgresql:
   auth:
     postgresPassword: ""
     username: netbox
-    password: netbox
+    password: ""
     database: netbox
     existingSecret: ""
-    ## @param auth.secretKeys.adminPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
-    ## @param auth.secretKeys.userPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
-    ## @param auth.secretKeys.replicationPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param postgresql.auth.secretKeys.adminPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param postgresql.auth.secretKeys.userPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param postgresql.auth.secretKeys.replicationPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
     ##
     secretKeys:
       adminPasswordKey: postgres-password
@@ -2100,6 +2100,10 @@ postgresql:
   ## @section PostgreSQL Primary parameters
   ##
   primary:
+    ## @param postgresql.primary.podLabels Map of labels to add to the pods (postgresql primary)
+    ##
+    podLabels:
+      app.kubernetes.io/part-of: netbox
     ## PostgreSQL Primary persistence configuration
     ##
     persistence:
@@ -2182,6 +2186,11 @@ redis:
     ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
     ##
     kind: Deployment
+    ## @param master.podLabels Extra labels for Redis master pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    podLabels:
+      app.kubernetes.io/part-of: netbox
     ## Persistence parameters
     ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
     ##
