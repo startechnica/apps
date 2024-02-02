@@ -167,8 +167,8 @@ spec:
             persistentVolumeClaim:
               claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
           {{- end }}
-          {{- with .Values.housekeeping.extraVolumes }}
-          {{- toYaml . | nindent 10 }}
+          {{- if .Values.extraVolumes }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
           {{- end }}
           {{- with .Values.housekeeping.affinity }}
           affinity:
