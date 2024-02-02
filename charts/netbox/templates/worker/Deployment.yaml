@@ -200,8 +200,7 @@ spec:
                       path: email_password
                     - key: secret_key
                       path: secret_key
-              # {{- if .Values.remoteAuth.enabled }}
-              {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
+              {{- if .Values.remoteAuth.enabled }}
               - secret:
                   name: {{ include "netbox.remoteAuth.secretName" . | quote }}
                   items:
