@@ -1300,9 +1300,7 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 100
   targetCPU: 80
-  targetMemory: 80
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  targetMemory: ""
 
 ## @section Netbox housekeeping parameters
 
@@ -1850,8 +1848,6 @@ worker:
     maxReplicas: 11
     targetCPU: 80
     targetMemory: ""
-    targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
 
   ## Netbox worker Network Policies
   ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
