@@ -1,7 +1,10 @@
 # Helm Chart for Netbox
 
-[NetBox](https://netbox.readthedocs.io/) is an IP address management (IPAM) and
-data center infrastructure management (DCIM) tool.
+NetBox is the leading solution for modeling and documenting modern networks. By combining the traditional disciplines of IP address management
+(IPAM) and datacenter infrastructure management (DCIM) with powerful APIs and extensions, NetBox provides the ideal "source of truth" to power
+network automation. Read on to discover why thousands of organizations worldwide put NetBox at the heart of their infrastructure.
+
+[Overview of Netbox](https://docs.netbox.dev/en/stable/)
 
 **Note:** This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions
 v5.0.0 and up are from this fork will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
@@ -11,12 +14,8 @@ v5.0.0 and up are from this fork will have diverged from any changes in the orig
 ## TL;DR
 
 ```console
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install netbox \
-    --set postgresql.auth.postgresPassword=<posgres-password> \
-    --set postgresql.auth.password=<db-password> \
-    --set redis.auth.password=<redis-password> \
-    startechnica/netbox
+helm repo add startechnica https://startechnica.github.io/apps
+helm install netbox startechnica/netbox
 ```
 ⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
 
@@ -28,15 +27,18 @@ $ helm install netbox \
 
 ## Installing the Chart
 
-To install the chart with the release name `my-release` and default configuration:
+To install the chart with the release name `netbox` and default configuration:
 
 ```console
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install my-release \
-  --set postgresql.auth.postgresPassword=<password1> \
-  --set postgresql.auth.password=<password2> \
-  --set redis.auth.password=<password3> \
-  startechnica/netbox
+helm repo add startechnica https://startechnica.github.io/apps
+helm install netbox \
+    --set postgresql.auth.password=<db-password> \
+    --set postgresql.auth.postgresPassword=<posgres-password> \
+    --set redis.auth.password=<redis-password> \
+    --set superuser.password=<superuser-password> \
+    --set superuser.apiToken=<superuser-api-token> \
+    --set secretKey=<secret-key> \
+    startechnica/netbox
 ```
 
 The default configuration includes the required PostgreSQL and Redis database
@@ -52,8 +54,8 @@ I strongly recommend setting both `postgresql.enabled` and `redis.enabled` to
 `false` and using a separate external PostgreSQL and Redis instance. This
 de-couples those services from the chart's bundled versions which may have
 complex upgrade requirements. I also recommend using a clustered PostgreSQL
-server (e.g. using Zalando's
-[Postgres Operator](https://github.com/zalando/postgres-operator)) and Redis
+server (e.g. using CloudNativePG
+[Postgres Operator](https://cloudnative-pg.io/)) and Redis
 with Sentinel (e.g. using [Aaron Layfield](https://github.com/DandyDeveloper)'s
 [redis-ha chart](https://github.com/DandyDeveloper/charts/tree/master/charts/redis-ha)).
 

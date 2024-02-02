@@ -65,10 +65,24 @@ spec:
             env:
               {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
+            {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+            envFrom:
+              {{- if .Values.extraEnvVarsCM }}
+              - configMapRef:
+                  name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+              {{- end }}
+              {{- if .Values.extraEnvVarsSecret }}
+              - secretRef:
+                  name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+              {{- end }}
+            {{- end }}
             volumeMounts:
             - name: config
               mountPath: /etc/netbox/config/configuration.py
               subPath: configuration.py
+              readOnly: true
+            - name: config
+              mountPath: /run/config/netbox
               readOnly: true
             {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
             - name: config
@@ -76,9 +90,6 @@ spec:
               subPath: ldap_config.py
               readOnly: true
             {{- end }}
-            - name: config
-              mountPath: /run/config/netbox
-              readOnly: true
             - name: secrets
               mountPath: /run/secrets/netbox
               readOnly: true
@@ -98,8 +109,8 @@ spec:
               mountPath: {{ .Values.scriptsPersistence.path  }}
               subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
             {{- end }}
-            {{- with .Values.housekeeping.extraVolumeMounts }}
-            {{- toYaml . | nindent 12 }}
+            {{- if .Values.housekeeping.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" ( dict "value" .Values.housekeeping.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
             resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
