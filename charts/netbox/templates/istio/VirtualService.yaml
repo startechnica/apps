@@ -43,6 +43,5 @@ spec:
         - destination:
             host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
   {{- end }}
-  {{- end }}
 {{- end -}}
 {{- end -}}
