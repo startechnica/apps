@@ -158,8 +158,7 @@ spec:
               mountPath: /etc/netbox/config/configuration.py
               subPath: configuration.py
               readOnly: true
-            # {{- if .Values.remoteAuth.ldap.enabled }}
-            {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
+            {{- if .Values.remoteAuth.ldap.enabled }}
             - name: config
               mountPath: /etc/netbox/config/ldap/ldap_config.py
               subPath: ldap_config.py
