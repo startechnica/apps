@@ -1496,6 +1496,11 @@ housekeeping:
   ##
   initContainers: []
 
+
+  ## @param housekeeping.timeZone Set the cronjob parameter timeZone
+  ##
+  timeZone: ""
+
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 5
   restartPolicy: OnFailure
