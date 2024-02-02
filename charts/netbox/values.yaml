@@ -248,6 +248,7 @@ containerSecurityContext:
   runAsGroup: 1000
   runAsNonRoot: true
   allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
   seccompProfile:
     type: RuntimeDefault
   capabilities:
@@ -1351,14 +1352,12 @@ housekeeping:
   ##     value: "bar"
   ##
   extraEnvVars: []
-  ## @param housekeeping.podLabels Extra labels for Netbox housekeeping pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ## @param housekeeping.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox housekeeping nodes
   ##
-  podLabels: {}
-  ## @param housekeeping.podAnnotations Annotations for Netbox housekeeping pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  extraEnvVarsCM: ""
+  ## @param housekeeping.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox housekeeping nodes
   ##
-  podAnnotations: {}
+  extraEnvVarsSecret: ""
   ## Netbox housekeeping resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
@@ -1412,11 +1411,42 @@ housekeeping:
     capabilities:
       drop:
         - ALL
-
   ## @param housekeeping.automountServiceAccountToken Mount Service Account token in pod
   ##
   automountServiceAccountToken: false
-
+  ## @param housekeeping.podLabels Extra labels for Netbox housekeeping pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+  ## @param housekeeping.podAnnotations Annotations for Netbox housekeeping pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## @param housekeeping.podAffinityPreset Pod affinity preset. Ignored if `housekeeping.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param housekeeping.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `housekeeping.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: soft
+  ## Node housekeeping.affinity preset
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
+  nodeAffinityPreset:
+    ## @param housekeeping.nodeAffinityPreset.type Node affinity preset type. Ignored if `housekeeping.affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param housekeeping.nodeAffinityPreset.key Node label key to match. Ignored if `housekeeping.affinity` is set
+    ##
+    key: ""
+    ## @param housekeeping.nodeAffinityPreset.values Node label values to match. Ignored if `housekeeping.affinity` is set
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
   ## @param housekeeping.affinity Affinity for Netbox housekeeping pods assignment
   ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ## NOTE: `housekeeping.podAffinityPreset`, `housekeeping.podAntiAffinityPreset`, and `housekeeping.nodeAffinityPreset` will be ignored when it's set
@@ -1645,6 +1675,7 @@ worker:
     runAsGroup: 1000
     runAsNonRoot: true
     allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
     seccompProfile:
       type: RuntimeDefault
     capabilities:
@@ -2305,7 +2336,7 @@ redisWait:
     seLinuxOptions: null
     runAsUser: 1001
     runAsNonRoot: true
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     privileged: false
     capabilities:
@@ -2335,7 +2366,7 @@ initDirs:
     seLinuxOptions: null
     runAsUser: 1000
     runAsNonRoot: true
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     privileged: false
     capabilities:
