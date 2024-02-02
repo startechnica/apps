@@ -1,48 +1,48 @@
-{{- if and .Values.gateway.enabled (not .Values.gateway.existingVirtualService) (not .Values.gateway.gatewayApi.create) }}
-{{- if (include "common.capabilities.istioNetworking.apiVersion" .) }}
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingVirtualService) (not .Values.gateway.gatewayApi.create) -}}
+{{- if (include "common.capabilities.istioNetworking.apiVersion" .) -}}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: VirtualService
 metadata:
   name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   gateways:
     - {{ printf "%s/%s" (include "common.names.namespace" .) (include "netbox.fullname" .) }}
-  {{- if .Values.netbox.ingress.hosts }}
   hosts:
-    {{- range .Values.netbox.ingress.hosts }}
-    - {{ .host | quote }}
+    - {{ include "common.tplvalues.render" (dict "value" .Values.ingress.hostname "context" $) }}
+    {{- range .Values.ingress.extraHosts }}
+    - {{ .name | quote }}
     {{- end }}
   http:
-    {{- range .Values.netbox.ingress.hosts }}
     - match:
         - uri: 
-            prefix: {{ default "/" .path | quote }}
+            prefix: {{ default "/" .Values.ingress.path | quote }}
+        {{- range .Values.ingress.extraPaths }}
+        - uri: 
+            prefix: {{ .path | quote }}
+        {{- end }}            
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" $) (include "common.names.namespace" $) $.Values.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" $) (include "common.names.namespace" .) .Values.clusterDomain }}
             port:
-              number: {{ $.Values.netbox.service.port }}
-    {{- end }}
-  {{- if .Values.tls.enabled }}
+              number: {{ .Values.service.ports.http }}
+  {{- if or .Values.tls.enabled .Values.ingress.tls }}
   tls:
     - match:
         - port: 443
           sniHosts:
-            {{- range .Values.netbox.ingress.hosts }}
-            - {{ .host | quote }}
+            - {{ .Values.ingress.hostname }}
+            {{- range .Values.ingress.extraHosts }}
+            - {{ .name | quote }}
             {{- end }}
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "common.names.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
   {{- end }}
   {{- end }}
-{{- end }}
-{{- end }}
+{{- end -}}
+{{- end -}}

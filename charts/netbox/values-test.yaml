@@ -27,4 +27,4 @@ metrics:
       release: kube-prometheus-stack
 
 housekeeping:
-  schedule: '*/5 * * * *'
+  schedule: '*/30 * * * *'
