@@ -1099,6 +1099,50 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: v3.7.1
+    created: "2024-02-02T04:04:38.321303157Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 18.x.x
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.x.x
+    description: IP address management (IPAM) and data center infrastructure management
+      (DCIM) tool
+    digest: 4159675786b635f11cfa02cdae7597b7350152a1278494106002141d1e64a291
+    home: https://github.com/bootc/netbox-chart
+    icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: bootc@boo.tc
+      name: Chris Boot
+      url: https://github.com/bootc
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: netbox
+    urls:
+    - https://github.com/startechnica/apps/releases/download/netbox-5.0.3/netbox-5.0.3.tgz
+    version: 5.0.3
+  - annotations:
+      images: |
+        - name: netbox
+          image: docker.io/netboxcommunity/netbox:v3.7-2.8.0
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: v3.7.1
     created: "2024-01-31T12:49:16.99075743Z"
     dependencies:
     - condition: postgresql.enabled
@@ -1432,4 +1476,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-01-31T12:49:16.990816119Z"
+generated: "2024-02-02T04:04:38.321368429Z"
