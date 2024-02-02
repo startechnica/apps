@@ -1,8 +1,17 @@
 postgresql:
-  enabled: true
-  # auth:
-  #   username: netbox_user
-  #   password: "mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA"
+  auth:
+    postgresPassword: j6vdHYFm2ZZ6168L0WC2Kyh35UTiVctgkCAWLJp4RAQXqDpUvqdDCeS3xJ5uJxBe
+    # username: netbox_user
+    password: mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA
+
+redis:
+  auth:
+    password: 9FYGZS1ziN31KjP9ZB0TRgXjD9zGj6
+
+secretKey: yA9ZzZYMJdN3iVEqjYVhbU1kxnHEnqZM9zKhcPNx5Z3EFZt6VEBZQHBHM2trPPLQ
+
+superuser:
+  password: QqbpZ2R598RqUMVeF0BNSdGjS581mtFD2Bu30a0pYVk9SCSi2qBcK2F6tH8XhKCH
 
 metrics:
   enabled: true
@@ -11,3 +20,6 @@ metrics:
     interval: 30s
     labels:
       release: kube-prometheus-stack
+
+housekeeping:
+  schedule: '*/5 * * * *'
