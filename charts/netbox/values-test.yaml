@@ -2,6 +2,9 @@
 autoscaling:
   enabled: true
 
+gateway:
+  enabled: true
+
 postgresql:
   auth:
     postgresPassword: j6vdHYFm2ZZ6168L0WC2Kyh35UTiVctgkCAWLJp4RAQXqDpUvqdDCeS3xJ5uJxBe

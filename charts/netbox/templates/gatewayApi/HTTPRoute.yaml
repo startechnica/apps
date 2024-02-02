@@ -1,6 +1,6 @@
-{{- if and .Values.gateway.enabled .Values.gateway.gatewayApi }}
+{{- if and .Values.gateway.enabled .Values.gateway.gatewayApi.create -}}
 {{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" . }}
 kind: HTTPRoute
 metadata:
   name: {{ include "netbox.fullname" . }}
@@ -26,4 +26,4 @@ spec:
         - name: {{ include "netbox.fullname" . }}
           port: {{ .Values.service.ports.http | int }}
 {{- end }}
-{{- end }}
+{{- end -}}
