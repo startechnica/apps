@@ -99,6 +99,7 @@ The command removes all the Kubernetes components associated with the chart and 
   * The `housekeeping.securityContext` setting has been renamed to `housekeeping.containerSecurityContext`
   * The `init` setting has been renamed to `initDirs`.
   * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
+  * The `ingress.hosts` setting has been renamed to `ingress.extraHosts`.
   * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
   * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
   * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
