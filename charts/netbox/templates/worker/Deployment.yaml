@@ -94,7 +94,8 @@ spec:
               mountPath: /etc/netbox/config/configuration.py
               subPath: configuration.py
               readOnly: true
-            {{- if .Values.remoteAuth.ldap.enabled }}
+            # {{- if .Values.remoteAuth.ldap.enabled }}
+            {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
             - name: config
               mountPath: /etc/netbox/config/ldap/ldap_config.py
               subPath: ldap_config.py
@@ -199,7 +200,8 @@ spec:
                       path: email_password
                     - key: secret_key
                       path: secret_key
-              {{- if .Values.remoteAuth.enabled }}
+              # {{- if .Values.remoteAuth.enabled }}
+              {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
               - secret:
                   name: {{ include "netbox.remoteAuth.secretName" . | quote }}
                   items:
