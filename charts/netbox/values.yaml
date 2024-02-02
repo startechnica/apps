@@ -678,7 +678,7 @@ remoteAuth:
   ## see https://django-auth-ldap.readthedocs.io
   ##
   ## When enabling LDAP support please see "Using LDAP Authentication" in README.md and
-  ## uncomment ALL of the configuration settings below, or your configuration will be invalid.
+  ## set enabled to true.
   ##
   ldap:
     ## @param remoteAuth.ldap.enabled  Enable LDAP remote auth backend
