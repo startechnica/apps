@@ -1,4 +1,4 @@
-{{- if .Values.worker.enabled -}}
+{{- if and .Values.worker.enabled (eq .Values.worker.kind "Job") }}
 apiVersion: batch/v1
 kind: Job
 metadata:

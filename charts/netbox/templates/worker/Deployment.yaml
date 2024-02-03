@@ -1,4 +1,4 @@
-{{- if .Values.worker.enabled }}
+{{- if and .Values.worker.enabled (eq .Values.worker.kind "Deployment") }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:

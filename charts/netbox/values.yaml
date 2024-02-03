@@ -1505,6 +1505,10 @@ worker:
   ## @param worker.replicaCount Number of Netbox worker replicas to deploy
   ##
   replicaCount: 1
+  ## @param redis.master.kind Use either Deployment (default), or Job
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/job/
+  ##
+  kind: Deployment
   ## Netbox worker image version
   ## ref: https://hub.docker.com/r/netboxcommunity/netbox/tags
   ## @param image.registry [default: REGISTRY_NAME] Netbox worker image registry
