@@ -27,3 +27,6 @@ data:
 
     extraConfig.volumevolumeMounts
     {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
+
+    extraConfig.volumevolumeMounts tpl
+    {{- include "common.tplvalues.render" (dict "value" (include "netbox.extraConfig.volumeMounts" .) "context" $) | nindent 12 }}
