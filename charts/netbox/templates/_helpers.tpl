@@ -268,7 +268,7 @@ Return Redis password
     {{- if not (empty .Values.redis.auth.password) -}}
         {{- printf "%s" .Values.redis.auth.password -}}
     {{- else -}}
-        {{- include "getValueFromSecret" (dict "Namespace" (include "common.names.namespace" .) "Name" (include "redis.secretName" .) "Length" 16 "Key" (include "redis.secretPasswordKey" .)) -}}
+        {{- include "getValueFromSecret" (dict "Namespace" (include "common.names.namespace" .) "Name" (include "redis.secretName" .Subcharts.redis) "Length" 16 "Key" (include "redis.secretPasswordKey" .Subcharts.redis)) -}}
     {{- end -}}
 {{- else if not (empty .Values.tasksRedis.password) -}}
     {{- printf "%s" .Values.tasksRedis.password -}}
