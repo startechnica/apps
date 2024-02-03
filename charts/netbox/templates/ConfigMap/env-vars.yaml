@@ -21,4 +21,4 @@ data:
   {{- if not .Values.externalDatabase.existingSecretUserKey }}
   NETBOX_DATABASE_USER: {{ include "netbox.databaseUser" . | quote }}
   {{- end }}
-  redis-password: {{ include netbox.tasksRedis.password . }}
+  redis-password: {{ include "netbox.tasksRedis.password" . }}
