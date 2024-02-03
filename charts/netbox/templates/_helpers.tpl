@@ -365,7 +365,7 @@ Volumes that need to be mounted for .Values.extraConfig entries
   secret:
     {{- toYaml $config.secret | nindent 4 }}
   {{- end }}
-{{- end }}
+{{ end -}}
 {{- end -}}
 
 {{/*
