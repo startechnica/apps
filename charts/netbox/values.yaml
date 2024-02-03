@@ -621,16 +621,24 @@ storageConfig: {}
 # Determine how many objects to display per page within a list. (Default: 50)
 paginateCount: 50
 
-# Enable installed plugins. Add the name of each plugin to the list.
+## @param plugins  Enable installed plugins. Add the name of each plugin to the list.
+##
 plugins: []
 
-# Plugins configuration settings. These settings are used by various plugins
-# that the user may have installed. Each key in the dictionary is the name of
-# an installed plugin and its value is a dictionary of settings.
+## @param pluginsConfig  Plugins configuration settings. These settings are used by various plugins
+##   that the user may have installed. Each key in the dictionary is the name of
+##   an installed plugin and its value is a dictionary of settings.
+## E.g.:
+## pluginsConfig:
+##   my_plugin:
+##     foo: bar
+##     buzz: bazz
+##
 pluginsConfig: {}
 
-# The default value for the amperage field when creating new power feeds.
-# https://docs.netbox.dev/en/stable/configuration/dynamic-settings/#powerfeed_default_amperage
+## @param powerFeedDefaultAmperage  The default value for the amperage field when creating new power feeds.
+## ref: https://docs.netbox.dev/en/stable/configuration/dynamic-settings/#powerfeed_default_amperage
+##
 powerFeedDefaultAmperage: 15
 
 # The default value (percentage) for the max_utilization field when creating
@@ -718,7 +726,7 @@ releaseCheck:
   ## check for release in the official NetBox repository.
   ## url: https://api.github.com/repos/netbox-community/netbox/releases
   ##
-  url: null
+  url: https://api.github.com/repos/netbox-community/netbox/releases
 
 # Maximum execution time for background tasks, in seconds.
 rqDefaultTimeout: 300  # 5 mins
@@ -734,7 +742,7 @@ enableLocalization: false
 timeZone: UTC
 
 ## Date/time formatting. See the following link for supported formats:
-## https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
+## ref: https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
 ##
 dateFormat: 'N j, Y'
 shortDateFormat: 'Y-m-d'
@@ -763,8 +771,9 @@ extraConfig: []
 
 ## @param secretKey  If provided, this should be a 50+ character string of random characters. It
 ##    will be randomly generated if left blank.
-## You can also use an existing secret with "secret-key" instead of "secretKey"
-## See `existingSecretName` for details
+##    You can also use an existing secret with "secret-key" instead of "secretKey"
+##    See `existingSecretName` for details
+## ref: https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-SECRET_KEY
 ##
 secretKey: ""
 
@@ -1906,7 +1915,8 @@ worker:
     ## @param worker.metrics.enabled Enable metrics
     ##
     enabled: false
-
+## @param extraWorkers  Extra objects to deploy as worker (evaluated as a template)
+##
 extraWorkers: []
 
 ## HTTPS settings
@@ -2175,6 +2185,8 @@ externalDatabase:
 
   # The following settings also apply when using the bundled PostgreSQL chart:
   sslMode: prefer
+  ## @param externalDatabase  Max database connection age
+  ##
   connMaxAge: 300
   disableServerSideCursors: false
   targetSessionAttrs: read-write
@@ -2245,6 +2257,12 @@ redis:
     ##
     existingSecret: ""
 
+## @section External Redis database settings.
+##
+## Redis is used for caching and for queuing background tasks such as webhook events. A separate
+## configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
+## to use two separate database IDs.
+##
 tasksRedis:
   database: 0
   ssl: false
@@ -2289,11 +2307,12 @@ cachingRedis:
   ##
   existingSecretPasswordKey: ""
 
-##
-## External Redis
+## External Redis database settings.
+## Redis is used for caching and for queuing background tasks such as webhook events. A separate
+## configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
+## to use two separate database IDs.
 ##
 externalRedis:
-  ## Redis host
   ## @param externalRedis.host External Redis host
   ##
   host: localhost
