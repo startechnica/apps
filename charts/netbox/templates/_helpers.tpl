@@ -265,14 +265,9 @@ Return Redis password
 */}}
 {{- define "netbox.tasksRedis.password" -}}
 {{- if .Values.redis.enabled -}}
-    {{- if not (empty .Values.redis.auth.password) -}}
-        {{- printf "%s" .Values.redis.auth.password -}}
-    {{- else -}}
-        {{- include "getValueFromSecret" (dict "Namespace" (include "common.names.namespace" .) "Name" (include "redis.secretName" .Subcharts.redis) "Length" 16 "Key" (include "redis.secretPasswordKey" .Subcharts.redis)) -}}
-    {{- end -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "redis.secretName" .Subcharts.redis) "key" (include "redis.secretPasswordKey" .Subcharts.redis) "defaultValue" .Values.email.password "context" $) }}
 {{- else -}}
     {{ include "common.secrets.passwords.manage" (dict "secret" (include "netbox.tasksRedis.secretName" .) "key" (include "netbox.tasksRedis.secretPasswordKey" .) "length" 16 "providedValues" (list "tasksRedis.password") "context" $) }}
-    # {{- include "getValueFromSecret" (dict "Namespace" (include "common.names.namespace" .) "Name" (include "netbox.tasksRedis.secretName" .) "Length" 16 "Key" (include "netbox.tasksRedis.secretPasswordKey" .)) -}}
 {{- end -}}
 {{- end -}}
 
