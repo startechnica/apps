@@ -264,7 +264,7 @@ Name of the key in Secret that contains the Redis cache password
 Return Redis password
 */}}
 {{- define "netbox.tasksRedis.password" -}}
-{{- if .Values.redis.auth.enabled }}
+{{- if .Values.redis.enabled }}
     {{- if not (empty .Values.redis.auth.password) -}}
         {{- printf "%s" .Values.redis.auth.password -}}
     {{- else -}}
