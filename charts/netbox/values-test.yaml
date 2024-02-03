@@ -19,12 +19,9 @@ postgresql:
     # username: netbox_user
     password: mRY5pxyx1aiDZPKHSCcdjXqSXLSYkA
 
-redis:
-  auth:
-    password: 9FYGZS1ziN31KjP9ZB0TRgXjD9zGj6
-
-releaseCheck:
-  url: https://api.github.com/repos/netbox-community/netbox/releases
+# redis:
+#   auth:
+#     password: 9FYGZS1ziN31KjP9ZB0TRgXjD9zGj6
 
 secretKey: yA9ZzZYMJdN3iVEqjYVhbU1kxnHEnqZM9zKhcPNx5Z3EFZt6VEBZQHBHM2trPPLQ
 
