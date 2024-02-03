@@ -45,7 +45,8 @@ spec:
             - /opt/netbox/venv/bin/python
             - /opt/netbox/netbox/manage.py
             - rqworker
-            - --max-jobs 1
+            - --max-jobs
+            - 1
           {{- end }}
           {{- if .Values.worker.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
