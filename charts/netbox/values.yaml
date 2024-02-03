@@ -117,17 +117,17 @@ command: []
 ## @param args Override default container args (useful when using custom images)
 ##
 args: []
-## @param preExecCmds Additional commands to run prior to starting Netbox worker
+## @param preExecCmds Additional commands to run prior to starting Netbox
 ##
 preExecCmds: []
-## @param extraFlags Array with additional command line flags for Netbox worker
+## @param extraFlags Array with additional command line flags for Netbox
 ## e.g:
 ## extraFlags:
 ##  - "--maxmemory-policy volatile-ttl"
 ##  - "--repl-backlog-size 1024mb"
 ##
 extraFlags: []
-## @param extraEnvVars Array with extra environment variables to add to Netbox worker nodes
+## @param extraEnvVars Array with extra environment variables to add to Netbox nodes
 ## e.g:
 ## extraEnvVars:
 ##   - name: FOO
