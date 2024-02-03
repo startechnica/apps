@@ -93,6 +93,9 @@ spec:
                   name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
               {{- end }}
             {{- end }}
+            {{- if .Values.housekeeping.resources }}
+            resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
+            {{- end }}
             volumeMounts:
             - name: config
               mountPath: /etc/netbox/config/configuration.py
@@ -110,7 +113,6 @@ spec:
             - name: secrets
               mountPath: /run/secrets/netbox
               readOnly: true
-            {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 -}}
             - name: netbox-tmp
               mountPath: /tmp
             - name: media
@@ -126,11 +128,9 @@ spec:
               mountPath: {{ .Values.scriptsPersistence.path  }}
               subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
             {{- end }}
+            {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
             {{- if .Values.housekeeping.extraVolumeMounts }}
               {{- include "common.tplvalues.render" ( dict "value" .Values.housekeeping.extraVolumeMounts "context" $ ) | nindent 12 }}
-            {{- end }}
-            {{- if .Values.housekeeping.resources }}
-            resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
             {{- end }}
           {{- if .Values.sidecars }}
             {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 10 }}
@@ -174,7 +174,6 @@ spec:
                   items:
                   - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
                     path: redis_cache_password
-          {{- include "netbox.extraConfig.volumes" . | nindent 10 -}}
           - name: netbox-tmp
             emptyDir:
               medium: Memory
@@ -202,4 +201,5 @@ spec:
           {{- if .Values.extraVolumes }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 10 }}
           {{- end }}
+          {{- include "netbox.extraConfig.volumes" . | nindent 10 -}}
 {{- end -}}

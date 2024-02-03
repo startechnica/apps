@@ -142,13 +142,13 @@ extraEnvVars: []
 ##        name: secret-resource
 ##
 extraEnvs: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox worker nodes
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox nodes
 ##
 extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox worker nodes
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox nodes
 ##
 extraEnvVarsSecret: ""
-## @param containerPorts.redis Container port to open on Netbox worker nodes
+## @param containerPorts.redis Container port to open on Netbox nodes
 ##
 containerPorts:
   http: 8080

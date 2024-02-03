@@ -117,7 +117,6 @@ spec:
             - name: secrets
               mountPath: /run/secrets/netbox
               readOnly: true
-            {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 -}}
             - name: netbox-tmp
               mountPath: /tmp
             - name: media
@@ -135,6 +134,7 @@ spec:
               {{- if .Values.scriptsPersistence.subPath }}
               subPath: {{ .Values.scriptsPersistence.subPath | quote }}
               {{- end }}
+            {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
             {{- if .Values.worker.extraVolumeMounts }}
               {{- include "common.tplvalues.render" ( dict "value" .Values.worker.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
@@ -234,7 +234,6 @@ spec:
                   items:
                     - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
                       path: redis_cache_password
-        {{- include "netbox.extraConfig.volumes" . | nindent 8 -}}
         - name: netbox-tmp
           emptyDir:
             medium: Memory
@@ -259,7 +258,8 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-          {{- if .Values.extraVolumes }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
-          {{- end }}
+        {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
+        {{- if .Values.extraVolumes }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
 {{- end }}
