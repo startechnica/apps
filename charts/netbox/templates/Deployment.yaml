@@ -212,7 +212,7 @@ spec:
             - name: custom-init-scripts
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
-            {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
+            # {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
             {{- if .Values.extraVolumeMounts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -365,7 +365,7 @@ spec:
           configMap:
             name: {{ include "netbox.initdbScriptsCM" . }}
         {{- end }}
-        {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
+        # {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
