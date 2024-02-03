@@ -339,7 +339,7 @@ spec:
         - name: media
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "netbox.media.pvc" }}
+            claimName: {{ include "netbox.media.pvc" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}
