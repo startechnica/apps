@@ -76,8 +76,10 @@ spec:
               - /opt/netbox/netbox/manage.py
               - housekeeping
             {{- end }}
-            {{- if .Values.housekeeping.extraEnvVars }}
             env:
+              - name: HOUSEKEEPING_INTERVAL
+                value: 20
+            {{- if .Values.housekeeping.extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
             {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
