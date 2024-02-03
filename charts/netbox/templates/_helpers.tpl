@@ -352,19 +352,19 @@ Volumes that need to be mounted for .Values.extraConfig entries
 {{- define "netbox.extraConfig.volumes" -}}
 {{- range $index, $config := .Values.extraConfig -}}
 - name: extra-config-{{ $index }}
-  {{- if $config.values -}}
+  {{- if $config.values }}
   configMap:
     name: {{ printf "%s" (include "netbox.fullname" $) }}
     items:
     - key: extra-{{ $index }}.yaml
       path: extra-{{ $index }}.yaml
-  {{- else if $config.configMap -}}
+  {{- else if $config.configMap }}
   configMap:
     {{- toYaml $config.configMap | nindent 4 }}
-  {{- else if $config.secret -}}
+  {{- else if $config.secret }}
   secret:
     {{- toYaml $config.secret | nindent 4 }}
-  {{- end -}}
+  {{- end }}
 {{- end -}}
 {{- end -}}
 
