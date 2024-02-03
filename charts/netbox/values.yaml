@@ -1497,10 +1497,10 @@ housekeeping:
   timeZone: ""
 
   concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
   restartPolicy: OnFailure
   schedule: '0 0 * * *'
-  successfulJobsHistoryLimit: 5
+  successfulJobsHistoryLimit: 3
   suspend: false
 
 ## @section Netbox worker parameters
