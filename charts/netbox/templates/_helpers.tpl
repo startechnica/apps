@@ -376,7 +376,7 @@ Volume mounts for .Values.extraConfig entries
 - name: extra-config-{{ $index }}
   mountPath: /run/config/extra/{{ $index }}
   readOnly: true
-{{- end }}
+{{ end -}}
 {{- end -}}
 
 {{/*
