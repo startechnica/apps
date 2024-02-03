@@ -444,7 +444,7 @@ Return the Database encrypted password
 {{- else if .Values.existingSecretName -}}
     {{- printf "%s" .Values.existingSecretName -}}
 {{- else -}}
-    {{- default (printf "%s-externaldb" .Release.Name) (tpl .Values.externalDatabase.existingSecretName $) -}}
+    {{- default (printf "%s-external-db" .Release.Name) (tpl .Values.externalDatabase.existingSecretName $) -}}
 {{- end -}}
 {{- end -}}
 
@@ -621,7 +621,7 @@ Return the secret name containing email server
 {{- if .Values.email.existingSecretName -}}
     {{- printf "%s" .Values.email.existingSecretName -}}
 {{- else -}}
-    {{- .Values.existingSecretName | default (include "netbox.fullname" .) }}
+    {{- default (include "netbox.fullname" .) .Values.existingSecretName }}
 {{- end -}}
 {{- end -}}
 
