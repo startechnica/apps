@@ -1099,6 +1099,54 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: v3.7.1
+    created: "2024-02-03T13:41:39.871214285Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 18.x.x
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.x.x
+    description: IP address management (IPAM) and data center infrastructure management
+      (DCIM) tool
+    digest: b02f9724a285a12b647fee590584e7c9ba633ea4cc89d2aca640f54612d3df82
+    home: https://github.com/startechnica/apps/tree/main/charts/netbox
+    icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+    keywords:
+    - ipam
+    - netbox
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: bootc@boo.tc
+      name: Chris Boot
+      url: https://github.com/bootc
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: netbox
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/netbox-5.0.4/netbox-5.0.4.tgz
+    version: 5.0.4
+  - annotations:
+      images: |
+        - name: netbox
+          image: docker.io/netboxcommunity/netbox:v3.7-2.8.0
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: v3.7.1
     created: "2024-02-02T04:04:38.321303157Z"
     dependencies:
     - condition: postgresql.enabled
@@ -1476,4 +1524,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-02-02T04:04:38.321368429Z"
+generated: "2024-02-03T13:41:39.871290677Z"
