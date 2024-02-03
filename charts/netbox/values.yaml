@@ -1903,6 +1903,8 @@ worker:
     ##
     enabled: false
 
+extraWorkers: []
+
 ## HTTPS settings
 ##
 tls:
