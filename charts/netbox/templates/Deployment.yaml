@@ -339,7 +339,7 @@ spec:
         - name: media
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+            claimName: {{ include "netbox.media.pvc" }}
           {{- else }}
           emptyDir: {}
           {{- end }}
