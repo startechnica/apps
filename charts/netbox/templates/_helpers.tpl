@@ -261,6 +261,23 @@ Name of the key in Secret that contains the Redis cache password
 {{- end -}}
 
 {{/*
+Return Redis password
+*/}}
+{{- define "netbox.tasksRedis.password" -}}
+{{- if .Values.redis.auth.enabled }}
+    {{- if not (empty .Values.redis.auth.password) -}}
+        {{- printf "%s" .Values.redis.auth.password -}}
+    {{- else -}}
+        {{- include "getValueFromSecret" (dict "Namespace" (include "common.names.namespace" .) "Name" (include "redis.secretName" .) "Length" 16 "Key" (include "redis.secretPasswordKey" .)) -}}
+    {{- end -}}
+{{- else if not (empty .Values.tasksRedis.password) -}}
+    {{- printf "%s" .Values.tasksRedis.password -}}
+{{- else -}}
+    {{- include "getValueFromSecret" (dict "Namespace" (include "common.names.namespace" .) "Name" (include "netbox.tasksRedis.secretName" .) "Length" 16 "Key" (include "netbox.tasksRedis.secretPasswordKey" .)) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Return the task Redis hostname
 */}}
 {{- define "netbox.tasksRedis.host" -}}
