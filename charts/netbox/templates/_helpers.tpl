@@ -354,7 +354,7 @@ Volumes that need to be mounted for .Values.extraConfig entries
 - name: extra-config-{{ $index }}
   {{- if $config.values -}}
   configMap:
-    name: {{ include "netbox.fullname" $ }}
+    name: {{ printf "%s" (include "netbox.fullname" $) }}
     items:
     - key: extra-{{ $index }}.yaml
       path: extra-{{ $index }}.yaml
@@ -365,7 +365,7 @@ Volumes that need to be mounted for .Values.extraConfig entries
   secret:
     {{- toYaml $config.secret | nindent 4 }}
   {{- end -}}
-{{ end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -376,7 +376,7 @@ Volume mounts for .Values.extraConfig entries
 - name: extra-config-{{ $index }}
   mountPath: /run/config/extra/{{ $index }}
   readOnly: true
-{{ end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

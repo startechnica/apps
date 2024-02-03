@@ -21,3 +21,9 @@ data:
   {{- if not .Values.externalDatabase.existingSecretUserKey }}
   NETBOX_DATABASE_USER: {{ include "netbox.databaseUser" . | quote }}
   {{- end }}
+  test.txt: |-
+    extraConfig.volume
+    {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
+
+    extraConfig.volumevolumeMounts
+    {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
