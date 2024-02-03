@@ -14,7 +14,8 @@ Using custom auth pipelines you can assign groups based on the roles supplied by
 ```yaml
 remoteAuth:
   enabled: true
-  backend: social_core.backends.keycloak.KeycloakOAuth2
+  backends:
+    - social_core.backends.keycloak.KeycloakOAuth2
   autoCreateUser: true
 
 extraConfig:

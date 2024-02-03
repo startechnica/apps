@@ -191,7 +191,7 @@ livenessProbe:
 ##
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 0
+  initialDelaySeconds: 60
   periodSeconds: 10
   timeoutSeconds: 1
   successThreshold: 1
@@ -205,14 +205,18 @@ customLivenessProbe: {}
 ## @param customReadinessProbe Custom readinessProbe that overrides the default one
 ##
 customReadinessProbe: {}
-## Netbox worker resource requests and limits
+## Netbox resource requests and limits
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-## @param resources.limits The resources limits for the Netbox worker containers
-## @param resources.requests The requested resources for the Netbox worker containers
+## @param resources.limits The resources limits for the Netbox containers
+## @param resources.requests The requested resources for the Netbox containers
 ##
 resources:
-  limits: {}
-  requests: {}
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 128Mi
 ## Configure Pods Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 ## @param podSecurityContext.enabled Enabled Netbox pods' Security Context
@@ -248,6 +252,7 @@ containerSecurityContext:
   runAsGroup: 1000
   runAsNonRoot: true
   allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
   seccompProfile:
     type: RuntimeDefault
   capabilities:
@@ -616,16 +621,24 @@ storageConfig: {}
 # Determine how many objects to display per page within a list. (Default: 50)
 paginateCount: 50
 
-# Enable installed plugins. Add the name of each plugin to the list.
+## @param plugins  Enable installed plugins. Add the name of each plugin to the list.
+##
 plugins: []
 
-# Plugins configuration settings. These settings are used by various plugins
-# that the user may have installed. Each key in the dictionary is the name of
-# an installed plugin and its value is a dictionary of settings.
+## @param pluginsConfig  Plugins configuration settings. These settings are used by various plugins
+##   that the user may have installed. Each key in the dictionary is the name of
+##   an installed plugin and its value is a dictionary of settings.
+## E.g.:
+## pluginsConfig:
+##   my_plugin:
+##     foo: bar
+##     buzz: bazz
+##
 pluginsConfig: {}
 
-# The default value for the amperage field when creating new power feeds.
-# https://docs.netbox.dev/en/stable/configuration/dynamic-settings/#powerfeed_default_amperage
+## @param powerFeedDefaultAmperage  The default value for the amperage field when creating new power feeds.
+## ref: https://docs.netbox.dev/en/stable/configuration/dynamic-settings/#powerfeed_default_amperage
+##
 powerFeedDefaultAmperage: 15
 
 # The default value (percentage) for the max_utilization field when creating
@@ -713,7 +726,7 @@ releaseCheck:
   ## check for release in the official NetBox repository.
   ## url: https://api.github.com/repos/netbox-community/netbox/releases
   ##
-  url: null
+  url: https://api.github.com/repos/netbox-community/netbox/releases
 
 # Maximum execution time for background tasks, in seconds.
 rqDefaultTimeout: 300  # 5 mins
@@ -729,7 +742,7 @@ enableLocalization: false
 timeZone: UTC
 
 ## Date/time formatting. See the following link for supported formats:
-## https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
+## ref: https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
 ##
 dateFormat: 'N j, Y'
 shortDateFormat: 'Y-m-d'
@@ -758,8 +771,9 @@ extraConfig: []
 
 ## @param secretKey  If provided, this should be a 50+ character string of random characters. It
 ##    will be randomly generated if left blank.
-## You can also use an existing secret with "secret-key" instead of "secretKey"
-## See `existingSecretName` for details
+##    You can also use an existing secret with "secret-key" instead of "secretKey"
+##    See `existingSecretName` for details
+## ref: https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-SECRET_KEY
 ##
 secretKey: ""
 
@@ -1258,22 +1272,6 @@ ingress:
   ##             name: http
   ##
   extraRules: []
-  hosts:
-    - host: chart-example.local
-      paths:
-        # You can manually specify the service name and service port if
-        # required. This could be useful if for exemple you are using the AWS
-        # ALB Ingress Controller and want to set up automatic SSL redirect.
-        # https://kubernetes-sigs.github.io/aws-alb-ingress-controller/guide/tasks/ssl_redirect/#redirect-traffic-from-http-to-https
-        # - path: /*
-        #   backend:
-        #     serviceName: ssl-redirect
-        #     servicePort: use-annotation
-        #
-        # Or you can let the template set it for you.
-        # Both types of rule can be combined.
-        # NB: You may also want to set the basePath above
-        - /
 
 test:
   image:
@@ -1293,11 +1291,9 @@ test:
 autoscaling:
   enabled: false
   minReplicas: 1
-  maxReplicas: 100
+  maxReplicas: 5
   targetCPU: 80
-  targetMemory: 80
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  targetMemory: ""
 
 ## @section Netbox housekeeping parameters
 
@@ -1351,14 +1347,12 @@ housekeeping:
   ##     value: "bar"
   ##
   extraEnvVars: []
-  ## @param housekeeping.podLabels Extra labels for Netbox housekeeping pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ## @param housekeeping.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox housekeeping nodes
   ##
-  podLabels: {}
-  ## @param housekeeping.podAnnotations Annotations for Netbox housekeeping pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  extraEnvVarsCM: ""
+  ## @param housekeeping.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox housekeeping nodes
   ##
-  podAnnotations: {}
+  extraEnvVarsSecret: ""
   ## Netbox housekeeping resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
@@ -1412,11 +1406,42 @@ housekeeping:
     capabilities:
       drop:
         - ALL
-
   ## @param housekeeping.automountServiceAccountToken Mount Service Account token in pod
   ##
   automountServiceAccountToken: false
-
+  ## @param housekeeping.podLabels Extra labels for Netbox housekeeping pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+  ## @param housekeeping.podAnnotations Annotations for Netbox housekeeping pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## @param housekeeping.podAffinityPreset Pod affinity preset. Ignored if `housekeeping.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param housekeeping.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `housekeeping.affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: soft
+  ## Node housekeeping.affinity preset
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ##
+  nodeAffinityPreset:
+    ## @param housekeeping.nodeAffinityPreset.type Node affinity preset type. Ignored if `housekeeping.affinity` is set. Allowed values: `soft` or `hard`
+    ##
+    type: ""
+    ## @param housekeeping.nodeAffinityPreset.key Node label key to match. Ignored if `housekeeping.affinity` is set
+    ##
+    key: ""
+    ## @param housekeeping.nodeAffinityPreset.values Node label values to match. Ignored if `housekeeping.affinity` is set
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
   ## @param housekeeping.affinity Affinity for Netbox housekeeping pods assignment
   ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ## NOTE: `housekeeping.podAffinityPreset`, `housekeeping.podAntiAffinityPreset`, and `housekeeping.nodeAffinityPreset` will be ignored when it's set
@@ -1466,11 +1491,16 @@ housekeeping:
   ##
   initContainers: []
 
+
+  ## @param housekeeping.timeZone Set the cronjob parameter timeZone
+  ##
+  timeZone: ""
+
   concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
   restartPolicy: OnFailure
   schedule: '0 0 * * *'
-  successfulJobsHistoryLimit: 5
+  successfulJobsHistoryLimit: 3
   suspend: false
 
 ## @section Netbox worker parameters
@@ -1484,6 +1514,10 @@ worker:
   ## @param worker.replicaCount Number of Netbox worker replicas to deploy
   ##
   replicaCount: 1
+  ## @param redis.master.kind Use either Deployment (default), or Job
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/job/
+  ##
+  kind: Deployment
   ## Netbox worker image version
   ## ref: https://hub.docker.com/r/netboxcommunity/netbox/tags
   ## @param image.registry [default: REGISTRY_NAME] Netbox worker image registry
@@ -1645,6 +1679,7 @@ worker:
     runAsGroup: 1000
     runAsNonRoot: true
     allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
     seccompProfile:
       type: RuntimeDefault
     capabilities:
@@ -1810,8 +1845,6 @@ worker:
     maxReplicas: 11
     targetCPU: 80
     targetMemory: ""
-    targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
 
   ## Netbox worker Network Policies
   ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
@@ -1882,6 +1915,9 @@ worker:
     ## @param worker.metrics.enabled Enable metrics
     ##
     enabled: false
+## @param extraWorkers  Extra objects to deploy as worker (evaluated as a template)
+##
+extraWorkers: []
 
 ## HTTPS settings
 ##
@@ -2071,24 +2107,30 @@ metrics:
 
 ## PostgreSQL chart configuration
 ## ref: https://github.com/bitnami/charts/blob/main/bitnami/postgresql/values.yaml
-## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
-## @param postgresql.auth.postgresPassword Password for the "postgres" admin user. Ignored if `auth.existingSecret` with key `postgres-password` is provided
-## @param postgresql.auth.username Name for a custom user to create
-## @param postgresql.auth.password Password for the custom user to create
-## @param postgresql.auth.database Name for a custom database to create
-## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials
 ##
 postgresql:
+  ## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
+  ##
   enabled: true
+  ## @param postgresql.commonLabels Labels to add to all deployed objects
+  ##
+  commonLabels:
+    app.kubernetes.io/part-of: netbox
+  ## @param postgresql.auth.postgresPassword Password for the "postgres" admin user. Ignored if `auth.existingSecret` with key `postgres-password` is provided
+  ## @param postgresql.auth.username Name for a custom user to create
+  ## @param postgresql.auth.password Password for the custom user to create
+  ## @param postgresql.auth.database Name for a custom database to create
+  ## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials
+  ##
   auth:
     postgresPassword: ""
     username: netbox
-    password: netbox
+    password: ""
     database: netbox
     existingSecret: ""
-    ## @param auth.secretKeys.adminPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
-    ## @param auth.secretKeys.userPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
-    ## @param auth.secretKeys.replicationPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param postgresql.auth.secretKeys.adminPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param postgresql.auth.secretKeys.userPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param postgresql.auth.secretKeys.replicationPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
     ##
     secretKeys:
       adminPasswordKey: postgres-password
@@ -2100,6 +2142,9 @@ postgresql:
   ## @section PostgreSQL Primary parameters
   ##
   primary:
+    ## @param postgresql.primary.podLabels Map of labels to add to the pods (postgresql primary)
+    ##
+    podLabels: {}
     ## PostgreSQL Primary persistence configuration
     ##
     persistence:
@@ -2140,6 +2185,8 @@ externalDatabase:
 
   # The following settings also apply when using the bundled PostgreSQL chart:
   sslMode: prefer
+  ## @param externalDatabase  Max database connection age
+  ##
   connMaxAge: 300
   disableServerSideCursors: false
   targetSessionAttrs: read-write
@@ -2148,35 +2195,74 @@ externalDatabase:
 ## https://github.com/bitnami/containers/tree/main/bitnami/redis#configuration
 ##
 redis:
-  ## Deploy Redis using bundled chart
-  # To use an external Redis instance, set this to false and configure the
-  # settings under *both* tasksRedis *and* cachingRedis
+  ## @param redis.enabled  Deploy Redis using bundled chart
+  ## To use an external Redis instance, set this to false and configure the
+  ## settings under *both* tasksRedis *and* cachingRedis
+  ##
   enabled: true
-  ## @param architecture Netbox architecture. Allowed values: `standalone` or `replication`
+  ## @param redis.commonLabels Labels to add to all deployed objects
+  ##
+  commonLabels:
+    app.kubernetes.io/part-of: netbox
+  ## @param redis.architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
-  ## Use password authentication
-  ## @param redis.auth.enabled Enable Redis dependency authentication
-  ## @param redis.auth.existingSecret Existing secret to load redis dependency password
-  ## @param redis.auth.existingSecretPasswordKey Pasword key name inside the existing secret
+  ## Redis Authentication parameters
+  ## ref: https://github.com/bitnami/containers/tree/main/bitnami/redis#setting-the-server-password-on-first-run
   ##
   auth:
-    ## @param auth.enabled Enable password authentication
+    ## @param redis.auth.enabled Enable password authentication
     ##
     enabled: true
+    ## @param redis.auth.password Redis password
+    ## Defaults to a random 10-character alphanumeric string if not set
+    ##
+    password: ""
+    ## @param redis.auth.existingSecret The name of an existing secret with Redis credentials
+    ## NOTE: When it's set, the previous `auth.password` parameter is ignored
+    ##
     existingSecret: ""
-    existingSecretPasswordKey: 'redis-password'
+    ## @param redis.auth.existingSecretPasswordKey Password key to be retrieved from existing secret
+    ## NOTE: ignored unless `auth.existingSecret` parameter is set
+    ##
+    existingSecretPasswordKey: ""
   ## @section Redis master configuration parameters
   ##
   master:
+    ## @param redis.master.kind Use either Deployment, StatefulSet (default) or DaemonSet
+    ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+    ##
+    kind: Deployment
+    ## @param master.podLabels Extra labels for Redis master pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    podLabels: {}
     ## Persistence parameters
     ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
     ##
     persistence:
-      ## @param master.persistence.enabled Enable persistence on Redis master nodes using Persistent Volume Claims
+      ## @param redis.master.persistence.enabled Enable persistence on Redis master nodes using Persistent Volume Claims
       ##
       enabled: false
+  ## TLS configuration
+  ##
+  tls:
+    ## @param redis.tls.enabled Enable TLS traffic
+    ##
+    enabled: false
+    ## @param redis.tls.autoGenerated Enable autogenerated certificates
+    ##
+    autoGenerated: false
+    ## @param redis.tls.existingSecret The name of the existing secret that contains the TLS certificates
+    ##
+    existingSecret: ""
 
+## @section External Redis database settings.
+##
+## Redis is used for caching and for queuing background tasks such as webhook events. A separate
+## configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
+## to use two separate database IDs.
+##
 tasksRedis:
   database: 0
   ssl: false
@@ -2221,11 +2307,12 @@ cachingRedis:
   ##
   existingSecretPasswordKey: ""
 
-##
-## External Redis
+## External Redis database settings.
+## Redis is used for caching and for queuing background tasks such as webhook events. A separate
+## configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
+## to use two separate database IDs.
 ##
 externalRedis:
-  ## Redis host
   ## @param externalRedis.host External Redis host
   ##
   host: localhost
@@ -2271,7 +2358,7 @@ redisWait:
     seLinuxOptions: null
     runAsUser: 1001
     runAsNonRoot: true
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     privileged: false
     capabilities:
@@ -2301,7 +2388,7 @@ initDirs:
     seLinuxOptions: null
     runAsUser: 1000
     runAsNonRoot: true
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     privileged: false
     capabilities:

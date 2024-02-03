@@ -4,12 +4,11 @@ annotations:
     - name: netbox
       image: docker.io/netboxcommunity/netbox:v3.7-2.8.0
 apiVersion: v2
-name: netbox
-version: 5.0.3
 appVersion: v3.7.1
+name: netbox
 kubeVersion: ">=1.25.0"
 description: IP address management (IPAM) and data center infrastructure management (DCIM) tool
-home: https://github.com/bootc/netbox-chart
+home: https://github.com/startechnica/apps/tree/main/charts/netbox
 icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
 maintainers:
 - name: Chris Boot
@@ -37,3 +36,8 @@ dependencies:
   repository: https://startechnica.github.io/apps
   version: 0.x.x
   alias: startechnica-common
+keywords:
+  - ipam
+  - netbox
+type: application
+version: 5.0.4

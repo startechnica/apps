@@ -1,16 +1,14 @@
-{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) (not .Values.gateway.gatewayApi.create) }}
-{{- if (include "common.capabilities.istioNetworking.apiVersion" .) }}
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) (not .Values.gateway.gatewayApi.create) -}}
+{{- if (include "common.capabilities.istioNetworking.apiVersion" .) -}}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: Gateway
 metadata:
   name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   selector:
@@ -20,24 +18,24 @@ spec:
         name: http
         number: 80
         protocol: HTTP
-      {{- if .Values.netbox.ingress.hosts }}
       hosts:
-        {{- range .Values.netbox.ingress.hosts }}
-        - {{ .host | quote }}
+        - {{ .Values.ingress.hostname }}
+        {{- range .Values.ingress.extraHosts }}
+        - {{ .name | quote }}
         {{- end }}
-      {{- end }}
     {{- if .Values.tls.enabled }}
     - port:
         name: https
         number: 443
         protocol: HTTPS
       hosts:
-        {{- range .Values.netbox.ingress.hosts }}
-        - {{ .host | quote }}
+        - {{ .Values.ingress.hostname }}
+        {{- range .Values.ingress.extraHosts }}
+        - {{ .name | quote }}
         {{- end }}
       tls:
-        credentialName: {{ printf "%s-tls" (include "common.names.fullname" .) }}
+        credentialName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
         mode: SIMPLE
     {{- end }}
-{{- end }}
-{{- end }}
+{{- end -}}
+{{- end -}}

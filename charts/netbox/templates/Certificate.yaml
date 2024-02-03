@@ -1,9 +1,9 @@
-{{- if and .Values.tls.enabled }}
+{{- if .Values.tls.enabled }}
 {{- if (include "common.capabilities.certManager.apiVersion" .) }}
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
@@ -13,7 +13,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  secretName: {{ printf "%s-tls" (include "common.names.fullname" .) }}
+  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
   issuerRef:
     kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
     name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
@@ -27,15 +27,15 @@ spec:
     organizationalUnits:
       - {{ include "common.names.fullname" . }}
   dnsNames:
-    {{- range .Values.netbox.ingress.hosts }}
-    - {{ .host | quote }}
+    {{- range .Values.ingress.extraHosts }}
+    - {{ .name | quote }}
     {{- end }}
 ---
 {{- if .Values.gateway.enabled }}
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "netbox.fullname" . }}
   namespace: {{ .Values.gateway.namespace | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
@@ -45,7 +45,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  secretName: {{ printf "%s-tls" (include "common.names.fullname" .) }}
+  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
   issuerRef:
     kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
     name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
@@ -57,10 +57,10 @@ spec:
     organizations:
       - {{ .Release.Name | quote }}
     organizationalUnits:
-      - {{ include "common.names.fullname" . }}
+      - {{ include "netbox.fullname" . }}
   dnsNames:
-    {{- range .Values.netbox.ingress.hosts }}
-    - {{ .host | quote }}
+    {{- range .Values.ingress.extraHosts }}
+    - {{ .name | quote }}
     {{- end }}
 {{- end }}
 {{- end }}

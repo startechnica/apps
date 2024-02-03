@@ -1,7 +1,10 @@
 # Helm Chart for Netbox
 
-[NetBox](https://netbox.readthedocs.io/) is an IP address management (IPAM) and
-data center infrastructure management (DCIM) tool.
+NetBox is the leading solution for modeling and documenting modern networks. By combining the traditional disciplines of IP address management
+(IPAM) and datacenter infrastructure management (DCIM) with powerful APIs and extensions, NetBox provides the ideal "source of truth" to power
+network automation. Read on to discover why thousands of organizations worldwide put NetBox at the heart of their infrastructure.
+
+[Overview of Netbox](https://docs.netbox.dev/en/stable/)
 
 **Note:** This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions
 v5.0.0 and up are from this fork will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
@@ -11,12 +14,8 @@ v5.0.0 and up are from this fork will have diverged from any changes in the orig
 ## TL;DR
 
 ```console
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install netbox \
-    --set postgresql.auth.postgresPassword=<posgres-password> \
-    --set postgresql.auth.password=<db-password> \
-    --set redis.auth.password=<redis-password> \
-    startechnica/netbox
+helm repo add startechnica https://startechnica.github.io/apps
+helm install netbox startechnica/netbox
 ```
 ⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
 
@@ -28,15 +27,18 @@ $ helm install netbox \
 
 ## Installing the Chart
 
-To install the chart with the release name `my-release` and default configuration:
+To install the chart with the release name `netbox` and default configuration:
 
 ```console
-$ helm repo add startechnica https://startechnica.github.io/apps
-$ helm install my-release \
-  --set postgresql.auth.postgresPassword=<password1> \
-  --set postgresql.auth.password=<password2> \
-  --set redis.auth.password=<password3> \
-  startechnica/netbox
+helm repo add startechnica https://startechnica.github.io/apps
+helm install netbox \
+    --set postgresql.auth.password=<db-password> \
+    --set postgresql.auth.postgresPassword=<posgres-password> \
+    --set redis.auth.password=<redis-password> \
+    --set superuser.password=<superuser-password> \
+    --set superuser.apiToken=<superuser-api-token> \
+    --set secretKey=<secret-key> \
+    startechnica/netbox
 ```
 
 The default configuration includes the required PostgreSQL and Redis database
@@ -52,8 +54,8 @@ I strongly recommend setting both `postgresql.enabled` and `redis.enabled` to
 `false` and using a separate external PostgreSQL and Redis instance. This
 de-couples those services from the chart's bundled versions which may have
 complex upgrade requirements. I also recommend using a clustered PostgreSQL
-server (e.g. using Zalando's
-[Postgres Operator](https://github.com/zalando/postgres-operator)) and Redis
+server (e.g. using CloudNativePG
+[Postgres Operator](https://cloudnative-pg.io/)) and Redis
 with Sentinel (e.g. using [Aaron Layfield](https://github.com/DandyDeveloper)'s
 [redis-ha chart](https://github.com/DandyDeveloper/charts/tree/master/charts/redis-ha)).
 
@@ -97,6 +99,7 @@ The command removes all the Kubernetes components associated with the chart and 
   * The `housekeeping.securityContext` setting has been renamed to `housekeeping.containerSecurityContext`
   * The `init` setting has been renamed to `initDirs`.
   * The `ingress.className` setting has been renamed to `ingress.ingressClassName`.
+  * The `ingress.hosts` setting has been renamed to `ingress.extraHosts`.
   * The `metricsEnabled` setting has been renamed to `metrics.enabled`.
   * The `securityContext` setting has been renamed to `podSecurityContext` and `containerSecurityContext`.
   * The `serviceMonitor` setting has been renamed to `metrics.serviceMonitor`.
@@ -200,12 +203,12 @@ The following table lists the configurable parameters for this chart and their d
 | ------------------------------------------------|---------------------------------------------------------------------|----------------------------------------------|
 | `replicaCount`                                  | The desired number of NetBox pods                                   | `1`                                          |
 | `image.repository`                              | NetBox container image repository                                   | `netboxcommunity/netbox`                     |
-| `image.tag`                                     | NetBox container image tag                                          | `""`                                         |
+| `image.tag`                                     | NetBox container image tag                                          | `v3.7.1-2.8.0`                               |
 | `image.pullPolicy`                              | NetBox container image pull policy                                  | `IfNotPresent`                               |
 | `superuser.name`                                | Initial super-user account to create                                | `admin`                                      |
 | `superuser.email`                               | Email address for the initial super-user account                    | `admin@example.com`                          |
 | `superuser.password`                            | Password for the initial super-user account                         | `admin`                                      |
-| `superuser.apiToken`                            | API token created for the initial super-user account                | `0123456789abcdef0123456789abcdef01234567`   |
+| `superuser.apiToken`                            | API token created for the initial super-user account                | `""`                                         |
 | `skipStartupScripts`                            | Skip [netbox-docker startup scripts]                                | `true`                                       |
 | `allowedHosts`                                  | List of valid FQDNs for this NetBox instance                        | `["*"]`                                      |
 | `admins`                                        | List of admins to email about critical errors                       | `[]`                                         |
@@ -281,6 +284,7 @@ The following table lists the configurable parameters for this chart and their d
 | `remoteAuth.staffGroups`                        | The list of groups that promote an remote User to Staff on login    | `[]`                                         |
 | `remoteAuth.staffUsers`                         | The list of users that get promoted to Staff on login               | `[]`                                         |
 | `remoteAuth.groupSeparator`                     | The Seperator upon which `remoteAuth.groupHeader` gets split into individual groups | `\|`                        |
+| `remoteAuth.ldap.enabled`                       | Enable LDAP remote auth backend support and configurations          | `""`                                         |
 | `remoteAuth.ldap.serverUri`                     | see [django-auth-ldap](https://django-auth-ldap.readthedocs.io)     | `""`                                         |
 | `remoteAuth.ldap.startTls`                      | if StarTLS should be used                                           | *see values.yaml*                            |
 | `remoteAuth.ldap.ignoreCertErrors`              | if Certificate errors should be ignored                             | *see values.yaml*                            |
@@ -412,11 +416,11 @@ The following table lists the configurable parameters for this chart and their d
 | `readinessProbe.timeoutSeconds`                 | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.periodSeconds`                  | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.successThreshold`               | Number of seconds                                                   |  *see `values.yaml`*                         |
-| `init.image.repository`                         | Init container image repository                                     | `busybox`                                    |
-| `init.image.tag`                                | Init container image tag                                            | `1.32.1`                                     |
-| `init.image.pullPolicy`                         | Init container image pull policy                                    | `IfNotPresent`                               |
-| `init.resources`                                | Configure resource requests or limits for init container            | `{}`                                         |
-| `init.securityContext`                          | Security context for init container                                 | *see `values.yaml`*                          |
+| `initDirs.image.repository`                     | Init container image repository                                     | `busybox`                                    |
+| `initDirs.image.tag`                            | Init container image tag                                            | `1.32.1`                                     |
+| `initDirs.image.pullPolicy`                     | Init container image pull policy                                    | `IfNotPresent`                               |
+| `initDirs.resources`                            | Configure resource requests or limits for init container            | `{}`                                         |
+| `initDirs.securityContext`                      | Security context for init container                                 | *see `values.yaml`*                          |
 | `autoscaling.enabled`                           | Whether to enable the HorizontalPodAutoscaler                       | `false`                                      |
 | `autoscaling.minReplicas`                       | Minimum number of replicas when autoscaling is enabled              | `1`                                          |
 | `autoscaling.maxReplicas`                       | Maximum number of replicas when autoscaling is enabled              | `100`                                        |
@@ -461,8 +465,8 @@ The following table lists the configurable parameters for this chart and their d
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install` or provide a YAML file containing the values for the above parameters:
 
-```shell
-$ helm install --name my-release bootc/netbox --values values.yaml
+```consoel
+helm install --name my-release startechnica/netbox --values values.yaml
 ```
 
 ## Persistent storage pitfalls
@@ -472,16 +476,15 @@ care you will run into issues. The most common issue is that one of the NetBox
 pods gets stuck in the `ContainerCreating` state. There are several ways around
 this problem:
 
-1. For production usage I recommend **disabling** persistent storage by setting
-   `persistence.enabled` to `false` and using the S3 `storageBackend`. This can
-   be used with any S3-compatible storage provider including Amazon S3, Minio,
+1. For production usage it is recommended to **disable** persistent storage by setting
+   `persistence.enabled` to `false` and using the S3 `storageBackend` instead. This can
+   be used with any S3-compatible storage provider including Amazon S3, MinIo,
    Ceph RGW, and many others. See further down for an example of this.
 2. Use a `ReadWriteMany` volume that can be mounted by several pods across
    nodes simultaneously.
 3. Configure pod affinity settings to keep all the pods on the same node. This
-   allows a `ReadWriteOnce` volume to be mounted in several pods at the same
-   time.
-4. Disable persistent storage of media altogether and just manage without. The
+   allows a `ReadWriteOnce` volume to be mounted in several pods at the same time.
+4. Disable persistent storage of `media` altogether and just manage without. The
    storage functionality is only needed to store uploaded image attachments.
 
 To configure the pod affinity to allow using a `ReadWriteOnce` volume you can
@@ -522,16 +525,16 @@ Rather than specifying passwords and secrets as part of the Helm release values,
 you may pass these to NetBox using a pre-existing `Secret` resource. When using
 this, the `Secret` must contain the following keys:
 
-| Key                    | Description                                                   | Required?                                                                                         |
+| Key                    | Description                                                   | Remarks                                                                                           |
 | -----------------------|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| `db_password`          | The password for the external PostgreSQL database             | If `postgresql.enabled` is `false` and `externalDatabase.existingSecretName` is unset             |
-| `email_password`       | SMTP user password                                            | Yes, but the value may be left blank if not required                                              |
-| `ldap_bind_password`   | Password for LDAP bind DN                                     | If `remoteAuth.enabled` is `true` and `remoteAuth.backend` is `netbox.authentication.LDAPBackend` |
-| `redis_tasks_password` | Password for the external Redis tasks database                | If `redis.enabled` is `false` and `tasksRedis.existingSecretName` is unset                        |
-| `redis_cache_password` | Password for the external Redis cache database                | If `redis.enabled` is `false` and `cachingRedis.existingSecretName` is unset                      |
-| `secret_key`           | Django secret key used for sessions and password reset tokens | Yes                                                                                               |
-| `superuser_password`   | Password for the initial super-user account                   | Yes                                                                                               |
-| `superuser_api_token`  | API token created for the initial super-user account          | Yes                                                                                               |
+| `db-password`          | The password for the external PostgreSQL database             | If `postgresql.enabled` is `false` and `externalDatabase.existingSecretName` is unset             |
+| `email-password`       | SMTP user password                                            | Yes, but the value may be left blank if not required                                              |
+| `ldap-bind-password`   | Password for LDAP bind DN                                     | If `remoteAuth.enabled` is `true` and `remoteAuth.backend` is `netbox.authentication.LDAPBackend` |
+| `redis-tasks-password` | Password for the external Redis tasks database                | If `redis.enabled` is `false` and `tasksRedis.existingSecretName` is unset                        |
+| `redis-cache-password` | Password for the external Redis cache database                | If `redis.enabled` is `false` and `cachingRedis.existingSecretName` is unset                      |
+| `secret_key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
+| `superuser_password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
+| `superuser_api_token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
 
 ## Using extraConfig for S3 storage configuration
 

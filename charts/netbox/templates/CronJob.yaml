@@ -3,7 +3,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ template "netbox.housekeeping.fullname" . }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.image "chart" .Chart ) ) }}  
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.housekeeping.image "chart" .Chart ) ) }}  
   {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: housekeeping
@@ -17,39 +17,48 @@ spec:
   schedule: {{ .Values.housekeeping.schedule | quote }}
   successfulJobsHistoryLimit: {{ .Values.housekeeping.successfulJobsHistoryLimit }}
   suspend: {{ .Values.housekeeping.suspend }}
+  {{- if or .Values.timezone .Values.housekeeping.timezone }}
+  timeZone: {{ coalesce .Values.timezone .Values.housekeeping.timezone | quote }}
+  {{- end }}
   jobTemplate:
-    metadata:
-      {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.housekeeping.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
-      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
-        app.kubernetes.io/component: housekeeping
-        app.kubernetes.io/part-of: netbox
     spec:
+      {{- if .Values.housekeeping.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ .Values.housekeeping.ttlSecondsAfterFinished }}
+      {{- end }}
       template:
         metadata:
-          {{- if .Values.podAnnotations }}
-          annotations:
-            {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.podAnnotations "context" $) | nindent 12 }}
+          {{- if .Values.housekeeping.podAnnotations }}
+          annotations: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.podAnnotations "context" $) | nindent 12 }}
           {{- end }}
+          {{- $podLabels := include "common.tplvalues.merge" ( dict "values" (list .Values.housekeeping.podLabels .Values.commonLabels $versionLabel) "context" . ) }}
           labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 12 }}
             app.kubernetes.io/component: housekeeping
             app.kubernetes.io/part-of: netbox
         spec:
           automountServiceAccountToken: {{ .Values.housekeeping.automountServiceAccountToken }}
+          {{- if .Values.housekeeping.affinity }}
+          affinity: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.affinity "context" $) | nindent 12 }}
+          {{- else }}
+          affinity:
+            podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.housekeeping.podAffinityPreset "component" "housekeeping" "customLabels" $podLabels "context" $) | nindent 14 }}
+            podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.housekeeping.podAntiAffinityPreset "component" "housekeeping" "customLabels" $podLabels "context" $) | nindent 14 }}
+            nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.housekeeping.nodeAffinityPreset.type "key" .Values.housekeeping.nodeAffinityPreset.key "values" .Values.housekeeping.nodeAffinityPreset.values) | nindent 14 }}
+          {{- end }}
           {{- include "netbox.imagePullSecrets" . | nindent 10 }}
-          {{- if .Values.nodeSelector }}
-          nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 10 }}
+          {{- if .Values.housekeeping.nodeSelector }}
+          nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.housekeeping.nodeSelector "context" $) | nindent 10 }}
           {{- end }}
           restartPolicy: {{ .Values.housekeeping.restartPolicy }}
           {{- if .Values.housekeeping.podSecurityContext.enabled }}
-          securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 12 }}
+          securityContext: {{- omit .Values.housekeeping.podSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           serviceAccountName: {{ include "netbox.serviceAccountName" . }}
-          {{- if .Values.tolerations }}
-          tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 10 }}
+          {{- if .Values.housekeeping.tolerations }}
+          tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.tolerations "context" .) | nindent 10 }}
           {{- end }}
-          {{- if .Values.initContainers }}
+          {{- if .Values.housekeeping.initContainers }}
           initContainers:
-            {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 10 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.initContainers "context" $) | nindent 10 }}
           {{- end }}
           containers:
           - name: housekeeping
@@ -57,18 +66,40 @@ spec:
             securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
             {{- end }}
             image: {{ template "netbox.housekeeping.image" . }}
+            {{- if .Values.diagnosticMode.enabled }}
+            command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 14 }}
+            {{- else if .Values.housekeeping.command }}
+            command: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.command "context" $) | nindent 14 }}
+            {{- else }}
             command:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
-            {{- if .Values.housekeeping.extraEnvVars }}
+            {{- end }}
             env:
+              - name: HOUSEKEEPING_INTERVAL
+                value: "20"
+            {{- if .Values.housekeeping.extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+            {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+            envFrom:
+              {{- if .Values.extraEnvVarsCM }}
+              - configMapRef:
+                  name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+              {{- end }}
+              {{- if .Values.extraEnvVarsSecret }}
+              - secretRef:
+                  name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+              {{- end }}
             {{- end }}
             volumeMounts:
             - name: config
               mountPath: /etc/netbox/config/configuration.py
               subPath: configuration.py
+              readOnly: true
+            - name: config
+              mountPath: /run/config/netbox
               readOnly: true
             {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
             - name: config
@@ -76,9 +107,6 @@ spec:
               subPath: ldap_config.py
               readOnly: true
             {{- end }}
-            - name: config
-              mountPath: /run/config/netbox
-              readOnly: true
             - name: secrets
               mountPath: /run/secrets/netbox
               readOnly: true
@@ -98,8 +126,8 @@ spec:
               mountPath: {{ .Values.scriptsPersistence.path  }}
               subPath: {{ .Values.scriptsPersistence.subPath | default "" | quote }}
             {{- end }}
-            {{- with .Values.housekeeping.extraVolumeMounts }}
-            {{- toYaml . | nindent 12 }}
+            {{- if .Values.housekeeping.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" ( dict "value" .Values.housekeeping.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
             resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
@@ -157,21 +185,21 @@ spec:
             {{- else }}
             emptyDir: {}
             {{- end }}
-          {{- if .Values.reportsPersistence.enabled }}
           - name: reports
+            {{- if .Values.reportsPersistence.enabled }}
             persistentVolumeClaim:
               claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
-          {{- end }}
-          {{- if .Values.scriptsPersistence.enabled }}
+            {{- else }}
+            emptyDir: {}
+            {{- end }}
           - name: scripts
+            {{- if .Values.scriptsPersistence.enabled }}
             persistentVolumeClaim:
               claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
-          {{- end }}
+            {{- else }}
+            emptyDir: {}
+            {{- end }}
           {{- if .Values.extraVolumes }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
-          {{- end }}
-          {{- with .Values.housekeeping.affinity }}
-          affinity:
-            {{- toYaml . | nindent 12 }}
           {{- end }}
 {{- end -}}

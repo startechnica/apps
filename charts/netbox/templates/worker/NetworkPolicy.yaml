@@ -28,6 +28,12 @@ spec:
     - ports:
         - port: {{ include "netbox.redisPort" . }}
           protocol: TCP
+      {{- if .Values.redis.enabled }}
+      to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      {{- end }}
     - ports:
         - port: {{ include "netbox.databasePort" . }}
           protocol: TCP
