@@ -4,6 +4,7 @@ apiVersion: v1
 metadata:
   name: {{ include "netbox.fullname" . }}-reports
   labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/part-of: netbox
   {{- if or .Values.reportsPersistence.annotations .Values.commonAnnotations }}
   {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.reportsPersistence.annotations .Values.commonAnnotations ) "context" . ) }}
   annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
@@ -16,9 +17,11 @@ spec:
   resources:
     requests:
       storage: {{ .Values.reportsPersistence.size | quote }}
-  {{- include "common.storage.class" (dict "persistence" .Values.reportsPersistence "global" .Values.global) | nindent 2 }}
-  {{- with .Values.reportsPersistence.selector }}
-  selector:
-    {{- toYaml . | nindent 4 }}
+  {{- if .Values.reportsPersistence.selector }}
+  selector: {{- include "common.tplvalues.render" (dict "value" .Values.reportsPersistence.selector "context" $) | nindent 4 }}
   {{- end }}
+  {{- if .Values.reportsPersistence.dataSource }}
+  dataSource: {{- include "common.tplvalues.render" (dict "value" .Values.reportsPersistence.dataSource "context" $) | nindent 4 }}
+  {{- end }}
+  {{- include "common.storage.class" (dict "persistence" .Values.reportsPersistence "global" .Values.global) | nindent 2 }}
 {{- end -}}

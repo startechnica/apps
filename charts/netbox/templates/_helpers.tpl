@@ -662,6 +662,10 @@ Return true if a TLS secret object should be created
 {{- end -}}
 {{- end -}}
 
+{{- define "netbox.pvc.media" -}}
+{{- coalesce .Values.persistence.existingClaim (print "%s-media" (include "common.names.fullname" .)) -}}
+{{- end -}}
+
 {{/* Validate values of Netbox - database */}}
 {{- define "netbox.validateValues.database" -}}
 {{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) (and (not .Values.externalDatabase.password) (not .Values.externalDatabase.existingSecretName)) -}}
