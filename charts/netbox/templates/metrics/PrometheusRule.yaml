@@ -7,7 +7,8 @@ metadata:
   namespace: {{ default (include "common.names.namespace" .) .Values.metrics.prometheusRule.namespace }}
   {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.metrics.prometheusRule.labels .Values.commonLabels ) "context" . ) }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: netbox
+    app.kubernetes.io/component: server
+    app.kubernetes.io/part-of: netbox
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}

@@ -2091,15 +2091,21 @@ metrics:
 
 ## PostgreSQL chart configuration
 ## ref: https://github.com/bitnami/charts/blob/main/bitnami/postgresql/values.yaml
-## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
-## @param postgresql.auth.postgresPassword Password for the "postgres" admin user. Ignored if `auth.existingSecret` with key `postgres-password` is provided
-## @param postgresql.auth.username Name for a custom user to create
-## @param postgresql.auth.password Password for the custom user to create
-## @param postgresql.auth.database Name for a custom database to create
-## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials
 ##
 postgresql:
+  ## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
+  ##
   enabled: true
+  ## @param postgresql.commonLabels Labels to add to all deployed objects
+  ##
+  commonLabels:
+    app.kubernetes.io/part-of: netbox
+  ## @param postgresql.auth.postgresPassword Password for the "postgres" admin user. Ignored if `auth.existingSecret` with key `postgres-password` is provided
+  ## @param postgresql.auth.username Name for a custom user to create
+  ## @param postgresql.auth.password Password for the custom user to create
+  ## @param postgresql.auth.database Name for a custom database to create
+  ## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials
+  ##
   auth:
     postgresPassword: ""
     username: netbox
@@ -2122,8 +2128,7 @@ postgresql:
   primary:
     ## @param postgresql.primary.podLabels Map of labels to add to the pods (postgresql primary)
     ##
-    podLabels:
-      app.kubernetes.io/part-of: netbox
+    podLabels: {}
     ## PostgreSQL Primary persistence configuration
     ##
     persistence:
@@ -2177,6 +2182,10 @@ redis:
   ## settings under *both* tasksRedis *and* cachingRedis
   ##
   enabled: true
+  ## @param redis.commonLabels Labels to add to all deployed objects
+  ##
+  commonLabels:
+    app.kubernetes.io/part-of: netbox
   ## @param redis.architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
@@ -2209,8 +2218,7 @@ redis:
     ## @param master.podLabels Extra labels for Redis master pods
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
     ##
-    podLabels:
-      app.kubernetes.io/part-of: netbox
+    podLabels: {}
     ## Persistence parameters
     ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
     ##
