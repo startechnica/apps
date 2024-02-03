@@ -666,7 +666,7 @@ Return true if a TLS secret object should be created
 {{- if .Values.persistence.existingClaim -}}
     {{- .Values.persistence.existingClaim -}}
 {{- else -}}
-    {{ print "%s-media" (include "common.names.fullname" .) -}}
+    {{ printf "%s-%s" (include "common.names.fullname" .) "media" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
