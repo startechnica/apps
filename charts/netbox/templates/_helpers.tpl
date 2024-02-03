@@ -350,7 +350,7 @@ Name of the key in Secret that contains the Redis cache password
 Volumes that need to be mounted for .Values.extraConfig entries
 */}}
 {{- define "netbox.extraConfig.volumes" -}}
-{{- range $index, $config := .Values.extraConfig -}}
+{{- range $index, $config := .Values.extraConfig }}
 - name: extra-config-{{ $index }}
   {{- if $config.values }}
   configMap:
@@ -365,18 +365,18 @@ Volumes that need to be mounted for .Values.extraConfig entries
   secret:
     {{- toYaml $config.secret | nindent 4 }}
   {{- end }}
-{{- end -}}
+{{- end }}
 {{- end -}}
 
 {{/*
 Volume mounts for .Values.extraConfig entries
 */}}
 {{- define "netbox.extraConfig.volumeMounts" -}}
-{{- range $index, $config := .Values.extraConfig -}}
+{{- range $index, $config := .Values.extraConfig }}
 - name: extra-config-{{ $index }}
   mountPath: /run/config/extra/{{ $index }}
   readOnly: true
-{{- end -}}
+{{- end }}
 {{- end -}}
 
 {{/*
