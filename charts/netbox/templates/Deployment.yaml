@@ -120,6 +120,10 @@ spec:
                   apiVersion: v1
                   fieldPath: status.podIP
             {{- end }}
+            {{- if .Values.metrics.enabled }}
+            - name: prometheus_multiproc_dir
+              value: /tmp/metrics
+            {{- end }}
             {{- if .Values.extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
@@ -201,6 +205,10 @@ spec:
               mountPath: /run/secrets/superuser_api_token
               subPath: superuser_api_token
               readOnly: true
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              mountPath: /tmp/metrics
+            {{- end }}
             {{- if or .Values.initdbScriptsConfigMap .Values.initdbScripts }}
             - name: custom-init-scripts
               mountPath: /docker-entrypoint-initdb.d
@@ -349,6 +357,10 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if .Values.metrics.enabled }}
+        - name: metrics
+          emptyDir: {}
+        {{- end }}
         {{- if or .Values.initdbScriptsConfigMap .Values.initdbScripts }}
         - name: custom-init-scripts
           configMap:
