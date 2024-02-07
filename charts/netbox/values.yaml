@@ -413,9 +413,10 @@ superuser:
 # https://github.com/netbox-community/netbox-docker/tree/worker/startup_scripts
 skipStartupScripts: true
 
-# This is a list of valid fully-qualified domain names (FQDNs) for the NetBox
-# server. NetBox will not permit write access to the server via any other
-# hostnames. The first FQDN in the list will be treated as the preferred name.
+## @param allowedHosts  This is a list of valid fully-qualified domain names (FQDNs) for the NetBox
+##     server. NetBox will not permit write access to the server via any other
+##     hostnames. The first FQDN in the list will be treated as the preferred name.
+##
 allowedHosts:
   - '*'
 
@@ -511,8 +512,8 @@ defaultLanguage: en-us
 ##
 debug: false
 
-# Display full traceback of errors that occur when applying database
-# migrations.
+## @param dbWaitDebug  Display full traceback of errors that occur when applying database migrations.
+##
 dbWaitDebug: false
 
 ## Email settings
@@ -651,8 +652,9 @@ powerFeedMaxUtilisation: 80
 # https://docs.netbox.dev/en/stable/configuration/dynamic-settings/#powerfeed_default_voltage
 powerFeedDefaultVoltage: 120
 
-# When determining the primary IP address for a device, IPv6 is preferred over
-# IPv4 by default. Set this to True to prefer IPv4 instead.
+## @param preferIPv4  When determining the primary IP address for a device, IPv6 is preferred over
+## IPv4 by default. Set this to True to prefer IPv4 instead.
+##
 preferIPv4: false
 
 # Rack elevation size defaults, in pixels. For best results, the ratio of width
@@ -745,7 +747,8 @@ releaseCheck:
   ##
   url: https://api.github.com/repos/netbox-community/netbox/releases
 
-# Maximum execution time for background tasks, in seconds.
+## @param rqDefaultTimeout  Maximum execution time for background tasks, in seconds.
+##
 rqDefaultTimeout: 300  # 5 mins
 
 ## @param sessionCookieName  The name to use for the session cookie.
@@ -1292,14 +1295,6 @@ ingress:
   ##             name: http
   ##
   extraRules: []
-
-test:
-  image:
-    repository: busybox
-    tag: 1.36.1
-    pullPolicy: IfNotPresent
-
-  resources: {}
 
 ## Netbox server deployment autoscaling
 ## @param server.autoscaling.enabled Enable Netbox server deployment autoscaling
@@ -1919,16 +1914,6 @@ worker:
     ingressNSMatchLabels: {}
     ingressNSPodMatchLabels: {}
 
-  ## Netbox worker Service configuration
-  ##
-  service:
-    ## @param worker.service.enabled  Enable Netbox worker service
-    ##
-    enabled: false
-    ## @param worker.service.type Kubernetes service type
-    ##
-    type: ClusterIP
-
   ## Netbox worker Prometheus Exporter / Metrics
   ##
   metrics:
@@ -2360,6 +2345,52 @@ redisWait:
   ## @param redisWait.enabled Enables waiting for redis
   ##
   enabled: true
+  ## Redis image version
+  ## ref: https://hub.docker.com/r/bitnami/redis/tags/
+  ## @param redisWait.image.registry [default: REGISTRY_NAME] Redis image registry
+  ## @param redisWait.image.repository [default: REPOSITORY_NAME/redis] Redis image repository
+  ## @skip redisWait.image.tag Redis image tag (immutable tags are recommended)
+  ## @param redisWait.image.digest Redis image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param redisWait.image.pullPolicy Redis image pull policy
+  ## @param redisWait.image.pullSecrets Redis image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: 7.2.4-debian-11-r5
+    digest: ""
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## e.g:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  pullSecrets: []
+  ## Properties for the wait Redis init container
+  ## @param redisWait.command Override cmd
+  ## @param redisWait.args Override args
+  ## @param redisWait.extraVolumeMounts Add extra volume mounts
+  ## @param redisWait.extraEnvVars Add extra environment variables
+  ## @param redisWait.extraEnvVarsCM ConfigMap with extra environment variables
+  ## @param redisWait.extraEnvVarsSecret Secret with extra environment variables
+  ## @param redisWait.resources wait Redis init container resource requests and limits
+  ##
+  command: []
+  args: []
+  extraVolumeMounts: []
+  extraEnvVars: []
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  ## wait Redis init container resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ##
+  resources: {}
   ## @param redisWait.extraArgs Additional arguments for the redis-cli call, such as TLS
   ##
   extraArgs: ''

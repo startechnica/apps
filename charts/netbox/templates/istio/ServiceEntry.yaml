@@ -7,6 +7,8 @@ metadata:
 spec:
   hosts:
     - netbox.dev
+    - github.com
+    - api.github.com
   location: MESH_EXTERNAL
   ports:
     - number: 80

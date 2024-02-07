@@ -37,5 +37,13 @@ metrics:
     labels:
       release: kube-prometheus-stack
 
+test:
+  image:
+    repository: busybox
+    tag: 1.36.1
+    pullPolicy: IfNotPresent
+
+  resources: {}
+
 housekeeping:
   schedule: '*/5 * * * *'

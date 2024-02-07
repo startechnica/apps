@@ -1,69 +1,29 @@
-{{- if .Values.worker.service.enabled }}
+{{- if .Values.worker.metrics.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "netbox.worker.fullname" . }}
+  name: {{ printf "%s-metrics" (include "netbox.worker.fullname" .) }}
   namespace: {{ include "common.names.namespace" . | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.worker.image "chart" .Chart ) ) }}  
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" (list .Values.metrics.labels .Values.commonLabels $versionLabel) "context" . ) }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: worker
+    app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: netbox
-  {{- if or .Values.worker.service.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.service.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- if or .Values.metrics.service.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.metrics.service.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.worker.service.type }}
-  {{- if eq .Values.worker.service.type "LoadBalancer" }}
-  allocateLoadBalancerNodePorts: {{ eq .Values.worker.service.allocateLoadBalancerNodePorts "true" }}
-  {{- end }}
-  {{- if and .Values.worker.service.clusterIP (eq .Values.worker.service.type "ClusterIP") }}
-  clusterIP: {{ .Values.worker.service.clusterIP }}
-  {{- end }}
-  {{- if or (eq .Values.worker.service.type "LoadBalancer") (eq .Values.worker.service.type "NodePort") }}
-  externalTrafficPolicy: {{ .Values.worker.service.externalTrafficPolicy | quote }}
-  {{- end }}
-  {{- if and (eq .Values.worker.service.type "LoadBalancer") (not (empty .Values.worker.service.loadBalancerSourceRanges)) }}
-  loadBalancerSourceRanges: {{ .Values.worker.service.loadBalancerSourceRanges }}
-  {{- end }}
-  {{- if and (eq .Values.worker.service.type "LoadBalancer") (not (empty .Values.worker.service.loadBalancerIP)) }}
-  loadBalancerIP: {{ .Values.worker.service.loadBalancerIP }}
-  {{- end }}
-  {{- if .Values.worker.service.sessionAffinity }}
-  sessionAffinity: {{ .Values.worker.service.sessionAffinity }}
-  {{- end }}
-  {{- if .Values.worker.service.sessionAffinityConfig }}
-  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.worker.service.sessionAffinityConfig "context" $) | nindent 4 }}
-  {{- end }}
+  type: ClusterIP
   ports:
-    {{- if .Values.worker.service.http.enabled }}
     - name: http-metrics
-      port: {{ coalesce .Values.worker.service.ports.http .Values.worker.service.port }}
+      port: {{ default 8080 .Values.metrics.service.ports.http }}
       protocol: TCP
       targetPort: http
-      {{- if (and (or (eq .Values.worker.service.type "NodePort") (eq .Values.worker.service.type "LoadBalancer")) (not (empty .Values.worker.service.nodePorts.http))) }}
-      nodePort: {{ .Values.worker.service.nodePorts.http }}
-      {{- else if eq .Values.worker.service.type "ClusterIP" }}
-      nodePort: null
-      {{- end }}
-    {{- end }}
-    {{- if .Values.tls.enabled }}
-    - name: https
-      port: {{ default 443 .Values.worker.service.ports.https }}
-      protocol: TCP
-      targetPort: https
-      {{- if (and (or (eq .Values.worker.service.type "NodePort") (eq .Values.worker.service.type "LoadBalancer")) (not (empty .Values.worker.service.nodePorts.https))) }}
-      nodePort: {{ .Values.worker.service.nodePorts.https }}
-      {{- else if eq .Values.worker.service.type "ClusterIP" }}
-      nodePort: null
-      {{- end }}
-    {{- end }}
-    {{- if .Values.worker.service.extraPorts }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.worker.service.extraPorts "context" $) | nindent 4 }}
-    {{- end }}
-  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.podLabels .Values.commonLabels ) "context" . ) }}
+    {{- if .Values.worker.metrics.service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.worker.metrics.service.extraPorts "context" $) | nindent 4 }}
+    {{- end }}      
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
   selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker
-    app.kubernetes.io/part-of: netbox
-{{- end }}
+{{- end -}}

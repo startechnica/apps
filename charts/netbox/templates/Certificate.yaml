@@ -1,14 +1,11 @@
-{{- if .Values.tls.enabled -}}
+{{- if or .Values.tls.enabled .Values.ingress.tls -}}
 {{- if (include "common.capabilities.certManager.apiVersion" .) }}
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
@@ -23,24 +20,22 @@ spec:
     size: 256
   subject:
     organizations:
-      - {{ .Release.Name | quote }}
+      - {{ include "common.names.namespace" . | quote }}
     organizationalUnits:
       - {{ include "common.names.fullname" . }}
   dnsNames:
+    - {{ .Values.ingress.hostname }}
     {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
 ---
-{{- if .Values.gateway.enabled }}
+{{- if and .Values.gateway.enabled (not (empty .Values.gateway.namespace)) }}
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "netbox.fullname" . }}
   namespace: {{ .Values.gateway.namespace | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
@@ -59,6 +54,7 @@ spec:
     organizationalUnits:
       - {{ include "netbox.fullname" . }}
   dnsNames:
+    - {{ .Values.ingress.hostname }}
     {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}

@@ -1,4 +1,4 @@
-{{- if and (or .Values.metrics.enabled .Values.metricsEnabled) .Values.metrics.serviceMonitor.enabled }}
+{{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
 {{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
 apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
 kind: ServiceMonitor
@@ -44,6 +44,6 @@ spec:
       {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ .Release.Namespace | quote }}
+      - {{ include "common.names.namespace" . | quote }}
 {{- end }}
 {{- end }}
