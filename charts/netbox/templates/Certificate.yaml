@@ -1,4 +1,4 @@
-{{- if .Values.tls.enabled }}
+{{- if .Values.tls.enabled -}}
 {{- if (include "common.capabilities.certManager.apiVersion" .) }}
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
@@ -64,4 +64,4 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
-{{- end }}
+{{- end -}}

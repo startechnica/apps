@@ -1,0 +1,19 @@
+{{- if (include "common.capabilities.istioNetworking.apiVersion" .) -}}
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+kind: ServiceEntry
+metadata:
+  name: {{ include "netbox.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+spec:
+  hosts:
+    - netbox.dev
+  location: MESH_EXTERNAL
+  ports:
+    - number: 80
+      name: http
+      protocol: HTTP
+    - number: 443
+      name: https
+      protocol: TLS
+  resolution: DNS
+{{- end -}}

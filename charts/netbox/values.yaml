@@ -93,7 +93,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: netboxcommunity/netbox
-  tag: "v3.7.1-2.8.0"
+  tag: "v3.7.2-2.8.0"
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -117,17 +117,17 @@ command: []
 ## @param args Override default container args (useful when using custom images)
 ##
 args: []
-## @param preExecCmds Additional commands to run prior to starting Netbox worker
+## @param preExecCmds Additional commands to run prior to starting Netbox
 ##
 preExecCmds: []
-## @param extraFlags Array with additional command line flags for Netbox worker
+## @param extraFlags Array with additional command line flags for Netbox
 ## e.g:
 ## extraFlags:
 ##  - "--maxmemory-policy volatile-ttl"
 ##  - "--repl-backlog-size 1024mb"
 ##
 extraFlags: []
-## @param extraEnvVars Array with extra environment variables to add to Netbox worker nodes
+## @param extraEnvVars Array with extra environment variables to add to Netbox nodes
 ## e.g:
 ## extraEnvVars:
 ##   - name: FOO
@@ -142,13 +142,13 @@ extraEnvVars: []
 ##        name: secret-resource
 ##
 extraEnvs: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox worker nodes
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox nodes
 ##
 extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox worker nodes
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox nodes
 ##
 extraEnvVarsSecret: ""
-## @param containerPorts.redis Container port to open on Netbox worker nodes
+## @param containerPorts.redis Container port to open on Netbox nodes
 ##
 containerPorts:
   http: 8080
@@ -504,10 +504,11 @@ csrf:
 # Set the default preferred language/locale
 defaultLanguage: en-us
 
-# Set to True to enable server debugging. WARNING: Debugging introduces a
-# substantial performance penalty and may reveal sensitive information about
-# your installation. Only enable debugging while performing testing. Never
-# enable debugging on a production system.
+## @param debug  Set to True to enable server debugging. WARNING: Debugging introduces a
+##     substantial performance penalty and may reveal sensitive information about
+##     your installation. Only enable debugging while performing testing. Never
+##     enable debugging on a production system.
+##
 debug: false
 
 # Display full traceback of errors that occur when applying database
@@ -720,6 +721,22 @@ remoteAuth:
     attrLastName: 'sn'
     attrMail: 'mail'
 
+socialAuth:
+  pipelines:
+    - social_core.pipeline.social_auth.social_details
+    - social_core.pipeline.social_auth.social_uid
+    - social_core.pipeline.social_auth.social_user
+    - social_core.pipeline.user.get_username
+    - social_core.pipeline.social_auth.associate_by_email
+    - social_core.pipeline.user.create_user
+    - social_core.pipeline.social_auth.associate_user
+    - netbox.authentication.user_default_groups_handler
+    - social_core.pipeline.social_auth.load_extra_data
+    - social_core.pipeline.user.user_details
+    - netbox.sso_pipeline_roles.set_role
+  jsonField:
+    enabled: true
+
 releaseCheck:
   ## This repository is used to check whether there is a new release of NetBox
   ## available. Set to null to disable the version check or use the URL below to
@@ -731,10 +748,12 @@ releaseCheck:
 # Maximum execution time for background tasks, in seconds.
 rqDefaultTimeout: 300  # 5 mins
 
-# The name to use for the session cookie.
+## @param sessionCookieName  The name to use for the session cookie.
+##
 sessionCookieName: sessionid
 
-# Localization
+## @param enableLocalization  Localization
+##
 enableLocalization: false
 
 ## @param timeZone  Time zone (default: UTC)
@@ -755,19 +774,20 @@ shortDateTimeFormat: 'Y-m-d H:i'
 ## You can pass additional YAML files to be loaded into NetBox's configuration.
 ## These can be passed as arbitrary configuration values set in the chart, or
 ## you can load arbitrary *.yaml keys from ConfigMaps and Secrets.
+## extraConfig:
+##   - values:
+##       EXTRA_SETTING_ONE: example
+##       ANOTHER_SETTING: foobar
+##   - configMap: # pod.spec.volumes.configMap
+##       name: netbox-extra
+##       items: []
+##       optional: false
+##   - secret: # same as pod.spec.volumes.secret
+##       secretName: netbox-extra
+##       items: []
+##       optional: false
 ##
 extraConfig: []
-  # - values:
-  #     EXTRA_SETTING_ONE: example
-  #     ANOTHER_SETTING: foobar
-  # - configMap: # pod.spec.volumes.configMap
-  #     name: netbox-extra
-  #     items: []
-  #     optional: false
-  # - secret: # same as pod.spec.volumes.secret
-  #     secretName: netbox-extra
-  #     items: []
-  #     optional: false
 
 ## @param secretKey  If provided, this should be a 50+ character string of random characters. It
 ##    will be randomly generated if left blank.
@@ -1316,7 +1336,7 @@ housekeeping:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.1-2.8.0"
+    tag: "v3.7.2-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1531,7 +1551,7 @@ worker:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.1-2.8.0"
+    tag: "v3.7.2-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'

@@ -48,52 +48,53 @@ extraVolumeMounts:
     readOnly: true
 ```
 
-Additional resources are necessary (please note that the client ID is necessary in the custom pipeline script):
+Put additional necessary resources on `extraDeploy` parameter.
+Note: Client ID is necessary in the custom pipeline script
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: keycloak-client
-  namespace: netbox
-type: Opaque
-data:
-  oidc-keycloak.yaml: |
-    SOCIAL_AUTH_KEYCLOAK_KEY:               <OAUTH_CLIENT_ID>
-    SOCIAL_AUTH_KEYCLOAK_SECRET:            <OAUTH_CLIENT_SECRET>
-    SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY:        MIIB...AB
-    SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL: "https://keycloak.example.com/auth/realms/master/protocol/openid-connect/auth"
-    SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL:  "https://keycloak.example.com/auth/realms/master/protocol/openid-connect/token"
-    SOCIAL_AUTH_JSONFIELD_ENABLED:          true
+extraDeploy:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: keycloak-client
+      namespace: netbox
+    type: Opaque
+    stringData:
+      oidc-keycloak.yaml: |
+        SOCIAL_AUTH_KEYCLOAK_KEY:               <OAUTH_CLIENT_ID>
+        SOCIAL_AUTH_KEYCLOAK_SECRET:            <OAUTH_CLIENT_SECRET>
+        SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY:        MIIB...AB
+        SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL: "https://keycloak.example.com/realms/master/protocol/openid-connect/auth"
+        SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL:  "https://keycloak.example.com/realms/master/protocol/openid-connect/token"
+        SOCIAL_AUTH_JSONFIELD_ENABLED:          true
 
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: sso-pipeline-roles
-  namespace: netbox
-data:
-  sso_pipeline_roles.py: |
-    from django.contrib.auth.models import Group
-    def set_role(response, user, backend, *args, **kwargs):
-      client_id = '<OAUTH_CLIENT_ID>'
-      roles = []
-      try:
-        roles = response['resource_access'][client_id]['roles']
-      except KeyError:
-        pass
-      user.is_staff = ('admin' in roles)
-      user.is_superuser = ('superuser' in roles)
-      user.save()
-      groups = Group.objects.all()
-      for group in groups:
-        try:
-          if group.name in roles:
-            group.user_set.add(user)
-          else:
-            group.user_set.remove(user)
-        except Group.DoesNotExist:
-          continue
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: sso-pipeline-roles
+      namespace: netbox
+    data:
+      sso_pipeline_roles.py: |
+        from django.contrib.auth.models import Group
+        def set_role(response, user, backend, *args, **kwargs):
+          client_id = '<OAUTH_CLIENT_ID>'
+          roles = []
+          try:
+            roles = response['resource_access'][client_id]['roles']
+          except KeyError:
+            pass
+          user.is_staff = ('admin' in roles)
+          user.is_superuser = ('superuser' in roles)
+          user.save()
+          groups = Group.objects.all()
+          for group in groups:
+            try:
+              if group.name in roles:
+                group.user_set.add(user)
+              else:
+                group.user_set.remove(user)
+            except Group.DoesNotExist:
+              continue
 ```
 
 ### Example config for GitLab backend
@@ -201,8 +202,10 @@ For example:
 ```yaml
 remoteAuth:
   enabled: true
-  backend: netbox.authentication.LDAPBackend
+  backends:
+    - netbox.authentication.LDAPBackend
   ldap:
+    enabled: true
     serverUri: 'ldap://domain.com'
     startTls: true
     ignoreCertErrors: true
