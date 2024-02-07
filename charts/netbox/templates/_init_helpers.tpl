@@ -36,7 +36,7 @@ Usage:
         . /opt/bitnami/scripts/liblog.sh
 
         check_redis_connection() {
-            local result="$(redis-cli -h {{ include "netbox.redisHost" .context }} -p {{ include "netbox.redisPort" .context }} {{ .Values.redisWait.extraArgs }} PING)"
+            local result="$(redis-cli -h {{ include "netbox.redisHost" .context }} -p {{ include "netbox.redisPort" .context }} {{ .context.Values.redisWait.extraArgs }} PING)"
             if [[ "$result" != "PONG" ]]; then
             false
             fi
