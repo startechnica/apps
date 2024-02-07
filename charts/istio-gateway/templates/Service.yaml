@@ -16,13 +16,8 @@ metadata:
       {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
-  annotations:
-    {{- if $.Values.commonAnnotations }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .service.annotations }}
-      {{- include "common.tplvalues.render" (dict "value" .service.annotations "context" $) | nindent 4 }}
-    {{- end }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .service.annotations $.Values.commonAnnotations ) "context" $ ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}
