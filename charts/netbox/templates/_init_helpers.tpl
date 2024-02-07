@@ -36,7 +36,7 @@ Usage:
         . /opt/bitnami/scripts/liblog.sh
 
         check_redis_connection() {
-            local result="$(redis-cli -h {{ include "netbox.redisHost" . }} -p {{ include "netbox.redisPort" . }} {{ .Values.redisWait.extraArgs }} PING)"
+            local result="$(redis-cli -h {{ include "netbox.redisHost" .context }} -p {{ include "netbox.redisPort" .context }} {{ .Values.redisWait.extraArgs }} PING)"
             if [[ "$result" != "PONG" ]]; then
             false
             fi
@@ -50,13 +50,13 @@ Usage:
             info "Connected to the Redis instance"
         fi
   {{- end }}
-  {{- if include "netbox.redis.auth.enabled" . }}
+  {{- if include "netbox.redis.auth.enabled" .context }}
   env:
     - name: REDISCLI_AUTH
       valueFrom:
         secretKeyRef:
-          name: {{ include "netbox.redis.secretName" . }}
-          key: {{ include "netbox.redis.secretPasswordKey" . }}
+          name: {{ include "netbox.redis.secretName" .context }}
+          key: {{ include "netbox.redis.secretPasswordKey" .context }}
   {{- end }}
 {{- end }}
 {{- end -}}
