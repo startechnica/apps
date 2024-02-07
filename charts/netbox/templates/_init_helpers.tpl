@@ -8,21 +8,21 @@ Usage:
 - name: wait-for-redis
   image: {{ include "netbox.redis.image" .context | quote }}
   imagePullPolicy: {{ .context.Values.redisWait.image.pullPolicy | quote }}
-{{- if .securityContext.enabled }}
+  {{- if .securityContext.enabled }}
   securityContext: {{- omit .securityContext "enabled" | toYaml | nindent 4 }}
-{{- end }}
-{{- if .context.Values.redisWait.resources }}
+  {{- end }}
+  {{- if .context.Values.redisWait.resources }}
   resources: {{- toYaml .context.Values.redisWait.resources | nindent 4 }}
-{{- end }}
-{{- if .context.Values.redisWait.command }}
+  {{- end }}
+  {{- if .context.Values.redisWait.command }}
   command: {{- include "common.tplvalues.render" (dict "value" .context.Values.redisWait.command "context" .context) | nindent 4 }}
-{{- else }}
+  {{- else }}
   command:
     - /bin/bash
-{{- end }}
-{{- if .context.Values.redisWait.args }}
+  {{- end }}
+  {{- if .context.Values.redisWait.args }}
   args: {{- include "common.tplvalues.render" (dict "value" .context.Values.redisWait.args "context" .context) | nindent 4 }}
-{{- else }}
+  {{- else }}
   args:
     - -ec
     - |
@@ -49,14 +49,14 @@ Usage:
         else
             info "Connected to the Redis instance"
         fi
-    {{- if include "netbox.redis.auth.enabled" . }}
-    env:
-      - name: REDISCLI_AUTH
-        valueFrom:
-          secretKeyRef:
-            name: {{ include "netbox.redis.secretName" . }}
-            key: {{ include "netbox.redis.secretPasswordKey" . }}
-    {{- end }}
-{{- end }}
+  {{- end }}
+  {{- if include "netbox.redis.auth.enabled" . }}
+  env:
+    - name: REDISCLI_AUTH
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "netbox.redis.secretName" . }}
+          key: {{ include "netbox.redis.secretPasswordKey" . }}
+  {{- end }}
 {{- end }}
 {{- end -}}
