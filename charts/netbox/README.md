@@ -87,12 +87,15 @@ affinity:
 To uninstall/delete the `netbox` deployment on `netbox` namespace:
 
 ```console
-$ helm delete netbox --namespace netbox
+helm delete netbox --namespace netbox
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
 ## Breaking Changes
+
+### From 5.0.0 to 5.0.5
+
   * The `extraEnvs` setting has been renamed to `extraEnvVars`.
   * The `extraContainers` setting has been renamed to `sidecars`.
   * The `extraInitContainers` setting has been renamed to `initContainers`.

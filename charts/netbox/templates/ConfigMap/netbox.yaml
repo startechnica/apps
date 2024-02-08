@@ -207,7 +207,6 @@ data:
     SHORT_DATE_FORMAT: {{ .Values.shortDateFormat | quote }}
     SHORT_TIME_FORMAT: {{ .Values.shortTimeFormat | quote }}
     SHORT_DATETIME_FORMAT: {{ .Values.shortDateTimeFormat | quote }}
-
     SKIP_SUPERUSER: {{ ternary false true .Values.superuser.create | toJson }}
 
   {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
