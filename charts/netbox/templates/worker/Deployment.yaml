@@ -83,6 +83,11 @@ spec:
             - /opt/netbox/netbox/manage.py
             - rqworker
           {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.worker.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
+          {{- end }}
           {{- if .Values.worker.extraEnvVars }}
           env:
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
@@ -167,7 +172,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "netbox.fullname" . }}
+            name: {{ include "netbox.configmapName" . }}
         - name: secrets
           projected:
             sources:

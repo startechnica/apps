@@ -139,7 +139,7 @@ spec:
           volumes:
           - name: config
             configMap:
-              name: {{ include "netbox.fullname" . }}
+              name: {{ include "netbox.configmapName" . }}
           - name: secrets
             projected:
               sources:
