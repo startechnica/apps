@@ -103,15 +103,7 @@ spec:
                 name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
             {{- end }}
           {{- end }}
-          {{- if or .Values.worker.extraPorts (and .Values.metrics.enabled .Values.worker.metrics.enabled) }}
-          ports:
-            {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
-            - name: http
-              containerPort: {{ default 8080 .Values.worker.containerPorts.http }}
-              protocol: TCP
-            {{- end }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
-          {{- end }}
+
           {{- if .Values.worker.resources }}
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}
@@ -152,11 +144,6 @@ spec:
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
             {{- if .Values.worker.extraVolumeMounts }}
               {{- include "common.tplvalues.render" ( dict "value" .Values.worker.extraVolumeMounts "context" $ ) | nindent 12 }}
-            {{- end }}
-            {{- if .Values.metrics.enabled }}
-            {{- if .Values.metrics.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.extraVolumeMounts "context" $ ) | nindent 12 }}
-            {{- end }}
             {{- end }}
         {{- if .Values.worker.sidecars }}
           {{- include "common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
