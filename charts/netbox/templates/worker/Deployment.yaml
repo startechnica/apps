@@ -105,12 +105,12 @@ spec:
           {{- end }}
           {{- if or .Values.worker.extraPorts (and .Values.metrics.enabled .Values.worker.metrics.enabled) }}
           ports:
-          {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
+            {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
             - name: http
-              containerPort: {{ default 8080 .Values.metrics.service.ports.http }}
+              containerPort: {{ default 8080 .Values.worker.containerPorts.http }}
               protocol: TCP
-          {{- end }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
+            {{- end }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.worker.resources }}
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}

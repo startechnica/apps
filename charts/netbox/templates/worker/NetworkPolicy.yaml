@@ -37,10 +37,18 @@ spec:
     - ports:
         - port: {{ include "netbox.databasePort" . }}
           protocol: TCP
+      {{- if .Values.postgres.enabled }}
+      to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      {{- end }}
     # Allow outbound connections to other cluster pods
     - ports:
-        - port: {{ .Values.service.ports.http }}
-        - port: {{ .Values.worker.containerPorts.http }}
+        - port: {{ .Values.service.ports.http | int }}
+        {{- if not (eq .Values.containerPorts.http .Values.service.ports.http) }}
+        - port: {{ .Values.containerPorts.http | int }}
+        {{- end }}
       to:
         - podSelector:
             matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 14 }}
@@ -48,9 +56,18 @@ spec:
       {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
     {{- end }}
   ingress:
+    {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled -}}
     - ports:
-        - port: {{ .Values.service.ports.http }}
-        - port: {{ .Values.worker.containerPorts.http }}
+        - port: {{ default 8080 .Values.worker.containerPorts.http }}
+        {{- if not (eq .Values.worker.containerPorts.http .Values.metrics.service.ports.http)  }}
+        - port: {{ .Values.metrics.service.ports.http }}
+        {{- end }}
+    {{- end }}
+    {{- if .Values.worker.extraPorts }}
+    - ports:
+        {{ range $extraPort := .Values.worker.extraPorts }}
+        - port: {{ $extraPort | int }}
+        {{- end }}
       {{- if not .Values.worker.networkPolicy.allowExternal }}
       from:
         - podSelector:
@@ -71,6 +88,7 @@ spec:
           {{- end }}
         {{- end }}
       {{- end }}
+    {{- end }}
     {{- if .Values.worker.networkPolicy.extraIngress }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
     {{- end }}
