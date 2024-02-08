@@ -541,6 +541,7 @@ gateway:
     #   protocol: HTTPS
   existingGateway: ~
   existingVirtualService: ~
+  existingServiceEntry: ~
   ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
   ##
   extraRoute: []

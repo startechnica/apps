@@ -538,7 +538,7 @@ service:
   ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
   ##
   externalTrafficPolicy: Cluster
-  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for
   ## bare metal / on-prem environments that rely on VIP based LB implementations.
   allocateLoadBalancerNodePorts: false
   ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
@@ -896,6 +896,7 @@ gateway:
   listeners: []
   existingGateway: ~
   existingVirtualService: ~
+  existingServiceEntry: ~
   ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
   ##
   extraRoute: []
@@ -907,7 +908,7 @@ metrics:
   ##
   enabled: false
   ## Bitnami FreeRADIUS Prometheus exporter image
-  ## ref: 
+  ## ref:
   ## @param metrics.image.registry FreeRADIUS Prometheus exporter image registry
   ## @param metrics.image.repository FreeRADIUS Prometheus exporter image repository
   ## @param metrics.image.tag FreeRADIUS Prometheus exporter image tag (immutable tags are recommended)
@@ -916,8 +917,8 @@ metrics:
   ##
   image:
     registry: docker.io
-    repository: 
-    tag: 
+    repository:
+    tag:
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/

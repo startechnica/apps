@@ -1138,7 +1138,7 @@ service:
   clusterIP: ""
   clusterIPs: []
   externalIPs: []
-  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for
   ## bare metal / on-prem environments that rely on VIP based LB implementations.
   ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
   ##
@@ -2420,23 +2420,23 @@ gateway:
   ## @param gateway.enabled  Enable Istio Gateway and VirtualService
   ##
   enabled: false
-  ## @param gateway.dedicated 
-  ## 
+  ## @param gateway.dedicated
+  ##
   dedicated: false
-  ## @param gateway.gatewayApi 
-  ## 
+  ## @param gateway.gatewayApi
+  ##
   gatewayApi:
     ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway
-    ## 
+    ##
     create: false
-  ## @param gateway.name 
-  ## 
+  ## @param gateway.name
+  ##
   name: ""
-  ## @param gateway.namespace 
-  ## 
+  ## @param gateway.namespace
+  ##
   namespace: ""
-  ## @param gateway.gatewayClassName 
-  ## 
+  ## @param gateway.gatewayClassName
+  ##
   gatewayClassName: istio
   ## @param gateway.listeners
   ##
@@ -2453,8 +2453,12 @@ gateway:
   ## @param gateway.existingVirtualService
   ##
   existingVirtualService: ~
+  ## @param gateway.existingServiceEntry
+  ##
+  existingServiceEntry: ~
   ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
   ##
+
   extraRoute: []
 
 organization: Startechnica
