@@ -95,7 +95,9 @@ spec:
               containerPort: {{ default 8080 .Values.worker.containerPorts.http }}
               protocol: TCP
             {{- end }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
+            {{- if .Values.worker.extraPorts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
+            {{- end }}
           {{- end }}
           {{- if .Values.worker.extraEnvVars }}
           env:
