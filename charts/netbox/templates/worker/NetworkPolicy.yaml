@@ -37,7 +37,7 @@ spec:
     - ports:
         - port: {{ include "netbox.databasePort" . }}
           protocol: TCP
-      {{- if .Values.postgres.enabled }}
+      {{- if .Values.postgresql.enabled }}
       to:
         - podSelector:
             matchLabels:
