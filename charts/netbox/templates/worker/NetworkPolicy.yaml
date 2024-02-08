@@ -56,17 +56,17 @@ spec:
       {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
     {{- end }}
   ingress:
-    {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled -}}
+    {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
     - ports:
         - port: {{ default 8080 .Values.worker.containerPorts.http }}
-        {{- if not (eq .Values.worker.containerPorts.http .Values.metrics.service.ports.http)  }}
+        {{- if not (eq .Values.worker.containerPorts.http .Values.metrics.service.ports.http) }}
         - port: {{ .Values.metrics.service.ports.http }}
         {{- end }}
     {{- end }}
     {{- if .Values.worker.extraPorts }}
     - ports:
         {{ range $extraPort := .Values.worker.extraPorts }}
-        - port: {{ $extraPort | int }}
+        - port: {{ $extraPort.containerPort | int }}
         {{- end }}
       {{- if not .Values.worker.networkPolicy.allowExternal }}
       from:

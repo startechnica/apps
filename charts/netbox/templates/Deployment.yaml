@@ -321,16 +321,15 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        {{- if .Values.metrics.enabled }}
-        - name: metrics
-          emptyDir: {}
-        {{- end }}
         {{- if or .Values.initdbScriptsConfigMap .Values.initdbScripts }}
         - name: custom-init-scripts
           configMap:
             name: {{ include "netbox.initdbScriptsCM" . }}
         {{- end }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
+        {{- if and .Values.metrics.enabled .Values.metrics.extraVolumes }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}

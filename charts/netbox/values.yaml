@@ -1609,7 +1609,7 @@ worker:
   ##
   containerPorts:
     http: 8080
-  ## @param worker.extraPorts Extra ports for Grafana deployment
+  ## @param worker.extraPorts Extra ports for Netbox worker deployment
   ##
   extraPorts: []
   ## Configure extra options for Netbox containers' liveness and readiness probes
@@ -1980,6 +1980,16 @@ metrics:
   ## @param metrics.enabled Enable metrics
   ##
   enabled: false
+  ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the Netbox pod(s)
+  ##
+  extraVolumes:
+    - name: metrics
+      emptyDir: {}
+  ## @param metrics.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox container(s)
+  ##
+  extraVolumeMounts:
+    - name: metrics
+      mountPath: /tmp/metrics
   ## Netbox metrics service parameters
   ##
   service:
