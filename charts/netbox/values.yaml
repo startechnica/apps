@@ -2204,14 +2204,19 @@ externalDatabase:
   existingSecretPasswordKey: ""
   annotations: {}
 
-  existingSecretKey: postgresql-password
+  ## The following settings also apply when using the bundled PostgreSQL chart:
 
-  # The following settings also apply when using the bundled PostgreSQL chart:
+  ## @param externalDatabase.sslMode
+  ##
   sslMode: prefer
-  ## @param externalDatabase  Max database connection age
+  ## @param externalDatabase.connMaxAge  Max database connection age
   ##
   connMaxAge: 300
+  ## @param externalDatabase.disableServerSideCursors
+  ##
   disableServerSideCursors: false
+  ## @param externalDatabase.targetSessionAttrs
+  ##
   targetSessionAttrs: read-write
 
 ## @section Redis common configuration parameters
@@ -2291,9 +2296,8 @@ tasksRedis:
   ssl: false
   insecureSkipTlsVerify: false
   caCertPath: ""
-
-  # Used only when redis.enabled is false. host and port are not used if
-  # sentinels are given.
+  ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
+  ##
   host: netbox-redis
   port: 6379
   sentinels: []
@@ -2302,7 +2306,6 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecretKey: redis-password
   ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2312,9 +2315,8 @@ cachingRedis:
   ssl: false
   insecureSkipTlsVerify: false
   caCertPath: ""
-
-  # Used only when redis.enabled is false. host and port are not used if
-  # sentinels are given.
+  ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
+  ##
   host: netbox-redis
   port: 6379
   sentinels: []
@@ -2323,7 +2325,6 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecretKey: redis-password
   ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""

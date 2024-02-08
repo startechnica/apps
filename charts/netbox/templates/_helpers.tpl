@@ -208,18 +208,7 @@ Name of the Secret that contains the PostgreSQL password
 {{- end -}}
 {{- end -}}
 
-{{/*
-Name of the key in Secret that contains the PostgreSQL password
-*/}}
-{{- define "netbox.postgresql.secretKey" -}}
-{{- if .Values.postgresql.enabled -}}
-    {{- include "postgresql.v1.userPasswordKey" .Subcharts.postgresql -}}
-{{- else if .Values.externalDatabase.existingSecretName -}}
-    {{- .Values.externalDatabase.existingSecretKey -}}
-{{- else -}}
-    {{- print "db_password" -}}
-{{- end -}}
-{{- end -}}
+
 
 {{/*
 Name of the key in Secret that contains the Redis cache password
@@ -243,9 +232,16 @@ Name of the key in Secret that contains the Redis cache password
 {{/*
 Return Redis password
 */}}
+{{- define "netbox.cachingRedis.password" -}}
+{{- if .Values.redis.enabled -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "redis.secretName" .Subcharts.redis) "key" (include "redis.secretPasswordKey" .Subcharts.redis) "defaultValue" .Values.redis.auth.password "context" $) }}
+{{- else -}}
+    {{ include "common.secrets.passwords.manage" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.cachingRedis.secretPasswordKey" .) "length" 16 "providedValues" (list "cachingRedis.password") "context" $) }}
+{{- end -}}
+{{- end -}}
 {{- define "netbox.tasksRedis.password" -}}
 {{- if .Values.redis.enabled -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "redis.secretName" .Subcharts.redis) "key" (include "redis.secretPasswordKey" .Subcharts.redis) "defaultValue" .Values.email.password "context" $) }}
+    {{ include "common.secrets.lookup" (dict "secret" (include "redis.secretName" .Subcharts.redis) "key" (include "redis.secretPasswordKey" .Subcharts.redis) "defaultValue" .Values.redis.auth.password "context" $) }}
 {{- else -}}
     {{ include "common.secrets.passwords.manage" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.tasksRedis.secretPasswordKey" .) "length" 16 "providedValues" (list "tasksRedis.password") "context" $) }}
 {{- end -}}
@@ -421,11 +417,24 @@ Return the Database encrypted password
 {{- end -}}
 
 {{/*
+Name of the key in Secret that contains the PostgreSQL password
+*/}}
+{{- define "netbox.postgresql.secretKey" -}}
+{{- if .Values.postgresql.enabled -}}
+    {{- include "postgresql.v1.userPasswordKey" .Subcharts.postgresql -}}
+{{- else if .Values.externalDatabase.existingSecretName -}}
+    {{- .Values.externalDatabase.existingSecretPasswordKey -}}
+{{- else -}}
+    {{- print "db_password" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Add environment variables to configure database values
 */}}
 {{- define "netbox.databaseSecretPasswordKey" -}}
 {{- if .Values.postgresql.enabled -}}
-    {{- printf "%s" "password" -}}
+    {{- include "postgresql.v1.userPasswordKey" .Subcharts.postgresql -}}
 {{- else -}}
     {{- if .Values.externalDatabase.existingSecretName -}}
         {{- if .Values.externalDatabase.existingSecretPasswordKey -}}
