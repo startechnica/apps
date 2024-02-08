@@ -148,13 +148,16 @@ extraEnvVarsCM: ""
 ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox nodes
 ##
 extraEnvVarsSecret: ""
-## @param containerPorts.redis Container port to open on Netbox nodes
+## @param containerPorts.http Container port to open on Netbox nodes
 ##
 containerPorts:
   http: 8080
+## @param extraPorts Extra ports for Netbox server deployment
+##
+extraPorts: []
 ## Configure extra options for Netbox containers' liveness and readiness probes
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-## @param startupProbe.enabled Enable startupProbe on Netbox worker nodes
+## @param startupProbe.enabled Enable startupProbe on Netbox nodes
 ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
 ## @param startupProbe.periodSeconds Period seconds for startupProbe
 ## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
@@ -168,7 +171,7 @@ startupProbe:
   timeoutSeconds: 1
   successThreshold: 1
   failureThreshold: 60
-## @param livenessProbe.enabled Enable livenessProbe on Netbox worker nodes
+## @param livenessProbe.enabled Enable livenessProbe on Netbox nodes
 ## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
 ## @param livenessProbe.periodSeconds Period seconds for livenessProbe
 ## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
@@ -182,7 +185,7 @@ livenessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 5
-## @param readinessProbe.enabled Enable readinessProbe on Netbox worker nodes
+## @param readinessProbe.enabled Enable readinessProbe on Netbox nodes
 ## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
 ## @param readinessProbe.periodSeconds Period seconds for readinessProbe
 ## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
@@ -317,20 +320,20 @@ nodeAffinityPreset:
   ##   - e2e-az2
   ##
   values: []
-## @param affinity Affinity for Netbox worker pods assignment
+## @param affinity Affinity for Netbox pods assignment
 ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
 ## NOTE: `podAffinityPreset`, `podAntiAffinityPreset`, and `nodeAffinityPreset` will be ignored when it's set
 ##
 affinity: {}
-## @param nodeSelector Node labels for Netbox worker pods assignment
+## @param nodeSelector Node labels for Netbox pods assignment
 ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
 ##
 nodeSelector: {}
-## @param tolerations Tolerations for Netbox worker pods assignment
+## @param tolerations Tolerations for Netbox pods assignment
 ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 ##
 tolerations: []
-## @param topologySpreadConstraints Spread Constraints for Netbox worker pod assignment
+## @param topologySpreadConstraints Spread Constraints for Netbox pod assignment
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
 ## E.g.
 ## topologySpreadConstraints:
@@ -339,16 +342,16 @@ tolerations: []
 ##     whenUnsatisfiable: DoNotSchedule
 ##
 topologySpreadConstraints: []
-## @param lifecycleHooks for the Netbox worker container(s) to automate configuration before or after startup
+## @param lifecycleHooks for the Netbox container(s) to automate configuration before or after startup
 ##
 lifecycleHooks: {}
-## @param extraVolumes Optionally specify extra list of additional volumes for the Netbox worker pod(s)
+## @param extraVolumes Optionally specify extra list of additional volumes for the Netbox pod(s)
 ##
 extraVolumes: []
-## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox worker container(s)
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox container(s)
 ##
 extraVolumeMounts: []
-## @param sidecars Add additional sidecar containers to the Netbox worker pod(s)
+## @param sidecars Add additional sidecar containers to the Netbox pod(s)
 ## e.g:
 ## sidecars:
 ##   - name: your-image-name
@@ -364,7 +367,7 @@ sidecars: []
 ##    image: nginx:latest
 ##
 extraContainers: []
-## @param worker.initContainers Add additional init containers to the Netbox worker pod(s)
+## @param initContainers Add additional init containers to the Netbox pod(s)
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 ## e.g:
 ## initContainers:
@@ -374,7 +377,7 @@ extraContainers: []
 ##    command: ['sh', '-c', 'echo "hello world"']
 ##
 initContainers: []
-## @extraInitContainers  Containers which are run before the NetBox containers are started.
+## @param extraInitContainers  Containers which are run before the NetBox containers are started.
 ##  - name: init-myservice
 ##    image: busybox
 ##    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
@@ -487,8 +490,9 @@ cors:
   originRegexWhitelist: []
   #  - '^(https?://)?(\w+\.)?example\.com$'
 
-# CSRF settings.  Needed for netbox v3.2.0 and newer. For more information
-# see https://docs.netbox.dev/en/stable/configuration/optional-settings/#csrf_trusted_origins
+## CSRF settings.  Needed for netbox v3.2.0 and newer. For more information
+## see https://docs.netbox.dev/en/stable/configuration/optional-settings/#csrf_trusted_origins
+##
 csrf:
   # The name of the cookie to use for the cross-site request forgery (CSRF)
   # authentication token.
@@ -1598,10 +1602,13 @@ worker:
   ## @param worker.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox worker nodes
   ##
   extraEnvVarsSecret: ""
-  ## @param worker.containerPorts.redis Container port to open on Netbox worker nodes
+  ## @param worker.containerPorts.http Container port to open on Netbox worker nodes
   ##
   containerPorts:
     http: 8080
+  ## @param worker.extraPorts Extra ports for Grafana deployment
+  ##
+  extraPorts: []
   ## Configure extra options for Netbox containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param worker.startupProbe.enabled Enable startupProbe on Netbox worker nodes

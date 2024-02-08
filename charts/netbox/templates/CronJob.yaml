@@ -149,7 +149,7 @@ spec:
                   # Used by our configuration
                   - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
                     path: email_password
-                  - key: secret_key
+                  - key: {{ include "netbox.secretSecretKeyKey" . }}
                     path: secret_key
               {{- if .Values.remoteAuth.enabled }}
               - secret:
@@ -181,7 +181,7 @@ spec:
           - name: media
             {{- if .Values.persistence.enabled }}
             persistentVolumeClaim:
-              claimName: {{ include "netbox.media.pvc" . }}
+              claimName: {{ include "netbox.media.pvcName" . }}
             {{- else }}
             emptyDir: {}
             {{- end }}

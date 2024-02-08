@@ -98,6 +98,15 @@ spec:
                 name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
             {{- end }}
           {{- end }}
+          {{- if or .Values.worker.extraPorts (and .Values.metrics.enabled .Values.worker.metrics.enabled) }}
+          ports:
+          {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
+            - name: http
+              containerPort: {{ default 8080 .Values.metrics.service.ports.http }}
+              protocol: TCP
+          {{- end }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
+          {{- end }}
           {{- if .Values.worker.resources }}
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}
@@ -166,9 +175,9 @@ spec:
                   name: {{ include "netbox.secretName" . | quote }}
                   items:
                     # Used by our configuration
-                    - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
+                    - key: {{ include "netbox.email.secretPasswordKey" . }}
                       path: email_password
-                    - key: secret_key
+                    - key: {{ include "netbox.secretSecretKeyKey" . }}
                       path: secret_key
               {{- if .Values.remoteAuth.enabled }}
               - secret:
@@ -200,7 +209,7 @@ spec:
         - name: media
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ include "netbox.media.pvc" . }}
+            claimName: {{ include "netbox.media.pvcName" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}

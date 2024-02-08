@@ -1,4 +1,4 @@
-{{- if .Values.worker.metrics.enabled -}}
+{{- if and .Values.metrics.enabled .Values.worker.metrics.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,7 +7,7 @@ metadata:
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.worker.image "chart" .Chart ) ) }}  
   {{- $labels := include "common.tplvalues.merge" ( dict "values" (list .Values.metrics.labels .Values.commonLabels $versionLabel) "context" . ) }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: metrics
+    app.kubernetes.io/component: worker-metrics
     app.kubernetes.io/part-of: netbox
   {{- if or .Values.metrics.service.annotations .Values.commonAnnotations }}
   {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.metrics.service.annotations .Values.commonAnnotations ) "context" . ) }}
@@ -21,8 +21,8 @@ spec:
       port: {{ default 8080 .Values.metrics.service.ports.http }}
       protocol: TCP
       targetPort: http
-    {{- if .Values.worker.metrics.service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.worker.metrics.service.extraPorts "context" $) | nindent 4 }}
+    {{- if .Values.metrics.service.extraPorts }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
   selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}

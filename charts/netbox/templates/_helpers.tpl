@@ -635,10 +635,23 @@ Return the secret key that contains the Netbox email password
     {{- else -}}
         {{- printf "%s" "email-password" -}}
     {{- end -}}
-{{- else if .Values.existingSecretName -}}
-    {{- printf "%s" "email-password" -}}
 {{- else -}}
-    {{- printf "%s" "email_password" -}}
+    {{- if .Values.existingSecretName -}}
+        {{- printf "%s" "email-password" -}}
+    {{- else -}}
+        {{- printf "%s" "email_password" -}}
+    {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the secret key that contains the Netbox Secret Key
+*/}}
+{{- define "netbox.secretSecretKeyKey" -}}
+{{- if .Values.existingSecretName -}}
+    {{- printf "%s" "secret-key" -}}
+{{- else -}}
+    {{- printf "%s" "secret-key" -}}
 {{- end -}}
 {{- end -}}
 
@@ -662,11 +675,11 @@ Return true if a TLS secret object should be created
 {{- end -}}
 {{- end -}}
 
-{{- define "netbox.media.pvc" -}}
+{{- define "netbox.media.pvcName" -}}
 {{- if .Values.persistence.existingClaim -}}
     {{- .Values.persistence.existingClaim -}}
 {{- else -}}
-    {{ printf "%s-%s" (include "common.names.fullname" .) "media" | trunc 63 | trimSuffix "-" -}}
+    {{ printf "%s-%s" (include "netbox.fullname" .) "media" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
