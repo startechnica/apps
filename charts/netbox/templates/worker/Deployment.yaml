@@ -88,6 +88,15 @@ spec:
           {{- else if .Values.worker.args }}
           args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
           {{- end }}
+          {{- if or .Values.worker.extraPorts (and .Values.metrics.enabled .Values.worker.metrics.enabled) }}
+          ports:
+            {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
+            - name: http
+              containerPort: {{ default 8080 .Values.worker.containerPorts.http }}
+              protocol: TCP
+            {{- end }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
+          {{- end }}
           {{- if .Values.worker.extraEnvVars }}
           env:
             {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
