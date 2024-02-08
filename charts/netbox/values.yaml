@@ -388,6 +388,9 @@ extraInitContainers: []
 ## See `existingSecretName` for details
 ##
 superuser:
+  ## @param superuser.create  Create superuser
+  ##
+  create: true
   ## @param superuser.name Netbox administrator username
   ##
   name: admin
