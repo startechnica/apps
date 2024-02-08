@@ -651,7 +651,7 @@ Return the secret key that contains the Netbox Secret Key
 {{- if .Values.existingSecretName -}}
     {{- printf "%s" "secret-key" -}}
 {{- else -}}
-    {{- printf "%s" "secret-key" -}}
+    {{- printf "%s" "secret_key" -}}
 {{- end -}}
 {{- end -}}
 
