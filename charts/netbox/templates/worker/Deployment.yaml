@@ -141,10 +141,8 @@ spec:
               {{- if .Values.scriptsPersistence.subPath }}
               subPath: {{ .Values.scriptsPersistence.subPath | quote }}
               {{- end }}
-            {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
-            {{- if .Values.metrics.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.extraVolumeMounts "context" $ ) | nindent 12 }}
-            {{- end }}
+            {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
             {{- if .Values.worker.extraVolumeMounts }}
@@ -221,11 +219,10 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        {{- if .Values.metrics.enabled }}
-        - name: metrics
-          emptyDir: {}
-        {{- end }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
+        {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumes }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
