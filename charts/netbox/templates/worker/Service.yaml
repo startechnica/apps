@@ -15,6 +15,7 @@ metadata:
   {{- end }}
 spec:
   type: ClusterIP
+  ipFamilyPolicy: {{ default "SingleStack" .Values.metrics.service.ipFamilyPolicy }}
   ports:
     - name: http-metrics
       port: {{ default 8080 .Values.metrics.service.ports.http }}
@@ -22,7 +23,7 @@ spec:
       targetPort: http
     {{- if .Values.worker.metrics.service.extraPorts }}
       {{- include "common.tplvalues.render" (dict "value" .Values.worker.metrics.service.extraPorts "context" $) | nindent 4 }}
-    {{- end }}      
+    {{- end }}
   {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
   selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker

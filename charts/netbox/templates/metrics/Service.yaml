@@ -15,6 +15,13 @@ metadata:
   {{- end }}
 spec:
   type: ClusterIP
+  {{- if .Values.metrics.service.externalIPs }}
+  externalIPs:
+  {{- range $externalIP := .Values.metrics.service.externalIPs }}
+  - {{ $externalIP | quote }}
+  {{- end }}
+  {{- end }}
+  ipFamilyPolicy: {{ default "SingleStack" .Values.metrics.service.ipFamilyPolicy }}
   ports:
     - name: http-metrics
       port: {{ coalesce .Values.metrics.service.ports.http .Values.metrics.service.port }}
