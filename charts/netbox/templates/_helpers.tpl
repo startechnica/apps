@@ -376,6 +376,7 @@ Return the Database port
 {{- else -}}
   {{- default 5432 .Values.externalDatabase.port | int -}}
 {{- end -}}
+{{- end -}}
 
 {{/*
 Return the Database database name
