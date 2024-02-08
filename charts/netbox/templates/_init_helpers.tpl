@@ -1,12 +1,12 @@
 {{/*
 Returns the init container that will wait for redis connections
 Usage:
-{{ include "netbox.redis.waitContainer" ( dict "securityContext" .Values.path.to.the.component.securityContext "context" $ ) }}
+{{ include "netbox.redisWait.container" ( dict "securityContext" .Values.path.to.the.component.securityContext "context" $ ) }}
 */}}
-{{- define "netbox.redis.waitContainer" -}}
+{{- define "netbox.redisWait.container" -}}
 {{- if .context.Values.redisWait.enabled }}
 - name: wait-for-redis
-  image: {{ include "netbox.redis.image" .context | quote }}
+  image: {{ include "netbox.redisWait.image" .context | quote }}
   imagePullPolicy: {{ .context.Values.redisWait.image.pullPolicy | quote }}
   {{- if .securityContext.enabled }}
   securityContext: {{- omit .securityContext "enabled" | toYaml | nindent 4 }}

@@ -164,7 +164,7 @@ spec:
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.worker.podSecurityContext.enabled .Values.worker.containerSecurityContext.enabled }}
       {{- if or .Values.redisWait.enabled .Values.worker.initContainers $needsVolumePermissions }}
       initContainers:
-        {{- include "netbox.redis.waitContainer" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
+        {{- include "netbox.redisWait.container" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
         {{- if .Values.worker.initContainers }}
           {{- include "common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
         {{- end }}

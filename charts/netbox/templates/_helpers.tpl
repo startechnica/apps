@@ -91,6 +91,18 @@ Return the proper Redis image name
 {{- else -}}
     {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Return the proper Redis wait image name
+*/}}
+{{- define "netbox.redisWait.image" -}}
+{{- if .Values.redis.enabled -}}
+    {{- include "redis.image" .Subcharts.redis -}}
+{{- else -}}
+    {{ include "common.images.image" ( dict "imageRoot" .Values.redisWait.image "global" .Values.global ) }}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Return the proper Docker Image Registry Secret Names

@@ -244,7 +244,7 @@ spec:
           volumeMounts:
             - name: optunit
               mountPath: /opt/unit
-        {{- include "netbox.redis.waitContainer" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
+        {{- include "netbox.redisWait.container" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
         {{- if or .Values.initContainers $needsVolumePermissions }}
         {{- if .Values.initContainers }}
           {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 10 }}
