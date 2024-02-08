@@ -2302,7 +2302,6 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecretName: ""
   existingSecretKey: redis-password
   ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
@@ -2324,7 +2323,6 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecretName: ""
   existingSecretKey: redis-password
   ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
@@ -2339,7 +2337,6 @@ externalRedis:
   ## @param externalRedis.host External Redis host
   ##
   host: localhost
-  ## Redis port
   ## @param externalRedis.port External Redis port
   ##
   port: 6379
