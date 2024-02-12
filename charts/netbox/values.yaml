@@ -686,11 +686,11 @@ storageConfig: {}
 # Determine how many objects to display per page within a list. (Default: 50)
 paginateCount: 50
 
-## @param plugins  Enable installed plugins. Add the name of each plugin to the list.
+## @param scripts  Enable installed scripts. Add the name of each plugin to the list.
 ##
-plugins: []
+scripts: []
 
-## @param pluginsConfig  Plugins configuration settings. These settings are used by various plugins
+## @param pluginsConfig  Plugins configuration settings. These settings are used by various scripts
 ##   that the user may have installed. Each key in the dictionary is the name of
 ##   an installed plugin and its value is a dictionary of settings.
 ## E.g.:
@@ -1010,56 +1010,6 @@ persistence:
   ##     app: my-app
   ##
   selector: {}
-## 'volumePermissions' init container parameters
-## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
-## based on the podSecurityContext/containerSecurityContext parameters
-##
-volumePermissions:
-  ## @param volumePermissions.enabled  Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
-  ##
-  enabled: false
-  ## OS Shell + Utility image
-  ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
-  ## @param volumePermissions.image.registry [default: REGISTRY_NAME] OS Shell + Utility image registry
-  ## @param volumePermissions.image.repository [default: REPOSITORY_NAME/os-shell] OS Shell + Utility image repository
-  ## @skip volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
-  ## @param volumePermissions.image.digest OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
-  ## @param volumePermissions.image.pullPolicy OS Shell + Utility image pull policy
-  ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
-  ##
-  image:
-    registry: docker.io
-    repository: bitnami/os-shell
-    tag: 11-debian-11-r95
-    digest: ""
-    pullPolicy: IfNotPresent
-    ## Optionally specify an array of imagePullSecrets.
-    ## Secrets must be manually created in the namespace.
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-    ## e.g:
-    ## pullSecrets:
-    ##   - myRegistryKeySecretName
-    ##
-    pullSecrets: []
-  ## Init container's resource requests and limits
-  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  ## @param volumePermissions.resources.limits The resources limits for the init container
-  ## @param volumePermissions.resources.requests The requested resources for the init container
-  ##
-  resources:
-    limits: {}
-    requests: {}
-  ## Init container Container Security Context
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-  ## @param volumePermissions.securityContext.seLinuxOptions [object,nullable] Set SELinux options in container
-  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
-  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
-  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
-  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
-  ##
-  securityContext:
-    seLinuxOptions: null
-    runAsUser: 0
 
 ## Storage configuration for reports
 ##
@@ -2417,6 +2367,7 @@ externalRedis:
   existingSecretName: ""
   ## Password key to be retrieved from Redis secret
   ## @param externalRedis.existingSecretPasswordKey Password key for the existing secret containing the external redis password
+  ## Ignored if `tasksRedis.existingSecretPasswordKey` and `cachingRedis.existingSecretPasswordKey` is set.
   ##
   existingSecretPasswordKey: 'redis-password'
 
@@ -2498,12 +2449,16 @@ redisWait:
     seccompProfile:
       type: "RuntimeDefault"
 
+## 'initDirs' init container parameters
+##
 initDirs:
   image:
     repository: busybox
     tag: 1.36.1
     pullPolicy: IfNotPresent
-
+  ## initDirs init container resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ##
   resources: {}
   ## @param initDirs.containerSecurityContext.enabled Enabled init-dirs container Security Context
   ## @param initDirs.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
@@ -2527,6 +2482,175 @@ initDirs:
       drop: ["ALL"]
     seccompProfile:
       type: "RuntimeDefault"
+
+## 'volumePermissions' init container parameters
+## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
+## based on the podSecurityContext/containerSecurityContext parameters
+##
+volumePermissions:
+  ## @param volumePermissions.enabled  Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
+  ##
+  enabled: false
+  ## OS Shell + Utility image
+  ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
+  ## @param volumePermissions.image.registry [default: REGISTRY_NAME] OS Shell + Utility image registry
+  ## @param volumePermissions.image.repository [default: REPOSITORY_NAME/os-shell] OS Shell + Utility image repository
+  ## @skip volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.digest OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param volumePermissions.image.pullPolicy OS Shell + Utility image pull policy
+  ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/os-shell
+    tag: 11-debian-11-r95
+    digest: ""
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Init container's resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param volumePermissions.resources.limits The resources limits for the init container
+  ## @param volumePermissions.resources.requests The requested resources for the init container
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Init container Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param volumePermissions.securityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
+  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
+  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
+  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
+  ##
+  securityContext:
+    seLinuxOptions: null
+    runAsUser: 0
+
+## @section Netbox git sync parameters
+
+## Configure Git to pull reports and scripts
+##
+git:
+  ## Bitnami Git image version
+  ## ref: https://hub.docker.com/r/bitnami/git/tags/
+  ## @param git.image.registry [default: REGISTRY_NAME] Git image registry
+  ## @param git.image.repository [default: REPOSITORY_NAME/git] Git image repository
+  ## @skip git.image.tag Git image tag (immutable tags are recommended)
+  ## @param git.image.digest Git image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param git.image.pullPolicy Git image pull policy
+  ## @param git.image.pullSecrets Git image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/git
+    tag: 2.43.0-debian-11-r9
+    digest: ""
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Get DAG files from git repositories
+  ## @param git.reports.enabled Enable in order to download DAG files from git repositories.
+  ## @param git.reports.repositories [array] Array of repositories from which to download DAG files
+  ##
+  reports:
+    enabled: false
+    ## Name for repositories can be anything unique and must follow same naming conventions as kubernetes.
+    ## Kubernetes resources can have names up to 253 characters long. The characters allowed in names are:
+    ## digits (0-9), lower case letters (a-z), -, and .
+    ## Example:
+    ##   - repository: https://github.com/myuser/myrepo
+    ##     branch: main
+    ##     name: my-reports
+    ##     path: /
+    ##
+    repositories:
+      - repository: ""
+        ## Branch from repository to checkout
+        ##
+        branch: ""
+        ## An unique identifier for repository, must be unique for each repository
+        ##
+        name: ""
+        ## Subpath to a folder in the repository containing the reports
+        ##
+        subPath: ""
+  ## Get Plugins files from git repositories.
+  ## @param git.scripts.enabled Enable in order to download Plugins files from git repositories.
+  ## @param git.scripts.repositories [array] Array of repositories from which to download DAG files
+  ##
+  scripts:
+    enabled: false
+    repositories:
+      - repository: ""
+        ## Branch from repository to checkout
+        ##
+        branch: ""
+        ## An unique identifier for repository, must be unique for each repository
+        ##
+        name: ""
+        ## Subpath to a folder in the repository containing the scripts
+        ##
+        subPath: ""
+  ## Properties for the Clone init container
+  ## @param git.clone.command Override cmd
+  ## @param git.clone.args Override args
+  ## @param git.clone.extraVolumeMounts Add extra volume mounts
+  ## @param git.clone.extraEnvVars Add extra environment variables
+  ## @param git.clone.extraEnvVarsCM ConfigMap with extra environment variables
+  ## @param git.clone.extraEnvVarsSecret Secret with extra environment variables
+  ## @param git.clone.resources Clone init container resource requests and limits
+  ##
+  clone:
+    command: []
+    args: []
+    extraVolumeMounts: []
+    extraEnvVars: []
+    extraEnvVarsCM: ""
+    extraEnvVarsSecret: ""
+    ## Clone init container resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ##
+    resources: {}
+  ## Properties for the Sync sidecar container
+  ## @param git.sync.interval Interval in seconds to pull the git repository containing the scripts and/or DAG files
+  ## @param git.sync.command Override cmd
+  ## @param git.sync.args Override args
+  ## @param git.sync.extraVolumeMounts Add extra volume mounts
+  ## @param git.sync.extraEnvVars Add extra environment variables
+  ## @param git.sync.extraEnvVarsCM ConfigMap with extra environment variables
+  ## @param git.sync.extraEnvVarsSecret Secret with extra environment variables
+  ## @param git.sync.resources Sync sidecar container resource requests and limits
+  ##
+  sync:
+    interval: 60
+    command: []
+    args: []
+    extraVolumeMounts: []
+    extraEnvVars: []
+    extraEnvVarsCM: ""
+    extraEnvVarsSecret: ""
+    ## Sync sidecar container resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ##
+    resources: {}
 
 gateway:
   ## @param gateway.enabled  Enable Istio Gateway and VirtualService

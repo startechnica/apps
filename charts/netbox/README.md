@@ -335,11 +335,9 @@ The following table lists the configurable parameters for this chart and their d
 | `readinessProbe.timeoutSeconds`                 | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.periodSeconds`                  | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.successThreshold`               | Number of seconds                                                   |  *see `values.yaml`*                         |
-| `initDirs.image.repository`                     | Init container image repository                                     | `busybox`                                    |
-| `initDirs.image.tag`                            | Init container image tag                                            | `1.32.1`                                     |
-| `initDirs.image.pullPolicy`                     | Init container image pull policy                                    | `IfNotPresent`                               |
-| `initDirs.resources`                            | Configure resource requests or limits for init container            | `{}`                                         |
-| `initDirs.securityContext`                      | Security context for init container                                 | *see `values.yaml`*                          |
+
+
+
 | `autoscaling.enabled`                           | Whether to enable the HorizontalPodAutoscaler                       | `false`                                      |
 | `autoscaling.minReplicas`                       | Minimum number of replicas when autoscaling is enabled              | `1`                                          |
 | `autoscaling.maxReplicas`                       | Maximum number of replicas when autoscaling is enabled              | `100`                                        |
@@ -648,6 +646,14 @@ The following table lists the configurable parameters for this chart and their d
 | `cachingRedis.existingSecretPasswordKey`     | Key to fetch the password in the above `Secret`                                                        | `redis-caching-password` |
 
 
+### Init container 
+
+| `initDirs.image.repository`                     | Init container image repository                                     | `busybox`                                    |
+| `initDirs.image.tag`                            | Init container image tag                                            | `1.32.1`                                     |
+| `initDirs.image.pullPolicy`                     | Init container image pull policy                                    | `IfNotPresent`                               |
+| `initDirs.resources`                            | Configure resource requests or limits for init container            | `{}`                                         |
+| `initDirs.securityContext`                      | Security context for init container                                 | *see `values.yaml`*                          |
+
 [netbox-docker startup scripts]: https://github.com/netbox-community/netbox-docker/tree/master/startup_scripts
 [CORS]: https://github.com/ottoyiu/django-cors-headers
 [housekeeping]: https://demo.netbox.dev/static/docs/administration/housekeeping/
@@ -722,9 +728,9 @@ this, the `Secret` must contain the following keys:
 | `ldap-bind-password`   | Password for LDAP bind DN                                     | If `remoteAuth.enabled` is `true` and `remoteAuth.backend` is `netbox.authentication.LDAPBackend` |
 | `redis-tasks-password` | Password for the external Redis tasks database                | If `redis.enabled` is `false` and `tasksRedis.existingSecretName` is unset                        |
 | `redis-cache-password` | Password for the external Redis cache database                | If `redis.enabled` is `false` and `cachingRedis.existingSecretName` is unset                      |
-| `secret_key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
-| `superuser_password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
-| `superuser_api_token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
+| `secret-key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
+| `superuser-password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
+| `superuser-api-token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
 
 ## Using extraConfig for S3 storage configuration
 
