@@ -688,7 +688,7 @@ paginateCount: 50
 
 ## @param scripts  Enable installed scripts. Add the name of each plugin to the list.
 ##
-scripts: []
+plugins: []
 
 ## @param pluginsConfig  Plugins configuration settings. These settings are used by various scripts
 ##   that the user may have installed. Each key in the dictionary is the name of
