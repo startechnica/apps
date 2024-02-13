@@ -29,7 +29,7 @@ Returns the volume mounts that will be used by the main container
 {{- if .Values.git.reports.enabled }}
   {{- range .Values.git.reports.repositories }}
 - name: git-cloned-reports
-  mountPath: {{ $.Values.reportsPersistence.path }}/git_{{ include "netbox.git.repository.name" . }}
+  mountPath: /opt/git_{{ include "netbox.git.repository.name" . }}
   {{- if .subPath }}
   subPath: {{ include "netbox.git.repository.name" . }}/{{ .subPath }}
   {{- else }}
@@ -40,7 +40,7 @@ Returns the volume mounts that will be used by the main container
 {{- if .Values.git.scripts.enabled }}
   {{- range .Values.git.scripts.repositories }}
 - name: git-cloned-scripts
-  mountPath: {{ $.Values.scriptsPersistence.path }}/git_{{ include "netbox.git.repository.name" . }}
+  mountPath: /opt/git_{{ include "netbox.git.repository.name" . }}
   {{- if .subPath }}
   subPath: {{ include "netbox.git.repository.name" . }}/{{ .subPath }}
   {{- else }}
