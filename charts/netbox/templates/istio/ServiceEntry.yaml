@@ -1,3 +1,4 @@
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingServiceEntry) (not .Values.gateway.gatewayApi.create) -}}
 {{- if (include "common.capabilities.istioNetworking.apiVersion" .) -}}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: ServiceEntry
@@ -16,4 +17,5 @@ spec:
       name: https
       protocol: TLS
   resolution: DNS
+{{- end -}}
 {{- end -}}
