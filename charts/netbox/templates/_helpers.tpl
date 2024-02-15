@@ -645,6 +645,22 @@ Return true if a TLS secret object should be created
 {{- end -}}
 {{- end -}}
 
+{{- define "netbox.reports.pvcName" -}}
+{{- if .Values.reportsPersistance.existingClaim -}}
+    {{- .Values.reportsPersistance.existingClaim -}}
+{{- else -}}
+    {{ printf "%s-%s" (include "netbox.fullname" .) "reports" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "netbox.scriptsPersistence.pvcName" -}}
+{{- if .Values.scriptsPersistance.existingClaim -}}
+    {{- .Values.scriptsPersistance.existingClaim -}}
+{{- else -}}
+    {{ printf "%s-%s" (include "netbox.fullname" .) "scripts" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Validate values of Netbox - database */}}
 {{- define "netbox.validateValues.database" -}}
 {{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) (and (not .Values.externalDatabase.password) (not .Values.externalDatabase.existingSecretName)) -}}
@@ -653,7 +669,7 @@ netbox: database
     Either deploy the PostgreSQL sub-chart (--set postgresql.enabled=true),
     or set a value for the external database host (--set externalDatabase.host=FOO)
     and set a value for the external database password (--set externalDatabase.password=BAR)
-    or existing secret (--set externalDatabase.existingSecretName=BAR).
+    or use existing secret (--set externalDatabase.existingSecretName=BAR).
 {{- end -}}
 {{- end -}}
 

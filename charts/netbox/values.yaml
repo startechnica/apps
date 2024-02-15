@@ -1379,9 +1379,10 @@ housekeeping:
   ## @param housekeeping.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox housekeeping nodes
   ##
   extraEnvVarsCM: ""
-  ## @param housekeeping.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox housekeeping nodes
+  ## @param housekeeping.extraEnvVarsSecrets List of secrets with extra environment variables for Netbox housekeeping pods
   ##
   extraEnvVarsSecret: ""
+  extraEnvVarsSecrets: []
   ## Netbox housekeeping resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
@@ -2625,6 +2626,7 @@ git:
     extraEnvVars: []
     extraEnvVarsCM: ""
     extraEnvVarsSecret: ""
+    extraEnvVarsSecrets: []
     ## Clone init container resource requests and limits
     ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
     ##

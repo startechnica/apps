@@ -88,6 +88,7 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       containers:
+        {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.worker.containerSecurityContext "context" $) | trim | nindent 8 }}
         - name: netbox
           image: {{ template "netbox.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -207,8 +208,8 @@ spec:
             - name: local-reports-files
               mountPath: {{ printf "%s/%s" .Values.reportsPersistence.path "local" }}
             {{- end }}
-            {{- if .Files.Glob "files/reports/*.py" }}
-            - name: local-reports-files
+            {{- if .Files.Glob "files/scripts/*.py" }}
+            - name: local-scripts-files
               mountPath: {{ printf "%s/%s" .Values.scriptsPersistence.path "local" }}
             {{- end }}
             - name: optunit
@@ -226,12 +227,8 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
-            {{- if .Values.metrics.enabled }}
-            - name: metrics
-              mountPath: /tmp/metrics
-            {{- if .Values.metrics.extraVolumeMounts }}
+            {{- if and .Values.metrics.enabled .Values.metrics.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
-            {{- end }}
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
@@ -322,14 +319,14 @@ spec:
         - name: reports
           {{- if .Values.reportsPersistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+            claimName: {{ include "netbox.reports.pvcName" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}
         - name: scripts
           {{- if .Values.scriptsPersistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+            claimName: {{ include "netbox.scripts.pvcName" . }}
           {{- else }}
           emptyDir: {}
           {{- end }}
