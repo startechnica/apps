@@ -1936,6 +1936,7 @@ worker:
   ##
   metrics:
     ## @param worker.metrics.enabled Enable metrics
+    ## ref: https://docs.netbox.dev/en/stable/integrations/prometheus-metrics/
     ##
     enabled: false
 ## @param extraWorkers  Extra objects to deploy as worker (evaluated as a template)
@@ -1981,6 +1982,7 @@ tls:
 ## @section Metrics Parameters
 
 ## Prometheus Exporter / Metrics
+## ref: https://docs.netbox.dev/en/stable/integrations/prometheus-metrics/
 ##
 metrics:
   ## @param metrics.enabled Enable metrics

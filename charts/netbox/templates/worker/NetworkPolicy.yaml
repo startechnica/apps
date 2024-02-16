@@ -24,6 +24,10 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+        - port: 80
+          protocol: TCP
+        - port: 443
+          protocol: TCP
     # Allow to Redis and PostgreSQL
     - ports:
         - port: {{ include "netbox.redisPort" . }}
