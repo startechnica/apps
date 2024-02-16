@@ -139,23 +139,23 @@ spec:
           volumes:
           - name: config
             configMap:
-              name: {{ include "netbox.fullname" . }}
+              name: {{ include "netbox.configmapName" . }}
           - name: secrets
             projected:
               sources:
               - secret:
                   name: {{ include "netbox.secretName" . | quote }}
                   items:
-                  # Used by our configuration
-                  - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
-                    path: email_password
-                  - key: secret_key
-                    path: secret_key
+                    # Used by our configuration
+                    - key: {{ include "netbox.email.secretPasswordKey" . | quote }}
+                      path: email_password
+                    - key: {{ include "netbox.secretSecretKeyKey" . }}
+                      path: secret_key
               {{- if .Values.remoteAuth.enabled }}
               - secret:
                   name: {{ include "netbox.remoteAuth.secretName" . | quote }}
                   items:
-                    {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
+                    {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
                     - key: ldap_bind_password
                       path: ldap_bind_password
                     {{- end }}
@@ -163,39 +163,36 @@ spec:
               - secret:
                   name: {{ include "netbox.databaseSecretName" . | quote }}
                   items:
-                  - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
-                    path: db_password
+                    - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
+                      path: db_password
               - secret:
-                  name: {{ include "netbox.tasksRedis.secretName" . | quote }}
+                  name: {{ include "netbox.redis.secretName" . | quote }}
                   items:
-                  - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
-                    path: redis_tasks_password
-              - secret:
-                  name: {{ include "netbox.cachingRedis.secretName" . | quote }}
-                  items:
-                  - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
-                    path: redis_cache_password
+                    - key: {{ include "netbox.cachingRedis.secretPasswordKey" . | quote }}
+                      path: redis_cache_password
+                    - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
+                      path: redis_tasks_password
           - name: netbox-tmp
             emptyDir:
               medium: Memory
           - name: media
             {{- if .Values.persistence.enabled }}
             persistentVolumeClaim:
-              claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+              claimName: {{ include "netbox.media.pvcName" . }}
             {{- else }}
             emptyDir: {}
             {{- end }}
           - name: reports
             {{- if .Values.reportsPersistence.enabled }}
             persistentVolumeClaim:
-              claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+              claimName: {{ include "netbox.reports.pvcName" . }}
             {{- else }}
             emptyDir: {}
             {{- end }}
           - name: scripts
             {{- if .Values.scriptsPersistence.enabled }}
             persistentVolumeClaim:
-              claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+              claimName: {{ include "netbox.scripts.pvcName" . }}
             {{- else }}
             emptyDir: {}
             {{- end }}

@@ -148,13 +148,16 @@ extraEnvVarsCM: ""
 ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox nodes
 ##
 extraEnvVarsSecret: ""
-## @param containerPorts.redis Container port to open on Netbox nodes
+## @param containerPorts.http Container port to open on Netbox nodes
 ##
 containerPorts:
   http: 8080
+## @param extraPorts Extra ports for Netbox server deployment
+##
+extraPorts: []
 ## Configure extra options for Netbox containers' liveness and readiness probes
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-## @param startupProbe.enabled Enable startupProbe on Netbox worker nodes
+## @param startupProbe.enabled Enable startupProbe on Netbox nodes
 ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
 ## @param startupProbe.periodSeconds Period seconds for startupProbe
 ## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
@@ -168,7 +171,7 @@ startupProbe:
   timeoutSeconds: 1
   successThreshold: 1
   failureThreshold: 60
-## @param livenessProbe.enabled Enable livenessProbe on Netbox worker nodes
+## @param livenessProbe.enabled Enable livenessProbe on Netbox nodes
 ## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
 ## @param livenessProbe.periodSeconds Period seconds for livenessProbe
 ## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
@@ -182,7 +185,7 @@ livenessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 5
-## @param readinessProbe.enabled Enable readinessProbe on Netbox worker nodes
+## @param readinessProbe.enabled Enable readinessProbe on Netbox nodes
 ## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
 ## @param readinessProbe.periodSeconds Period seconds for readinessProbe
 ## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
@@ -317,20 +320,20 @@ nodeAffinityPreset:
   ##   - e2e-az2
   ##
   values: []
-## @param affinity Affinity for Netbox worker pods assignment
+## @param affinity Affinity for Netbox pods assignment
 ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
 ## NOTE: `podAffinityPreset`, `podAntiAffinityPreset`, and `nodeAffinityPreset` will be ignored when it's set
 ##
 affinity: {}
-## @param nodeSelector Node labels for Netbox worker pods assignment
+## @param nodeSelector Node labels for Netbox pods assignment
 ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
 ##
 nodeSelector: {}
-## @param tolerations Tolerations for Netbox worker pods assignment
+## @param tolerations Tolerations for Netbox pods assignment
 ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 ##
 tolerations: []
-## @param topologySpreadConstraints Spread Constraints for Netbox worker pod assignment
+## @param topologySpreadConstraints Spread Constraints for Netbox pod assignment
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
 ## E.g.
 ## topologySpreadConstraints:
@@ -339,16 +342,16 @@ tolerations: []
 ##     whenUnsatisfiable: DoNotSchedule
 ##
 topologySpreadConstraints: []
-## @param lifecycleHooks for the Netbox worker container(s) to automate configuration before or after startup
+## @param lifecycleHooks for the Netbox container(s) to automate configuration before or after startup
 ##
 lifecycleHooks: {}
-## @param extraVolumes Optionally specify extra list of additional volumes for the Netbox worker pod(s)
+## @param extraVolumes Optionally specify extra list of additional volumes for the Netbox pod(s)
 ##
 extraVolumes: []
-## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox worker container(s)
+## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox container(s)
 ##
 extraVolumeMounts: []
-## @param sidecars Add additional sidecar containers to the Netbox worker pod(s)
+## @param sidecars Add additional sidecar containers to the Netbox pod(s)
 ## e.g:
 ## sidecars:
 ##   - name: your-image-name
@@ -364,7 +367,7 @@ sidecars: []
 ##    image: nginx:latest
 ##
 extraContainers: []
-## @param worker.initContainers Add additional init containers to the Netbox worker pod(s)
+## @param initContainers Add additional init containers to the Netbox pod(s)
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 ## e.g:
 ## initContainers:
@@ -374,17 +377,76 @@ extraContainers: []
 ##    command: ['sh', '-c', 'echo "hello world"']
 ##
 initContainers: []
-## @extraInitContainers  Containers which are run before the NetBox containers are started.
+## @param extraInitContainers  Containers which are run before the NetBox containers are started.
 ##  - name: init-myservice
 ##    image: busybox
 ##    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 ##
 extraInitContainers: []
 
+## Network Policies
+## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+##
+networkPolicy:
+  ## @param readReplicas.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+  ##
+  enabled: true
+  ## @param readReplicas.networkPolicy.allowExternal Don't require server label for connections
+  ## The Policy model to apply. When set to false, only pods with the correct
+  ## server label will have network access to the ports server is listening
+  ## on. When true, server will accept connections from any source
+  ## (with the correct destination port).
+  ##
+  allowExternal: true
+  ## @param readReplicas.networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
+  ##
+  allowExternalEgress: false
+  ## @param readReplicas.networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolice
+  ## e.g:
+  ## extraIngress:
+  ##   - ports:
+  ##       - port: 1234
+  ##     from:
+  ##       - podSelector:
+  ##           - matchLabels:
+  ##               - role: frontend
+  ##       - podSelector:
+  ##           - matchExpressions:
+  ##               - key: role
+  ##                 operator: In
+  ##                 values:
+  ##                   - frontend
+  extraIngress: []
+  ## @param readReplicas.networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
+  ## e.g:
+  ## extraEgress:
+  ##   - ports:
+  ##       - port: 1234
+  ##     to:
+  ##       - podSelector:
+  ##           - matchLabels:
+  ##               - role: frontend
+  ##       - podSelector:
+  ##           - matchExpressions:
+  ##               - key: role
+  ##                 operator: In
+  ##                 values:
+  ##                   - frontend
+  ##
+  extraEgress: []
+  ## @param readReplicas.networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
+  ## @param readReplicas.networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
+  ##
+  ingressNSMatchLabels: {}
+  ingressNSPodMatchLabels: {}
+
 ## You can also use an existing secret for the superuser password and API token
 ## See `existingSecretName` for details
 ##
 superuser:
+  ## @param superuser.create  Create superuser
+  ##
+  create: true
   ## @param superuser.name Netbox administrator username
   ##
   name: admin
@@ -413,9 +475,10 @@ superuser:
 # https://github.com/netbox-community/netbox-docker/tree/worker/startup_scripts
 skipStartupScripts: true
 
-# This is a list of valid fully-qualified domain names (FQDNs) for the NetBox
-# server. NetBox will not permit write access to the server via any other
-# hostnames. The first FQDN in the list will be treated as the preferred name.
+## @param allowedHosts  This is a list of valid fully-qualified domain names (FQDNs) for the NetBox
+##     server. NetBox will not permit write access to the server via any other
+##     hostnames. The first FQDN in the list will be treated as the preferred name.
+##
 allowedHosts:
   - '*'
 
@@ -486,8 +549,9 @@ cors:
   originRegexWhitelist: []
   #  - '^(https?://)?(\w+\.)?example\.com$'
 
-# CSRF settings.  Needed for netbox v3.2.0 and newer. For more information
-# see https://docs.netbox.dev/en/stable/configuration/optional-settings/#csrf_trusted_origins
+## CSRF settings.  Needed for netbox v3.2.0 and newer. For more information
+## see https://docs.netbox.dev/en/stable/configuration/optional-settings/#csrf_trusted_origins
+##
 csrf:
   # The name of the cookie to use for the cross-site request forgery (CSRF)
   # authentication token.
@@ -511,8 +575,8 @@ defaultLanguage: en-us
 ##
 debug: false
 
-# Display full traceback of errors that occur when applying database
-# migrations.
+## @param dbWaitDebug  Display full traceback of errors that occur when applying database migrations.
+##
 dbWaitDebug: false
 
 ## Email settings
@@ -622,11 +686,11 @@ storageConfig: {}
 # Determine how many objects to display per page within a list. (Default: 50)
 paginateCount: 50
 
-## @param plugins  Enable installed plugins. Add the name of each plugin to the list.
+## @param scripts  Enable installed scripts. Add the name of each plugin to the list.
 ##
 plugins: []
 
-## @param pluginsConfig  Plugins configuration settings. These settings are used by various plugins
+## @param pluginsConfig  Plugins configuration settings. These settings are used by various scripts
 ##   that the user may have installed. Each key in the dictionary is the name of
 ##   an installed plugin and its value is a dictionary of settings.
 ## E.g.:
@@ -651,8 +715,9 @@ powerFeedMaxUtilisation: 80
 # https://docs.netbox.dev/en/stable/configuration/dynamic-settings/#powerfeed_default_voltage
 powerFeedDefaultVoltage: 120
 
-# When determining the primary IP address for a device, IPv6 is preferred over
-# IPv4 by default. Set this to True to prefer IPv4 instead.
+## @param preferIPv4  When determining the primary IP address for a device, IPv6 is preferred over
+## IPv4 by default. Set this to True to prefer IPv4 instead.
+##
 preferIPv4: false
 
 # Rack elevation size defaults, in pixels. For best results, the ratio of width
@@ -668,7 +733,6 @@ remoteAuth:
   enabled: false
   backends:
     - netbox.authentication.RemoteUserBackend
-    - social_core.backends.keycloak.KeycloakOAuth2
   header: HTTP_REMOTE_USER
   userFirstName: HTTP_REMOTE_USER_FIRST_NAME
   userLastName: HTTP_REMOTE_USER_LAST_NAME
@@ -745,7 +809,8 @@ releaseCheck:
   ##
   url: https://api.github.com/repos/netbox-community/netbox/releases
 
-# Maximum execution time for background tasks, in seconds.
+## @param rqDefaultTimeout  Maximum execution time for background tasks, in seconds.
+##
 rqDefaultTimeout: 300  # 5 mins
 
 ## @param sessionCookieName  The name to use for the session cookie.
@@ -945,56 +1010,6 @@ persistence:
   ##     app: my-app
   ##
   selector: {}
-## 'volumePermissions' init container parameters
-## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
-## based on the podSecurityContext/containerSecurityContext parameters
-##
-volumePermissions:
-  ## @param volumePermissions.enabled  Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
-  ##
-  enabled: false
-  ## OS Shell + Utility image
-  ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
-  ## @param volumePermissions.image.registry [default: REGISTRY_NAME] OS Shell + Utility image registry
-  ## @param volumePermissions.image.repository [default: REPOSITORY_NAME/os-shell] OS Shell + Utility image repository
-  ## @skip volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
-  ## @param volumePermissions.image.digest OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
-  ## @param volumePermissions.image.pullPolicy OS Shell + Utility image pull policy
-  ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
-  ##
-  image:
-    registry: docker.io
-    repository: bitnami/os-shell
-    tag: 11-debian-11-r95
-    digest: ""
-    pullPolicy: IfNotPresent
-    ## Optionally specify an array of imagePullSecrets.
-    ## Secrets must be manually created in the namespace.
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-    ## e.g:
-    ## pullSecrets:
-    ##   - myRegistryKeySecretName
-    ##
-    pullSecrets: []
-  ## Init container's resource requests and limits
-  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  ## @param volumePermissions.resources.limits The resources limits for the init container
-  ## @param volumePermissions.resources.requests The requested resources for the init container
-  ##
-  resources:
-    limits: {}
-    requests: {}
-  ## Init container Container Security Context
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-  ## @param volumePermissions.securityContext.seLinuxOptions [object,nullable] Set SELinux options in container
-  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
-  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
-  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
-  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
-  ##
-  securityContext:
-    seLinuxOptions: null
-    runAsUser: 0
 
 ## Storage configuration for reports
 ##
@@ -1137,6 +1152,8 @@ service:
   ##
   clusterIP: ""
   clusterIPs: []
+  ## @param service.externalIPs  Designate an IP address block that is external to the cluster that can send traffic to services in the cluster.
+  ##
   externalIPs: []
   ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
   ## bare metal / on-prem environments that rely on VIP based LB implementations.
@@ -1293,14 +1310,6 @@ ingress:
   ##
   extraRules: []
 
-test:
-  image:
-    repository: busybox
-    tag: 1.36.1
-    pullPolicy: IfNotPresent
-
-  resources: {}
-
 ## Netbox server deployment autoscaling
 ## @param server.autoscaling.enabled Enable Netbox server deployment autoscaling
 ## @param server.autoscaling.minReplicas Netbox server deployment autoscaling minimum number of replicas
@@ -1318,6 +1327,7 @@ autoscaling:
 ## @section Netbox housekeeping parameters
 
 ## Configuration of Cron settings
+## ref: https://docs.netbox.dev/en/stable/administration/housekeeping/
 ##
 housekeeping:
   ## @param housekeeping.enabled Whether to enable Netbox housekeeping cron job
@@ -1370,9 +1380,10 @@ housekeeping:
   ## @param housekeeping.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox housekeeping nodes
   ##
   extraEnvVarsCM: ""
-  ## @param housekeeping.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox housekeeping nodes
+  ## @param housekeeping.extraEnvVarsSecrets List of secrets with extra environment variables for Netbox housekeeping pods
   ##
   extraEnvVarsSecret: ""
+  extraEnvVarsSecrets: []
   ## Netbox housekeeping resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
@@ -1526,6 +1537,7 @@ housekeeping:
 ## @section Netbox worker parameters
 
 ## Only required for Netbox Jobs, e.g. Webhooks
+## ref: https://docs.netbox.dev/en/stable/features/background-jobs/
 ##
 worker:
   ## @param worker.enabled Whether to enable Netbox worker job
@@ -1601,10 +1613,13 @@ worker:
   ## @param worker.extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox worker nodes
   ##
   extraEnvVarsSecret: ""
-  ## @param worker.containerPorts.redis Container port to open on Netbox worker nodes
+  ## @param worker.containerPorts.http Container port to open on Netbox worker nodes
   ##
   containerPorts:
     http: 8080
+  ## @param worker.extraPorts Extra ports for Netbox worker deployment
+  ##
+  extraPorts: []
   ## Configure extra options for Netbox containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ## @param worker.startupProbe.enabled Enable startupProbe on Netbox worker nodes
@@ -1871,8 +1886,9 @@ worker:
   ##
   networkPolicy:
     ## @param worker.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+    ##     Handle with care. Egress may obstruct Job, Sync and Queues.
     ##
-    enabled: true
+    enabled: false
     ## @param worker.networkPolicy.allowExternal Don't require client label for connections
     ## The Policy model to apply. When set to false, only pods with the correct
     ## client label will have network access to the ports Worker is listening
@@ -1919,20 +1935,11 @@ worker:
     ingressNSMatchLabels: {}
     ingressNSPodMatchLabels: {}
 
-  ## Netbox worker Service configuration
-  ##
-  service:
-    ## @param worker.service.enabled  Enable Netbox worker service
-    ##
-    enabled: false
-    ## @param worker.service.type Kubernetes service type
-    ##
-    type: ClusterIP
-
   ## Netbox worker Prometheus Exporter / Metrics
   ##
   metrics:
     ## @param worker.metrics.enabled Enable metrics
+    ## ref: https://docs.netbox.dev/en/stable/integrations/prometheus-metrics/
     ##
     enabled: false
 ## @param extraWorkers  Extra objects to deploy as worker (evaluated as a template)
@@ -1978,11 +1985,22 @@ tls:
 ## @section Metrics Parameters
 
 ## Prometheus Exporter / Metrics
+## ref: https://docs.netbox.dev/en/stable/integrations/prometheus-metrics/
 ##
 metrics:
   ## @param metrics.enabled Enable metrics
   ##
   enabled: false
+  ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the Netbox pod(s)
+  ##
+  extraVolumes:
+    - name: metrics
+      emptyDir: {}
+  ## @param metrics.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the Netbox container(s)
+  ##
+  extraVolumeMounts:
+    - name: metrics
+      mountPath: /tmp/metrics
   ## Netbox metrics service parameters
   ##
   service:
@@ -1990,6 +2008,12 @@ metrics:
     ##
     ports:
       http: 8080
+    ## @param metrics.service.externalIPs  Designate an IP address block that is external to the cluster that can send traffic to services in the cluster.
+    ##
+    externalIPs: []
+    ## @param metrics.service.ipFamilyPolicy Kubernetes service ipFamilyPolicy policy
+    ##
+    ipFamilyPolicy: SingleStack
     ## @param metrics.service.annotations [object] Annotations for enabling prometheus to access the metrics endpoints
     ##
     annotations:
@@ -2201,14 +2225,19 @@ externalDatabase:
   existingSecretPasswordKey: ""
   annotations: {}
 
-  existingSecretKey: postgresql-password
+  ## The following settings also apply when using the bundled PostgreSQL chart:
 
-  # The following settings also apply when using the bundled PostgreSQL chart:
+  ## @param externalDatabase.sslMode
+  ##
   sslMode: prefer
-  ## @param externalDatabase  Max database connection age
+  ## @param externalDatabase.connMaxAge  Max database connection age
   ##
   connMaxAge: 300
+  ## @param externalDatabase.disableServerSideCursors
+  ##
   disableServerSideCursors: false
+  ## @param externalDatabase.targetSessionAttrs
+  ##
   targetSessionAttrs: read-write
 
 ## @section Redis common configuration parameters
@@ -2288,9 +2317,8 @@ tasksRedis:
   ssl: false
   insecureSkipTlsVerify: false
   caCertPath: ""
-
-  # Used only when redis.enabled is false. host and port are not used if
-  # sentinels are given.
+  ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
+  ##
   host: netbox-redis
   port: 6379
   sentinels: []
@@ -2299,8 +2327,6 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecretName: ""
-  existingSecretKey: redis-password
   ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2310,9 +2336,8 @@ cachingRedis:
   ssl: false
   insecureSkipTlsVerify: false
   caCertPath: ""
-
-  # Used only when redis.enabled is false. host and port are not used if
-  # sentinels are given.
+  ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
+  ##
   host: netbox-redis
   port: 6379
   sentinels: []
@@ -2321,8 +2346,6 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
-  existingSecretName: ""
-  existingSecretKey: redis-password
   ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2336,7 +2359,6 @@ externalRedis:
   ## @param externalRedis.host External Redis host
   ##
   host: localhost
-  ## Redis port
   ## @param externalRedis.port External Redis port
   ##
   port: 6379
@@ -2351,6 +2373,7 @@ externalRedis:
   existingSecretName: ""
   ## Password key to be retrieved from Redis secret
   ## @param externalRedis.existingSecretPasswordKey Password key for the existing secret containing the external redis password
+  ## Ignored if `tasksRedis.existingSecretPasswordKey` and `cachingRedis.existingSecretPasswordKey` is set.
   ##
   existingSecretPasswordKey: 'redis-password'
 
@@ -2360,6 +2383,52 @@ redisWait:
   ## @param redisWait.enabled Enables waiting for redis
   ##
   enabled: true
+  ## Redis image version
+  ## ref: https://hub.docker.com/r/bitnami/redis/tags/
+  ## @param redisWait.image.registry [default: REGISTRY_NAME] Redis image registry
+  ## @param redisWait.image.repository [default: REPOSITORY_NAME/redis] Redis image repository
+  ## @skip redisWait.image.tag Redis image tag (immutable tags are recommended)
+  ## @param redisWait.image.digest Redis image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param redisWait.image.pullPolicy Redis image pull policy
+  ## @param redisWait.image.pullSecrets Redis image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: 7.2.4-debian-11-r5
+    digest: ""
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## e.g:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  pullSecrets: []
+  ## Properties for the wait Redis init container
+  ## @param redisWait.command Override cmd
+  ## @param redisWait.args Override args
+  ## @param redisWait.extraVolumeMounts Add extra volume mounts
+  ## @param redisWait.extraEnvVars Add extra environment variables
+  ## @param redisWait.extraEnvVarsCM ConfigMap with extra environment variables
+  ## @param redisWait.extraEnvVarsSecret Secret with extra environment variables
+  ## @param redisWait.resources wait Redis init container resource requests and limits
+  ##
+  command: []
+  args: []
+  extraVolumeMounts: []
+  extraEnvVars: []
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  ## wait Redis init container resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ##
+  resources: {}
   ## @param redisWait.extraArgs Additional arguments for the redis-cli call, such as TLS
   ##
   extraArgs: ''
@@ -2386,12 +2455,16 @@ redisWait:
     seccompProfile:
       type: "RuntimeDefault"
 
+## 'initDirs' init container parameters
+##
 initDirs:
   image:
     repository: busybox
     tag: 1.36.1
     pullPolicy: IfNotPresent
-
+  ## initDirs init container resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ##
   resources: {}
   ## @param initDirs.containerSecurityContext.enabled Enabled init-dirs container Security Context
   ## @param initDirs.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
@@ -2416,6 +2489,196 @@ initDirs:
     seccompProfile:
       type: "RuntimeDefault"
 
+## 'volumePermissions' init container parameters
+## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
+## based on the podSecurityContext/containerSecurityContext parameters
+##
+volumePermissions:
+  ## @param volumePermissions.enabled  Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
+  ##
+  enabled: false
+  ## OS Shell + Utility image
+  ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
+  ## @param volumePermissions.image.registry [default: REGISTRY_NAME] OS Shell + Utility image registry
+  ## @param volumePermissions.image.repository [default: REPOSITORY_NAME/os-shell] OS Shell + Utility image repository
+  ## @skip volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.digest OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param volumePermissions.image.pullPolicy OS Shell + Utility image pull policy
+  ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/os-shell
+    tag: 11-debian-11-r95
+    digest: ""
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## Init container's resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param volumePermissions.resources.limits The resources limits for the init container
+  ## @param volumePermissions.resources.requests The requested resources for the init container
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Init container Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+  ## @param volumePermissions.securityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
+  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
+  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
+  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
+  ##
+  securityContext:
+    seLinuxOptions: null
+    runAsUser: 0
+
+## @section Netbox git sync parameters
+
+## Configure Git to pull reports and scripts
+##
+git:
+  ## Bitnami Git image version
+  ## ref: https://hub.docker.com/r/bitnami/git/tags/
+  ## @param git.image.registry [default: REGISTRY_NAME] Git image registry
+  ## @param git.image.repository [default: REPOSITORY_NAME/git] Git image repository
+  ## @skip git.image.tag Git image tag (immutable tags are recommended)
+  ## @param git.image.digest Git image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param git.image.pullPolicy Git image pull policy
+  ## @param git.image.pullSecrets Git image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: bitnami/git
+    tag: 2.43.2-debian-11-r4
+    digest: ""
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+
+  securityContext:
+    enabled: true
+    seLinuxOptions: null
+    runAsUser: 1001
+    runAsNonRoot: true
+    privileged: false
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
+  ## Get Report files from git repositories
+  ## @param git.reports.enabled Enable in order to download DAG files from git repositories.
+  ## @param git.reports.repositories [array] Array of repositories from which to download DAG files
+  ##
+  reports:
+    enabled: false
+    ## Name for repositories can be anything unique and must follow same naming conventions as kubernetes.
+    ## Kubernetes resources can have names up to 253 characters long. The characters allowed in names are:
+    ## digits (0-9), lower case letters (a-z), -, and .
+    ## Example:
+    ##   - repository: https://github.com/myuser/myrepo
+    ##     branch: main
+    ##     name: my-reports
+    ##     path: /
+    ##
+    repositories:
+      - repository: ""
+        ## Branch from repository to checkout
+        ##
+        branch: ""
+        ## An unique identifier for repository, must be unique for each repository
+        ##
+        name: ""
+        ## Subpath to a folder in the repository containing the reports
+        ##
+        path: ""
+  ## Get Script files from git repositories.
+  ## @param git.scripts.enabled Enable in order to download Plugins files from git repositories.
+  ## @param git.scripts.repositories [array] Array of repositories from which to download DAG files
+  ##
+  scripts:
+    enabled: false
+    repositories:
+      - repository: ""
+        ## Branch from repository to checkout
+        ##
+        branch: ""
+        ## An unique identifier for repository, must be unique for each repository
+        ##
+        name: ""
+        ## Subpath to a folder in the repository containing the scripts
+        ##
+        path: ""
+  ## Properties for the Clone init container
+  ## @param git.clone.command Override cmd
+  ## @param git.clone.args Override args
+  ## @param git.clone.extraVolumeMounts Add extra volume mounts
+  ## @param git.clone.extraEnvVars Add extra environment variables
+  ## @param git.clone.extraEnvVarsCM ConfigMap with extra environment variables
+  ## @param git.clone.extraEnvVarsSecret Secret with extra environment variables
+  ## @param git.clone.resources Clone init container resource requests and limits
+  ##
+  clone:
+    command: []
+    args: []
+    extraVolumeMounts: []
+    extraEnvVars: []
+    extraEnvVarsCM: ""
+    extraEnvVarsSecret: ""
+    ## Clone init container resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## @param web.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if web.resources is set (web.resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "none"
+    ## Clone init container resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ##
+    resources: {}
+  ## Properties for the Sync sidecar container
+  ## @param git.sync.interval Interval in seconds to pull the git repository containing the scripts and/or DAG files
+  ## @param git.sync.command Override cmd
+  ## @param git.sync.args Override args
+  ## @param git.sync.extraVolumeMounts Add extra volume mounts
+  ## @param git.sync.extraEnvVars Add extra environment variables
+  ## @param git.sync.extraEnvVarsCM ConfigMap with extra environment variables
+  ## @param git.sync.extraEnvVarsSecret Secret with extra environment variables
+  ## @param git.sync.resources Sync sidecar container resource requests and limits
+  ##
+  sync:
+    interval: 60
+    command: []
+    args: []
+    extraVolumeMounts: []
+    extraEnvVars: []
+    extraEnvVarsCM: ""
+    extraEnvVarsSecret: ""
+    ## Sync sidecar container resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ##
+    resources: {}
+
+## @section Netbox ingress gateway parameters
+## ref: https://istio.io/latest/docs/reference/config/networking/gateway/
+
 gateway:
   ## @param gateway.enabled  Enable Istio Gateway and VirtualService
   ##
@@ -2426,27 +2689,43 @@ gateway:
   ## @param gateway.gatewayApi 
   ## 
   gatewayApi:
-    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway
+    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway HTTPRoute
     ## 
     create: false
-  ## @param gateway.name 
+  ## @param gateway.name  Name of the Gateway resource
+  ## e.g.
+  ## name: istio-ingressgateway
   ## 
   name: ""
-  ## @param gateway.namespace 
+  ## @param gateway.namespace  Namespace for the Gateway resource
+  ## e.g.:
+  ## namespace: istio-ingressgateway
   ## 
   namespace: ""
-  ## @param gateway.gatewayClassName 
+  ## @param gateway.selector  Gateway instance selector labels. One or more labels that indicate a specific set of pods/VMs on 
+  ## which this gateway configuration should be applied.
+  ## ref: https://istio.io/latest/docs/reference/config/networking/gateway/#Gateway
+  ## e.g.
+  ## selector:
+  ##   istio.io/gateway-name: istio-ingressgateway
+  ##
+  selector: {}
+  ## @param gateway.gatewayClassName  Cluster-scoped resource defined by the infrastructure provider. This resource represents a
+  ## class of Gateways that can be instantiated.
+  ## ref: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
   ## 
   gatewayClassName: istio
   ## @param gateway.listeners
+  ## e.g.
+  ## listeners:
+  ##   - name: http
+  ##     port: 80
+  ##     protocol: HTTP
+  ##   - name: https
+  ##     port: 443
+  ##     protocol: HTTPS
   ##
   listeners: []
-    # - name: http
-    #   port: 80
-    #   protocol: HTTP
-    # - name: https
-    #   port: 443
-    #   protocol: HTTPS
   ## @param gateway.existingGateway
   ##
   existingGateway: ~
@@ -2459,5 +2738,3 @@ gateway:
   ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
   ##
   extraRoute: []
-
-organization: Startechnica

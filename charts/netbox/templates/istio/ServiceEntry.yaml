@@ -1,5 +1,5 @@
 {{- if and .Values.gateway.enabled (not .Values.gateway.existingServiceEntry) (not .Values.gateway.gatewayApi.create) -}}
-{{- if (include "common.capabilities.istioNetworking.apiVersion" .) -}}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") -}}
 apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
 kind: ServiceEntry
 metadata:
@@ -8,6 +8,8 @@ metadata:
 spec:
   hosts:
     - netbox.dev
+    - github.com
+    - api.github.com
   location: MESH_EXTERNAL
   ports:
     - number: 80

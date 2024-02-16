@@ -2,7 +2,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: {{ include "netbox.fullname" . }}-reports
+  name: {{ include "netbox.reports.pvcName" . }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/part-of: netbox
   {{- if or .Values.reportsPersistence.annotations .Values.commonAnnotations }}

@@ -1,4 +1,4 @@
-{{- if and (or .Values.metrics.enabled .Values.worker.metrics.enabled) .Values.metrics.serviceMonitor.enabled }}
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
 {{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
 apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
 kind: ServiceMonitor
@@ -12,7 +12,7 @@ metadata:
     app.kubernetes.io/part-of: netbox
    {{- if or .Values.commonAnnotations .Values.metrics.serviceMonitor.annotations }}
    {{- $annotations := merge.Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   {{- if .Values.metrics.serviceMonitor.jobLabel }}
@@ -32,10 +32,10 @@ spec:
       scrapeTimeout: {{ $endpoint.scrapeTimeout }}
       {{- end }}
       {{- if $endpoint.relabelings }}
-      relabelings: {{- include "common.tplvalues.render" ( dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
+      relabelings: {{- include "common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
       {{- end }}
       {{- if $endpoint.metricRelabelings }}
-      metricRelabelings: {{- include "common.tplvalues.render" ( dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
+      metricRelabelings: {{- include "common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
       {{- end }}
       {{- if $endpoint.honorLabels }}
       honorLabels: {{ $endpoint.honorLabels }}

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s" (include "netbox.fullname" .) }}
+  name: {{ include "netbox.configmapName" . }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -53,7 +53,6 @@ data:
 
     _load_yaml()
 
-    # db_password: {{ include "common.secrets.lookup" (dict "secret" (include "netbox.databaseSecretName" .) "key" (include "netbox.databaseSecretPasswordKey" .) "defaultValue" .Values.postgresql.auth.password "context" $) }}
     DATABASE["PASSWORD"] = _load_secret("netbox", "db_password")
     EMAIL["PASSWORD"] = _load_secret("netbox", "email_password")
     REDIS["tasks"]["PASSWORD"] = _load_secret("netbox", "redis_tasks_password")
@@ -208,8 +207,9 @@ data:
     SHORT_DATE_FORMAT: {{ .Values.shortDateFormat | quote }}
     SHORT_TIME_FORMAT: {{ .Values.shortTimeFormat | quote }}
     SHORT_DATETIME_FORMAT: {{ .Values.shortDateTimeFormat | quote }}
+    SKIP_SUPERUSER: {{ ternary false true .Values.superuser.create | toJson }}
 
-  {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backend) .Values.remoteAuth.ldap.enabled }}
+  {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
   ldap_config.py: |-
     from importlib import import_module
 

@@ -87,12 +87,15 @@ affinity:
 To uninstall/delete the `netbox` deployment on `netbox` namespace:
 
 ```console
-$ helm delete netbox --namespace netbox
+helm delete netbox --namespace netbox
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
 ## Breaking Changes
+
+### From 5.0.0 to 5.0.5
+
   * The `extraEnvs` setting has been renamed to `extraEnvVars`.
   * The `extraContainers` setting has been renamed to `sidecars`.
   * The `extraInitContainers` setting has been renamed to `initContainers`.
@@ -165,7 +168,7 @@ need to take action depending on how you have configured the chart. The
 PostgreSQL chart was upgraded from 5.x.x to 7.x.x, and Redis from 8.x.x to
 9.x.x.
 
-## Configuration
+## Configurations
 
 The following table lists the configurable parameters for this chart and their default values.
 
@@ -187,9 +190,12 @@ The following table lists the configurable parameters for this chart and their d
 | `nameOverride`             | String to partially override common.names.fullname template with a string (will prepend the release name)         | `""`            |
 | `namespaceOverride`        | String to fully override common.names.namespace                                                                   | `""`            |
 | `fullnameOverride`         | String to fully override common.names.fullname template with a string                                             | `""`            |
-| `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
 | `commonLabels`             | Labels to add to all deployed objects                                                                             | `{}`            |
+| `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
 | `schedulerName`            | Name of the Kubernetes scheduler (other than default)                                                             | `""`            |
+| `enableServiceLinks`       | If set to false, disable Kubernetes service links in the pod spec                                                 | `false`         |
+| `dnsPolicy`                | DNS Policy for pod https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/                       | `""`            |
+| `dnsConfig`                | DNS Configuration pod  https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/                   | `{}`            |
 | `clusterDomain`            | Kubernetes DNS Domain name to use                                                                                 | `cluster.local` |
 | `extraDeploy`              | Array of extra objects to deploy with the release (evaluated as a template)                                       | `[]`            |
 | `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                           | `false`         |
@@ -197,67 +203,77 @@ The following table lists the configurable parameters for this chart and their d
 | `diagnosticMode.args`      | Args to override all containers in the deployment                                                                 | `[]`            |
 
 
-### Netbox parameters
+### Netbox server parameters
 
-| Parameter                                       | Description                                                         | Default                                      |
-| ------------------------------------------------|---------------------------------------------------------------------|----------------------------------------------|
-| `replicaCount`                                  | The desired number of NetBox pods                                   | `1`                                          |
-| `image.repository`                              | NetBox container image repository                                   | `netboxcommunity/netbox`                     |
-| `image.tag`                                     | NetBox container image tag                                          | `v3.7.1-2.8.0`                               |
-| `image.pullPolicy`                              | NetBox container image pull policy                                  | `IfNotPresent`                               |
-| `superuser.name`                                | Initial super-user account to create                                | `admin`                                      |
-| `superuser.email`                               | Email address for the initial super-user account                    | `admin@example.com`                          |
-| `superuser.password`                            | Password for the initial super-user account                         | `admin`                                      |
-| `superuser.apiToken`                            | API token created for the initial super-user account                | `""`                                         |
-| `skipStartupScripts`                            | Skip [netbox-docker startup scripts]                                | `true`                                       |
-| `allowedHosts`                                  | List of valid FQDNs for this NetBox instance                        | `["*"]`                                      |
-| `admins`                                        | List of admins to email about critical errors                       | `[]`                                         |
-| `allowTokenRetrieval`                           | Permit the retrieval of API tokens after their creation             | `false`                                      |
-| `authPasswordValidators`                        | Configure validation of local user account passwords                | `[]`                                         |
-| `allowedUrlSchemes`                             | URL schemes that are allowed within links in NetBox                 | *see `values.yaml`*                          |
-| `banner.top`                                    | Banner text to display at the top of every page                     | `""`                                         |
-| `banner.bottom`                                 | Banner text to display at the bottom of every page                  | `""`                                         |
-| `banner.login`                                  | Banner text to display on the login page                            | `""`                                         |
-| `basePath`                                      | Base URL path if accessing NetBox within a directory                | `""`                                         |
-| `changelogRetention`                            | Maximum number of days to retain logged changes (0 = forever)       | `90`                                         |
-| `customValidators`                              | Custom validators for NetBox field values                           | `{}`                                         |
-| `defaultUserPreferences`                        | Default preferences for newly created user accounts                 | `{}`                                         |
-| `cors.originAllowAll`                           | [CORS]: allow all origins                                           | `false`                                      |
-| `cors.originWhitelist`                          | [CORS]: list of origins authorised to make cross-site HTTP requests | `[]`                                         |
-| `cors.originRegexWhitelist`                     | [CORS]: list of regex strings matching authorised origins           | `[]`                                         |
-| `csrf.cookieName`                               | Name of the CSRF authentication cookie                              | `csrftoken`                                  |
-| `csrf.trustedOrigins`                           | A list of trusted origins for unsafe (e.g. POST) requests           | `[]`                                         |
-| `debug`                                         | Enable NetBox debugging (NOT for production use)                    | `false`                                      |
-| `defaultLanguage`                               | Set the default preferred language/locale                           | `en-us`                                      |
-| `dbWaitDebug`                                   | Show details of errors that occur when applying migrations          | `false`                                      |
-| `email.server`                                  | SMTP server to use to send emails                                   | `localhost`                                  |
-| `email.port`                                    | TCP port to connect to the SMTP server on                           | `25`                                         |
-| `email.username`                                | Optional username for SMTP authentication                           | `""`                                         |
-| `email.password`                                | Password for SMTP authentication (see also `existingSecretName`)    | `""`                                         |
-| `email.useSSL`                                  | Use SSL when connecting to the server                               | `false`                                      |
-| `email.useTLS`                                  | Use TLS when connecting to the server                               | `false`                                      |
-| `email.sslCertFile`                             | SMTP SSL certificate file path (e.g. in a mounted volume)           | `""`                                         |
-| `email.sslKeyFile`                              | SMTP SSL key file path (e.g. in a mounted volume)                   | `""`                                         |
-| `email.timeout`                                 | Timeout for SMTP connections, in seconds                            | `10`                                         |
-| `email.from`                                    | Sender address for emails sent by NetBox                            | `""`                                         |
-| `enforceGlobalUnique`                           | Enforce unique IP space in the global table (not in a VRF)          | `false`                                      |
-| `exemptViewPermissions`                         | A list of models to exempt from the enforcement of view permissions | `[]`                                         |
-| `fieldChoices`                                  | Configure custom choices for certain built-in fields                | `{}`                                         |
-| `graphQlEnabled`                                | Enable the GraphQL API                                              | `true`                                       |
-| `httpProxies`                                   | HTTP proxies NetBox should use when sending outbound HTTP requests  | `null`                                       |
-| `internalIPs`                                   | IP addresses recognized as internal to the system                   | `['127.0.0.1', '::1']`                       |
-| `jobRetention`                                  | The number of days to retain job results (scripts and reports)      | `90`                                         |
-| `logging`                                       | Custom Django logging configuration                                 | `{}`                                         |
-| `loginPersistence`                              | Enables users to remain authenticated to NetBox indefinitely        | `false`                                      |
-| `loginRequired`                                 | Permit only logged-in users to access NetBox                        | `false` (unauthenticated read-only access)   |
-| `loginTimeout`                                  | How often to re-authenticate users                                  | `1209600` (14 days)                          |
-| `logoutRedirectUrl`                             | View name or URL to which users are redirected after logging out    | `home`                                       |
-| `maintenanceMode`                               | Display a "maintenance mode" banner on every page                   | `false`                                      |
-| `mapsUrl`                                       | The URL to use when mapping physical addresses or GPS coordinates   | `https://maps.google.com/?q=`                |
-| `maxPageSize`                                   | Maximum number of objects that can be returned by a single API call | `1000`                                       |
-| `storageBackend`                                | Django-storages backend class name                                  | `null`                                       |
-| `storageConfig`                                 | Django-storages backend configuration                               | `{}`                                         |
-| `metricsEnabled`                                | Expose Prometheus metrics at the `/metrics` HTTP endpoint           | `false`                                      |
+| Parameter                                       | Description                                                              | Default                                      |
+| ------------------------------------------------|--------------------------------------------------------------------------|----------------------------------------------|
+| `image.registry`                                | NetBox container image registry                                          | `docker.io`                                  |
+| `image.repository`                              | NetBox container image repository                                        | `netboxcommunity/netbox`                     |
+| `image.tag`                                     | NetBox container image tag                                               | `v3.7.2-2.8.0`                               |
+| `image.digest`                                  | NetBox image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag        | `"`                               |
+| `image.pullPolicy`                              | NetBox container image pull policy                                       | `IfNotPresent`                               |
+| `image.pullSecrets`                             | NetBox container image pull secret                                       | `[]`                                         |
+| `image.debug`                                   | Enable image debug mode                                                  | `false`                                      |
+| `command`                                       | Override default container command (useful when using custom images)     | `[]`                                         |
+| `args`                                          | Override default container args (useful when using custom images)        | `[]`                                         |
+| `extraEnvVars`                                  | Array with extra environment variables to add Netbox server pods         | `[]`                                         |
+| `extraEnvVarsCM`                                | ConfigMap containing extra environment variables for Netbox server pods  | `""`                                         |
+| `extraEnvVarsSecret`                            | Secret containing extra environment variables (in case of sensitive data) for Netbox server pods              | `""`                                      |
+| `extraEnvVarsSecrets`                           | List of secrets with extra environment variables for Netbox server pods  | `[]`                                         |
+| `replicaCount`                                  | The desired number of NetBox pods                                        | `1`                                          |
+| `superuser.name`                                | Initial super-user account to create                                     | `admin`                                      |
+| `superuser.email`                               | Email address for the initial super-user account                         | `admin@example.com`                          |
+| `superuser.password`                            | Password for the initial super-user account                              | `admin`                                      |
+| `superuser.apiToken`                            | API token created for the initial super-user account                     | `""`                                         |
+| `skipStartupScripts`                            | Skip [netbox-docker startup scripts]                                     | `true`                                       |
+| `allowedHosts`                                  | List of valid FQDNs for this NetBox instance                             | `["*"]`                                      |
+| `admins`                                        | List of admins to email about critical errors                            | `[]`                                         |
+| `allowTokenRetrieval`                           | Permit the retrieval of API tokens after their creation                  | `false`                                      |
+| `authPasswordValidators`                        | Configure validation of local user account passwords                     | `[]`                                         |
+| `allowedUrlSchemes`                             | URL schemes that are allowed within links in NetBox                      | *see `values.yaml`*                          |
+| `banner.top`                                    | Banner text to display at the top of every page                          | `""`                                         |
+| `banner.bottom`                                 | Banner text to display at the bottom of every page                       | `""`                                         |
+| `banner.login`                                  | Banner text to display on the login page                                 | `""`                                         |
+| `basePath`                                      | Base URL path if accessing NetBox within a directory                     | `""`                                         |
+| `changelogRetention`                            | Maximum number of days to retain logged changes (0 = forever)            | `90`                                         |
+| `customValidators`                              | Custom validators for NetBox field values                                | `{}`                                         |
+| `defaultUserPreferences`                        | Default preferences for newly created user accounts                      | `{}`                                         |
+| `cors.originAllowAll`                           | [CORS]: allow all origins                                                | `false`                                      |
+| `cors.originWhitelist`                          | [CORS]: list of origins authorised to make cross-site HTTP requests      | `[]`                                         |
+| `cors.originRegexWhitelist`                     | [CORS]: list of regex strings matching authorised origins                | `[]`                                         |
+| `csrf.cookieName`                               | Name of the CSRF authentication cookie                                   | `csrftoken`                                  |
+| `csrf.trustedOrigins`                           | A list of trusted origins for unsafe (e.g. POST) requests                | `[]`                                         |
+| `debug`                                         | Enable NetBox debugging (NOT for production use)                         | `false`                                      |
+| `defaultLanguage`                               | Set the default preferred language/locale                                | `en-us`                                      |
+| `dbWaitDebug`                                   | Show details of errors that occur when applying migrations               | `false`                                      |
+| `email.server`                                  | SMTP server to use to send emails                                        | `localhost`                                  |
+| `email.port`                                    | TCP port to connect to the SMTP server on                                | `25`                                         |
+| `email.username`                                | Optional username for SMTP authentication                                | `""`                                         |
+| `email.password`                                | Password for SMTP authentication (see also `existingSecretName`)         | `""`                                         |
+| `email.useSSL`                                  | Use SSL when connecting to the server                                    | `false`                                      |
+| `email.useTLS`                                  | Use TLS when connecting to the server                                    | `false`                                      |
+| `email.sslCertFile`                             | SMTP SSL certificate file path (e.g. in a mounted volume)                | `""`                                         |
+| `email.sslKeyFile`                              | SMTP SSL key file path (e.g. in a mounted volume)                        | `""`                                         |
+| `email.timeout`                                 | Timeout for SMTP connections, in seconds                                 | `10`                                         |
+| `email.from`                                    | Sender address for emails sent by NetBox                                 | `""`                                         |
+| `enforceGlobalUnique`                           | Enforce unique IP space in the global table (not in a VRF)               | `false`                                      |
+| `exemptViewPermissions`                         | A list of models to exempt from the enforcement of view permissions      | `[]`                                         |
+| `fieldChoices`                                  | Configure custom choices for certain built-in fields                     | `{}`                                         |
+| `graphQlEnabled`                                | Enable the GraphQL API                                                   | `true`                                       |
+| `httpProxies`                                   | HTTP proxies NetBox should use when sending outbound HTTP requests       | `null`                                       |
+| `internalIPs`                                   | IP addresses recognized as internal to the system                        | `['127.0.0.1', '::1']`                       |
+| `jobRetention`                                  | The number of days to retain job results (scripts and reports)           | `90`                                         |
+| `logging`                                       | Custom Django logging configuration                                      | `{}`                                         |
+| `loginPersistence`                              | Enables users to remain authenticated to NetBox indefinitely             | `false`                                      |
+| `loginRequired`                                 | Permit only logged-in users to access NetBox                             | `false` (unauthenticated read-only access)   |
+| `loginTimeout`                                  | How often to re-authenticate users                                       | `1209600` (14 days)                          |
+| `logoutRedirectUrl`                             | View name or URL to which users are redirected after logging out         | `home`                                       |
+| `maintenanceMode`                               | Display a "maintenance mode" banner on every page                        | `false`                                      |
+| `mapsUrl`                                       | The URL to use when mapping physical addresses or GPS coordinates        | `https://maps.google.com/?q=`                |
+| `maxPageSize`                                   | Maximum number of objects that can be returned by a single API call      | `1000`                                       |
+| `storageBackend`                                | Django-storages backend class name                                       | `null`                                       |
+| `storageConfig`                                 | Django-storages backend configuration                                    | `{}`                                         |
+| `metricsEnabled`                                | Expose Prometheus metrics at the `/metrics` HTTP endpoint                | `false`                                      |
 | `paginateCount`                                 | The default number of objects to display per page in the web UI     | `50`                                         |
 | `plugins`                                       | Additional plugins to load into NetBox                              | `[]`                                         |
 | `pluginsConfig`                                 | Configuration for the additional plugins                            | `{}`                                         |
@@ -267,44 +283,6 @@ The following table lists the configurable parameters for this chart and their d
 | `preferIPv4`                                    | Prefer devices' IPv4 address when determining their primary address | `false`                                      |
 | `rackElevationDefaultUnitHeight`                | Rack elevation default height in pixels                             | `22`                                         |
 | `rackElevationDefaultUnitWidth`                 | Rack elevation default width in pixels                              | `220`                                        |
-| `remoteAuth.enabled`                            | Enable remote authentication support                                | `false`                                      |
-| `remoteAuth.backends`                           | Remote authentication backend classes                               | `[netbox.authentication.RemoteUserBackend]`  |
-| `remoteAuth.header`                             | The name of the HTTP header which conveys the username              | `HTTP_REMOTE_USER`                           |
-| `remoteAuth.userFirstName`                      | HTTP header which contains the user's first name                    | `HTTP_REMOTE_USER_FIRST_NAME`                |
-| `remoteAuth.userLastName`                       | HTTP header which contains the user's last name                     | `HTTP_REMOTE_USER_LAST_NAME`                 |
-| `remoteAuth.userEmail`                          | HTTP header which contains the user's email address                 | `HTTP_REMOTE_USER_EMAIL`                     |
-| `remoteAuth.autoCreateUser`                     | Enables the automatic creation of new users                         | `false`                                      |
-| `remoteAuth.autoCreateGroups`                   | Enables the automatic creation of new groups                        | `false`                                      |
-| `remoteAuth.defaultGroups`                      | A list of groups to assign to newly created users                   | `[]`                                         |
-| `remoteAuth.defaultPermissions`                 | A list of permissions to assign newly created users                 | `{}`                                         |
-| `remoteAuth.groupSyncEnabled`                   | Sync remote user groups from an HTTP header set by a reverse proxy  | `false`                                      |
-| `remoteAuth.groupHeader`                        | The name of the HTTP header which conveys the groups to which the user belongs | `HTTP_REMOTE_USER_GROUP`          |
-| `remoteAuth.superuserGroups`                    | The list of groups that promote an remote User to Superuser on login| `[]`                                         |
-| `remoteAuth.superusers`                         | The list of users that get promoted to Superuser on login           | `[]`                                         |
-| `remoteAuth.staffGroups`                        | The list of groups that promote an remote User to Staff on login    | `[]`                                         |
-| `remoteAuth.staffUsers`                         | The list of users that get promoted to Staff on login               | `[]`                                         |
-| `remoteAuth.groupSeparator`                     | The Seperator upon which `remoteAuth.groupHeader` gets split into individual groups | `\|`                        |
-| `remoteAuth.ldap.enabled`                       | Enable LDAP remote auth backend support and configurations          | `""`                                         |
-| `remoteAuth.ldap.serverUri`                     | see [django-auth-ldap](https://django-auth-ldap.readthedocs.io)     | `""`                                         |
-| `remoteAuth.ldap.startTls`                      | if StarTLS should be used                                           | *see values.yaml*                            |
-| `remoteAuth.ldap.ignoreCertErrors`              | if Certificate errors should be ignored                             | *see values.yaml*                            |
-| `remoteAuth.ldap.bindDn`                        | Distinguished Name to bind with                                     | `""`                                         |
-| `remoteAuth.ldap.bindPassword`                  | Password for bind DN                                                | `""`                                         |
-| `remoteAuth.ldap.userDnTemplate`                | see [AUTH_LDAP_USER_DN_TEMPLATE](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-dn-template) | *see values.yaml* |
-| `remoteAuth.ldap.userSearchBaseDn`              | see base_dn of [django_auth_ldap.config.LDAPSearch](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#django_auth_ldap.config.LDAPSearch) | *see values.yaml* |
-| `remoteAuth.ldap.userSearchAttr`                | User attribute name for user search                                 | `sAMAccountName`                             |
-| `remoteAuth.ldap.groupSearchBaseDn`             | base DN for group search                                            | *see values.yaml*                            |
-| `remoteAuth.ldap.groupSearchClass`              | [django-auth-ldap](https://django-auth-ldap.readthedocs.io) for group search | `group`                             |
-| `remoteAuth.ldap.groupType`                     | see [AUTH_LDAP_GROUP_TYPE](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-group-type) | `GroupOfNamesType` |
-| `remoteAuth.ldap.requireGroupDn`                | DN of a group that is required for login                            | `null`                                       |
-| `remoteAuth.ldap.findGroupPerms`                | see [AUTH_LDAP_FIND_GROUP_PERMS](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-find-group-perms) | true |
-| `remoteAuth.ldap.mirrorGroups`                  | see [AUTH_LDAP_MIRROR_GROUPS](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-mirror-groups) | `null` |
-| `remoteAuth.ldap.cacheTimeout`                  | see [AUTH_LDAP_MIRROR_GROUPS_EXCEPT](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-mirror-groups-except) | `null` |
-| `remoteAuth.ldap.isAdminDn`                     | required DN to be able to login in Admin-Backend, "is_staff"-Attribute of [AUTH_LDAP_USER_FLAGS_BY_GROUP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-flags-by-group) | *see values.yaml* |
-| `remoteAuth.ldap.isSuperUserDn`                 | required DN to receive SuperUser privileges, "is_superuser"-Attribute of [AUTH_LDAP_USER_FLAGS_BY_GROUP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-flags-by-group) | *see values.yaml* |
-| `remoteAuth.ldap.attrFirstName`                 | first name attribute of users, "first_name"-Attribute of [AUTH_LDAP_USER_ATTR_MAP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-attr-map) | `givenName` |
-| `remoteAuth.ldap.attrLastName`                  | last name attribute of users, "last_name"-Attribute of [AUTH_LDAP_USER_ATTR_MAP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-attr-map) | `sn` |
-| `remoteAuth.ldap.attrMail`                      | mail attribute of users, "email_name"-Attribute of [AUTH_LDAP_USER_ATTR_MAP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-attr-map) | `mail` |
 | `releaseCheck.url`                              | Release check URL (GitHub API URL; see `values.yaml`)               | `null` (disabled by default)                 |
 | `rqDefaultTimeout`                              | Maximum execution time for background tasks, in seconds             | `300` (5 minutes)                            |
 | `sessionCookieName`                             | The name to use for the session cookie                              | `"sessionid"`                                |
@@ -313,10 +291,6 @@ The following table lists the configurable parameters for this chart and their d
 | `dateFormat`                                    | Django date format for long-form date strings                       | `"N j, Y"`                                   |
 | `shortDateFormat`                               | Django date format for short-form date strings                      | `"Y-m-d"`                                    |
 | `timeFormat`                                    | Django date format for long-form time strings                       | `"g:i a"`                                    |
-| `serviceMonitor.enabled`                        | Whether to enable a [ServiceMonitor](https://prometheus-operator.dev/docs/operator/design/#servicemonitor) for Netbox | `false`                                      |
-| `serviceMonitor.additionalLabels`               | Additonal labels to apply to the ServiceMonitor                     | `{}`                                         |
-| `serviceMonitor.interval`                       | Interval to scrape metrics.                                         | `1m`                                         |
-| `serviceMonitor.scrapeTimeout`                  | Timeout duration for scraping metrics                               | `10s`                                        |
 | `shortTimeFormat`                               | Django date format for short-form time strings                      | `"H:i:s"`                                    |
 | `dateTimeFormat`                                | Django date format for long-form date and time strings              | `"N j, Y g:i a"`                             |
 | `shortDateTimeFormat`                           | Django date format for short-form date and time strongs             | `"Y-m-d H:i"`                                |
@@ -324,57 +298,7 @@ The following table lists the configurable parameters for this chart and their d
 | `secretKey`                                     | Django secret key used for sessions and password reset tokens       | `""` (generated)                             |
 | `existingSecretName`                            | Use an existing Kubernetes `Secret` for secret values (see below)   | `""` (use individual chart values)           |
 | `overrideUnitConfig`                            | Override the NGINX Unit application server configuration            | `{}` (*see values.yaml*)                     |
-| `postgresql.enabled`                            | Deploy PostgreSQL using bundled Bitnami PostgreSQL chart            | `true`                                       |
-| `postgresql.auth.username`                      | Username to create for NetBox in bundled PostgreSQL instance        | `netbox`                                     |
-| `postgresql.auth.database`                      | Database to create for NetBox in bundled PostgreSQL instance        | `netbox`                                     |
-| `postgresql.*`                                  | Values under this key are passed to the bundled PostgreSQL chart    | n/a                                          |
-| `externalDatabase.host`                         | PostgreSQL host to use when `postgresql.enabled` is `false`         | `localhost`                                  |
-| `externalDatabase.port`                         | Port number for external PostgreSQL                                 | `5432`                                       |
-| `externalDatabase.database`                     | Database name for external PostgreSQL                               | `netbox`                                     |
-| `externalDatabase.username`                     | Username for external PostgreSQL                                    | `netbox`                                     |
-| `externalDatabase.password`                     | Password for external PostgreSQL (see also `existingSecretName`)    | `""`                                         |
-| `externalDatabase.existingSecretName`           | Fetch password for external PostgreSQL from a different `Secret`    | `""`                                         |
-| `externalDatabase.existingSecretKey`            | Key to fetch the password in the above `Secret`                     | `postgresql-password`                        |
-| `externalDatabase.sslMode`                      | PostgreSQL client SSL Mode setting                                  | `prefer`                                     |
-| `externalDatabase.connMaxAge`                   | The lifetime of a database connection, as an integer of seconds     | `300`                                        |
-| `externalDatabase.disableServerSideCursors`     | Disable the use of server-side cursors transaction pooling          | `false`                                      |
-| `externalDatabase.targetSessionAttrs`           | Determines whether the session must have certain properties         | `read-write`                                 |
-| `redis.enabled`                                 | Deploy Redis using bundled Bitnami Redis chart                      | `true`                                       |
-| `redis.*`                                       | Values under this key are passed to the bundled Redis chart         | n/a                                          |
-| `tasksRedis.database`                           | Redis database number used for NetBox task queue                    | `0`                                          |
-| `tasksRedis.ssl`                                | Enable SSL when connecting to Redis                                 | `false`                                      |
-| `tasksRedis.insecureSkipTlsVerify`              | Skip TLS certificate verification when connecting to Redis          | `false`                                      |
-| `tasksRedis.caCertPath`                         | Path to CA certificates bundle for Redis (needs mounting manually)  | `""`                                         |
-| `tasksRedis.host`                               | Redis host to use when `redis.enabled` is `false`                   | `"netbox-redis"`                             |
-| `tasksRedis.port`                               | Port number for external Redis                                      | `6379`                                       |
-| `tasksRedis.sentinels`                          | List of sentinels in `host:port` form (`host` and `port` not used)  | `[]`                                         |
-| `tasksRedis.sentinelService`                    | Sentinel master service name                                        | `"netbox-redis"`                             |
-| `tasksRedis.sentinelTimeout`                    | Sentinel connection timeout, in seconds                             | `300` (5 minutes)                            |
-| `tasksRedis.username`                           | Username for external Redis                                         | `""`                                         |
-| `tasksRedis.password`                           | Password for external Redis (see also `existingSecretName`)         | `""`                                         |
-| `tasksRedis.existingSecretName`                 | Fetch password for external Redis from a different `Secret`         | `""`                                         |
-| `tasksRedis.existingSecretKey`                  | Key to fetch the password in the above `Secret`                     | `redis-password`                             |
-| `cachingRedis.database`                         | Redis database number used for caching views                        | `1`                                          |
-| `cachingRedis.ssl`                              | Enable SSL when connecting to Redis                                 | `false`                                      |
-| `cachingRedis.insecureSkipTlsVerify`            | Skip TLS certificate verification when connecting to Redis          | `false`                                      |
-| `cachingRedis.caCertPath`                       | Path to CA certificates bundle for Redis (needs mounting manually)  | `""`                                         |
-| `cachingRedis.host`                             | Redis host to use when `redis.enabled` is `false`                   | `"netbox-redis"`                             |
-| `cachingRedis.port`                             | Port number for external Redis                                      | `6379`                                       |
-| `cachingRedis.sentinels`                        | List of sentinels in `host:port` form (`host` and `port` not used)  | `[]`                                         |
-| `cachingRedis.sentinelService`                  | Sentinel master service name                                        | `"netbox-redis"`                             |
-| `cachingRedis.sentinelTimeout`                  | Sentinel connection timeout, in seconds                             | `300` (5 minutes)                            |
-| `cachingRedis.username`                         | Username for external Redis                                         | `""`                                         |
-| `cachingRedis.password`                         | Password for external Redis (see also `existingSecretName`)         | `""`                                         |
-| `cachingRedis.existingSecretName`               | Fetch password for external Redis from a different `Secret`         | `""`                                         |
-| `cachingRedis.existingSecretKey`                | Key to fetch the password in the above `Secret`                     | `redis-password`                             |
 | `imagePullSecrets`                              | List of `Secret` names containing private registry credentials      | `[]`                                         |
-| `nameOverride`                                  | Override the application name (`netbox`) used throughout the chart  | `""`                                         |
-| `fullnameOverride`                              | Override the full name of resources created as part of the release  | `""`                                         |
-| `serviceAccount.create`                         | Create a ServiceAccount for NetBox                                  | `true`                                       |
-| `serviceAccount.annotations`                    | Annotations to add to the service account                           | `{}`                                         |
-| `serviceAccount.name`                           | The name of the service account to use                              | `""` (use the fullname)                      |
-| `serviceAccount.imagePullSecrets`               | Add an imagePullSecrets attribute to the serviceAccount             | `""`                                         |
-| `serviceAccount.automountServiceAccountToken`   | Whether to automatically mount the token in the containers using this serviceAccount or not | `false`              |
 | `persistence.enabled`                           | Enable storage persistence for uploaded media (images)              | `true`                                       |
 | `persistence.existingClaim`                     | Use an existing `PersistentVolumeClaim` instead of creating one     | `""`                                         |
 | `persistence.subPath`                           | Mount a sub-path of the volume into the container, not the root     | `""`                                         |
@@ -389,25 +313,17 @@ The following table lists the configurable parameters for this chart and their d
 | `reportsPersistence.selector`                   | Set the selector for PVs, if desired                                | `{}`                                         |
 | `reportsPersistence.accessMode`                 | Access mode for the volume                                          | `ReadWriteOnce`                              |
 | `reportsPersistence.size`                       | Size of persistent volume to request                                | `1Gi`                                        |
+| `scriptsPersistence.enabled`                    | Enable storage persistence for NetBox scripts                       | `false`                                      |
+| `scriptsPersistence.existingClaim`              | Use an existing `PersistentVolumeClaim` instead of creating one     | `""`                                         |
+| `scriptsPersistence.subPath`                    | Mount a sub-path of the volume into the container, not the root     | `""`                                         |
+| `scriptsPersistence.storageClass`               | Set the storage class of the PVC (use `-` to disable provisioning)  | `""`                                         |
+| `scriptsPersistence.selector`                   | Set the selector for PVs, if desired                                | `{}`                                         |
+| `scriptsPersistence.accessMode`                 | Access mode for the volume                                          | `ReadWriteOnce`                              |
+| `scriptsPersistence.size`                       | Size of persistent volume to request                                | `1Gi`                                        |
 | `podAnnotations`                                | Additional annotations for NetBox pods                              | `{}`                                         |
 | `podLabels`                                     | Additional labels for NetBox pods                                   | `{}`                                         |
 | `podSecurityContext`                            | Security context for NetBox pods                                    | *see `values.yaml`*                          |
 | `securityContext`                               | Security context for NetBox containers                              | *see `values.yaml`*                          |
-| `service.type`                                  | Type of `Service` resource to create                                | `ClusterIP`                                  |
-| `service.port`                                  | Port number for the service                                         | `80`                                         |
-| `service.nodePort`                              | The port used on the node when `service.type` is NodePort           | `""`                                         |
-| `service.clusterIP`                             | The cluster IP address assigned to the service                      | `""`                                         |
-| `service.clusterIPs`                            | A list of cluster IP addresses assigned to the service              | `[]`                                         |
-| `service.externalIPs`                           | A list of external IP addresses aliased to this service             | `[]`                                         |
-| `service.externalTrafficPolicy`                 | Policy for routing external traffic                                 | `""`                                         |
-| `service.ipFamilyPolicy`                        | Represents the dual-stack-ness of the service                       | `""`                                         |
-| `service.loadBalancerIP`                        | Request a specific IP address when `service.type` is LoadBalancer   | `""`                                         |
-| `service.loadBalancerSourceRanges`              | A list of allowed IP ranges when `service.type` is LoadBalancer     | `[]`                                         |
-| `ingress.enabled`                               | Create an `Ingress` resource for accessing NetBox                   | `false`                                      |
-| `ingress.className`                             | Use a named IngressClass                                            | `""`                                         |
-| `ingress.annotations`                           | Extra annotations to apply to the `Ingress` resource                | `{}`                                         |
-| `ingress.hosts`                                 | List of hosts and paths to map to the service (see `values.yaml`)   | `[{host:"chart-example.local",paths:["/"]}]` |
-| `ingress.tls`                                   | TLS settings for the `Ingress` resource                             | `[]`                                         |
 | `resources`                                     | Configure resource requests or limits for NetBox                    | `{}`                                         |
 | `automountServiceAccountToken`                  | Whether to automatically mount the serviceAccount token in the main container or not | `false`                     |
 | `topologySpreadConstraints`                     | Configure Pod Topology Spread Constraints for NetBox                | `[]`                                         |
@@ -416,11 +332,6 @@ The following table lists the configurable parameters for this chart and their d
 | `readinessProbe.timeoutSeconds`                 | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.periodSeconds`                  | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.successThreshold`               | Number of seconds                                                   |  *see `values.yaml`*                         |
-| `initDirs.image.repository`                     | Init container image repository                                     | `busybox`                                    |
-| `initDirs.image.tag`                            | Init container image tag                                            | `1.32.1`                                     |
-| `initDirs.image.pullPolicy`                     | Init container image pull policy                                    | `IfNotPresent`                               |
-| `initDirs.resources`                            | Configure resource requests or limits for init container            | `{}`                                         |
-| `initDirs.securityContext`                      | Security context for init container                                 | *see `values.yaml`*                          |
 | `autoscaling.enabled`                           | Whether to enable the HorizontalPodAutoscaler                       | `false`                                      |
 | `autoscaling.minReplicas`                       | Minimum number of replicas when autoscaling is enabled              | `1`                                          |
 | `autoscaling.maxReplicas`                       | Maximum number of replicas when autoscaling is enabled              | `100`                                        |
@@ -435,7 +346,106 @@ The following table lists the configurable parameters for this chart and their d
 | `extraVolumes`                                  | Additional volumes to reference in pods                             | `[]`                                         |
 | `extraContainers`                               | Additional sidecar containers to be added to pods                   | `[]`                                         |
 | `extraInitContainers`                           | Additional init containers to run before starting main containers   | `[]`                                         |
-| `worker`                                        | Worker specific variables. Most global variables also apply here.   | *see `values.yaml`*                          |
+
+### Netbox worker parameters
+
+| Name                                                       | Description                                                                                                              | Value                            |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| `worker.image.registry`                                    | Netbox Worker image registry                                                                                             | `docker.io`                      |
+| `worker.image.repository`                                  | Netbox Worker image repository                                                                                           | `netboxcommunity/netbox`         |
+| `worker.image.tag`                                         | NetBox Worker container image tag                                                                                        | `v3.7.2-2.8.0`                               |
+| `worker.image.digest`                                      | Netbox Worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag            | `""`                             |
+| `worker.image.pullPolicy`                                  | Netbox Worker image pull policy                                                                                          | `IfNotPresent`                   |
+| `worker.image.pullSecrets`                                 | Netbox Worker image pull secrets                                                                                         | `[]`                             |
+| `worker.image.debug`                                       | Enable image debug mode                                                                                                  | `false`                          |
+| `worker.command`                                           | Override default container command (useful when using custom images)                                                     | `[]`                             |
+| `worker.args`                                              | Override default container args (useful when using custom images)                                                        | `[]`                             |
+| `worker.extraEnvVars`                                      | Array with extra environment variables to add Netbox worker pods                                                         | `[]`                             |
+| `worker.extraEnvVarsCM`                                    | ConfigMap containing extra environment variables for Netbox worker pods                                                  | `""`                             |
+| `worker.extraEnvVarsSecret`                                | Secret containing extra environment variables (in case of sensitive data) for Netbox worker pods                         | `""`                             |
+| `worker.extraEnvVarsSecrets`                               | List of secrets with extra environment variables for Netbox worker pods                                                  | `[]`                             |
+| `worker.containerPorts.http`                               | Netbox worker HTTP container port                                                                                        | `""`                             |
+| `worker.replicaCount`                                      | Number of Netbox worker replicas                                                                                         | `1`                              |
+| `worker.livenessProbe.enabled`                             | Enable livenessProbe on Netbox worker containers                                                                         | `true`                           |
+| `worker.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                  | `180`                            |
+| `worker.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                         | `20`                             |
+| `worker.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                        | `5`                              |
+| `worker.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                      | `6`                              |
+| `worker.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                      | `1`                              |
+| `worker.readinessProbe.enabled`                            | Enable readinessProbe on Netbox worker containers                                                                        | `true`                           |
+| `worker.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                 | `30`                             |
+| `worker.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                        | `10`                             |
+| `worker.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                       | `5`                              |
+| `worker.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                     | `6`                              |
+| `worker.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                     | `1`                              |
+| `worker.startupProbe.enabled`                              | Enable startupProbe on Netbox worker containers                                                                          | `false`                          |
+| `worker.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                   | `60`                             |
+| `worker.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                          | `10`                             |
+| `worker.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                         | `1`                              |
+| `worker.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                       | `15`                             |
+| `worker.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                       | `1`                              |
+| `worker.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                      | `{}`                             |
+| `worker.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                     | `{}`                             |
+| `worker.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                       | `{}`                             |
+| `worker.resources.limits`                                  | The resources limits for the Netbox worker containers                                                                    | `{}`                             |
+| `worker.resources.requests`                                | The requested resources for the Netbox worker containers                                                                 | `{}`                             |
+| `worker.podSecurityContext.enabled`                        | Enabled Netbox worker pods' Security Context                                                                             | `true`                           |
+| `worker.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                       | `Always`                         |
+| `worker.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                           | `[]`                             |
+| `worker.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                              | `[]`                             |
+| `worker.podSecurityContext.fsGroup`                        | Set Netbox worker pod's Security Context fsGroup                                                                         | `1000`                           |
+| `worker.containerSecurityContext.enabled`                  | Enabled Netbox worker containers' Security Context                                                                       | `true`                           |
+| `worker.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                         | `nil`                            |
+| `worker.containerSecurityContext.runAsUser`                | Set Netbox worker containers' Security Context runAsUser                                                                 | `1000`                           |
+| `worker.containerSecurityContext.runAsNonRoot`             | Set Netbox worker containers' Security Context runAsNonRoot                                                              | `true`                           |
+| `worker.containerSecurityContext.privileged`               | Set worker container's Security Context privileged                                                                       | `false`                          |
+| `worker.containerSecurityContext.allowPrivilegeEscalation` | Set worker container's Security Context allowPrivilegeEscalation                                                         | `false`                          |
+| `worker.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                       | `["ALL"]`                        |
+| `worker.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                         | `RuntimeDefault`                 |
+| `worker.lifecycleHooks`                                    | for the Netbox worker container(s) to automate configuration before or after startup                                     | `{}`                             |
+| `worker.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                       | `false`                          |
+| `worker.hostAliases`                                       | Deployment pod host aliases                                                                                              | `[]`                             |
+| `worker.podLabels`                                         | Add extra labels to the Netbox worker pods                                                                               | `{}`                             |
+| `worker.podAnnotations`                                    | Add extra annotations to the Netbox worker pods                                                                          | `{}`                             |
+| `worker.affinity`                                          | Affinity for Netbox worker pods assignment (evaluated as a template)                                                     | `{}`                             |
+| `worker.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `worker.affinity` is set.                                                            | `""`                             |
+| `worker.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`                         | `""`                             |
+| `worker.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `worker.affinity` is set.                                                         | `[]`                             |
+| `worker.nodeSelector`                                      | Node labels for Netbox worker pods assignment                                                                            | `{}`                             |
+| `worker.podAffinityPreset`                                 | Pod affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`.                              | `""`                             |
+| `worker.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `worker.affinity` is set. Allowed values: `soft` or `hard`.                         | `soft`                           |
+| `worker.tolerations`                                       | Tolerations for Netbox worker pods assignment                                                                            | `[]`                             |
+| `worker.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains. Evaluated as a template | `[]`                             |
+| `worker.priorityClassName`                                 | Priority Class Name                                                                                                      | `""`                             |
+| `worker.schedulerName`                                     | Use an alternate scheduler, e.g. "stork".                                                                                | `""`                             |
+| `worker.terminationGracePeriodSeconds`                     | Seconds Netbox worker pod needs to terminate gracefully                                                                  | `""`                             |
+| `worker.updateStrategy.type`                               | Netbox worker deployment strategy type                                                                                   | `RollingUpdate`                  |
+| `worker.updateStrategy.rollingUpdate`                      | Netbox worker deployment rolling update configuration parameters                                                         | `{}`                             |
+| `worker.sidecars`                                          | Add additional sidecar containers to the Netbox worker pods                                                              | `[]`                             |
+| `worker.initContainers`                                    | Add additional init containers to the Netbox worker pods                                                                 | `[]`                             |
+| `worker.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Netbox worker pods                                      | `[]`                             |
+| `worker.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Netbox worker pods                                           | `[]`                             |
+| `worker.extraVolumeClaimTemplates`                         | Optionally specify extra list of volumesClaimTemplates for the Netbox worker statefulset                                 | `[]`                             |
+| `worker.podDisruptionBudget.create`                        | Deploy a podDisruptionBudget object for the Netbox worker pods                                                           | `false`                          |
+| `worker.podDisruptionBudget.minAvailable`                  | Maximum number/percentage of unavailable Netbox worker replicas                                                          | `1`                              |
+| `worker.podDisruptionBudget.maxUnavailable`                | Maximum number/percentage of unavailable Netbox worker replicas                                                          | `""`                             |
+| `worker.autoscaling.enabled`                               | Whether enable horizontal pod autoscaler                                                                                 | `false`                          |
+| `worker.autoscaling.minReplicas`                           | Configure a minimum amount of pods                                                                                       | `1`                              |
+| `worker.autoscaling.maxReplicas`                           | Configure a maximum amount of pods                                                                                       | `3`                              |
+| `worker.autoscaling.targetCPU`                             | Define the CPU target to trigger the scaling actions (utilization percentage)                                            | `80`                             |
+| `worker.autoscaling.targetMemory`                          | Define the memory target to trigger the scaling actions (utilization percentage)                                         | `80`                             |
+| `worker.networkPolicy.enabled`                             | Specifies whether a NetworkPolicy should be created                                                                      | `true`                           |
+| `worker.networkPolicy.allowExternal`                       | Don't require client label for connections                                                                               | `true`                           |
+| `worker.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolice                                                                             | `[]`                             |
+| `worker.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy                                                                             | `[]`                             |
+| `worker.networkPolicy.ingressNSMatchLabels`                | Labels to match to allow traffic from other namespaces                                                                   | `{}`                             |
+| `worker.networkPolicy.ingressNSPodMatchLabels`             | Pod labels to match to allow traffic from other namespaces                                                               | `{}`                             |
+| `extraWorkers`                                             | Extra objects to deploy as worker (evaluated as a template)                                                              | `[]`                             |
+
+### Netbox housekeeping parameters
+
+| Parameter                                       | Description                                                         | Default                                      |
+| ------------------------------------------------|---------------------------------------------------------------------|----------------------------------------------|
 | `housekeeping.enabled`                          | Whether the [Housekeeping][housekeeping] `CronJob` should be active | `true`                                       |
 | `housekeeping.concurrencyPolicy`                | ConcurrencyPolicy for the Housekeeping CronJob.                     | `Forbid`                                     |
 | `housekeeping.failedJobsHistoryLimit`           | Number of failed jobs to keep in history                            | `5`                                          |
@@ -458,6 +468,201 @@ The following table lists the configurable parameters for this chart and their d
 | `housekeeping.extraContainers`                  | Additional sidecar containers to be added to housekeeping CronJob   | `[]`                                         |
 | `housekeeping.extraInitContainers`              | Additional init containers for housekeeping CronJob pods            | `[]`                                         |
 
+### Traffic Exposure Parameters
+
+| Name                               | Description                                                                                                                      | Value                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `service.type`                     | Netbox service type                                                                                                              | `ClusterIP`              |
+| `service.ports.http`               | Netbox service HTTP port                                                                                                         | `80`                     |
+| `service.nodePorts.http`           | Node port for HTTP                                                                                                               | `""`                     |
+| `service.sessionAffinity`          | Control where client requests go, to the same pod or round-robin                                                                 | `None`                   |
+| `service.sessionAffinityConfig`    | Additional settings for the sessionAffinity                                                                                      | `{}`                     |
+| `service.clusterIP`                | Netbox service Cluster IP                                                                                                        | `""`                     |
+| `service.loadBalancerIP`           | Netbox service Load Balancer IP                                                                                                  | `""`                     |
+| `service.loadBalancerSourceRanges` | Netbox service Load Balancer sources                                                                                             | `[]`                     |
+| `service.externalTrafficPolicy`    | Netbox service external traffic policy                                                                                           | `Cluster`                |
+| `service.annotations`              | Additional custom annotations for Netbox service                                                                                 | `{}`                     |
+| `service.extraPorts`               | Extra port to expose on Netbox service                                                                                           | `[]`                     |
+| `ingress.enabled`                  | Enable ingress record generation for Netbox                                                                                      | `false`                  |
+| `ingress.ingressClassName`         | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                                                    | `""`                     |
+| `ingress.pathType`                 | Ingress path type                                                                                                                | `ImplementationSpecific` |
+| `ingress.apiVersion`               | Force Ingress API version (automatically detected if not set)                                                                    | `""`                     |
+| `ingress.hostname`                 | Default host for the ingress record                                                                                              | `netbox.local`           |
+| `ingress.path`                     | Default path for the ingress record                                                                                              | `/`                      |
+| `ingress.annotations`              | Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations. | `{}`                     |
+| `ingress.tls`                      | Enable TLS configuration for the host defined at `ingress.hostname` parameter                                                    | `false`                  |
+| `ingress.selfSigned`               | Create a TLS secret for this ingress record using self-signed certificates generated by Helm                                     | `false`                  |
+| `ingress.extraHosts`               | An array with additional hostname(s) to be covered with the ingress record                                                       | `[]`                     |
+| `ingress.extraPaths`               | An array with additional arbitrary paths that may need to be added to the ingress under the main host                            | `[]`                     |
+| `ingress.extraTls`                 | TLS configuration for additional hostname(s) to be covered with this ingress record                                              | `[]`                     |
+| `ingress.secrets`                  | Custom TLS certificates as secrets                                                                                               | `[]`                     |
+| `ingress.extraRules`               | Additional rules to be covered with this ingress record                                                                          | `[]`                     |
+| `gateway.enabled`                  |                                                                           | `false`                     |
+| `gateway.dedicated`                |                                                                           | `false`                     |
+| `gateway.gatewayApi.create`        |                                                                           | `false`                     |
+| `gateway.name`                     |                                                                           | `""`                        |
+| `gateway.namespace`                |                                                                           | `""`                        |
+| `gateway.gatewayClassName`         |                                                                           | `istio`                     |
+| `gateway.listeners`                |                                                                           | `[]`                        |
+| `gateway.existingGateway`          |                                                                           | `""`                        |
+| `gateway.existingServiceEntry`     |                                                                           | `""`                        |
+| `gateway.existingVirtualService`   |                                                                           | `""`                        |
+| `gateway.extraRoute`               |                                                                           | `[]`                        |
+
+### RBAC parameters
+
+| Name                                          | Description                                                            | Value   |
+| --------------------------------------------- | ---------------------------------------------------------------------- | ------- |
+| `serviceAccount.create`                       | Enable creation of ServiceAccount for Netbox pods                      | `true`  |
+| `serviceAccount.name`                         | The name of the ServiceAccount to use.                                 | `""`    |
+| `serviceAccount.automountServiceAccountToken` | Allows auto mount of ServiceAccountToken on the serviceAccount created | `false` |
+| `serviceAccount.imagePullSecrets`             | Add an imagePullSecrets attribute to the serviceAccount                | `""`    |
+| `serviceAccount.annotations`                  | Additional custom annotations for the ServiceAccount                   | `{}`    |
+| `rbac.create`                                 | Create Role and RoleBinding                                            | `false` |
+| `rbac.rules`                                  | Custom RBAC rules to set                                               | `[]`    |
+
+### Netbox metrics parameters
+
+| Name                                                        | Description                                                                                           | Value            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------| -----------------|
+| `metrics.enabled`                                           | Whether or enable Django exporter to expose Netbox metrics                                            | `false`          |
+| `metrics.service.ports.http`                                | Netbox exporter metrics service port                                                                  | `9112`           |
+| `metrics.service.clusterIP`                                 | Static clusterIP or None for headless services                                                        | `""`             |
+| `metrics.service.sessionAffinity`                           | Control where client requests go, to the same pod or round-robin                                      | `None`           |
+| `metrics.service.annotations`                               | Annotations for the Netbox exporter service                                                           | `{}`             |
+| `metrics.serviceMonitor.enabled`                            | if `true`, creates a Prometheus Operator ServiceMonitor (requires `metrics.enabled` to be `true`)     | `false`          |
+| `metrics.serviceMonitor.namespace`                          | Namespace in which Prometheus is running                                                              | `""`             |
+| `metrics.serviceMonitor.interval`                           | Interval at which metrics should be scraped                                                           | `""`             |
+| `metrics.serviceMonitor.scrapeTimeout`                      | Timeout after which the scrape is ended                                                               | `""`             |
+| `metrics.serviceMonitor.labels`                             | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus                 | `{}`             |
+| `metrics.serviceMonitor.selector`                           | Prometheus instance selector labels                                                                   | `{}`             |
+| `metrics.serviceMonitor.relabelings`                        | RelabelConfigs to apply to samples before scraping                                                    | `[]`             |
+| `metrics.serviceMonitor.metricRelabelings`                  | MetricRelabelConfigs to apply to samples before ingestion                                             | `[]`             |
+| `metrics.serviceMonitor.honorLabels`                        | Specify honorLabels parameter to add the scrape endpoint                                              | `false`          |
+| `metrics.serviceMonitor.jobLabel`                           | The name of the label on the target service to use as the job name in prometheus.                     | `""`             |
+| `metrics.networkPolicy.enabled`                             | Specifies whether a NetworkPolicy should be created                                                   | `true`           |
+| `metrics.networkPolicy.allowExternal`                       | Don't require client label for connections                                                            | `true`           |
+| `metrics.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                          | `[]`             |
+| `metrics.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy                                                          | `[]`             |
+| `metrics.networkPolicy.ingressNSMatchLabels`                | Labels to match to allow traffic from other namespaces                                                | `{}`             |
+| `metrics.networkPolicy.ingressNSPodMatchLabels`             | Pod labels to match to allow traffic from other namespaces                                            | `{}`             |
+| `worker.metrics.enabled`                                    | Whether or enable Django exporter to expose Netbox worker metrics                                     | `false`          |
+
+### Remote Authentication parameters
+
+| Name                                            | Description                                                                         | Value                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------- |
+| `remoteAuth.enabled`                            | Enable remote authentication support                                                | `false`                                      |
+| `remoteAuth.backends`                           | Remote authentication backend classes                                               | `[netbox.authentication.RemoteUserBackend]`  |
+| `remoteAuth.header`                             | The name of the HTTP header which conveys the username                              | `HTTP_REMOTE_USER`                           |
+| `remoteAuth.userFirstName`                      | HTTP header which contains the user's first name                                    | `HTTP_REMOTE_USER_FIRST_NAME`                |
+| `remoteAuth.userLastName`                       | HTTP header which contains the user's last name                                     | `HTTP_REMOTE_USER_LAST_NAME`                 |
+| `remoteAuth.userEmail`                          | HTTP header which contains the user's email address                                 | `HTTP_REMOTE_USER_EMAIL`                     |
+| `remoteAuth.autoCreateUser`                     | Enables the automatic creation of new users                                         | `false`                                      |
+| `remoteAuth.autoCreateGroups`                   | Enables the automatic creation of new groups                                        | `false`                                      |
+| `remoteAuth.defaultGroups`                      | A list of groups to assign to newly created users                                   | `[]`                                         |
+| `remoteAuth.defaultPermissions`                 | A list of permissions to assign newly created users                                 | `{}`                                         |
+| `remoteAuth.groupSyncEnabled`                   | Sync remote user groups from an HTTP header set by a reverse proxy                  | `false`                                      |
+| `remoteAuth.groupHeader`                        | The name of the HTTP header which conveys the groups to which the user belongs      | `HTTP_REMOTE_USER_GROUP`                     |
+| `remoteAuth.superuserGroups`                    | The list of groups that promote an remote User to Superuser on login                | `[]`                                         |
+| `remoteAuth.superusers`                         | The list of users that get promoted to Superuser on login                           | `[]`                                         |
+| `remoteAuth.staffGroups`                        | The list of groups that promote an remote User to Staff on login                    | `[]`                                         |
+| `remoteAuth.staffUsers`                         | The list of users that get promoted to Staff on login                               | `[]`                                         |
+| `remoteAuth.groupSeparator`                     | The Seperator upon which `remoteAuth.groupHeader` gets split into individual groups | `\|`                        |
+| `remoteAuth.ldap.enabled`                       | Enable LDAP remote auth backend support and configurations                          | `""`                                         |
+| `remoteAuth.ldap.serverUri`                     | see [django-auth-ldap](https://django-auth-ldap.readthedocs.io)                     | `""`                                         |
+| `remoteAuth.ldap.startTls`                      | if StarTLS should be used                                                           | *see values.yaml*                            |
+| `remoteAuth.ldap.ignoreCertErrors`              | if Certificate errors should be ignored                                             | *see values.yaml*                            |
+| `remoteAuth.ldap.bindDn`                        | Distinguished Name to bind with                                                     | `""`                                         |
+| `remoteAuth.ldap.bindPassword`                  | Password for bind DN                                                                | `""`                                         |
+| `remoteAuth.ldap.userDnTemplate`                | see [AUTH_LDAP_USER_DN_TEMPLATE](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-dn-template) | *see values.yaml* |
+| `remoteAuth.ldap.userSearchBaseDn`              | see base_dn of [django_auth_ldap.config.LDAPSearch](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#django_auth_ldap.config.LDAPSearch) | *see values.yaml* |
+| `remoteAuth.ldap.userSearchAttr`                | User attribute name for user search                                                 | `sAMAccountName`                             |
+| `remoteAuth.ldap.groupSearchBaseDn`             | base DN for group search                                                            | *see values.yaml*                            |
+| `remoteAuth.ldap.groupSearchClass`              | [django-auth-ldap](https://django-auth-ldap.readthedocs.io) for group search        | `group`                             |
+| `remoteAuth.ldap.groupType`                     | see [AUTH_LDAP_GROUP_TYPE](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-group-type) | `GroupOfNamesType` |
+| `remoteAuth.ldap.requireGroupDn`                | DN of a group that is required for login                                            | `null`                                       |
+| `remoteAuth.ldap.findGroupPerms`                | see [AUTH_LDAP_FIND_GROUP_PERMS](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-find-group-perms) | true |
+| `remoteAuth.ldap.mirrorGroups`                  | see [AUTH_LDAP_MIRROR_GROUPS](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-mirror-groups) | `null` |
+| `remoteAuth.ldap.cacheTimeout`                  | see [AUTH_LDAP_MIRROR_GROUPS_EXCEPT](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-mirror-groups-except) | `null` |
+| `remoteAuth.ldap.isAdminDn`                     | required DN to be able to login in Admin-Backend, "is_staff"-Attribute of [AUTH_LDAP_USER_FLAGS_BY_GROUP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-flags-by-group) | *see values.yaml* |
+| `remoteAuth.ldap.isSuperUserDn`                 | required DN to receive SuperUser privileges, "is_superuser"-Attribute of [AUTH_LDAP_USER_FLAGS_BY_GROUP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-flags-by-group) | *see values.yaml* |
+| `remoteAuth.ldap.attrFirstName`                 | first name attribute of users, "first_name"-Attribute of [AUTH_LDAP_USER_ATTR_MAP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-attr-map) | `givenName` |
+| `remoteAuth.ldap.attrLastName`                  | last name attribute of users, "last_name"-Attribute of [AUTH_LDAP_USER_ATTR_MAP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-attr-map) | `sn` |
+| `remoteAuth.ldap.attrMail`                      | mail attribute of users, "email_name"-Attribute of [AUTH_LDAP_USER_ATTR_MAP](https://django-auth-ldap.readthedocs.io/en/latest/reference.html#auth-ldap-user-attr-map) | `mail` |
+
+
+### Database parameters
+
+| Name                                         | Description                                                                                            | Value             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------- |
+| `postgresql.enabled`                         | Switch to enable or disable the PostgreSQL helm chart                                                  | `true`            |
+| `postgresql.auth.enablePostgresUser`         | Assign a password to the "postgres" admin user. Otherwise, remote access will be blocked for this user | `true`            |
+| `postgresql.auth.username`                   | Name for a custom user to create                                                                       | `netbox`          |
+| `postgresql.auth.password`                   | Password for the custom user to create                                                                 | `""`              |
+| `postgresql.auth.database`                   | Name for a custom database to create                                                                   | `netbox`          |
+| `postgresql.auth.existingSecret`             | Name of existing secret to use for PostgreSQL credentials                                              | `""`              |
+| `postgresql.architecture`                    | PostgreSQL architecture (`standalone` or `replication`)                                                | `standalone`      |
+| `externalDatabase.host`                      | Database host                                                                                          | `localhost`       |
+| `externalDatabase.port`                      | Database port number                                                                                   | `5432`            |
+| `externalDatabase.user`                      | Non-root username for Netbox                                                                           | `""`              |
+| `externalDatabase.password`                  | Password for the non-root username for Netbox                                                          | `""`              |
+| `externalDatabase.database`                  | Netbox database name                                                                                   | `""`              |
+| `externalDatabase.existingSecretName`        | Name of an existing secret resource containing the database credentials                                | `""`              |
+| `externalDatabase.existingSecretPasswordKey` | Name of an existing secret key containing the database credentials                                     | `db-password`     |
+| `externalDatabase.sslMode`                   | PostgreSQL client SSL Mode setting                                                                     | `prefer`          |
+| `externalDatabase.connMaxAge`                | The lifetime of a database connection, as an integer of seconds                                        | `300`             |
+| `externalDatabase.disableServerSideCursors`  | Disable the use of server-side cursors transaction pooling                                             | `false`           |
+| `externalDatabase.targetSessionAttrs`        | Determines whether the session must have certain properties                                            | `read-write`      |
+| `redis.enabled`                              | Switch to enable or disable the Redis&reg; helm                                                        | `true`            |
+| `redis.auth.enabled`                         | Enable password authentication                                                                         | `true`            |
+| `redis.auth.password`                        | Redis&reg; password                                                                                    | `""`              |
+| `redis.auth.existingSecret`                  | The name of an existing secret with Redis&reg; credentials                                             | `""`              |
+| `redis.architecture`                         | Redis&reg; architecture. Allowed values: `standalone` or `replication`                                 | `standalone`      |
+| `externalRedis.host`                         | Redis&reg; host                                                                                        | `localhost`       |
+| `externalRedis.port`                         | Redis&reg; port number                                                                                 | `6379`            |
+| `externalRedis.username`                     | Redis&reg; username                                                                                    | `""`              |
+| `externalRedis.password`                     | Redis&reg; password                                                                                    | `""`              |
+| `externalRedis.existingSecretName`           | Name of an existing secret resource containing the Redis&trade credentials                             | `""`              |
+| `externalRedis.existingSecretPasswordKey`    | Name of an existing secret key containing the Redis&trade credentials                                  | `""`              |
+| `tasksRedis.database`                        | Redis database number used for NetBox task queue                                                       | `0`                      |
+| `tasksRedis.ssl`                             | Enable SSL when connecting to Redis                                                                    | `false`                  |
+| `tasksRedis.insecureSkipTlsVerify`           | Skip TLS certificate verification when connecting to Redis                                             | `false`                  |
+| `tasksRedis.caCertPath`                      | Path to CA certificates bundle for Redis (needs mounting manually)                                     | `""`                     |
+| `tasksRedis.host`                            | Redis host to use when `redis.enabled` is `false`                                                      | `"netbox-redis-master"`  |
+| `tasksRedis.port`                            | Port number for external Redis                                                                         | `6379`                   |
+| `tasksRedis.sentinels`                       | List of sentinels in `host:port` form (`host` and `port` not used)                                     | `[]`                     |
+| `tasksRedis.sentinelService`                 | Sentinel master service name                                                                           | `"netbox-redis"`         |
+| `tasksRedis.sentinelTimeout`                 | Sentinel connection timeout, in seconds                                                                | `300` (5 minutes)        |
+| `tasksRedis.username`                        | Username for external Redis                                                                            | `""`                     |
+| `tasksRedis.password`                        | Password for external Redis (see also `existingSecretName`)                                            | `""`                     |
+| `tasksRedis.existingSecretName`              | Fetch password for external Redis from a different `Secret`                                            | `""`                     |
+| `tasksRedis.existingSecretPasswordKey`       | Key to fetch the password in the above `Secret`                                                        | `redis-task-password`    |
+| `cachingRedis.database`                      | Redis database number used for caching views                                                           | `1`                      |
+| `cachingRedis.ssl`                           | Enable SSL when connecting to Redis                                                                    | `false`                  |
+| `cachingRedis.insecureSkipTlsVerify`         | Skip TLS certificate verification when connecting to Redis                                             | `false`                  |
+| `cachingRedis.caCertPath`                    | Path to CA certificates bundle for Redis (needs mounting manually)                                     | `""`                     |
+| `cachingRedis.host`                          | Redis host to use when `redis.enabled` is `false`                                                      | `"netbox-redis"`         |
+| `cachingRedis.port`                          | Port number for external Redis                                                                         | `6379`                   |
+| `cachingRedis.sentinels`                     | List of sentinels in `host:port` form (`host` and `port` not used)                                     | `[]`                     |
+| `cachingRedis.sentinelService`               | Sentinel master service name                                                                           | `"netbox-redis"`         |
+| `cachingRedis.sentinelTimeout`               | Sentinel connection timeout, in seconds                                                                | `300` (5 minutes)        |
+| `cachingRedis.username`                      | Username for external Redis                                                                            | `""`                     |
+| `cachingRedis.password`                      | Password for external Redis (see also `existingSecretName`)                                            | `""`                     |
+| `cachingRedis.existingSecretName`            | Fetch password for external Redis from a different `Secret`                                            | `""`                     |
+| `cachingRedis.existingSecretPasswordKey`     | Key to fetch the password in the above `Secret`                                                        | `redis-caching-password` |
+
+
+### Init container 
+
+| Name                                         | Description                                                                                            | Value             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------- |
+| `initDirs.image.repository`                     | Init container image repository                                     | `busybox`                                    |
+| `initDirs.image.tag`                            | Init container image tag                                            | `1.32.1`                                     |
+| `initDirs.image.pullPolicy`                     | Init container image pull policy                                    | `IfNotPresent`                               |
+| `initDirs.resources`                            | Configure resource requests or limits for init container            | `{}`                                         |
+| `initDirs.securityContext`                      | Security context for init container                                 | *see `values.yaml`*                          |
+
 [netbox-docker startup scripts]: https://github.com/netbox-community/netbox-docker/tree/master/startup_scripts
 [CORS]: https://github.com/ottoyiu/django-cors-headers
 [housekeeping]: https://demo.netbox.dev/static/docs/administration/housekeeping/
@@ -465,7 +670,7 @@ The following table lists the configurable parameters for this chart and their d
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install` or provide a YAML file containing the values for the above parameters:
 
-```consoel
+```console
 helm install --name my-release startechnica/netbox --values values.yaml
 ```
 
@@ -532,9 +737,9 @@ this, the `Secret` must contain the following keys:
 | `ldap-bind-password`   | Password for LDAP bind DN                                     | If `remoteAuth.enabled` is `true` and `remoteAuth.backend` is `netbox.authentication.LDAPBackend` |
 | `redis-tasks-password` | Password for the external Redis tasks database                | If `redis.enabled` is `false` and `tasksRedis.existingSecretName` is unset                        |
 | `redis-cache-password` | Password for the external Redis cache database                | If `redis.enabled` is `false` and `cachingRedis.existingSecretName` is unset                      |
-| `secret_key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
-| `superuser_password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
-| `superuser_api_token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
+| `secret-key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
+| `superuser-password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
+| `superuser-api-token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
 
 ## Using extraConfig for S3 storage configuration
 
