@@ -88,7 +88,6 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       containers:
-        {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         - name: netbox
           image: {{ template "netbox.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -239,7 +238,6 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
-            {{- include "netbox.git.maincontainer.volumeMounts" . | trim | nindent 12 }}
             {{- if and .Values.metrics.enabled .Values.metrics.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -266,7 +264,6 @@ spec:
             - name: optunit
               mountPath: /opt/unit
         {{- include "netbox.redisWait.container" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
-        {{- include "netbox.git.containers.clone" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         {{- if or .Values.initContainers $needsVolumePermissions }}
         {{- if .Values.initContainers }}
           {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 10 }}
@@ -348,7 +345,6 @@ spec:
           configMap:
             name: {{ include "netbox.initdbScriptsCM" . }}
         {{- end }}
-        {{- include "netbox.git.volumes" . | trim | nindent 8 }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
         {{- if and .Values.metrics.enabled .Values.metrics.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
