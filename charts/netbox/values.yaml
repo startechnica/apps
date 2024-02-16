@@ -2676,6 +2676,9 @@ git:
     ##
     resources: {}
 
+## @section Netbox ingress gateway parameters
+## ref: https://istio.io/latest/docs/reference/config/networking/gateway/
+
 gateway:
   ## @param gateway.enabled  Enable Istio Gateway and VirtualService
   ##
@@ -2686,27 +2689,43 @@ gateway:
   ## @param gateway.gatewayApi 
   ## 
   gatewayApi:
-    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway
+    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway HTTPRoute
     ## 
     create: false
-  ## @param gateway.name 
+  ## @param gateway.name  Name of the Gateway resource
+  ## e.g.
+  ## name: istio-ingressgateway
   ## 
   name: ""
-  ## @param gateway.namespace 
+  ## @param gateway.namespace  Namespace for the Gateway resource
+  ## e.g.:
+  ## namespace: istio-ingressgateway
   ## 
   namespace: ""
-  ## @param gateway.gatewayClassName 
+  ## @param gateway.selector  Gateway instance selector labels. One or more labels that indicate a specific set of pods/VMs on 
+  ## which this gateway configuration should be applied.
+  ## ref: https://istio.io/latest/docs/reference/config/networking/gateway/#Gateway
+  ## e.g.
+  ## selector:
+  ##   istio.io/gateway-name: istio-ingressgateway
+  ##
+  selector: {}
+  ## @param gateway.gatewayClassName  Cluster-scoped resource defined by the infrastructure provider. This resource represents a
+  ## class of Gateways that can be instantiated.
+  ## ref: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
   ## 
   gatewayClassName: istio
   ## @param gateway.listeners
+  ## e.g.
+  ## listeners:
+  ##   - name: http
+  ##     port: 80
+  ##     protocol: HTTP
+  ##   - name: https
+  ##     port: 443
+  ##     protocol: HTTPS
   ##
   listeners: []
-    # - name: http
-    #   port: 80
-    #   protocol: HTTP
-    # - name: https
-    #   port: 443
-    #   protocol: HTTPS
   ## @param gateway.existingGateway
   ##
   existingGateway: ~

@@ -12,7 +12,11 @@ metadata:
   {{- end }}
 spec:
   selector:
+    {{- if .Values.gateway.selector }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.gateway.selector "context" $) | nindent 4 }}
+    {{- else }}
     istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
+    {{- end }}
   servers:
     - port:
         name: http
