@@ -2552,7 +2552,7 @@ git:
   image:
     registry: docker.io
     repository: bitnami/git
-    tag: 2.43.0-debian-11-r9
+    tag: 2.43.2-debian-11-r4
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -2592,7 +2592,7 @@ git:
         name: ""
         ## Subpath to a folder in the repository containing the reports
         ##
-        subPath: ""
+        path: ""
   ## Get Plugins files from git repositories.
   ## @param git.scripts.enabled Enable in order to download Plugins files from git repositories.
   ## @param git.scripts.repositories [array] Array of repositories from which to download DAG files
@@ -2609,7 +2609,7 @@ git:
         name: ""
         ## Subpath to a folder in the repository containing the scripts
         ##
-        subPath: ""
+        path: ""
   ## Properties for the Clone init container
   ## @param git.clone.command Override cmd
   ## @param git.clone.args Override args
@@ -2626,7 +2626,6 @@ git:
     extraEnvVars: []
     extraEnvVarsCM: ""
     extraEnvVarsSecret: ""
-    extraEnvVarsSecrets: []
     ## Clone init container resource requests and limits
     ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
     ##
