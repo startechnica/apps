@@ -29,7 +29,7 @@ Returns the volume mounts that will be used by the main container
 {{- if .Values.git.reports.enabled }}
   {{- range .Values.git.reports.repositories }}
 - name: git-cloned-reports
-  mountPath: /opt/git_{{ include "netbox.git.repository.name" . }}
+  mountPath: {{ printf "%s/git_%s" .Values.reportsPersistence.path (include "netbox.git.repository.name" .) }}
   {{- if .subPath }}
   subPath: {{ include "netbox.git.repository.name" . }}/{{ .subPath }}
   {{- else }}
@@ -40,7 +40,7 @@ Returns the volume mounts that will be used by the main container
 {{- if .Values.git.scripts.enabled }}
   {{- range .Values.git.scripts.repositories }}
 - name: git-cloned-scripts
-  mountPath: /opt/git_{{ include "netbox.git.repository.name" . }}
+  mountPath: {{ printf "%s/git_%s" .Values.scriptsPersistence.path (include "netbox.git.repository.name" .) }}
   {{- if .subPath }}
   subPath: {{ include "netbox.git.repository.name" . }}/{{ .subPath }}
   {{- else }}
@@ -137,21 +137,21 @@ Usage:
 - name: sync-repositories
   image: {{ include "git.image" .context | quote }}
   imagePullPolicy: {{ .context.Values.git.image.pullPolicy | quote }}
-{{- if .securityContext.enabled }}
+  {{- if .securityContext.enabled }}
   securityContext: {{- omit .securityContext "enabled" | toYaml | nindent 4 }}
-{{- end }}
-{{- if .context.Values.git.sync.resources }}
+  {{- end }}
+  {{- if .context.Values.git.sync.resources }}
   resources: {{- toYaml .context.Values.git.sync.resources | nindent 4 }}
-{{- end }}
-{{- if .context.Values.git.sync.command }}
+  {{- end }}
+  {{- if .context.Values.git.sync.command }}
   command: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.sync.command "context" .context) | nindent 4 }}
-{{- else }}
+  {{- else }}
   command:
     - /bin/bash
-{{- end }}
-{{- if .context.Values.git.sync.args }}
+  {{- end }}
+  {{- if .context.Values.git.sync.args }}
   args: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.sync.args "context" .context) | nindent 4 }}
-{{- else }}
+  {{- else }}
   args:
     - -ec
     - |
@@ -169,7 +169,7 @@ Usage:
       {{- end }}
           sleep {{ default "60" .context.Values.git.sync.interval }}
       done
-{{- end }}
+  {{- end }}
   volumeMounts:
     {{- include "netbox.git.volumeMounts" .context | trim | nindent 4 }}
   {{- if .context.Values.git.sync.extraVolumeMounts }}

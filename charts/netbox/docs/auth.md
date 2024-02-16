@@ -22,7 +22,7 @@ extraConfig:
   - secret:
       secretName: keycloak-client
   - values:
-      SOCIAL_AUTH_PIPELINE:
+      SOCIAL_AUTH_KEYCLOAK_PIPELINE:
         [
           "social_core.pipeline.social_auth.social_details",
           "social_core.pipeline.social_auth.social_uid",
@@ -38,13 +38,14 @@ extraConfig:
         ]
 
 extraVolumes:
-  - name: sso-pipeline-roles
+  - name: keycloak-pipeline-roles
     configMap:
-      name: sso-pipeline-roles
+      name: keycloak-pipeline-roles
+
 extraVolumeMounts:
-  - name: sso-pipeline-roles
-    mountPath: /opt/netbox/netbox/netbox/sso_pipeline_roles.py
-    subPath: sso_pipeline_roles.py
+  - name: keycloak-pipeline-roles
+    mountPath: /opt/netbox/netbox/netbox/keycloak_pipeline_roles.py
+    subPath: keycloak_pipeline_roles.py
     readOnly: true
 ```
 
@@ -64,17 +65,17 @@ extraDeploy:
         SOCIAL_AUTH_KEYCLOAK_KEY:               <OAUTH_CLIENT_ID>
         SOCIAL_AUTH_KEYCLOAK_SECRET:            <OAUTH_CLIENT_SECRET>
         SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY:        MIIB...AB
-        SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL: "https://keycloak.example.com/realms/master/protocol/openid-connect/auth"
-        SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL:  "https://keycloak.example.com/realms/master/protocol/openid-connect/token"
+        SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL: "https://keycloak.example.com/realms/<REALM_ID>/protocol/openid-connect/auth"
+        SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL:  "https://keycloak.example.com/realms/<REALM_ID>/protocol/openid-connect/token"
         SOCIAL_AUTH_JSONFIELD_ENABLED:          true
 
   - apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: sso-pipeline-roles
+      name: keycloak-pipeline-roles
       namespace: netbox
     data:
-      sso_pipeline_roles.py: |
+      keycloak_pipeline_roles.py: |
         from django.contrib.auth.models import Group
         def set_role(response, user, backend, *args, **kwargs):
           client_id = '<OAUTH_CLIENT_ID>'
@@ -101,13 +102,15 @@ extraDeploy:
 ```yaml
 remoteAuth:
   enabled: true
-  backend: social_core.backends.gitlab.GitLabOAuth2
+  backends:
+    - social_core.backends.gitlab.GitLabOAuth2
   autoCreateUser: true
+
 extraConfig:
   - secret:
       secretName: gitlab-client
   - values:
-      SOCIAL_AUTH_PIPELINE:
+      SOCIAL_AUTH_GITLAB_PIPELINE:
         [
             "social_core.pipeline.social_auth.social_details",
             "social_core.pipeline.social_auth.social_uid",
@@ -121,14 +124,16 @@ extraConfig:
             "social_core.pipeline.user.user_details",
             "netbox.sso_pipeline_roles.set_role",
         ]
+
 extraVolumes:
-  - name: sso-pipeline-roles
+  - name: gitlab-pipeline-roles
     configMap:
-      name: sso-pipeline-roles
+      name: gitlab-pipeline-roles
+
 extraVolumeMounts:
-  - name: sso-pipeline-roles
-    mountPath: /opt/netbox/netbox/netbox/sso_pipeline_roles.py
-    subPath: sso_pipeline_roles.py
+  - name: gitlab-pipeline-roles
+    mountPath: /opt/netbox/netbox/netbox/gitlab_pipeline_roles.py
+    subPath: gitlab_pipeline_roles.py
     readOnly: true
 ```
 
@@ -154,10 +159,10 @@ stringData:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sso-pipeline-roles
+  name: gitlab-pipeline-roles
   namespace: netbox
 data:
-  sso_pipeline_roles.py: |
+  gitlab_pipeline_roles.py: |
     from django.contrib.auth.models import Group
     import jwt
     from jwt import PyJWKClient

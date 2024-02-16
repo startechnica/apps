@@ -190,9 +190,12 @@ The following table lists the configurable parameters for this chart and their d
 | `nameOverride`             | String to partially override common.names.fullname template with a string (will prepend the release name)         | `""`            |
 | `namespaceOverride`        | String to fully override common.names.namespace                                                                   | `""`            |
 | `fullnameOverride`         | String to fully override common.names.fullname template with a string                                             | `""`            |
-| `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
 | `commonLabels`             | Labels to add to all deployed objects                                                                             | `{}`            |
+| `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
 | `schedulerName`            | Name of the Kubernetes scheduler (other than default)                                                             | `""`            |
+| `enableServiceLinks`       | If set to false, disable Kubernetes service links in the pod spec                                                 | `false`         |
+| `dnsPolicy`                | DNS Policy for pod https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/                       | `""`            |
+| `dnsConfig`                | DNS Configuration pod  https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/                   | `{}`            |
 | `clusterDomain`            | Kubernetes DNS Domain name to use                                                                                 | `cluster.local` |
 | `extraDeploy`              | Array of extra objects to deploy with the release (evaluated as a template)                                       | `[]`            |
 | `diagnosticMode.enabled`   | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                           | `false`         |
@@ -288,10 +291,6 @@ The following table lists the configurable parameters for this chart and their d
 | `dateFormat`                                    | Django date format for long-form date strings                       | `"N j, Y"`                                   |
 | `shortDateFormat`                               | Django date format for short-form date strings                      | `"Y-m-d"`                                    |
 | `timeFormat`                                    | Django date format for long-form time strings                       | `"g:i a"`                                    |
-| `serviceMonitor.enabled`                        | Whether to enable a [ServiceMonitor](https://prometheus-operator.dev/docs/operator/design/#servicemonitor) for Netbox | `false`                                      |
-| `serviceMonitor.additionalLabels`               | Additonal labels to apply to the ServiceMonitor                     | `{}`                                         |
-| `serviceMonitor.interval`                       | Interval to scrape metrics.                                         | `1m`                                         |
-| `serviceMonitor.scrapeTimeout`                  | Timeout duration for scraping metrics                               | `10s`                                        |
 | `shortTimeFormat`                               | Django date format for short-form time strings                      | `"H:i:s"`                                    |
 | `dateTimeFormat`                                | Django date format for long-form date and time strings              | `"N j, Y g:i a"`                             |
 | `shortDateTimeFormat`                           | Django date format for short-form date and time strongs             | `"Y-m-d H:i"`                                |
@@ -300,8 +299,6 @@ The following table lists the configurable parameters for this chart and their d
 | `existingSecretName`                            | Use an existing Kubernetes `Secret` for secret values (see below)   | `""` (use individual chart values)           |
 | `overrideUnitConfig`                            | Override the NGINX Unit application server configuration            | `{}` (*see values.yaml*)                     |
 | `imagePullSecrets`                              | List of `Secret` names containing private registry credentials      | `[]`                                         |
-| `nameOverride`                                  | Override the application name (`netbox`) used throughout the chart  | `""`                                         |
-| `fullnameOverride`                              | Override the full name of resources created as part of the release  | `""`                                         |
 | `persistence.enabled`                           | Enable storage persistence for uploaded media (images)              | `true`                                       |
 | `persistence.existingClaim`                     | Use an existing `PersistentVolumeClaim` instead of creating one     | `""`                                         |
 | `persistence.subPath`                           | Mount a sub-path of the volume into the container, not the root     | `""`                                         |
@@ -335,9 +332,6 @@ The following table lists the configurable parameters for this chart and their d
 | `readinessProbe.timeoutSeconds`                 | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.periodSeconds`                  | Number of seconds                                                   |  *see `values.yaml`*                         |
 | `readinessProbe.successThreshold`               | Number of seconds                                                   |  *see `values.yaml`*                         |
-
-
-
 | `autoscaling.enabled`                           | Whether to enable the HorizontalPodAutoscaler                       | `false`                                      |
 | `autoscaling.minReplicas`                       | Minimum number of replicas when autoscaling is enabled              | `1`                                          |
 | `autoscaling.maxReplicas`                       | Maximum number of replicas when autoscaling is enabled              | `100`                                        |
@@ -359,6 +353,7 @@ The following table lists the configurable parameters for this chart and their d
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
 | `worker.image.registry`                                    | Netbox Worker image registry                                                                                             | `docker.io`                      |
 | `worker.image.repository`                                  | Netbox Worker image repository                                                                                           | `netboxcommunity/netbox`         |
+| `worker.image.tag`                                         | NetBox Worker container image tag                                                                                        | `v3.7.2-2.8.0`                               |
 | `worker.image.digest`                                      | Netbox Worker image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag            | `""`                             |
 | `worker.image.pullPolicy`                                  | Netbox Worker image pull policy                                                                                          | `IfNotPresent`                   |
 | `worker.image.pullSecrets`                                 | Netbox Worker image pull secrets                                                                                         | `[]`                             |
@@ -369,7 +364,7 @@ The following table lists the configurable parameters for this chart and their d
 | `worker.extraEnvVarsCM`                                    | ConfigMap containing extra environment variables for Netbox worker pods                                                  | `""`                             |
 | `worker.extraEnvVarsSecret`                                | Secret containing extra environment variables (in case of sensitive data) for Netbox worker pods                         | `""`                             |
 | `worker.extraEnvVarsSecrets`                               | List of secrets with extra environment variables for Netbox worker pods                                                  | `[]`                             |
-| `worker.containerPorts.http`                               | Netbox worker HTTP container port                                                                                        | `""`                           |
+| `worker.containerPorts.http`                               | Netbox worker HTTP container port                                                                                        | `""`                             |
 | `worker.replicaCount`                                      | Number of Netbox worker replicas                                                                                         | `1`                              |
 | `worker.livenessProbe.enabled`                             | Enable livenessProbe on Netbox worker containers                                                                         | `true`                           |
 | `worker.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                  | `180`                            |
@@ -431,7 +426,7 @@ The following table lists the configurable parameters for this chart and their d
 | `worker.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Netbox worker pods                                      | `[]`                             |
 | `worker.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Netbox worker pods                                           | `[]`                             |
 | `worker.extraVolumeClaimTemplates`                         | Optionally specify extra list of volumesClaimTemplates for the Netbox worker statefulset                                 | `[]`                             |
-| `worker.podDisruptionBudget.create`                        | Deploy a podDisruptionBudget object for the Netbox worker pods                                                                           | `false`                          |
+| `worker.podDisruptionBudget.create`                        | Deploy a podDisruptionBudget object for the Netbox worker pods                                                           | `false`                          |
 | `worker.podDisruptionBudget.minAvailable`                  | Maximum number/percentage of unavailable Netbox worker replicas                                                          | `1`                              |
 | `worker.podDisruptionBudget.maxUnavailable`                | Maximum number/percentage of unavailable Netbox worker replicas                                                          | `""`                             |
 | `worker.autoscaling.enabled`                               | Whether enable horizontal pod autoscaler                                                                                 | `false`                          |
@@ -445,6 +440,7 @@ The following table lists the configurable parameters for this chart and their d
 | `worker.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy                                                                             | `[]`                             |
 | `worker.networkPolicy.ingressNSMatchLabels`                | Labels to match to allow traffic from other namespaces                                                                   | `{}`                             |
 | `worker.networkPolicy.ingressNSPodMatchLabels`             | Pod labels to match to allow traffic from other namespaces                                                               | `{}`                             |
+| `extraWorkers`                                             | Extra objects to deploy as worker (evaluated as a template)                                                              | `[]`                             |
 
 ### Netbox housekeeping parameters
 
@@ -501,6 +497,17 @@ The following table lists the configurable parameters for this chart and their d
 | `ingress.extraTls`                 | TLS configuration for additional hostname(s) to be covered with this ingress record                                              | `[]`                     |
 | `ingress.secrets`                  | Custom TLS certificates as secrets                                                                                               | `[]`                     |
 | `ingress.extraRules`               | Additional rules to be covered with this ingress record                                                                          | `[]`                     |
+| `gateway.enabled`                  |                                                                           | `false`                     |
+| `gateway.dedicated`                |                                                                           | `false`                     |
+| `gateway.gatewayApi.create`        |                                                                           | `false`                     |
+| `gateway.name`                     |                                                                           | `""`                        |
+| `gateway.namespace`                |                                                                           | `""`                        |
+| `gateway.gatewayClassName`         |                                                                           | `istio`                     |
+| `gateway.listeners`                |                                                                           | `[]`                        |
+| `gateway.existingGateway`          |                                                                           | `""`                        |
+| `gateway.existingServiceEntry`     |                                                                           | `""`                        |
+| `gateway.existingVirtualService`   |                                                                           | `""`                        |
+| `gateway.extraRoute`               |                                                                           | `[]`                        |
 
 ### RBAC parameters
 
@@ -516,30 +523,30 @@ The following table lists the configurable parameters for this chart and their d
 
 ### Netbox metrics parameters
 
-| Name                                                        | Description                                                                                                      | Value                              |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `metrics.enabled`                                           | Whether or not to create a standalone Netbox exporter to expose Netbox metrics                                   | `false`                            |
-| `metrics.service.ports.http`                                | Netbox exporter metrics service port                                                                            | `9112`                             |
-| `metrics.service.clusterIP`                                 | Static clusterIP or None for headless services                                                                   | `""`                               |
-| `metrics.service.sessionAffinity`                           | Control where client requests go, to the same pod or round-robin                                                 | `None`                             |
-| `metrics.service.annotations`                               | Annotations for the Netbox exporter service                                                                     | `{}`                               |
-| `metrics.serviceMonitor.enabled`                            | if `true`, creates a Prometheus Operator ServiceMonitor (requires `metrics.enabled` to be `true`)                | `false`                            |
-| `metrics.serviceMonitor.namespace`                          | Namespace in which Prometheus is running                                                                         | `""`                               |
-| `metrics.serviceMonitor.interval`                           | Interval at which metrics should be scraped                                                                      | `""`                               |
-| `metrics.serviceMonitor.scrapeTimeout`                      | Timeout after which the scrape is ended                                                                          | `""`                               |
-| `metrics.serviceMonitor.labels`                             | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus                            | `{}`                               |
-| `metrics.serviceMonitor.selector`                           | Prometheus instance selector labels                                                                              | `{}`                               |
-| `metrics.serviceMonitor.relabelings`                        | RelabelConfigs to apply to samples before scraping                                                               | `[]`                               |
-| `metrics.serviceMonitor.metricRelabelings`                  | MetricRelabelConfigs to apply to samples before ingestion                                                        | `[]`                               |
-| `metrics.serviceMonitor.honorLabels`                        | Specify honorLabels parameter to add the scrape endpoint                                                         | `false`                            |
-| `metrics.serviceMonitor.jobLabel`                           | The name of the label on the target service to use as the job name in prometheus.                                | `""`                               |
-| `metrics.networkPolicy.enabled`                             | Specifies whether a NetworkPolicy should be created                                                              | `true`                             |
-| `metrics.networkPolicy.allowExternal`                       | Don't require client label for connections                                                                       | `true`                             |
-| `metrics.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                     | `[]`                               |
-| `metrics.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy                                                                     | `[]`                               |
-| `metrics.networkPolicy.ingressNSMatchLabels`                | Labels to match to allow traffic from other namespaces                                                           | `{}`                               |
-| `metrics.networkPolicy.ingressNSPodMatchLabels`             | Pod labels to match to allow traffic from other namespaces                                                       | `{}`                               |
-
+| Name                                                        | Description                                                                                           | Value            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------| -----------------|
+| `metrics.enabled`                                           | Whether or enable Django exporter to expose Netbox metrics                                            | `false`          |
+| `metrics.service.ports.http`                                | Netbox exporter metrics service port                                                                  | `9112`           |
+| `metrics.service.clusterIP`                                 | Static clusterIP or None for headless services                                                        | `""`             |
+| `metrics.service.sessionAffinity`                           | Control where client requests go, to the same pod or round-robin                                      | `None`           |
+| `metrics.service.annotations`                               | Annotations for the Netbox exporter service                                                           | `{}`             |
+| `metrics.serviceMonitor.enabled`                            | if `true`, creates a Prometheus Operator ServiceMonitor (requires `metrics.enabled` to be `true`)     | `false`          |
+| `metrics.serviceMonitor.namespace`                          | Namespace in which Prometheus is running                                                              | `""`             |
+| `metrics.serviceMonitor.interval`                           | Interval at which metrics should be scraped                                                           | `""`             |
+| `metrics.serviceMonitor.scrapeTimeout`                      | Timeout after which the scrape is ended                                                               | `""`             |
+| `metrics.serviceMonitor.labels`                             | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus                 | `{}`             |
+| `metrics.serviceMonitor.selector`                           | Prometheus instance selector labels                                                                   | `{}`             |
+| `metrics.serviceMonitor.relabelings`                        | RelabelConfigs to apply to samples before scraping                                                    | `[]`             |
+| `metrics.serviceMonitor.metricRelabelings`                  | MetricRelabelConfigs to apply to samples before ingestion                                             | `[]`             |
+| `metrics.serviceMonitor.honorLabels`                        | Specify honorLabels parameter to add the scrape endpoint                                              | `false`          |
+| `metrics.serviceMonitor.jobLabel`                           | The name of the label on the target service to use as the job name in prometheus.                     | `""`             |
+| `metrics.networkPolicy.enabled`                             | Specifies whether a NetworkPolicy should be created                                                   | `true`           |
+| `metrics.networkPolicy.allowExternal`                       | Don't require client label for connections                                                            | `true`           |
+| `metrics.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                          | `[]`             |
+| `metrics.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy                                                          | `[]`             |
+| `metrics.networkPolicy.ingressNSMatchLabels`                | Labels to match to allow traffic from other namespaces                                                | `{}`             |
+| `metrics.networkPolicy.ingressNSPodMatchLabels`             | Pod labels to match to allow traffic from other namespaces                                            | `{}`             |
+| `worker.metrics.enabled`                                    | Whether or enable Django exporter to expose Netbox worker metrics                                     | `false`          |
 
 ### Remote Authentication parameters
 
@@ -648,6 +655,8 @@ The following table lists the configurable parameters for this chart and their d
 
 ### Init container 
 
+| Name                                         | Description                                                                                            | Value             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------- |
 | `initDirs.image.repository`                     | Init container image repository                                     | `busybox`                                    |
 | `initDirs.image.tag`                            | Init container image tag                                            | `1.32.1`                                     |
 | `initDirs.image.pullPolicy`                     | Init container image pull policy                                    | `IfNotPresent`                               |
@@ -661,7 +670,7 @@ The following table lists the configurable parameters for this chart and their d
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install` or provide a YAML file containing the values for the above parameters:
 
-```consoel
+```console
 helm install --name my-release startechnica/netbox --values values.yaml
 ```
 
