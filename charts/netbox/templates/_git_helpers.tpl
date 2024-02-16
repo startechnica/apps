@@ -36,9 +36,9 @@ Returns the volume mounts that will be used by the main container
 {{- if .Values.git.reports.enabled }}
   {{- range .Values.git.reports.repositories }}
 - name: git-cloned-reports
-  mountPath: {{ printf "%s/git_%s" .Values.reportsPersistence.path (include "netbox.git.repository.name" .) }}
-  {{- if .subPath }}
-  subPath: {{ include "netbox.git.repository.name" . }}/{{ .subPath }}
+  mountPath: {{ printf "%s/git_%s" $.Values.reportsPersistence.path (include "netbox.git.repository.name" .) }}
+  {{- if .path }}
+  subPath: {{ include "netbox.git.repository.name" . }}/{{ .path }}
   {{- else }}
   subPath: {{ include "netbox.git.repository.name" . }}
   {{- end }}
@@ -47,9 +47,9 @@ Returns the volume mounts that will be used by the main container
 {{- if .Values.git.scripts.enabled }}
   {{- range .Values.git.scripts.repositories }}
 - name: git-cloned-scripts
-  mountPath: {{ printf "%s/git_%s" .Values.scriptsPersistence.path (include "netbox.git.repository.name" .) }}
-  {{- if .subPath }}
-  subPath: {{ include "netbox.git.repository.name" . }}/{{ .subPath }}
+  mountPath: {{ printf "%s/git_%s" $.Values.scriptsPersistence.path (include "netbox.git.repository.name" .) }}
+  {{- if .path }}
+  subPath: {{ include "netbox.git.repository.name" . }}/{{ .path }}
   {{- else }}
   subPath: {{ include "netbox.git.repository.name" . }}
   {{- end }}
