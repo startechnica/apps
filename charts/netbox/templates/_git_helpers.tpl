@@ -1,5 +1,12 @@
 {{/* vim: set filetype=mustache: */}}
 {{/*
+Return the proper git image name
+*/}}
+{{- define "netbox.git.image" -}}
+{{- include "common.images.image" (dict "imageRoot" .Values.git.image "global" .Values.global) -}}
+{{- end -}}
+
+{{/*
 Returns the name that will identify the repository internally and it will be used to create folders or
 volume names
 */}}
@@ -72,7 +79,7 @@ Usage:
 {{- define "netbox.git.containers.clone" -}}
 {{- if or .context.Values.git.reports.enabled .context.Values.git.scripts.enabled }}
 - name: clone-repositories
-  image: {{ include "git.image" .context | quote }}
+  image: {{ include "netbox.git.image" .context | quote }}
   imagePullPolicy: {{ .context.Values.git.image.pullPolicy | quote }}
 {{- if .securityContext.enabled }}
   securityContext: {{- omit .securityContext "enabled" | toYaml | nindent 4 }}
@@ -135,7 +142,7 @@ Usage:
 {{- define "netbox.git.containers.sync" -}}
 {{- if or .context.Values.git.reports.enabled .context.Values.git.scripts.enabled }}
 - name: sync-repositories
-  image: {{ include "git.image" .context | quote }}
+  image: {{ include "netbox.git.image" .context | quote }}
   imagePullPolicy: {{ .context.Values.git.image.pullPolicy | quote }}
   {{- if .securityContext.enabled }}
   securityContext: {{- omit .securityContext "enabled" | toYaml | nindent 4 }}
