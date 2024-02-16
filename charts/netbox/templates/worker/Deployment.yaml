@@ -67,6 +67,7 @@ spec:
       serviceAccountName: {{ template "netbox.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
       containers:
+        {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         - name: worker
           image: {{ template "netbox.worker.image" . }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy | quote }}
@@ -164,9 +165,10 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
         {{- end }}
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.worker.podSecurityContext.enabled .Values.worker.containerSecurityContext.enabled }}
-      {{- if or .Values.redisWait.enabled .Values.worker.initContainers $needsVolumePermissions }}
+      {{- if or .Values.redisWait.enabled .Values.git.reports.enabled .Values.git.scripts.enabled .Values.worker.initContainers $needsVolumePermissions }}
       initContainers:
         {{- include "netbox.redisWait.container" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
+        {{- include "netbox.git.containers.clone" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         {{- if .Values.worker.initContainers }}
           {{- include "common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
         {{- end }}
