@@ -152,6 +152,7 @@ spec:
               {{- if .Values.scriptsPersistence.subPath }}
               subPath: {{ .Values.scriptsPersistence.subPath | quote }}
               {{- end }}
+            {{- include "netbox.git.maincontainer.volumeMounts" . | trim | nindent 12 }}
             {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}

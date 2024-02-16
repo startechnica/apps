@@ -88,7 +88,7 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       containers:
-        {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.worker.containerSecurityContext "context" $) | trim | nindent 8 }}
+        {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.containerSecurityContext "context" $) | trim | nindent 8 }}
         - name: netbox
           image: {{ template "netbox.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -239,6 +239,7 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
+            {{- include "netbox.git.maincontainer.volumeMounts" . | trim | nindent 12 }}
             {{- if and .Values.metrics.enabled .Values.metrics.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
