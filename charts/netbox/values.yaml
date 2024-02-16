@@ -1327,6 +1327,7 @@ autoscaling:
 ## @section Netbox housekeeping parameters
 
 ## Configuration of Cron settings
+## ref: https://docs.netbox.dev/en/stable/administration/housekeeping/
 ##
 housekeeping:
   ## @param housekeeping.enabled Whether to enable Netbox housekeeping cron job
@@ -1536,6 +1537,7 @@ housekeeping:
 ## @section Netbox worker parameters
 
 ## Only required for Netbox Jobs, e.g. Webhooks
+## ref: https://docs.netbox.dev/en/stable/features/background-jobs/
 ##
 worker:
   ## @param worker.enabled Whether to enable Netbox worker job
@@ -1884,8 +1886,9 @@ worker:
   ##
   networkPolicy:
     ## @param worker.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+    ##     Handle with care. Egress may obstruct Job, Sync and Queues.
     ##
-    enabled: true
+    enabled: false
     ## @param worker.networkPolicy.allowExternal Don't require client label for connections
     ## The Policy model to apply. When set to false, only pods with the correct
     ## client label will have network access to the ports Worker is listening
