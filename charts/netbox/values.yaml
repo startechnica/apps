@@ -2732,8 +2732,9 @@ gateway:
   ## @param gateway.existingVirtualService
   ##
   existingVirtualService: ~
+  ## @param gateway.existingServiceEntry
+  ##
+  existingServiceEntry: ~  
   ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
   ##
   extraRoute: []
-
-organization: Startechnica
