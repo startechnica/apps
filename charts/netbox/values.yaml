@@ -2567,7 +2567,19 @@ git:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
-  ## Get DAG files from git repositories
+
+  securityContext:
+    enabled: true
+    seLinuxOptions: null
+    runAsUser: 1001
+    runAsNonRoot: true
+    privileged: false
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
+  ## Get Report files from git repositories
   ## @param git.reports.enabled Enable in order to download DAG files from git repositories.
   ## @param git.reports.repositories [array] Array of repositories from which to download DAG files
   ##
@@ -2593,7 +2605,7 @@ git:
         ## Subpath to a folder in the repository containing the reports
         ##
         path: ""
-  ## Get Plugins files from git repositories.
+  ## Get Script files from git repositories.
   ## @param git.scripts.enabled Enable in order to download Plugins files from git repositories.
   ## @param git.scripts.repositories [array] Array of repositories from which to download DAG files
   ##
