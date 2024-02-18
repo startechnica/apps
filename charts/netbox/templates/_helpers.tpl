@@ -646,16 +646,16 @@ Return true if a TLS secret object should be created
 {{- end -}}
 
 {{- define "netbox.reports.pvcName" -}}
-{{- if .Values.reportsPersistance.existingClaim -}}
-    {{- .Values.reportsPersistance.existingClaim -}}
+{{- if .Values.reportsPersistence.existingClaim -}}
+    {{- .Values.reportsPersistence.existingClaim -}}
 {{- else -}}
     {{ printf "%s-%s" (include "netbox.fullname" .) "reports" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "netbox.scripts.pvcName" -}}
-{{- if .Values.scriptsPersistance.existingClaim -}}
-    {{- .Values.scriptsPersistance.existingClaim -}}
+{{- if .Values.scriptsPersistence.existingClaim -}}
+    {{- .Values.scriptsPersistence.existingClaim -}}
 {{- else -}}
     {{ printf "%s-%s" (include "netbox.fullname" .) "scripts" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
