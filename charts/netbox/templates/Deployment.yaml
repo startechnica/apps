@@ -333,13 +333,7 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        - name: scripts
-          {{- if .Values.scriptsPersistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "netbox.scripts.pvcName" . }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+        {{- include "netbox.scripts.volumes" . | trim | nindent 8 }}
         {{- if or .Values.initdbScriptsConfigMap .Values.initdbScripts }}
         - name: custom-init-scripts
           configMap:

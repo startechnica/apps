@@ -226,13 +226,7 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        - name: scripts
-          {{- if .Values.scriptsPersistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "netbox.scripts.pvcName" . }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+        {{- include "netbox.scripts.volumes" . | trim | nindent 8 }}
         {{- include "netbox.git.volumes" . | trim | nindent 8 }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
         {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumes }}

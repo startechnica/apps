@@ -664,7 +664,7 @@ Return true if a TLS secret object should be created
 {{/*
 Returns the volumes that will be attached to the workload resources (deployment, statefulset, etc)
 */}}
-{{- define "netbox.script.volume" -}}
+{{- define "netbox.scripts.volumes" -}}
 - name: scripts
   {{- if .Values.scriptsPersistence.enabled }}
   persistentVolumeClaim:
