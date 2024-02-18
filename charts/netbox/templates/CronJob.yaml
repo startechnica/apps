@@ -175,20 +175,8 @@ spec:
           - name: netbox-tmp
             emptyDir:
               medium: Memory
-          - name: media
-            {{- if .Values.persistence.enabled }}
-            persistentVolumeClaim:
-              claimName: {{ include "netbox.media.pvcName" . }}
-            {{- else }}
-            emptyDir: {}
-            {{- end }}
-          - name: reports
-            {{- if .Values.reportsPersistence.enabled }}
-            persistentVolumeClaim:
-              claimName: {{ include "netbox.reports.pvcName" . }}
-            {{- else }}
-            emptyDir: {}
-            {{- end }}
+          {{- include "netbox.media.volumes" . | trim | nindent 10 }}
+          {{- include "netbox.reports.volumes" . | trim | nindent 10 }}
           {{- include "netbox.scripts.volumes" . | trim | nindent 10 }}
           {{- if .Values.extraVolumes }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 10 }}
