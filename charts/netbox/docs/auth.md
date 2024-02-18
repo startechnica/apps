@@ -9,6 +9,15 @@ You can leverage the `extraConfig` value in conjunction with `remoteAuth`.
 By default the users do not have any permission after logging in.
 Using custom auth pipelines you can assign groups based on the roles supplied by the oauth provider.
 
+## Configuring Keycloak
+Add Audience mapper
+
+- Clients -> <CLIENT_ID> -> [Tab] Client Scopes -> [Tab] Setup -> <client_id>-dedicated
+- Mappers -> Add mapper -> By configuration -> Audience
+    - Mapper type: Audience
+    - Name: netbox-aud
+    - Included Client Audience: <CLIENT_ID>
+
 ### Example config for Keycloak backend
 
 ```yaml

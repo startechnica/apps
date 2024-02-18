@@ -653,12 +653,25 @@ Return true if a TLS secret object should be created
 {{- end -}}
 {{- end -}}
 
-{{- define "netbox.scriptsPersistence.pvcName" -}}
+{{- define "netbox.scripts.pvcName" -}}
 {{- if .Values.scriptsPersistance.existingClaim -}}
     {{- .Values.scriptsPersistance.existingClaim -}}
 {{- else -}}
     {{ printf "%s-%s" (include "netbox.fullname" .) "scripts" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Returns the volumes that will be attached to the workload resources (deployment, statefulset, etc)
+*/}}
+{{- define "netbox.script.volume" -}}
+- name: scripts
+  {{- if .Values.scriptsPersistence.enabled }}
+  persistentVolumeClaim:
+    claimName: {{ include "netbox.scripts.pvcName" . }}
+  {{- else }}
+  emptyDir: {}
+  {{- end }}
 {{- end -}}
 
 {{/* Validate values of Netbox - database */}}
