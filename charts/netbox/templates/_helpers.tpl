@@ -675,9 +675,9 @@ Returns the volumes that will be attached to the workload resources (deployment,
 {{- end -}}
 {{- define "netbox.reports.volumes" -}}
 - name: reports
-  {{- if .Values.reportsPersistance.enabled }}
+  {{- if .Values.reportsPersistence.enabled }}
   persistentVolumeClaim:
-    claimName: {{ include "netbox.scripts.pvcName" . }}
+    claimName: {{ include "netbox.reports.pvcName" . }}
   {{- else }}
   emptyDir: {}
   {{- end }}
