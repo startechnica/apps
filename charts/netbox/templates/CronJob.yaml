@@ -151,12 +151,12 @@ spec:
                       path: email_password
                     - key: {{ include "netbox.secretSecretKeyKey" . }}
                       path: secret_key
-              {{- if .Values.remoteAuth.enabled }}
+              {{- if and .Values.remoteAuth.enabled (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
               - secret:
                   name: {{ include "netbox.remoteAuth.secretName" . | quote }}
                   items:
                     {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
-                    - key: ldap_bind_password
+                    - key: {{ include "netbox.remoteAuth.ldap.secretBindPasswordKey" . | quote }}
                       path: ldap_bind_password
                     {{- end }}
               {{- end }}

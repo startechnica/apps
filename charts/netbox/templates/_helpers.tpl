@@ -252,6 +252,7 @@ Return Redis password
     {{ include "common.secrets.passwords.manage" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.cachingRedis.secretPasswordKey" .) "length" 16 "providedValues" (list "cachingRedis.password") "context" $) }}
 {{- end -}}
 {{- end -}}
+
 {{- define "netbox.tasksRedis.password" -}}
 {{- if .Values.redis.enabled -}}
     {{- include "redis.password" .Subcharts.redis -}}
@@ -625,6 +626,18 @@ Return the secret name containing remote auth
     {{- printf "%s" .Values.remoteAuth.existingSecretName -}}
 {{- else -}}
     {{ include "netbox.secretName" . }}
+{{- end -}}
+{{- end -}}
+
+{{- define "netbox.remoteAuth.ldap.secretBindPasswordKey" -}}
+{{- if .Values.remoteAuth.ldap.existingSecretBindPasswordKey -}}
+    {{- printf "%s" .Values.externalDatabase.existingSecretBindPasswordKey -}}
+{{- else -}}
+  {{- if .Values.remoteAuth.existingSecretName -}}
+      {{- printf "%s" "ldap-bind-password" -}}
+  {{- else -}}
+    {{- print "ldap-bind-password" -}}
+  {{- end -}}
 {{- end -}}
 {{- end -}}
 
