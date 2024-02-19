@@ -2601,13 +2601,14 @@ git:
     ##
     repositories:
       - repository: ""
-        ## Branch from repository to checkout
+        ## @param git.reports.repositories.branch  Branch from repository to checkout
         ##
         branch: ""
-        ## An unique identifier for repository, must be unique for each repository
+        ## @param git.reports.repositories.name  An unique identifier for repository, must be unique for each repository (OPTIONAL)
+        ## Auto generated from repository if empty.
         ##
         name: ""
-        ## Subpath to a folder in the repository containing the reports
+        ## @param git.reports.repositories.path  Path to a folder in the repository containing the reports
         ##
         path: ""
   ## Get Script files from git repositories.
