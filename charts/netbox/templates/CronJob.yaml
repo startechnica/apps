@@ -47,7 +47,7 @@ spec:
           {{- end }}
           {{- include "netbox.imagePullSecrets" . | nindent 10 }}
           {{- if .Values.housekeeping.nodeSelector }}
-          nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.housekeeping.nodeSelector "context" $) | nindent 12 }}
+          nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.nodeSelector "context" $) | nindent 12 }}
           {{- end }}
           restartPolicy: {{ .Values.housekeeping.restartPolicy }}
           {{- if .Values.housekeeping.podSecurityContext.enabled }}
