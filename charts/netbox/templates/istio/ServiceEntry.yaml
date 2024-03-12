@@ -17,7 +17,7 @@ spec:
       protocol: HTTP
     - number: 443
       name: https
-      protocol: TLS
+      protocol: HTTPS
   resolution: DNS
 {{- end -}}
 {{- end -}}

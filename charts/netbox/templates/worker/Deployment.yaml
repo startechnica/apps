@@ -188,12 +188,12 @@ spec:
                       path: email_password
                     - key: {{ include "netbox.secretSecretKeyKey" . }}
                       path: secret_key
-              {{- if .Values.remoteAuth.enabled }}
+              {{- if and .Values.remoteAuth.enabled (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
               - secret:
                   name: {{ include "netbox.remoteAuth.secretName" . | quote }}
                   items:
                     {{- if and (has "netbox.authentication.LDAPBackend" .Values.remoteAuth.backends) .Values.remoteAuth.ldap.enabled }}
-                    - key: ldap_bind_password
+                    - key: {{ include "netbox.remoteAuth.ldap.secretBindPasswordKey" . | quote }}
                       path: ldap_bind_password
                     {{- end }}
               {{- end }}
@@ -212,27 +212,9 @@ spec:
         - name: netbox-tmp
           emptyDir:
             medium: Memory
-        - name: media
-          {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "netbox.media.pvcName" . }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
-        - name: reports
-          {{- if .Values.reportsPersistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "netbox.reports.pvcName" . }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
-        - name: scripts
-          {{- if .Values.scriptsPersistence.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ include "netbox.scripts.pvcName" . }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+        {{- include "netbox.media.volumes" . | trim | nindent 8 }}
+        {{- include "netbox.reports.volumes" . | trim | nindent 8 }}
+        {{- include "netbox.scripts.volumes" . | trim | nindent 8 }}
         {{- include "netbox.git.volumes" . | trim | nindent 8 }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
         {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumes }}

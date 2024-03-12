@@ -9,6 +9,15 @@ You can leverage the `extraConfig` value in conjunction with `remoteAuth`.
 By default the users do not have any permission after logging in.
 Using custom auth pipelines you can assign groups based on the roles supplied by the oauth provider.
 
+## Configuring Keycloak
+Add Audience mapper
+
+- Clients -> <CLIENT_ID> -> [Tab] Client Scopes -> [Tab] Setup -> <CLIENT_ID>-dedicated
+- Mappers -> Add mapper -> By configuration -> Audience
+    - Mapper type: Audience
+    - Name: netbox-aud
+    - Included Client Audience: <CLIENT_ID>
+
 ### Example config for Keycloak backend
 
 ```yaml
@@ -17,6 +26,9 @@ remoteAuth:
   backends:
     - social_core.backends.keycloak.KeycloakOAuth2
   autoCreateUser: true
+  defaultGroups: ['Guests']
+  groupSyncEnabled: true
+  groupSeparator: ','
 
 extraConfig:
   - secret:
@@ -26,6 +38,7 @@ extraConfig:
         [
           "social_core.pipeline.social_auth.social_details",
           "social_core.pipeline.social_auth.social_uid",
+          "social_core.pipeline.social_auth.auth_allowed",
           "social_core.pipeline.social_auth.social_user",
           "social_core.pipeline.user.get_username",
           "social_core.pipeline.social_auth.associate_by_email",
@@ -34,7 +47,8 @@ extraConfig:
           "netbox.authentication.user_default_groups_handler",
           "social_core.pipeline.social_auth.load_extra_data",
           "social_core.pipeline.user.user_details",
-          "netbox.sso_pipeline_roles.set_role",
+          "netbox.keycloak_pipeline_roles.set_role",
+          "netbox.keycloak_pipeline_roles.set_groups",
         ]
 
 extraVolumes:
@@ -62,8 +76,8 @@ extraDeploy:
     type: Opaque
     stringData:
       oidc-keycloak.yaml: |
-        SOCIAL_AUTH_KEYCLOAK_KEY:               <OAUTH_CLIENT_ID>
-        SOCIAL_AUTH_KEYCLOAK_SECRET:            <OAUTH_CLIENT_SECRET>
+        SOCIAL_AUTH_KEYCLOAK_KEY:               <KEYCLOAK_CLIENT_ID>
+        SOCIAL_AUTH_KEYCLOAK_SECRET:            <KEYCLOAK_CLIENT_SECRET>
         SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY:        MIIB...AB
         SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL: "https://keycloak.example.com/realms/<REALM_ID>/protocol/openid-connect/auth"
         SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL:  "https://keycloak.example.com/realms/<REALM_ID>/protocol/openid-connect/token"
@@ -77,26 +91,35 @@ extraDeploy:
     data:
       keycloak_pipeline_roles.py: |
         from django.contrib.auth.models import Group
+
+        # this must match your actual keycloak client ID string!
+        CLIENT_ID = "<KEYCLOAK_CLIENT_ID>"
+
         def set_role(response, user, backend, *args, **kwargs):
-          client_id = '<OAUTH_CLIENT_ID>'
-          roles = []
-          try:
-            roles = response['resource_access'][client_id]['roles']
-          except KeyError:
-            pass
-          user.is_staff = ('admin' in roles)
-          user.is_superuser = ('superuser' in roles)
-          user.save()
-          groups = Group.objects.all()
-          for group in groups:
             try:
-              if group.name in roles:
-                group.user_set.add(user)
-              else:
-                group.user_set.remove(user)
-            except Group.DoesNotExist:
-              continue
+                roles = response['resource_access'][CLIENT_ID]['roles']
+            except KeyError:
+                roles = []
+            user.is_staff = 'admin' in roles
+            user.is_superuser = 'superuser' in roles
+            user.save()
+
+        def set_groups(response, user, backend, *args, **kwargs):
+            django_groups = Group.objects.all()
+            sso_groups = response.get('groups', [])
+            for group in django_groups:
+                try:
+                    if group.name in sso_groups:
+                        group.user_set.add(user)
+                    else:
+                        group.user_set.remove(user)
+                except Group.DoesNotExist:
+                    continue
 ```
+
+Ref:
+
+- https://github.com/netbox-community/netbox/discussions/8579
 
 ### Example config for GitLab backend
 ```yaml
@@ -122,7 +145,7 @@ extraConfig:
             "netbox.authentication.user_default_groups_handler",
             "social_core.pipeline.social_auth.load_extra_data",
             "social_core.pipeline.user.user_details",
-            "netbox.sso_pipeline_roles.set_role",
+            "netbox.gitlab_pipeline_roles.set_role",
         ]
 
 extraVolumes:

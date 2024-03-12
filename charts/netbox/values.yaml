@@ -93,7 +93,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: netboxcommunity/netbox
-  tag: "v3.7.2-2.8.0"
+  tag: "v3.7.3-2.8.0"
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -785,21 +785,7 @@ remoteAuth:
     attrLastName: 'sn'
     attrMail: 'mail'
 
-socialAuth:
-  pipelines:
-    - social_core.pipeline.social_auth.social_details
-    - social_core.pipeline.social_auth.social_uid
-    - social_core.pipeline.social_auth.social_user
-    - social_core.pipeline.user.get_username
-    - social_core.pipeline.social_auth.associate_by_email
-    - social_core.pipeline.user.create_user
-    - social_core.pipeline.social_auth.associate_user
-    - netbox.authentication.user_default_groups_handler
-    - social_core.pipeline.social_auth.load_extra_data
-    - social_core.pipeline.user.user_details
-    - netbox.sso_pipeline_roles.set_role
-  jsonField:
-    enabled: true
+    existingSecretBindPasswordKey: ""
 
 releaseCheck:
   ## This repository is used to check whether there is a new release of NetBox
@@ -1346,7 +1332,7 @@ housekeeping:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.2-2.8.0"
+    tag: "v3.7.3-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1563,7 +1549,7 @@ worker:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.2-2.8.0"
+    tag: "v3.7.3-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -2601,13 +2587,14 @@ git:
     ##
     repositories:
       - repository: ""
-        ## Branch from repository to checkout
+        ## @param git.reports.repositories.branch  Branch from repository to checkout
         ##
         branch: ""
-        ## An unique identifier for repository, must be unique for each repository
+        ## @param git.reports.repositories.name  An unique identifier for repository, must be unique for each repository (OPTIONAL)
+        ## Auto generated from repository if empty.
         ##
         name: ""
-        ## Subpath to a folder in the repository containing the reports
+        ## @param git.reports.repositories.path  Path to a folder in the repository containing the reports
         ##
         path: ""
   ## Get Script files from git repositories.
