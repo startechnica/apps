@@ -484,7 +484,7 @@ Return the Redis secret name
 {{- else if .Values.externalRedis.existingSecretName -}}
     {{- printf "%s" .Values.externalRedis.existingSecretName -}}
 {{- else -}}
-    {{- default (printf "%s-%s"  (include "netbox.redis.fullname" .) "external-redis") .Values.existingSecretName -}}
+    {{- default (printf "%s-%s"  (include "netbox.fullname" .) "external-redis") .Values.existingSecretName -}}
 {{- end -}}
 {{- end -}}
 
@@ -723,8 +723,8 @@ Returns the volumes that will be attached to the workload resources (deployment,
 netbox: database
     You disabled the PostgreSQL sub-chart but did not specify an external PostgreSQL host.
     Either deploy the PostgreSQL sub-chart (--set postgresql.enabled=true),
-    or set a value for the external database host (--set externalDatabase.host=FOO)
-    and set a value for the external database password (--set externalDatabase.password=BAR)
+    or set a value for the external database host (--set externalDatabase.host=<db-host>)
+    and set a value for the external database password (--set externalDatabase.password=<db-password>)
     or use existing secret (--set externalDatabase.existingSecretName=BAR).
 {{- end -}}
 {{- end -}}

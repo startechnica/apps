@@ -2308,7 +2308,7 @@ tasksRedis:
   caCertPath: ""
   ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
   ##
-  host: netbox-redis
+  host: ""
   port: 6379
   sentinels: []
   #  - mysentinel:26379
@@ -2327,7 +2327,7 @@ cachingRedis:
   caCertPath: ""
   ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
   ##
-  host: netbox-redis
+  host: ""
   port: 6379
   sentinels: []
   #  - mysentinel:26379
@@ -2346,9 +2346,11 @@ cachingRedis:
 ##
 externalRedis:
   ## @param externalRedis.host External Redis host
+  ## Ignored if `tasksRedis.host` and `cachingRedis.host` is set.
   ##
   host: localhost
   ## @param externalRedis.port External Redis port
+  ## Ignored if `tasksRedis.port` and `cachingRedis.port` is set.
   ##
   port: 6379
   ## Redis password for authentication
