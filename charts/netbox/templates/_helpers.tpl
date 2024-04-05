@@ -474,7 +474,7 @@ Return the Redis secret name
 {{- else if .Values.externalRedis.existingSecretName -}}
     {{- printf "%s" .Values.externalRedis.existingSecretName -}}
 {{- else -}}
-    {{- default (include "netbox.redis.fullname" .) .Values.existingSecretName -}}
+    {{- default (printf "%s-%s"  (include "netbox.redis.fullname" .) "external-redis") .Values.existingSecretName -}}
 {{- end -}}
 {{- end -}}
 
