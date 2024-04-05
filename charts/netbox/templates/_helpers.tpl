@@ -222,8 +222,6 @@ Return the Netbox secret name
     {{ default (include "netbox.fullname" .) .Values.existingSecretName }}
 {{- end -}}
 
-
-
 {{/*
 Volumes that need to be mounted for .Values.extraConfig entries
 */}}
@@ -446,16 +444,20 @@ Return Redis password
 {{- define "netbox.cachingRedis.password" -}}
 {{- if .Values.redis.enabled -}}
     {{- include "redis.password" .Subcharts.redis -}}
-{{- else -}}
+{{- else if .Values.cachingRedis.password -}}
     {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.cachingRedis.secretPasswordKey" .) "defaultValue" .Values.cachingRedis.password "context" $) }}
+{{- else -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
 {{- end -}}
 {{- end -}}
 
 {{- define "netbox.tasksRedis.password" -}}
 {{- if .Values.redis.enabled -}}
     {{- include "redis.password" .Subcharts.redis -}}
-{{- else -}}
+{{- else if .Values.tasksRedis.password -}}
     {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.tasksRedis.secretPasswordKey" .) "defaultValue" .Values.tasksRedis.password "context" $) }}
+{{- else -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
 {{- end -}}
 {{- end -}}
 
