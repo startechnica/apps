@@ -203,8 +203,7 @@ Return the path Netbox is hosted on. This looks at httpRelativePath and returns 
 {{- end -}}
 
 {{/*
-Returns the available value for certain key in an existing secret (if it exists),
-otherwise it generates a random value.
+Returns the available value for certain key in an existing secret (if it exists), otherwise generate random value.
 */}}
 {{- define "netbox.getValueFromSecret" }}
     {{- $len := (default 16 .Length) | int -}}
@@ -369,7 +368,7 @@ Return the Database hostname
 {{- end -}}
 
 {{/*
-Return the Database port
+Return Database port
 */}}
 {{- define "netbox.databasePort" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -380,7 +379,7 @@ Return the Database port
 {{- end -}}
 
 {{/*
-Return the Database database name
+Return Database name
 */}}
 {{- define "netbox.databaseName" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -391,7 +390,7 @@ Return the Database database name
 {{- end -}}
 
 {{/*
-Return the Database user
+Return Database user
 */}}
 {{- define "netbox.databaseUser" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -415,7 +414,7 @@ Return the Database secret object name
 {{- end -}}
 
 {{/*
-RReturn database password key
+Return database password key
 */}}
 {{- define "netbox.databaseSecretPasswordKey" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -430,6 +429,17 @@ RReturn database password key
     {{- else -}}
         {{- printf "%s" "db-password" -}}
     {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return Database password
+*/}}
+{{- define "netbox.databasePassword" -}}
+{{- if .Values.postgresql.enabled -}}
+    {{ include "postgresql.v1.password" .Subcharts.postgresql }}
+{{- else -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.databaseSecretName" .) "key" (include "netbox.databaseSecretPasswordKey" .) "defaultValue" .Values.externalDatabase.password "context" $) }}
 {{- end -}}
 {{- end -}}
 

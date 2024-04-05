@@ -279,7 +279,6 @@ spec:
             - secret:
                 name: {{ include "netbox.secretName" . | quote }}
                 items:
-                  # Used by our configuration
                   - key: {{ include "netbox.email.secretPasswordKey" . }}
                     path: email_password
                   - key: {{ include "netbox.secretSecretKeyKey" . }}
@@ -304,8 +303,8 @@ spec:
             - secret:
                 name: {{ include "netbox.databaseSecretName" . | quote }}
                 items:
-                - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
-                  path: db_password
+                  - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
+                    path: db_password
             - secret:
                 name: {{ include "netbox.redis.secretName" . | quote }}
                 items:
