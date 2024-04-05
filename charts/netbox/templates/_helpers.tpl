@@ -241,24 +241,7 @@ Name of the key in Secret that contains the Redis cache password
 {{- end -}}
 {{- end -}}
 
-{{/*
-Return Redis password
-*/}}
-{{- define "netbox.cachingRedis.password" -}}
-{{- if .Values.redis.enabled -}}
-    {{- include "redis.password" .Subcharts.redis -}}
-{{- else -}}
-    {{ include "common.secrets.passwords.manage" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.cachingRedis.secretPasswordKey" .) "length" 16 "providedValues" (list "cachingRedis.password") "context" $) }}
-{{- end -}}
-{{- end -}}
 
-{{- define "netbox.tasksRedis.password" -}}
-{{- if .Values.redis.enabled -}}
-    {{- include "redis.password" .Subcharts.redis -}}
-{{- else -}}
-    {{ include "common.secrets.passwords.manage" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.tasksRedis.secretPasswordKey" .) "length" 16 "providedValues" (list "tasksRedis.password") "context" $) }}
-{{- end -}}
-{{- end -}}
 
 {{/*
 Return the task Redis hostname
@@ -510,6 +493,22 @@ Return the Redis secret key
 {{/*
 Return Redis password
 */}}
+{{- define "netbox.cachingRedis.password" -}}
+{{- if .Values.redis.enabled -}}
+    {{- include "redis.password" .Subcharts.redis -}}
+{{- else -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.cachingRedis.password "context" $) }}
+{{- end -}}
+{{- end -}}
+
+{{- define "netbox.tasksRedis.password" -}}
+{{- if .Values.redis.enabled -}}
+    {{- include "redis.password" .Subcharts.redis -}}
+{{- else -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.tasksRedis.password "context" $) }}
+{{- end -}}
+{{- end -}}
+
 {{- define "netbox.redis.password" -}}
 {{- if .Values.redis.enabled -}}
     {{ include "redis.password" .Subcharts.redis }}

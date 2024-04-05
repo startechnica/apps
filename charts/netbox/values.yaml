@@ -2353,12 +2353,12 @@ externalRedis:
   ## Ignored if `tasksRedis.port` and `cachingRedis.port` is set.
   ##
   port: 6379
-  ## Redis password for authentication
-  ## Ignored if existingSecretName is set
   ## @param externalRedis.password External Redis password
+  ## Redis password for authentication
+  ## Ignored if `existingSecretName`` is set
+  ## Ignored if `tasksRedis.password` and `cachingRedis.password` is set.
   ##
   password: ""
-  ## Name of existing secret object containing the password
   ## @param externalRedis.existingSecretName Existing secret for the external redis
   ##
   existingSecretName: ""
