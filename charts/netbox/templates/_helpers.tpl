@@ -508,6 +508,17 @@ Return the Redis secret key
 {{- end -}}
 
 {{/*
+Return Redis password
+*/}}
+{{- define "netbox.redis.password" -}}
+{{- if .Values.redis.enabled -}}
+    {{ include "redis.password" .Subcharts.redis }}
+{{- else -}}
+    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return whether Redis uses password authentication or not
 */}}
 {{- define "netbox.redis.auth.enabled" -}}
@@ -519,7 +530,7 @@ Return whether Redis uses password authentication or not
 {{/*
 Return the Redis hostname
 */}}
-{{- define "netbox.redisHost" -}}
+{{- define "netbox.redis.host" -}}
 {{- if .Values.redis.enabled -}}
     {{- printf "%s-master" (include "netbox.redis.fullname" .) -}}
 {{- else if .Values.externalRedis.host -}}
@@ -532,7 +543,7 @@ Return the Redis hostname
 {{/*
 Return the Redis port
 */}}
-{{- define "netbox.redisPort" -}}
+{{- define "netbox.redis.port" -}}
 {{- if .Values.redis.enabled -}}
     {{- .Values.redis.master.service.ports.redis -}}
 {{- else if .Values.externalRedis.port -}}
