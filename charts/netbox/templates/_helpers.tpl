@@ -390,22 +390,6 @@ Return the Redis secret name
 {{/*
 Return the Redis secret key
 */}}
-{{- define "netbox.tasksRedis.secretPasswordKey" -}}
-{{- if .Values.redis.enabled -}}
-    {{- include "redis.secretPasswordKey" .Subcharts.redis -}}
-{{- else -}}
-    {{- if .Values.tasksRedis.existingSecretName -}}
-        {{- if .Values.tasksRedis.existingSecretPasswordKey -}}
-            {{- printf "%s" .Values.tasksRedis.existingSecretPasswordKey -}}
-        {{- else -}}
-            {{- print "redis-tasks-password" -}}
-        {{- end -}}
-    {{- else -}}
-        {{- print "redis-tasks-password" -}}
-    {{- end -}}
-{{- end -}}
-{{- end -}}
-
 {{- define "netbox.cachingRedis.secretPasswordKey" -}}
 {{- if .Values.redis.enabled -}}
     {{- include "redis.secretPasswordKey" .Subcharts.redis -}}
@@ -418,6 +402,22 @@ Return the Redis secret key
         {{- end -}}
     {{- else -}}
         {{- print "redis-cache-password" -}}
+    {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "netbox.tasksRedis.secretPasswordKey" -}}
+{{- if .Values.redis.enabled -}}
+    {{- include "redis.secretPasswordKey" .Subcharts.redis -}}
+{{- else -}}
+    {{- if .Values.tasksRedis.existingSecretName -}}
+        {{- if .Values.tasksRedis.existingSecretPasswordKey -}}
+            {{- printf "%s" .Values.tasksRedis.existingSecretPasswordKey -}}
+        {{- else -}}
+            {{- print "redis-tasks-password" -}}
+        {{- end -}}
+    {{- else -}}
+        {{- print "redis-tasks-password" -}}
     {{- end -}}
 {{- end -}}
 {{- end -}}

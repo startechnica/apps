@@ -44,10 +44,10 @@ Usage:
 
         info "Checking redis connection..."
         if ! retry_while "check_redis_connection"; then
-            error "Could not connect to the Redis server"
+            error "Could not connect to the task Redis server"
             return 1
         else
-            info "Connected to the Redis instance"
+            info "Connected to the task Redis instance"
         fi
   {{- end }}
   {{- if include "netbox.redis.auth.enabled" .context }}
