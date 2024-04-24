@@ -1,16 +1,16 @@
 annotations:
   artifacthub.io/changes: |
     - kind: fixed
-      description: Housekeeping nodeSelector indent
+      description: External redis secret name
       links:
         - name: GitHub Issue
-          url: https://github.com/startechnica/apps/issues/59
+          url: https://github.com/startechnica/apps/issues/61
   licenses: Apache-2.0
   images: |
     - name: netbox
-      image: docker.io/netboxcommunity/netbox:v3.7.3-2.8.0
+      image: docker.io/netboxcommunity/netbox:v3.7.6-2.8.0
 apiVersion: v2
-appVersion: v3.7.3
+appVersion: v3.7.6
 name: netbox
 kubeVersion: ">=1.25.0"
 description: IP address management (IPAM) and data center infrastructure management (DCIM) tool
@@ -43,4 +43,4 @@ keywords:
   - ipam
   - netbox
 type: application
-version: 5.0.7
+version: 5.0.8

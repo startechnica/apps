@@ -4,13 +4,16 @@
 ## Current available global image parameters: imageRegistry, imagePullSecrets and storageClass
 
 ## @param global.imageRegistry Global image registry for Netbox Server, Worker and Housekeeping
+## @param global.imageRepository Global image repository for Netbox Server, Worker and Housekeeping
+## @param global.imageTag Global image tag for Netbox Server, Worker and Housekeeping
+## @param global.imageDigest Global image digest for Netbox Server, Worker and Housekeeping
 ## @param global.imagePullSecrets Global netbox registry secret names as an array
 ## @param global.storageClass Global StorageClass for Persistent Volume(s)
 ##
 global:
-  imageRegistry: ""
-  imageRepository: ""
-  imageTag: ""
+  imageRegistry: docker.io
+  imageRepository: netboxcommunity/netbox
+  imageTag: v3.7.6-2.8.0
   imageDigest: ""
   ## E.g.
   ## imagePullSecrets:
@@ -51,6 +54,7 @@ enableServiceLinks: true
 ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
 ## E.g.
 ## dnsPolicy: ClusterFirst
+##
 dnsPolicy: ""
 ## @param dnsConfig DNS Configuration pod
 ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
@@ -59,6 +63,7 @@ dnsPolicy: ""
 ##   options:
 ##   - name: ndots
 ##     value: "4"
+##
 dnsConfig: {}
 ## @param clusterDomain Default Kubernetes cluster domain
 ##
@@ -96,7 +101,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: netboxcommunity/netbox
-  tag: "v3.7.3-2.8.0"
+  tag: "v3.7.6-2.8.0"
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1335,7 +1340,7 @@ housekeeping:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.3-2.8.0"
+    tag: "v3.7.6-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1552,7 +1557,7 @@ worker:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.3-2.8.0"
+    tag: "v3.7.6-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'

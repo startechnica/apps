@@ -23,7 +23,7 @@ helm install netbox startechnica/netbox
 
 - Kubernetes 1.25.0+ (a [current](https://kubernetes.io/releases/) version)
 - Helm 3.10.0+ (a version [compatible](https://helm.sh/docs/topics/version_skew/) with your cluster)
-- This chart works with NetBox 3.5.0+ (3.6.4+ recommended)
+- This chart works with NetBox 3.5.0+ (3.7.0+ recommended)
 
 ## Installing the Chart
 
