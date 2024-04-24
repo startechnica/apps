@@ -1,14 +1,20 @@
 ## @section Global parameters
-## Global Docker image parameters
+## Global image parameters
 ## Please, note that this will override the image parameters, including dependencies, configured to use the global value
-## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+## Current available global image parameters: imageRegistry, imagePullSecrets and storageClass
 
-## @param global.imageRegistry Global Docker image registry
-## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.imageRegistry Global image registry for Netbox Server, Worker and Housekeeping
+## @param global.imageRepository Global image repository for Netbox Server, Worker and Housekeeping
+## @param global.imageTag Global image tag for Netbox Server, Worker and Housekeeping
+## @param global.imageDigest Global image digest for Netbox Server, Worker and Housekeeping
+## @param global.imagePullSecrets Global netbox registry secret names as an array
 ## @param global.storageClass Global StorageClass for Persistent Volume(s)
 ##
 global:
-  imageRegistry: ""
+  imageRegistry: docker.io
+  imageRepository: netboxcommunity/netbox
+  imageTag: v3.7.6-2.8.0
+  imageDigest: ""
   ## E.g.
   ## imagePullSecrets:
   ##   - myRegistryKeySecretName
@@ -48,6 +54,7 @@ enableServiceLinks: true
 ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
 ## E.g.
 ## dnsPolicy: ClusterFirst
+##
 dnsPolicy: ""
 ## @param dnsConfig DNS Configuration pod
 ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
@@ -56,6 +63,7 @@ dnsPolicy: ""
 ##   options:
 ##   - name: ndots
 ##     value: "4"
+##
 dnsConfig: {}
 ## @param clusterDomain Default Kubernetes cluster domain
 ##
@@ -93,7 +101,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: netboxcommunity/netbox
-  tag: "v3.7.3-2.8.0"
+  tag: "v3.7.6-2.8.0"
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1332,7 +1340,7 @@ housekeeping:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.3-2.8.0"
+    tag: "v3.7.6-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1549,7 +1557,7 @@ worker:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.3-2.8.0"
+    tag: "v3.7.6-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -2305,7 +2313,7 @@ tasksRedis:
   caCertPath: ""
   ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
   ##
-  host: netbox-redis
+  host: ""
   port: 6379
   sentinels: []
   #  - mysentinel:26379
@@ -2324,7 +2332,7 @@ cachingRedis:
   caCertPath: ""
   ## Used only when redis.enabled is false. host and port are not used if sentinels are given.
   ##
-  host: netbox-redis
+  host: ""
   port: 6379
   sentinels: []
   #  - mysentinel:26379
@@ -2343,17 +2351,19 @@ cachingRedis:
 ##
 externalRedis:
   ## @param externalRedis.host External Redis host
+  ## Ignored if `tasksRedis.host` and `cachingRedis.host` is set.
   ##
   host: localhost
   ## @param externalRedis.port External Redis port
+  ## Ignored if `tasksRedis.port` and `cachingRedis.port` is set.
   ##
   port: 6379
-  ## Redis password for authentication
-  ## Ignored if existingSecretName is set
   ## @param externalRedis.password External Redis password
+  ## Redis password for authentication
+  ## Ignored if `existingSecretName`` is set
+  ## Ignored if `tasksRedis.password` and `cachingRedis.password` is set.
   ##
   password: ""
-  ## Name of existing secret object containing the password
   ## @param externalRedis.existingSecretName Existing secret for the external redis
   ##
   existingSecretName: ""

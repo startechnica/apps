@@ -121,46 +121,7 @@ spec:
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.worker.podSecurityContext.enabled .Values.worker.containerSecurityContext.enabled }}
       initContainers:
         {{- if .Values.redisWait.enabled }}
-        - name: wait-for-redis
-          image: {{ include "netbox.redis.image" . }}
-          imagePullPolicy: {{ .Values.redis.image.pullPolicy | quote }}
-          securityContext: {{- omit .Values.redisWait.containerSecurityContext "enabled" | toYaml | nindent 12 }}
-          command:
-            - /bin/bash
-          args:
-            - -ec
-            - |
-                #!/bin/bash
-
-                set -o errexit
-                set -o nounset
-                set -o pipefail
-
-                . /opt/bitnami/scripts/libos.sh
-                . /opt/bitnami/scripts/liblog.sh
-
-                check_redis_connection() {
-                  local result="$(redis-cli -h {{ include "netbox.redisHost" . }} -p {{ include "netbox.redisPort" . }} {{ .Values.redisWait.extraArgs }} PING)"
-                  if [[ "$result" != "PONG" ]]; then
-                    false
-                  fi
-                }
-
-                info "Checking redis connection..."
-                if ! retry_while "check_redis_connection"; then
-                    error "Could not connect to the Redis server"
-                    return 1
-                else
-                    info "Connected to the Redis instance"
-                fi
-          {{- if include "netbox.redis.auth.enabled" . }}
-          env:
-            - name: REDISCLI_AUTH
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "netbox.redis.secretName" . }}
-                  key: {{ include "netbox.redis.secretPasswordKey" . }}
-          {{- end }}
+        {{- include "netbox.redisWait.container" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
         {{- end }}
         {{- if or .Values.worker.initContainers $needsVolumePermissions }}
         {{- if .Values.worker.initContainers }}

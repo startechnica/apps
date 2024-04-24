@@ -30,7 +30,7 @@ spec:
           protocol: TCP
     # Allow to Redis and PostgreSQL
     - ports:
-        - port: {{ include "netbox.redisPort" . }}
+        - port: {{ include "netbox.redis.port" . }}
           protocol: TCP
       {{- if .Values.redis.enabled }}
       to:

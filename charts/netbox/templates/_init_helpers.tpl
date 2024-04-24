@@ -36,7 +36,7 @@ Usage:
         . /opt/bitnami/scripts/liblog.sh
 
         check_redis_connection() {
-            local result="$(redis-cli -h {{ include "netbox.redisHost" .context }} -p {{ include "netbox.redisPort" .context }} {{ .context.Values.redisWait.extraArgs }} PING)"
+            local result="$(redis-cli -h {{ include "netbox.tasksRedis.host" .context }} -p {{ include "netbox.tasksRedis.port" .context }} {{ .context.Values.redisWait.extraArgs }} PING)"
             if [[ "$result" != "PONG" ]]; then
               false
             fi
@@ -44,10 +44,10 @@ Usage:
 
         info "Checking redis connection..."
         if ! retry_while "check_redis_connection"; then
-            error "Could not connect to the Redis server"
+            error "Could not connect to the task Redis server"
             return 1
         else
-            info "Connected to the Redis instance"
+            info "Connected to the task Redis instance"
         fi
   {{- end }}
   {{- if include "netbox.redis.auth.enabled" .context }}
