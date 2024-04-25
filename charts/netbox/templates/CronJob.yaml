@@ -77,6 +77,11 @@ spec:
               - /opt/netbox/netbox/manage.py
               - housekeeping
             {{- end }}
+            {{- if .Values.diagnosticMode.enabled }}
+            args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 14 }}
+            {{- else if .Values.args }}
+            args: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.args "context" $) | nindent 14 }}
+            {{- end }}
             env:
               - name: HOUSEKEEPING_INTERVAL
                 value: "20"
