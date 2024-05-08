@@ -1095,6 +1095,67 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: fixed
+          description: Add missing import if allowedHostsIncludesPodIp is true
+          links:
+            - name: GitHub Pull Request
+              url: https://github.com/startechnica/apps/pull/68
+        - kind: changed
+          description: Update Netbox Docker to v2.8.0
+          links:
+            - name: GitHub Releases
+              url: https://github.com/netbox-community/netbox-docker/releases/tag/2.8.0
+        - kind: changed
+          description: Update Netbox v3.7.8
+          links:
+            - name: GitHub Releases
+              url: https://github.com/netbox-community/netbox/releases/tag/v3.7.8
+      images: |
+        - name: netbox
+          image: docker.io/netboxcommunity/netbox:v3.7.8-2.8.0
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: v3.7.8
+    created: "2024-05-08T05:19:08.228270427Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 19.x.x
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.x.x
+    description: IP address management (IPAM) and data center infrastructure management
+      (DCIM) tool
+    digest: dc041fc51a34eefe456817c9ddc16e86823e2e41767a9df1e27ada252b59d234
+    home: https://github.com/startechnica/apps/tree/main/charts/netbox
+    icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+    keywords:
+    - ipam
+    - netbox
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: netbox
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/netbox-5.0.9/netbox-5.0.9.tgz
+    version: 5.0.9
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
           description: External redis secret name
           links:
             - name: GitHub Issue
@@ -1719,4 +1780,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-04-24T09:35:04.655171448Z"
+generated: "2024-05-08T05:19:08.228331551Z"
