@@ -1,10 +1,10 @@
 annotations:
   artifacthub.io/changes: |
     - kind: fixed
-      description: External redis secret name
+      description: Add missing import if allowedHostsIncludesPodIp is true
       links:
-        - name: GitHub Issue
-          url: https://github.com/startechnica/apps/issues/61
+        - name: GitHub Pull Request
+          url: https://github.com/startechnica/apps/pull/68
   licenses: Apache-2.0
   images: |
     - name: netbox

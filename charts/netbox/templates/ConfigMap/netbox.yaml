@@ -8,6 +8,9 @@ metadata:
   labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
 data:
   configuration.py: |-
+    {{- if .Values.allowedHostsIncludesPodIp }}
+    import os
+    {{- end }}
     import re
     from pathlib import Path
 
