@@ -11,9 +11,9 @@
 ## @param global.storageClass Global StorageClass for Persistent Volume(s)
 ##
 global:
-  imageRegistry: ""
-  imageRepository: ""
-  imageTag: ""
+  imageRegistry: docker.io
+  imageRepository: netboxcommunity/netbox
+  imageTag: "v3.7.8-2.8.0"
   imageDigest: ""
   ## E.g.
   ## imagePullSecrets:
@@ -1338,9 +1338,9 @@ housekeeping:
   ## @param image.debug Specify if debug logs should be enabled
   ##
   image:
-    registry: docker.io
-    repository: netboxcommunity/netbox
-    tag: "v3.7.8-2.8.0"
+    registry: ""
+    repository: ""
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
