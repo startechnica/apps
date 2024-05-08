@@ -24,7 +24,7 @@ Return the proper image version (ingores image revision/prerelease info & fallba
 {{ include "netbox.images.version" ( dict "imageRoot" .Values.path.to.the.image "global" .Values.global "chart" .Chart ) }}
 */}}
 {{- define "netbox.images.version" -}}
-{{- $imageTag := .imageRoot.tag ((.global).imageTag) | toString -}}
+{{- $imageTag := default .imageRoot.tag ((.global).imageTag) | toString -}}
 {{/* regexp from https://github.com/Masterminds/semver/blob/23f51de38a0866c5ef0bfc42b3f735c73107b700/version.go#L41-L44 */}}
 {{- if regexMatch `^([0-9]+)(\.[0-9]+)?(\.[0-9]+)?(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$` $imageTag -}}
     {{- $version := semver $imageTag -}}
