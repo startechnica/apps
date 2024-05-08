@@ -13,7 +13,7 @@
 global:
   imageRegistry: docker.io
   imageRepository: netboxcommunity/netbox
-  imageTag: v3.7.6-2.8.0
+  imageTag: v3.7.8-2.8.0
   imageDigest: ""
   ## E.g.
   ## imagePullSecrets:
@@ -101,7 +101,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: netboxcommunity/netbox
-  tag: "v3.7.6-2.8.0"
+  tag: "v3.7.8-2.8.0"
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1340,7 +1340,7 @@ housekeeping:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.6-2.8.0"
+    tag: "v3.7.8-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1557,7 +1557,7 @@ worker:
   image:
     registry: docker.io
     repository: netboxcommunity/netbox
-    tag: "v3.7.6-2.8.0"
+    tag: "v3.7.8-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'

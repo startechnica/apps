@@ -56,9 +56,30 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 
 {{/*
 Return the proper Netbox image name
+{{ include "netbox.images.image" ( dict "imageRoot" .Values.path.to.the.image "global" .Values.global ) }}
+*/}}
+{{- define "netbox.images.image" -}}
+{{- $registryName := default .imageRoot.registry ((.global).imageRegistry) -}}
+{{- $repositoryName := default .imageRoot.repository ((.global).imageRepository) -}}
+{{- $separator := ":" -}}
+{{- $termination := default .imageRoot.tag ((.global).imageTag) | toString -}}
+
+{{- if or (.imageRoot.digest) ((.global).imageDigest) }}
+    {{- $separator = "@" -}}
+    {{- $termination = default .imageRoot.digest ((.global).imageDigest) | toString -}}
+{{- end -}}
+{{- if $registryName }}
+    {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $termination -}}
+{{- else -}}
+    {{- printf "%s%s%s"  $repositoryName $separator $termination -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the proper Netbox image name
 */}}
 {{- define "netbox.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+{{ include "netbox.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*
