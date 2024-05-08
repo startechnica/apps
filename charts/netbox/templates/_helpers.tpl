@@ -86,14 +86,14 @@ Return the proper Netbox image name
 Return the proper Netbox worker image name
 */}}
 {{- define "netbox.worker.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
+{{ include "netbox.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*
 Return the proper Netbox housekeeping image name
 */}}
 {{- define "netbox.housekeeping.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
+{{ include "netbox.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*
@@ -110,7 +110,7 @@ Return the proper Redis image name
 {{- if .Values.redis.enabled -}}
     {{- include "redis.image" .Subcharts.redis -}}
 {{- else -}}
-    {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) }}
+    {{ include "common.images.image" (dict "imageRoot" .Values.redis.image "global" .Values.global) }}
 {{- end -}}
 {{- end -}}
 
