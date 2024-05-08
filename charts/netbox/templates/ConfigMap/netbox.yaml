@@ -97,6 +97,7 @@ data:
     BANNER_BOTTOM: {{ .Values.banner.bottom | quote }}
     BANNER_LOGIN: {{ .Values.banner.login | quote }}
     BASE_PATH: {{ .Values.basePath | quote }}
+    CENSUS_REPORTING_ENABLED: {{ toJson .Values.censusReporting }}
     CHANGELOG_RETENTION: {{ int .Values.changelogRetention }}
     CUSTOM_VALIDATORS: {{ toJson .Values.customValidators }}
     DEFAULT_USER_PREFERENCES: {{ toJson .Values.defaultUserPreferences }}
