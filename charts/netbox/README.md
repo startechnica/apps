@@ -6,8 +6,12 @@ network automation. Read on to discover why thousands of organizations worldwide
 
 [Overview of Netbox](https://docs.netbox.dev/en/stable/)
 
-**Note:** This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions
-v5.0.0 and up are from this fork will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
+> [!IMPORTANT]
+> This is last helm chart release for Netbox v3.x.
+> Please consult Netbox [v4.x release notes](https://github.com/netbox-community/netbox/releases/tag/v4.0.0) for any breaking changes before migrating.
+
+> [!NOTE]
+> This repository was forked from [bootc/netbox-chart](https://github.com/bootc/netbox-chart) at versions v5.0.0 and up are from this fork will have diverged from any changes in the original fork. A list of changes can be seen in the CHANGELOG.
 
 **This chart is not maintained by the upstream project and any issues with the chart should be raised [here](https://github.com/startechnica/apps/issues/new/choose)**
 
@@ -19,11 +23,11 @@ helm install netbox startechnica/netbox
 ```
 ⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
 
-## Prerequisites
+## Compatibility
 
 - Kubernetes 1.25.0+ (a [current](https://kubernetes.io/releases/) version)
 - Helm 3.10.0+ (a version [compatible](https://helm.sh/docs/topics/version_skew/) with your cluster)
-- This chart works with NetBox 3.5.0+ (3.7.0+ recommended)
+- This chart only works with NetBox 3.7.0+ and above.
 
 ## Installing the Chart
 
