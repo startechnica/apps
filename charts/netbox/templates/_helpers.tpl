@@ -55,56 +55,6 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{/*
-Return the proper Netbox image name
-*/}}
-{{- define "netbox.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Netbox worker image name
-*/}}
-{{- define "netbox.worker.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Netbox housekeeping image name
-*/}}
-{{- define "netbox.housekeeping.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Netbox init image name
-*/}}
-{{- define "netbox.init-dirs.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.initDirs.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Redis image name
-*/}}
-{{- define "netbox.redis.image" -}}
-{{- if .Values.redis.enabled -}}
-    {{- include "redis.image" .Subcharts.redis -}}
-{{- else -}}
-    {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global ) }}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return the proper Redis wait image name
-*/}}
-{{- define "netbox.redisWait.image" -}}
-{{- if .Values.redis.enabled -}}
-    {{- include "redis.image" .Subcharts.redis -}}
-{{- else -}}
-    {{ include "common.images.image" ( dict "imageRoot" .Values.redisWait.image "global" .Values.global ) }}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "netbox.imagePullSecrets" -}}

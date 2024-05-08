@@ -4,7 +4,7 @@ kind: CronJob
 metadata:
   name: {{ template "netbox.housekeeping.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.housekeeping.image "chart" .Chart ) ) }}  
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global "chart" .Chart) ) }}  
   {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
   labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: housekeeping
@@ -76,6 +76,11 @@ spec:
               - /opt/netbox/venv/bin/python
               - /opt/netbox/netbox/manage.py
               - housekeeping
+            {{- end }}
+            {{- if .Values.diagnosticMode.enabled }}
+            args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 14 }}
+            {{- else if .Values.args }}
+            args: {{- include "common.tplvalues.render" (dict "value" .Values.housekeeping.args "context" $) | nindent 14 }}
             {{- end }}
             env:
               - name: HOUSEKEEPING_INTERVAL

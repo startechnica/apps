@@ -1,16 +1,26 @@
 annotations:
   artifacthub.io/changes: |
     - kind: fixed
-      description: External redis secret name
+      description: Add missing import if allowedHostsIncludesPodIp is true
       links:
-        - name: GitHub Issue
-          url: https://github.com/startechnica/apps/issues/61
+        - name: GitHub Pull Request
+          url: https://github.com/startechnica/apps/pull/68
+    - kind: changed
+      description: Update Netbox Docker to v2.8.0
+      links:
+        - name: GitHub Releases
+          url: https://github.com/netbox-community/netbox-docker/releases/tag/2.8.0
+    - kind: changed
+      description: Update Netbox v3.7.8
+      links:
+        - name: GitHub Releases
+          url: https://github.com/netbox-community/netbox/releases/tag/v3.7.8
   licenses: Apache-2.0
   images: |
     - name: netbox
-      image: docker.io/netboxcommunity/netbox:v3.7.6-2.8.0
+      image: docker.io/netboxcommunity/netbox:v3.7.8-2.8.0
 apiVersion: v2
-appVersion: v3.7.6
+appVersion: v3.7.8
 name: netbox
 kubeVersion: ">=1.25.0"
 description: IP address management (IPAM) and data center infrastructure management (DCIM) tool
@@ -43,4 +53,4 @@ keywords:
   - ipam
   - netbox
 type: application
-version: 5.0.8
+version: 5.0.9

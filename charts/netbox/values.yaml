@@ -13,7 +13,7 @@
 global:
   imageRegistry: docker.io
   imageRepository: netboxcommunity/netbox
-  imageTag: v3.7.6-2.8.0
+  imageTag: "v3.7.8-2.8.0"
   imageDigest: ""
   ## E.g.
   ## imagePullSecrets:
@@ -99,9 +99,9 @@ diagnosticMode:
 ## @param image.debug Specify if debug logs should be enabled
 ##
 image:
-  registry: docker.io
-  repository: netboxcommunity/netbox
-  tag: "v3.7.6-2.8.0"
+  registry: ""
+  repository: ""
+  tag: ""
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -511,17 +511,20 @@ allowTokenRetrieval: false
 # https://docs.netbox.dev/en/stable/configuration/optional-settings/#auth_password_validators
 authPasswordValidators: []
 
-# URL schemes that are allowed within links in NetBox
+## URL schemes that are allowed within links in NetBox
+##
 allowedUrlSchemes: [file, ftp, ftps, http, https, irc, mailto, sftp, ssh, tel,
                     telnet, tftp, vnc, xmpp]
 
 banner:
-  # Optionally display a persistent banner at the top and/or bottom of every
-  # page. HTML is allowed.
+  ## Optionally display a persistent banner at the top and/or bottom of every
+  ## page. HTML is allowed.
+  ##
   top: ''
   bottom: ''
 
-  # Text to include on the login page above the login form. HTML is allowed.
+  ## Text to include on the login page above the login form. HTML is allowed.
+  ##
   login: ''
 
 # Base URL path if accessing NetBox within a directory. For example, if
@@ -530,6 +533,13 @@ banner:
 # This will also require customising the NGINX Unit application server
 # configuration.
 basePath: ''
+
+## By default, netbox sends census reporting data using a single HTTP request each time a worker starts.
+## This data enables the project maintainers to estimate how many NetBox deployments exist and track the adoption of new versions over time.
+## The only data reported by this function are the NetBox version, Python version, and a pseudorandom unique identifier.
+## Default: true
+##
+censusReporting: true
 
 # Maximum number of days to retain logged changes. Set to 0 to retain change
 # logs indefinitely. (Default: 90)
@@ -1338,9 +1348,9 @@ housekeeping:
   ## @param image.debug Specify if debug logs should be enabled
   ##
   image:
-    registry: docker.io
-    repository: netboxcommunity/netbox
-    tag: "v3.7.6-2.8.0"
+    registry: ""
+    repository: ""
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1555,9 +1565,9 @@ worker:
   ## @param image.debug Specify if debug logs should be enabled
   ##
   image:
-    registry: docker.io
-    repository: netboxcommunity/netbox
-    tag: "v3.7.6-2.8.0"
+    registry: ""
+    repository: ""
+    tag: ""
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
