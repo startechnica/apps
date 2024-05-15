@@ -3,6 +3,9 @@ annotations:
   artifacthub.io/images: |
     - name: adminer
       image: docker.io/adminer:4.8.1-standalone
+  artifacthub.io/changes: |
+    - kind: added
+      description: Add separate cluster domain for gateway
 apiVersion: v2
 appVersion: 4.8.1
 dependencies:
@@ -39,4 +42,4 @@ name: adminer
 sources:
   - https://www.adminer.org
 type: application
-version: 0.1.7
+version: 0.1.8
