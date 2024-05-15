@@ -2,6 +2,55 @@ apiVersion: v1
 entries:
   adminer:
   - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Add separate cluster domain for gateway
+      artifacthub.io/images: |
+        - name: adminer
+          image: docker.io/adminer:4.8.1-standalone
+      category: DatabaseManagement
+    apiVersion: v2
+    appVersion: 4.8.1
+    created: "2024-05-15T09:26:45.811337289Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: '*'
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Adminer is a full-featured database management tool written in PHP.
+      Conversely to phpMyAdmin, it consist of a single file ready to deploy to the
+      target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite,
+      MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
+    digest: 06f23301cebdebd663c5083a6aa51241816b3908b61b106dce0f6aea6a1ba599
+    home: https://github.com/startechnica/apps/tree/main/charts/adminer
+    icon: https://www.adminer.org/static/images/logo.png
+    keywords:
+    - adminer
+    - postgres
+    - mysql
+    - sqlite
+    - elasticsearch
+    - mongodb
+    - database
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: adminer
+    sources:
+    - https://www.adminer.org
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/adminer-0.1.8/adminer-0.1.8.tgz
+    version: 0.1.8
+  - annotations:
       artifacthub.io/images: |
         - name: adminer
           image: docker.io/adminer:4.8.1-standalone
@@ -1780,4 +1829,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-05-08T05:19:08.228331551Z"
+generated: "2024-05-15T09:26:45.811443126Z"
