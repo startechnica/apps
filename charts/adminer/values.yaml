@@ -546,6 +546,7 @@ gateway:
   name: ""
   namespace: ""
   gatewayClassName: istio
+  clusterDomain: "cluster.local"
   ## @param gateway.listeners
   ##
   listeners: []
