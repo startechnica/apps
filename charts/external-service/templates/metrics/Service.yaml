@@ -1,0 +1,42 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics
+  namespace: {{ include "external-service.namespace" . | quote }}
+  {{- $labels := include "external-service.tplvalues.merge" (dict "values" (list .Values.commonLabels) "context" .) }}
+  labels: {{- include "external-service.labels.standard" (dict "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  {{- if or .Values.metrics.service.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "external-service.tplvalues.merge" (dict "values" (list .Values.metrics.service.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "external-service.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  {{- if and .Values.metrics.service.clusterIP (eq .Values.metrics.service.type "ClusterIP") }}
+  clusterIP: {{ .Values.metrics.service.clusterIP }}
+  {{- end }}
+  {{- if and .Values.metrics.service.externalName (eq .Values.metrics.service.type "ExternalName") }}
+  externalName: {{ .Values.metrics.service.externalName }}
+  {{- end }}
+  {{- if .Values.metrics.service.externalIPs }}
+  externalIPs:
+  {{- range $externalIP := .Values.metrics.service.externalIPs }}
+  - {{ $externalIP | quote }}
+  {{- end }}
+  {{- end }}
+  ipFamilyPolicy: {{ default "SingleStack" .Values.metrics.service.ipFamilyPolicy }}
+  ports:
+    - name: http-metrics
+      port: {{ .Values.metrics.service.ports.http }}
+      protocol: TCP
+      targetPort: {{ .Values.endpoints.ports.metrics }}
+      {{- if (and (or (eq .Values.metrics.service.type "NodePort") (eq .Values.metrics.service.type "LoadBalancer")) (not (empty .Values.metrics.service.nodePorts.http))) }}
+      nodePort: {{ .Values.metrics.service.nodePorts.http }}
+      {{- else if eq .Values.metrics.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- if .Values.metrics.service.extraPorts }}
+      {{- include "external-service.tplvalues.render" (dict "value" .Values.metrics.service.extraPorts "context" $) | nindent 4 }}
+    {{- end }}      
+{{- end }}

@@ -1,0 +1,287 @@
+## @section Global parameters
+## Global image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global image registry for External Service Server, Worker and Housekeeping
+## @param global.imageRepository Global image repository for External Service Server, Worker and Housekeeping
+## @param global.imageTag Global image tag for External Service Server, Worker and Housekeeping
+## @param global.imageDigest Global image digest for External Service Server, Worker and Housekeeping
+## @param global.imagePullSecrets Global External Service registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+
+## @section Common parameters
+
+## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
+##
+kubeVersion: ""
+## @param nameOverride String to partially override External Service.fullname
+##
+nameOverride: ""
+## @param fullnameOverride String to fully override External Service.fullname
+##
+fullnameOverride: ""
+## @param namespaceOverride String to fully override common.names.namespace
+##
+namespaceOverride: ""
+## @param hostAliases Add deployment host aliases
+## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+##
+hostAliases: []
+## @param commonLabels Labels to add to all deployed objects
+##
+commonLabels: {}
+## @param commonAnnotations Annotations to add to all deployed objects
+##
+commonAnnotations: {}
+## @param enableServiceLinks If set to false, disable Kubernetes service links in the pod spec
+## Ref: https://kubernetes.io/docs/tutorials/services/connect-applications-service/#accessing-the-service
+##
+enableServiceLinks: true
+## @param dnsPolicy DNS Policy for pod
+## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+## E.g.
+## dnsPolicy: ClusterFirst
+##
+dnsPolicy: ""
+## @param dnsConfig DNS Configuration pod
+## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+## E.g.
+## dnsConfig:
+##   options:
+##   - name: ndots
+##     value: "4"
+##
+dnsConfig: {}
+## @param clusterDomain Default Kubernetes cluster domain
+##
+clusterDomain: cluster.local
+## @param extraDeploy Array of extra objects to deploy with the release
+##
+extraDeploy: []
+## Enable diagnostic mode in the deployment
+##
+diagnosticMode:
+  ## @param diagnosticMode.enabled Enable diagnostic mode (all probes will be disabled and the command will be overridden)
+  ##
+  enabled: false
+  ## @param diagnosticMode.command Command to override all containers in the deployment
+  ##
+  command:
+    - sleep
+  ## @param diagnosticMode.args Args to override all containers in the deployment
+  ##
+  args:
+    - infinity
+
+## @section Virtual Router parameters
+
+## Virtual Router image version
+## ref: https://hub.docker.com/r/External Servicecommunity/External Service/tags
+## @param image.registry [default: REGISTRY_NAME] External Service image registry
+## @param image.repository [default: REPOSITORY_NAME/External Service] External Service image repository
+## @skip image.tag External Service image tag (immutable tags are recommended)
+##
+image:
+  registry: ""
+  repository: ""
+  tag: ""
+
+## @param labels Extra labels for Endpoints
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+##
+epLabels: {}
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+##
+epAnnotations: {}
+
+endpoints:
+  ## @param endpoints.addresses
+  ## addresses:
+  ##   - ip: 
+  ##     nodeName:
+  ##
+  addresses: []
+
+  ports:
+    metrics: 9100
+
+## @section Metrics Parameters
+
+## Prometheus Exporter / Metrics
+## ref: https://docs.External Service.dev/en/stable/integrations/prometheus-metrics/
+##
+metrics:
+  ## @param metrics.enabled Enable metrics
+  ##
+  enabled: false
+  ## @param metrics.ports.metrics Metrics endpoint HTTP port
+  ##
+  ports:
+    metrics: 9100
+  ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the External Service pod(s)
+  ##
+  extraVolumes: []
+  ## @param metrics.extraVolumeMounts Optionally specify extra list of additional volumeMounts for the External Service container(s)
+  ##
+  extraVolumeMounts: []
+  ## External Service metrics service parameters
+  ##
+  service:
+    ## @param metrics.service.type Kubernetes service type
+    ##
+    type: ExternalName
+    ## @param metrics.service.ports.http Metrics service HTTP port
+    ##
+    ports:
+      http: 9100
+    ## @param metrics.externalName  References to an external DNS address instead of only pods, which will allow application authors to reference services that exist off platform, on other clusters, or locally.
+    ##
+    externalName: ""
+    ## @param metrics.service.externalIPs  Designate an IP address block that is external to the cluster that can send traffic to services in the cluster.
+    ##
+    externalIPs: []
+    ## @param metrics.service.ipFamilyPolicy Kubernetes service ipFamilyPolicy policy
+    ##
+    ipFamilyPolicy: SingleStack
+    ## @param metrics.service.annotations [object] Annotations for enabling prometheus to access the metrics endpoints
+    ##
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "{{ .Values.metrics.service.ports.http }}"
+    ## @param metrics.service.extraPorts [array] Add additional ports to the External Service metrics service (i.e. admin port 9000)
+    ##
+    extraPorts: []
+  ## Prometheus Operator ServiceMonitor configuration
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.port Metrics service HTTP port
+    ##
+    port: http-metrics
+    ## @param metrics.serviceMonitor.endpoints [array] The endpoint configuration of the ServiceMonitor. Path is mandatory. Interval, timeout and labellings can be overwritten.
+    ##
+    endpoints:
+      - path: /metrics
+    ## @param metrics.serviceMonitor.path Metrics service HTTP path. Deprecated: Use @param metrics.serviceMonitor.endpoints instead
+    ##
+    path: ""
+    ## @param metrics.serviceMonitor.namespace Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped.
+    ## ref: https://github.com/coreos/prometheus-operator/blob/worker/Documentation/api.md#endpoint
+    ##
+    interval: ""
+    ## @param metrics.serviceMonitor.scrapeTimeout Timeout after which the scrape is ended
+    ## ref: https://github.com/coreos/prometheus-operator/blob/worker/Documentation/api.md#endpoint
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.labels Additional labels that can be used so ServiceMonitor will be discovered by Prometheus
+    ##
+    labels: {}
+    ## @param metrics.serviceMonitor.selector Prometheus instance selector labels
+    ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels Specify honorLabels parameter to add the scrape endpoint
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+  ## Prometheus Operator alert rules configuration
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled Create PrometheusRule Resource for scraping metrics using PrometheusOperator
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace which Prometheus is running in
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.labels Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    ##
+    labels: {}
+    ## @param metrics.prometheusRule.groups Groups, containing the alert rules.
+    ## Example:
+    ##   groups:
+    ##     - name: External Service
+    ##       rules:
+    ##         - alert: External ServiceInstanceNotAvailable
+    ##           annotations:
+    ##             message: "External Service instance in namespace {{ `{{` }} $labels.namespace {{ `}}` }} has not been available for the last 5 minutes."
+    ##           expr: |
+    ##             absent(kube_pod_status_ready{namespace="{{ include "common.names.namespace" . }}", condition="true"} * on (pod) kube_pod_labels{pod=~"{{ include "common.names.fullname" . }}-\\d+", namespace="{{ include "common.names.namespace" . }}"}) != 0
+    ##           for: 5m
+    ##           labels:
+    ##             severity: critical
+    groups: []
+  ## Metrics Network Policies
+  ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  ##
+  networkPolicy:
+    ## @param metrics.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+    ##
+    enabled: true
+    ## @param metrics.networkPolicy.allowExternal Don't require client label for connections
+    ## The Policy model to apply. When set to false, only pods with the correct
+    ## client label will have network access to the ports Metrics is listening
+    ## on. When true, Metrics will accept connections from any source
+    ## (with the correct destination port).
+    ##
+    allowExternal: true
+    ## @param metrics.networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolice
+    ## e.g:
+    ## extraIngress:
+    ##   - ports:
+    ##       - port: 1234
+    ##     from:
+    ##       - podSelector:
+    ##           - matchLabels:
+    ##               - role: frontend
+    ##       - podSelector:
+    ##           - matchExpressions:
+    ##               - key: role
+    ##                 operator: In
+    ##                 values:
+    ##                   - frontend
+    extraIngress: []
+    ## @param metrics.networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
+    ## e.g:
+    ## extraEgress:
+    ##   - ports:
+    ##       - port: 1234
+    ##     to:
+    ##       - podSelector:
+    ##           - matchLabels:
+    ##               - role: frontend
+    ##       - podSelector:
+    ##           - matchExpressions:
+    ##               - key: role
+    ##                 operator: In
+    ##                 values:
+    ##                   - frontend
+    ##
+    extraEgress: []
+    ## @param metrics.networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
+    ## @param metrics.networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
+    ##
+    ingressNSMatchLabels: {}
+    ingressNSPodMatchLabels: {}
