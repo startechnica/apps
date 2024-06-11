@@ -2,11 +2,9 @@ annotations:
   category: Infrastructure
   artifacthub.io/changes: |
     - kind: changed
-      description: Add Kubernetes Gateway API
-    - kind: changed
-      description: Add support for Kubernetes Gateway API v1.0.0
+      description: Add Cloudnative-PG, MetalLB and OpenEBS
 apiVersion: v2
-appVersion: 0.1.4
+appVersion: 0.1.5
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
   This chart is not deployable by itself.
 home: https://github.com/startechnica/apps/tree/main/charts/common
@@ -25,4 +23,4 @@ name: st-common
 sources:
   - https://startechnica.github.io/apps
 type: library
-version: 0.1.4
+version: 0.1.5
