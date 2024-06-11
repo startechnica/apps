@@ -279,6 +279,23 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/adminer-0.1.1/adminer-0.1.1.tgz
     version: 0.1.1
+  external-service:
+  - apiVersion: v2
+    created: "2024-06-11T06:11:15.552291428Z"
+    dependencies:
+    - name: st-common
+      repository: https://startechnica.github.io/apps
+      version: '*'
+    description: External Service Helm chart
+    digest: 0448ab3da2e66b2311ec5435b5805ee9ea218da38bcaf4844bb02289c42ac535
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: external-service
+    urls:
+    - https://github.com/startechnica/apps/releases/download/external-service-0.1.0/external-service-0.1.0.tgz
+    version: 0.1.0
   freeradius:
   - annotations:
       category: AccessManagement
@@ -1859,4 +1876,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-11T04:56:00.018077135Z"
+generated: "2024-06-11T06:11:15.552385755Z"
