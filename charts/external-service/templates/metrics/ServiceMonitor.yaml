@@ -5,7 +5,7 @@ kind: ServiceMonitor
 metadata:
   name: metrics
   namespace: {{ default (include "external-service.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
-  {{- $labels := include "external-service.tplvalues.merge" (dict "values" ( list .Values.metrics.serviceMonitor.labels .Values.commonLabels $versionLabel ) "context" .) }}
+  {{- $labels := include "external-service.tplvalues.merge" (dict "values" (list .Values.metrics.serviceMonitor.labels .Values.commonLabels ) "context" .) }}
   labels: {{- include "external-service.labels.standard" (dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: metrics
   {{- if .Values.commonAnnotations }}
