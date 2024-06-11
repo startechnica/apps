@@ -25,7 +25,9 @@ spec:
   - {{ $externalIP | quote }}
   {{- end }}
   {{- end }}
+  {{- if not (eq .Values.metrics.service.type "ExternalName") }}
   ipFamilyPolicy: {{ default "SingleStack" .Values.metrics.service.ipFamilyPolicy }}
+  {{- end }}
   ports:
     - name: http-metrics
       port: {{ .Values.metrics.service.ports.http }}
