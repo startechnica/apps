@@ -11,9 +11,9 @@ metadata:
   annotations: {{- include "external-service.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 subsets:
-  {{- if not (empty .Values.endpoints.addresses) }}
+  {{- if not (empty .Values.addresses) }}
   - addresses:
-      {{ range $address := .Values.endpoints.addresses }}
+      {{ range $address := .Values.addresses }}
       - ip: {{ $address.ip }}
         nodeName: {{ $address.nodeName }}
       {{- end }}

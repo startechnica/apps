@@ -99,21 +99,24 @@ image:
 ## @param labels Extra labels for Endpoints
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 ##
-epLabels: {}
+labels: {}
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 ##
-epAnnotations: {}
+annotations: {}
 
-endpoints:
-  ## @param endpoints.addresses
-  ## addresses:
-  ##   - ip: 
-  ##     nodeName:
-  ##
-  addresses: []
-
-  ports:
-    metrics: 9100
+## @param addresses
+## addresses:
+##   - ip: 
+##     nodeName:
+##
+addresses: []
+## @param ports
+## addresses:
+##   - name: 
+##     port:
+##     protocol:
+##
+ports: []
 
 ## @section Metrics Parameters
 
