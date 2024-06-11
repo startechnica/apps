@@ -8,5 +8,5 @@ maintainers:
   - name: Firmansyah Nainggolan
     email: firmansyah@nainggolan.id
     url: https://firmansyah.nainggolan.id
-name: virtual-router
+name: external-service
 version: 0.1.0
