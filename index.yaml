@@ -1576,6 +1576,36 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Add Cloudnative-PG, MetalLB and OpenEBS
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.5
+    created: "2024-06-11T04:56:00.018012935Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: aab01cde47e5ec1d2061646e26d7f0b3acf9bb4b740d35f6a3ffaa169f523272
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.5/st-common-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Add Kubernetes Gateway API
         - kind: changed
           description: Add support for Kubernetes Gateway API v1.0.0
@@ -1829,4 +1859,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-05-15T09:26:45.811443126Z"
+generated: "2024-06-11T04:56:00.018077135Z"
