@@ -13,9 +13,7 @@ metadata:
 subsets:
   {{- if not (empty .Values.addresses) }}
   - addresses:
-      {{ range $address := .Values.addresses }}
-      {{- toYaml $address | nindent 6 }}
-      {{- end }}
+      {{- toYaml .Values.addresses | nindent 6 }}
     ports:
       - name: http-metrics
         port: {{ .Values.metrics.ports.metrics }}
