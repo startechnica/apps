@@ -6,7 +6,7 @@ Kubernetes standard labels
 */}}
 {{- define "external-service.labels.standard" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{- $default := dict "app.kubernetes.io/name" (include "app.name" .context) "helm.sh/chart" (include "app.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
+{{- $default := dict "app.kubernetes.io/name" (include "external-service.name" .context) "helm.sh/chart" (include "external-service.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
@@ -33,7 +33,7 @@ overwrote them on metadata.labels fields.
 */}}
 {{- define "external-service.labels.matchLabels" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-  {{ merge (pick (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance") (dict "app.kubernetes.io/name" (include "app.name" .context) "app.kubernetes.io/instance" .context.Release.Name ) | toYaml }}
+  {{ merge (pick (include "external-service.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance") (dict "app.kubernetes.io/name" (include "external-service.name" .context) "app.kubernetes.io/instance" .context.Release.Name ) | toYaml }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "external-service.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
