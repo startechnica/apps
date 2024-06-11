@@ -1,4 +1,4 @@
-{{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
 {{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
 apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
 kind: ServiceMonitor
