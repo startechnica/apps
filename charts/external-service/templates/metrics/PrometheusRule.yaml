@@ -1,0 +1,17 @@
+{{- if and .Values.metrics.enabled .Values.metrics.prometheusRule.enabled .Values.metrics.prometheusRule.groups }}
+{{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
+apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
+kind: PrometheusRule
+metadata:
+  name: {{ template "external-service.fullname" . }}
+  namespace: {{ default (include "external-service.namespace" .) .Values.metrics.prometheusRule.namespace }}
+  {{- $labels := include "external-service.tplvalues.merge" (dict "values" ( list .Values.metrics.prometheusRule.labels .Values.commonLabels) "context" . ) }}
+  labels: {{- include "external-service.labels.standard" (dict "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "external-service.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  groups: {{- include "external-service.tplvalues.render" (dict "value" .Values.metrics.prometheusRule.groups "context" .) | nindent 4 }}
+{{- end }}
+{{- end }}

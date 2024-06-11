@@ -1,0 +1,12 @@
+apiVersion: v2
+dependencies:
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: "*"
+description: External Service Helm chart
+maintainers:
+  - name: Firmansyah Nainggolan
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
+name: external-service
+version: 0.1.0
