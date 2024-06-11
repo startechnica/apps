@@ -281,6 +281,22 @@ entries:
     version: 0.1.1
   external-service:
   - apiVersion: v2
+    created: "2024-06-11T07:15:51.743449508Z"
+    dependencies:
+    - name: st-common
+      repository: https://startechnica.github.io/apps
+      version: '*'
+    description: External Service Helm chart
+    digest: 181b6161b61942daaf76a0b5dea7d781af2dc13d3f211f40a2fd68cd372d0bd8
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: external-service
+    urls:
+    - https://github.com/startechnica/apps/releases/download/external-service-0.1.1/external-service-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
     created: "2024-06-11T06:11:15.552291428Z"
     dependencies:
     - name: st-common
@@ -1876,4 +1892,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-11T06:11:15.552385755Z"
+generated: "2024-06-11T07:15:51.743528284Z"
