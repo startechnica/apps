@@ -18,7 +18,9 @@
 
 {{/* Return the appropriate apiVersion for Istio Networking. */}}
 {{- define "common.capabilities.istioNetworking.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1" -}}
   {{- print "networking.istio.io/v1beta1" -}}
 {{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1alpha3" -}}
   {{- print "networking.istio.io/v1alpha3" -}}
@@ -42,6 +44,8 @@
 {{- define "common.capabilities.istioTelemetry.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "telemetry.istio.io/v1alpha1" -}}
   {{- print "telemetry.istio.io/v1alpha1" -}}
+{{- else if .Capabilities.APIVersions.Has "telemetry.istio.io/v1" -}}
+  {{- print "telemetry.istio.io/v1" -}}
 {{- else -}}
   {{- false -}}
 {{- end -}}
