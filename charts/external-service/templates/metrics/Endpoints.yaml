@@ -14,8 +14,7 @@ subsets:
   {{- if not (empty .Values.addresses) }}
   - addresses:
       {{ range $address := .Values.addresses }}
-      - ip: {{ $address.ip }}
-        nodeName: {{ $address.nodeName }}
+      {{- toYaml $address | nindent 6 }}
       {{- end }}
     ports:
       - name: http-metrics

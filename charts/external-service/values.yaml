@@ -111,9 +111,8 @@ annotations: {}
 ##
 addresses: []
 ## @param ports
-## addresses:
+## ports:
 ##   - name: 
-##     ip:
 ##     port:
 ##     protocol:
 ##
