@@ -150,12 +150,13 @@ extraEnvVars: []
 ##        name: secret-resource
 ##
 extraEnvs: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox nodes
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox server nodes
 ##
 extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Netbox nodes
+## @param extraEnvVarsSecrets List of existing Secret containing extra env vars for Netbox server nodes
 ##
 extraEnvVarsSecret: ""
+extraEnvVarsSecrets: []
 ## @param containerPorts.http Container port to open on Netbox nodes
 ##
 containerPorts:
@@ -2699,6 +2700,9 @@ gateway:
     ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway HTTPRoute
     ## 
     create: false
+  ## @param gateway.clusterDomain  Name of gateway cluster domain
+  ##
+  clusterDomain: cluster.local
   ## @param gateway.name  Name of the Gateway resource
   ## e.g.
   ## name: istio-ingressgateway

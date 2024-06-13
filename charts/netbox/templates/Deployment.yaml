@@ -4,7 +4,7 @@ metadata:
   name: {{ include "netbox.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart) ) }}  
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" (list .Values.commonLabels $versionLabel) "context" . ) }}
   labels: {{- include "common.labels.standard" (dict "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: server
     app.kubernetes.io/part-of: netbox
@@ -44,7 +44,7 @@ spec:
         {{- end }}
     spec:
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}

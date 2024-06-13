@@ -28,7 +28,7 @@ spec:
         {{- end }}            
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" $) (include "common.names.namespace" .) .Values.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" $) (include "common.names.namespace" .) .Values.gateway.clusterDomain }}
             port:
               number: {{ .Values.service.ports.http }}
   {{- if or .Values.tls.enabled .Values.ingress.tls }}
@@ -42,7 +42,7 @@ spec:
             {{- end }}
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "common.names.namespace" .) .Values.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "common.names.namespace" .) .Values.gateway.clusterDomain }}
   {{- end }}
 {{- end -}}
 {{- end -}}
