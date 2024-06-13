@@ -1,20 +1,10 @@
 annotations:
   artifacthub.io/changes: |
     - kind: fixed
-      description: Add missing import if allowedHostsIncludesPodIp is true
+      description: Add missing parameter on external-db secret
       links:
-        - name: GitHub Pull Request
-          url: https://github.com/startechnica/apps/pull/68
-    - kind: changed
-      description: Update Netbox Docker to v2.8.0
-      links:
-        - name: GitHub Releases
-          url: https://github.com/netbox-community/netbox-docker/releases/tag/2.8.0
-    - kind: changed
-      description: Update Netbox v3.7.8
-      links:
-        - name: GitHub Releases
-          url: https://github.com/netbox-community/netbox/releases/tag/v3.7.8
+        - name: GitHub Issue
+          url: https://github.com/startechnica/apps/issues/71
   licenses: Apache-2.0
   images: |
     - name: netbox
@@ -53,4 +43,4 @@ keywords:
   - ipam
   - netbox
 type: application
-version: 5.0.9
+version: 5.0.10
