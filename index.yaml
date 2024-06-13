@@ -1177,6 +1177,57 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: fixed
+          description: Add missing parameter on external-db secret
+          links:
+            - name: GitHub Issue
+              url: https://github.com/startechnica/apps/issues/71
+      images: |
+        - name: netbox
+          image: docker.io/netboxcommunity/netbox:v3.7.8-2.8.0
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: v3.7.8
+    created: "2024-06-13T08:27:17.997296292Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 19.x.x
+    - alias: bitnami-common
+      name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.x.x
+    description: IP address management (IPAM) and data center infrastructure management
+      (DCIM) tool
+    digest: e474d9a8d8861a9f13e1ae0e0429b46acee8c418af147865e69f84140574333a
+    home: https://github.com/startechnica/apps/tree/main/charts/netbox
+    icon: https://raw.githubusercontent.com/netbox-community/netbox/develop/docs/netbox_logo.png
+    keywords:
+    - ipam
+    - netbox
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: netbox
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/netbox-5.0.10/netbox-5.0.10.tgz
+    version: 5.0.10
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
           description: Add missing import if allowedHostsIncludesPodIp is true
           links:
             - name: GitHub Pull Request
@@ -1892,4 +1943,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-11T07:15:51.743528284Z"
+generated: "2024-06-13T08:27:17.997377655Z"
