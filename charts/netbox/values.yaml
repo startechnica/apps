@@ -397,20 +397,20 @@ extraInitContainers: []
 ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 ##
 networkPolicy:
-  ## @param readReplicas.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+  ## @param networkPolicy.enabled Specifies whether a NetworkPolicy should be created
   ##
   enabled: true
-  ## @param readReplicas.networkPolicy.allowExternal Don't require server label for connections
+  ## @param networkPolicy.allowExternal Don't require server label for connections
   ## The Policy model to apply. When set to false, only pods with the correct
   ## server label will have network access to the ports server is listening
   ## on. When true, server will accept connections from any source
   ## (with the correct destination port).
   ##
   allowExternal: true
-  ## @param readReplicas.networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
+  ## @param networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
   ##
   allowExternalEgress: false
-  ## @param readReplicas.networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolice
+  ## @param networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolice
   ## e.g:
   ## extraIngress:
   ##   - ports:
@@ -426,7 +426,7 @@ networkPolicy:
   ##                 values:
   ##                   - frontend
   extraIngress: []
-  ## @param readReplicas.networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
+  ## @param networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
   ## e.g:
   ## extraEgress:
   ##   - ports:
@@ -443,8 +443,8 @@ networkPolicy:
   ##                   - frontend
   ##
   extraEgress: []
-  ## @param readReplicas.networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
-  ## @param readReplicas.networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
+  ## @param networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
+  ## @param networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
   ##
   ingressNSMatchLabels: {}
   ingressNSPodMatchLabels: {}
