@@ -655,6 +655,56 @@ entries:
           url: https://gateway-api.sigs.k8s.io/api-types/gateway/
       category: ServiceMesh
     apiVersion: v2
+    appVersion: 1.22.2
+    created: "2024-06-30T17:45:23.48575238Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: '*'
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Istio Gateway provides more extensive customization and flexibility
+      than Kubernetes Ingress, and allows Istio features such as monitoring and route
+      rules to be applied to traffic entering the cluster.
+    digest: 732987cd74428b576d15e1188c80d2ee3b6d8c9911f42169c1b32ccaeb48a54d
+    home: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
+    icon: https://istio.io/latest/favicons/android-192x192.png
+    keywords:
+    - gateway
+    - gateway-api
+    - istio
+    - ingress
+    - ingressgateway
+    - ingress-gateway
+    - kubernetes-gateway
+    kubeVersion: '>=1.24.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: istio-gateway
+    sources:
+    - http://github.com/istio/istio
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/istio-gateway-1.0.3/istio-gateway-1.0.3.tgz
+    version: 1.0.3
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
+        - name: Upstream Project
+          url: https://github.com/istio/istio/tree/master/manifests/charts/gateways/istio-ingress
+        - name: Istio Gateway
+          url: https://istio.io/latest/docs/concepts/traffic-management/#gateways
+        - name: Kubernetes Gateway
+          url: https://gateway-api.sigs.k8s.io/api-types/gateway/
+      category: ServiceMesh
+    apiVersion: v2
     appVersion: 1.20.0
     created: "2023-12-01T06:26:32.489119324Z"
     dependencies:
@@ -1943,4 +1993,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-13T08:27:17.997377655Z"
+generated: "2024-06-30T17:45:23.485884908Z"
