@@ -5,6 +5,8 @@ gateways:
     service:
       ipFamilyPolicy: PreferDualStack
 
+    serviceAccount:
+      create: true
 
   - name: freeradius
     enabled: true
