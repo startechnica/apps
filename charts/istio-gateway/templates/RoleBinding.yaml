@@ -19,7 +19,7 @@ subjects:
   {{- range $gateway := .Values.gateways }}
   {{- if and $gateway.enabled (and .serviceAccount .serviceAccount.create)}}
   - kind: ServiceAccount
-    name: {{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" $gateway "context" . ) }}
+    name: {{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" $gateway "context" $ ) }}
   {{- end }}
   {{- end }}
 {{- end -}}
