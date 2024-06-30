@@ -114,17 +114,6 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-    {{- if $.Values.metrics.enabled }}
-    - name: metrics
-      port: 15090
-      protocol: TCP
-      targetPort: http-envoy-prom
-      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.metrics) }}
-      nodePort: {{ .service.nodePorts.metrics | int }}
-      {{- else }}
-      nodePort: null
-      {{- end }}
-    {{- end }}
   selector: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
 ---
 {{- end }}
