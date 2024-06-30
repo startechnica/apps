@@ -104,7 +104,8 @@ spec:
   targetLimit: {{ . }}
   {{- end }}
   namespaceSelector:
-    - {{ include "common.names.namespace" . | quote }}
+    matchNames:
+      - {{ include "common.names.namespace" . | quote }}
   selector:
     matchExpressions:
     - {key: istio-prometheus-ignore, operator: DoesNotExist}
