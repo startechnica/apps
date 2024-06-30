@@ -17,9 +17,9 @@ roleRef:
   name: {{ include "common.names.fullname" . | quote }}
 subjects:
   {{- range $gateway := .Values.gateways }}
-  {{- if $gateway.enabled }}
+  {{- if and $gateway.enabled (and .serviceAccount .serviceAccount.create)}}
   - kind: ServiceAccount
-    name: {{ printf "%s-sa" $gateway.name }}
+    name: {{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" $gateway "context" . ) }}
   {{- end }}
   {{- end }}
 {{- end -}}

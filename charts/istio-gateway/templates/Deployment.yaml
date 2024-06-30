@@ -46,7 +46,7 @@ spec:
           - name: net.ipv4.ip_unprivileged_port_start
             value: "0"
       {{- end }}
-      serviceAccountName: {{ printf "%s-sa" .name | quote }}
+      serviceAccountName: {{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" $gateway "context" . ) }}
       {{- if .schedulerName }}
       schedulerName: {{ .schedulerName }}
       {{- end }}
