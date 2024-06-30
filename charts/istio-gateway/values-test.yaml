@@ -3,6 +3,7 @@ gateways:
     enabled: true
 
     service:
+      type: LoadBalancer
       ipFamilyPolicy: PreferDualStack
 
     serviceAccount:
@@ -12,6 +13,7 @@ gateways:
     enabled: true
 
     service:
+      type: LoadBalancer
       extraPorts:
         - name: acct
           port: 1813
