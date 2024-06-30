@@ -1,27 +1,25 @@
-{{- range $gateway := .Values.gateways }}
-{{- if and .enabled $.Values.rbac.create (and .rbac .rbac.create) }}
+{{- if and .Values.serviceAccount.create .Values.rbac.create }}
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" $ }}
 kind: RoleBinding
 metadata:
-  name: {{ .name | quote }}
-  namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
-    release: {{ $.Release.Name }}
-    install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
-    operator.istio.io/component: {{ $.Values.operator.component }}
-    {{- if $.Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
-  {{- if $.Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    release: {{ .Release.Name }}
+    install.operator.istio.io/owning-resource: {{ default "unknown" .Values.ownerName }}
+    operator.istio.io/component: {{ .Values.operator.component }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "common.names.fullname" $ | quote }}
+  name: {{ include "common.names.fullname" . | quote }}
 subjects:
-- kind: ServiceAccount
-  name: {{ printf "%s-sa" .name }}
----
-{{- end }}
-{{- end }}
+  {{- range $gateway := .Values.gateways }}
+  {{- if and $gateway.enabled (and .serviceAccount .serviceAccount.create)}}
+  - kind: ServiceAccount
+    name: {{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" $gateway "context" $ ) }}
+  {{- end }}
+  {{- end }}
+{{- end -}}

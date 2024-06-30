@@ -11,17 +11,20 @@ is true or default otherwise.
     {{- end -}}
 {{- end -}}
 
-{{/* Return the proper Proxy image name */}}
-{{- define "proxy.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
-{{- end -}}
 
-{{/* Return the proper Docker Image Registry Secret Names */}}
-{{- define "proxy.imagePullSecrets" -}}
-  {{- include "common.images.pullSecrets" (dict "images" (list .Values.proxy.image) "global" .Values.global) -}}
+{{/*
+{{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" .Values.gateways.gateway "context" . ) }}
+*/}}
+
+{{- define "gateway.rbac.serviceAccountName" -}}
+{{- if and .gatewayValues.serviceAccount .gatewayValues.serviceAccount.create -}}
+    {{ print .gatewayValues.name | trunc 63 | trimSuffix "-" }}
+{{- else -}}
+    {{ default "default" .context.Values.serviceAccount.name }}
+{{- end -}}
 {{- end -}}
 
 {{/* Return the proper Docker Image Registry Secret Names */}}
 {{- define "gateway.imagePullSecrets" -}}
-  {{- include "common.images.pullSecrets" (dict "images" (list .Values.proxy.image) "global" .Values.global) -}}
+{{- include "common.images.pullSecrets" (dict "images" (list .Values.proxy.image) "global" .Values.global) -}}
 {{- end -}}

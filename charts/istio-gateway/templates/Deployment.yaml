@@ -34,7 +34,6 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
-      # {{- include "gateway.imagePullSecrets" $ | nindent 6 }}
       {{ include "common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
       {{- if .hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
@@ -47,7 +46,7 @@ spec:
           - name: net.ipv4.ip_unprivileged_port_start
             value: "0"
       {{- end }}
-      serviceAccountName: {{ printf "%s-sa" .name | quote }}
+      serviceAccountName: {{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" $gateway "context" $ ) }}
       {{- if .schedulerName }}
       schedulerName: {{ .schedulerName }}
       {{- end }}
@@ -85,10 +84,10 @@ spec:
       containers:
         - name: istio-proxy
           # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
-          image: {{ include "gateway.image" (dict "imageRoot" .image "global" $) }}
+          image: {{ include "gateway.image" (dict "imageRoot" .image "global" $.Values.global) }}
           # image: "auto"
           {{- if and .image .image.pullPolicy }}
-          imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" | quote }}
+          imagePullPolicy: {{ default "IfNotPresent" .image.pullPolicy | quote }}
           {{- end }}
           {{- if and .containerSecurityContext .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
@@ -105,9 +104,9 @@ spec:
             runAsNonRoot: true
           {{- end }}
           env:
-            {{- with .networkGateway }}
+            {{- if .networkGateway }}
             - name: ISTIO_META_REQUESTED_NETWORK_VIEW
-              value: "{{.}}"
+              value: {{ .networkGateway | quote }}
             {{- end }}
             {{- if .extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" .extraEnvVars "context" $) | nindent 12 }}

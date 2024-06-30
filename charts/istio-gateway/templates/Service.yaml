@@ -5,6 +5,8 @@ kind: Service
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "gateway.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" (list $.Values.commonLabels $versionLabel ) "context" $) }}
   labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
     release: {{ $.Release.Name }}
@@ -14,18 +16,13 @@ metadata:
       {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
-  annotations:
-    {{- if $.Values.commonAnnotations }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .service.annotations }}
-      {{- include "common.tplvalues.render" (dict "value" .service.annotations "context" $) | nindent 4 }}
-    {{- end }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .service.annotations $.Values.commonAnnotations ) "context" $ ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}
   {{- if eq .service.type "LoadBalancer" }}
-  allocateLoadBalancerNodePorts: {{ eq .service.allocateLoadBalancerNodePorts "true" }}
+  allocateLoadBalancerNodePorts: false
   {{- end }}
   {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
   clusterIP: {{ .service.clusterIP }}
@@ -51,7 +48,7 @@ spec:
   {{- end }}
   ports:
   {{- if .networkGateway }}
-    - name: status
+    - name: tcp-status
       port: 15021
       targetPort: 15021
     - name: tls
@@ -65,11 +62,11 @@ spec:
       targetPort: 15017
   {{- else if and .service .containerPorts }}
     {{- if hasKey .service.ports "status" }}
-    - name: status
+    - name: tcp-status
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
       targetPort: {{ default 15021 .containerPorts.status | int }}
-      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.status) }}
+      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.status) }}
       nodePort: {{ .service.nodePorts.status | int }}
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
@@ -80,7 +77,7 @@ spec:
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
       targetPort: {{ default 80 .containerPorts.http2 | int }}
-      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.http2) }}
+      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.http2) }}
       nodePort: {{ .service.nodePorts.http2 | int }}
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
@@ -91,7 +88,7 @@ spec:
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
       targetPort: {{ default 443 .containerPorts.https | int }}
-      {{- if (and (or (eq .service.type "NodePort") (eq .service.type "LoadBalancer")) .service.nodePorts.https) }}
+      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.https) }}
       nodePort: {{ .service.nodePorts.https | int }}
       {{- else if eq .service.type "ClusterIP" }}
       nodePort: null
@@ -101,7 +98,7 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- else }}
-    - name: status
+    - name: tcp-status
       port: 15021
       protocol: TCP
       targetPort: 15021
@@ -117,17 +114,6 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-    {{- if $.Values.metrics.enabled }}
-    - name: metrics
-      port: 15090
-      protocol: TCP
-      targetPort: http-envoy-prom
-      {{- if or (eq .service.type "NodePort") (eq .service.type "LoadBalancer") }}
-      nodePort: 15090
-      {{- else if eq .service.type "ClusterIP" }}
-      nodePort: null
-      {{- end }}
-    {{- end }}
   selector: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
 ---
 {{- end }}

@@ -3,13 +3,17 @@ gateways:
     enabled: true
 
     service:
+      type: LoadBalancer
       ipFamilyPolicy: PreferDualStack
 
+    serviceAccount:
+      create: true
 
   - name: freeradius
     enabled: true
 
     service:
+      type: LoadBalancer
       extraPorts:
         - name: acct
           port: 1813
