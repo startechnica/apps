@@ -34,7 +34,6 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" .podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
-      # {{- include "gateway.imagePullSecrets" $ | nindent 6 }}
       {{ include "common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
       {{- if .hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
@@ -88,7 +87,7 @@ spec:
           image: {{ include "gateway.image" (dict "imageRoot" .image "global" $.Values.global) }}
           # image: "auto"
           {{- if and .image .image.pullPolicy }}
-          imagePullPolicy: {{ .image.pullPolicy | default "IfNotPresent" | quote }}
+          imagePullPolicy: {{ default "IfNotPresent" .image.pullPolicy | quote }}
           {{- end }}
           {{- if and .containerSecurityContext .containerSecurityContext.enabled }}
           securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}

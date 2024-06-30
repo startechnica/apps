@@ -13,5 +13,5 @@ is true or default otherwise.
 
 {{/* Return the proper Docker Image Registry Secret Names */}}
 {{- define "gateway.imagePullSecrets" -}}
-  {{- include "common.images.pullSecrets" (dict "images" (list .Values.proxy.image) "global" .Values.global) -}}
+{{- include "common.images.pullSecrets" (dict "images" (list .Values.proxy.image) "global" .Values.global) -}}
 {{- end -}}
