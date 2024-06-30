@@ -22,7 +22,7 @@ metadata:
 spec:
   type: {{ default "LoadBalancer" .service.type }}
   {{- if eq .service.type "LoadBalancer" }}
-  allocateLoadBalancerNodePorts: {{ eq .service.allocateLoadBalancerNodePorts "true" }}
+  allocateLoadBalancerNodePorts: false
   {{- end }}
   {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
   clusterIP: {{ .service.clusterIP }}
