@@ -5,17 +5,18 @@ kind: PodMonitor
 metadata:
   name: {{ include "common.names.fullname" . }}
   namespace: {{ default (include "common.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- if .Values.metrics.podMonitor.additionalLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.metrics.podMonitor.additionalLabels "context" $) | nindent 4 }}
-    {{- end }}
+  {{- $labels := include "app.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
   jobLabel: {{ .Values.metrics.podMonitor.jobLabel | quote }}
   podMetricsEndpoints:
-    - path: /stats/prometheus
+    - path: {{ .Values.metrics.podMonitor.path }}
+      {{- if .Values.metrics.podMonitor.port }}
+      port: {{ .Values.metrics.podMonitor.port }}
+      {{- end }}
       {{- if .Values.metrics.podMonitor.interval }}
       interval: {{ .Values.metrics.podMonitor.interval }}
       {{- end }}
@@ -37,15 +38,15 @@ spec:
           regex: (\d+);(([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4})
           replacement: '[$2]:$1'
           sourceLabels:
-          - __meta_kubernetes_pod_annotation_prometheus_io_port
-          - __meta_kubernetes_pod_ip
+            - __meta_kubernetes_pod_annotation_prometheus_io_port
+            - __meta_kubernetes_pod_ip
           targetLabel: __address__
         - action: replace
           regex: (\d+);((([0-9]+?)(\.|$)){4})
           replacement: $2:$1
           sourceLabels:
-          - __meta_kubernetes_pod_annotation_prometheus_io_port
-          - __meta_kubernetes_pod_ip
+            - __meta_kubernetes_pod_annotation_prometheus_io_port
+            - __meta_kubernetes_pod_ip
           targetLabel: __address__
         - action: labeldrop
           regex: "__meta_kubernetes_pod_label_(.+)"

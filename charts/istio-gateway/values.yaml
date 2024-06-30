@@ -393,9 +393,9 @@ metrics:
     ## @param metrics.podMonitor.honorLabels Specify honorLabels parameter to add the scrape endpoint
     ##
     honorLabels: false
-    ## @param metrics.podMonitor.additionalLabels Additional labels that can be used so PodMonitor resource(s) can be discovered by Prometheus
+    ## @param metrics.podMonitor.labels Additional labels that can be used so PodMonitor resource(s) can be discovered by Prometheus
     ##
-    additionalLabels: {}
+    labels: {}
     ## @param metrics.podMonitor.podTargetLabels Labels from the Kubernetes pod to be transferred to the created metrics
     ##
     podTargetLabels: []
@@ -575,6 +575,7 @@ gateways:
       status: 15021
       http2: 80
       https: 443
+      metrics: 15090
     ## Istio Gateway Pod security context
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
     ## @param podSecurityContext.enabled Enable security context for Istio Gateway pods
@@ -805,26 +806,6 @@ gateways:
     ##
     networkGateway: false
 
-    ## Role Based Access Configuration
-    ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
-    ##
-    rbac:
-      ## @param gateways.$gateway.rbac.create Specify whether RBAC resources should be created and used
-      ##
-      create: true
-      ## @param gateways.$gateway.rbac.rules Custom RBAC rules
-      ## Example:
-      ## rules:
-      ##   - apiGroups:
-      ##       - ""
-      ##     resources:
-      ##       - pods
-      ##     verbs:
-      ##       - get
-      ##       - list
-      ##
-      rules: []
-
     ##############
     secretVolumes:
       - name: ingressgateway-certs
@@ -850,3 +831,22 @@ gateways:
       ## @param gateways.$gateway.serviceAccount.annotations Additional custom annotations for the ServiceAccount
       ##
       annotations: {}
+    ## Role Based Access Configuration
+    ## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+    ##
+    rbac:
+      ## @param gateways.$gateway.rbac.create Specify whether RBAC resources should be created and used
+      ##
+      create: true
+      ## @param gateways.$gateway.rbac.rules Custom RBAC rules
+      ## Example:
+      ## rules:
+      ##   - apiGroups:
+      ##       - ""
+      ##     resources:
+      ##       - pods
+      ##     verbs:
+      ##       - get
+      ##       - list
+      ##
+      rules: []
