@@ -60,7 +60,7 @@ spec:
     - name: tls-webhook
       port: 15017
       targetPort: 15017
-  {{- else if and .service .containerPorts }}
+  {{- else if and (hasKey . "service") (hasKey . "containerPorts") }}
     {{- if hasKey .service.ports "status" }}
     - name: tcp-status
       port: {{ default 15021 .service.ports.status | int }}
