@@ -2,9 +2,17 @@ gateways:
   - name: webapps
     enabled: true
 
+    containerPorts:
+      http2: 32380
+
     service:
-      type: LoadBalancer
-      ipFamilyPolicy: PreferDualStack
+      type: NodePort
+      ipFamilyPolicy: SingleStack
+
+      ports:
+        http2: 801
+
+      
 
     serviceAccount:
       create: true

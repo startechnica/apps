@@ -103,7 +103,7 @@ spec:
       protocol: TCP
       targetPort: 15021
     - name: http2
-      port: 801
+      port: 80
       protocol: TCP
       targetPort: 80
     - name: https
