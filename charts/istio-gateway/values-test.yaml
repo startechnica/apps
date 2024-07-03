@@ -3,14 +3,17 @@ gateways:
     enabled: true
 
     containerPorts:
-      http2: 32380
+      http2: 80
 
     service:
       type: NodePort
       ipFamilyPolicy: SingleStack
 
       ports:
-        http2: 801
+        http2: 80
+
+      nodePorts:
+        http2: 32380
 
       
 
