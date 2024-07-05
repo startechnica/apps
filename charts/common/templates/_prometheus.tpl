@@ -1,3 +1,8 @@
+{{- /*
+Copyright (c) 2024 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{/* Return the appropriate apiVersion for Prometheus API */}}
 {{- define "common.capabilities.coreosMonitoring.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}

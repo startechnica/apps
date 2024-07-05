@@ -1,3 +1,8 @@
+{{- /*
+Copyright (c) 2024 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{/* Return the appropriate apiVersion for Istio Extensions. */}}
 {{- define "common.capabilities.istioExtensions.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "extensions.istio.io/v1alpha1" -}}
@@ -46,6 +51,29 @@
   {{- print "telemetry.istio.io/v1alpha1" -}}
 {{- else if .Capabilities.APIVersions.Has "telemetry.istio.io/v1" -}}
   {{- print "telemetry.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/* Return the appropriate apiVersion for Istio Gateway. */}}
+{{- define "common.capabilities.istioGateway.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/Gateway" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/Gateway" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio VirtualService. */}}
+{{- define "common.capabilities.istioVirtualService.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/VirtualService" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/VirtualService" -}}
+  {{- print "networking.istio.io/v1" -}}
 {{- else -}}
   {{- false -}}
 {{- end -}}

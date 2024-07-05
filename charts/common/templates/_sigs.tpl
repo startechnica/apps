@@ -1,3 +1,8 @@
+{{- /*
+Copyright (c) 2024 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API */}}
 {{- define "common.capabilities.networkingGateway.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1" -}}
