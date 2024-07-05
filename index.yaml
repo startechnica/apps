@@ -1710,6 +1710,36 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Add Flux CD
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.6
+    created: "2024-07-05T03:43:03.528981237Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 718db11ffea2e860456a1f769ba07712a7fc1479c11bf4c72b290829f3a1f9d4
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.6/st-common-0.1.6.tgz
+    version: 0.1.6
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Add Cloudnative-PG, MetalLB and OpenEBS
       category: Infrastructure
     apiVersion: v2
@@ -1993,4 +2023,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-30T17:45:23.485884908Z"
+generated: "2024-07-05T03:43:03.529160842Z"
