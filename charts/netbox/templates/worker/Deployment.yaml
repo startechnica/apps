@@ -100,6 +100,11 @@ spec:
               {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
             {{- end }}
           {{- end }}
+          {{- if .Values.worker.resources }}
+          resources: {{- include "common.tplvalues.render" (dict "value" .Values.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.worker.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" .Values.resourcesPreset) | nindent 12 }}
+          {{- end }}
           {{- if .Values.worker.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.worker.customLivenessProbe "context" $) | nindent 12 }}
           {{- else if .Values.worker.livenessProbe.enabled }}
@@ -129,9 +134,6 @@ spec:
             - secretRef:
                 name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
             {{- end }}
-          {{- end }}
-          {{- if .Values.worker.resources }}
-          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: config

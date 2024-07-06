@@ -100,7 +100,9 @@ spec:
               {{- end }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
-            resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
+            resources: {{- include "common.tplvalues.render" (dict "value" .Values.resources "context" $) | nindent 12 }}
+            {{- else if ne .Values.housekeeping.resourcesPreset "none" }}
+            resources: {{- include "common.resources.preset" (dict "type" .Values.resourcesPreset) | nindent 12 }}
             {{- end }}
             volumeMounts:
             - name: config
