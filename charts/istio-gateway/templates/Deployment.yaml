@@ -114,15 +114,19 @@ spec:
             {{- if .extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" .extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
-          {{- if or .extraEnvVarsCM .extraEnvVarsSecret }}
+          {{- if or .extraEnvVarsCMs .extraEnvVarsSecrets }}
           envFrom:
-            {{- if .extraEnvVarsCM }}
+            {{- if .extraEnvVarsCMs }}
+            {{- range .Values.extraEnvVarsCMs }}
             - configMapRef:
-                name: {{ include "common.tplvalues.render" (dict "value" .extraEnvVarsCM "context" $) }}
+                name: {{ . }}
             {{- end }}
-            {{- if .extraEnvVarsSecret }}
+            {{- end }}
+            {{- if .extraEnvVarsSecrets }}
+            {{- range .Values.extraEnvVarsSecrets }}
             - secretRef:
-                name: {{ include "common.tplvalues.render" (dict "value" .extraEnvVarsSecret "context" $) }}
+                name: {{ . }}
+            {{- end }}
             {{- end }}
           {{- end }}
           {{- $containerPorts := dict .containerPorts }}

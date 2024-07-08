@@ -714,10 +714,11 @@ gateways:
     ## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsCM: ""
+    extraEnvVarsCMs: []
     ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsSecret: ""
-
+    extraEnvVarsSecrets: []
     ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
     ##
     extraVolumes: []
