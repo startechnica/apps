@@ -5,6 +5,8 @@ kind: Deployment
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" (dict "imageRoot" .image "global" $.Values.global "chart" $.Chart) ) }}
+  {{- $labels := include "common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     {{- if $.Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
@@ -16,6 +18,7 @@ spec:
   {{- if not $.Values.pdb.create }}
   replicas: {{ default 1 .replicaCount | int }}
   {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
   selector:
     matchLabels: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 6 }}
   template:
@@ -26,7 +29,7 @@ spec:
           {{- include "common.tplvalues.render" (dict "value" $.Values.metrics.annotations "context" $) | nindent 8 }}
         {{- end }}
         {{- if .podAnnotations }}
-          {{- include "common.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
         {{- end }}
       labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 8 }}
         sidecar.istio.io/inject: "true"
@@ -123,6 +126,9 @@ spec:
             {{- end }}
           {{- end }}
           ports:
+            - containerPort: {{ default 15021 .containerPorts.status }}
+              name: status-port
+              protocol: TCP
             - containerPort: 15090
               protocol: TCP
               name: http-envoy-prom
@@ -145,15 +151,7 @@ spec:
           {{- if .customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .customLivenessProbe "context" $) | nindent 12 }}
           {{- else if and .livenessProbe .livenessProbe.enabled }}
-          livenessProbe:
-            httpGet:
-              path: /login
-              port: http
-            initialDelaySeconds: {{ .livenessProbe.initialDelaySeconds | int }}
-            periodSeconds: {{ .livenessProbe.periodSeconds | int }}
-            timeoutSeconds: {{ .livenessProbe.timeoutSeconds |int }}
-            failureThreshold: {{ .livenessProbe.failureThreshold | int }}
-            successThreshold: {{ .livenessProbe.successThreshold | int }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .livenessProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
           {{- if .customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .customReadinessProbe "context" $) | nindent 12 }}
@@ -161,26 +159,20 @@ spec:
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
           {{- else }}
           readinessProbe:
-            failureThreshold: 30
+            failureThreshold: 4
             httpGet:
               path: /healthz/ready
               port: 15021
               scheme: HTTP
             initialDelaySeconds: 1
             periodSeconds: 15
-            timeoutSeconds: 1
             successThreshold: 1
+            timeoutSeconds: 1
           {{- end }}
           {{- if .resources }}
-          resources: {{- toYaml .resources | nindent 12 }}
-          {{- else }}
-          resources:
-            limits:
-              cpu: 2000m
-              memory: 1024Mi
-            requests:
-              cpu: 100m
-              memory: 128Mi
+          resources: {{- include "common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
+          {{- else if ne .resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if $.Values.extraVolumeMounts }}
           volumeMounts:
