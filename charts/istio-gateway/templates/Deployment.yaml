@@ -171,7 +171,7 @@ spec:
           {{- end }}
           {{- if .resources }}
           resources: {{- include "common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
-          {{- else if ne .resourcesPreset "none" }}
+          {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
           resources: {{- include "common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if $.Values.extraVolumeMounts }}
