@@ -126,10 +126,10 @@ spec:
             {{- end }}
           {{- end }}
           ports:
-            - containerPort: {{ default 15021 (and .containerPorts .containerPorts.status) }}
+            - containerPort: {{ ternary .containerPorts.status 15021 (and .containerPorts .containerPorts.status) }}
               name: status-port
               protocol: TCP
-            - containerPort: 15090
+            - containerPort: {{ ternary .containerPorts.metrics 15090 (and .containerPorts .containerPorts.metrics) }}
               protocol: TCP
               name: http-envoy-prom
           {{- if .customStartupProbe }}
