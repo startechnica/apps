@@ -126,7 +126,7 @@ spec:
             {{- end }}
           {{- end }}
           ports:
-            - containerPort: {{ default 15021 .containerPorts.status }}
+            - containerPort: {{ default 15021 (and .containerPorts .containerPorts.status) }}
               name: status-port
               protocol: TCP
             - containerPort: 15090
