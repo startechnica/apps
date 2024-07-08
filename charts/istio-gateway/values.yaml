@@ -569,7 +569,7 @@ gateways:
       ##     timeoutSeconds: 300
       sessionAffinityConfig: {}
 
-    ## @param containerPorts.http Istio Gateway HTTP container port
+    ## @param gateways.$gateway.containerPorts.http Istio Gateway HTTP container port
     ##
     containerPorts:
       status: 15021
