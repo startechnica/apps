@@ -5,7 +5,7 @@ kind: Deployment
 metadata:
   name: {{ .name }}
   namespace: {{ include "common.names.namespace" $ | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" (dict "imageRoot" $gateway.image "global" $.Values.global "chart" $.Chart) ) }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "gateway.images.version" (dict "imageRoot" $gateway.image "global" $.Values.global "chart" $.Chart) ) }}
   {{- $labels := include "common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     {{- if $.Values.commonLabels }}
