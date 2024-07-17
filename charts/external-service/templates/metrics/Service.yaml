@@ -13,8 +13,11 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.metrics.service.type }}
-  {{- if and .Values.metrics.service.clusterIP (eq .Values.metrics.service.type "ClusterIP") }}
-  clusterIP: {{ .Values.metrics.service.clusterIP }}
+  {{- if eq .Values.metrics.service.type "LoadBalancer" }}
+  allocateLoadBalancerNodePorts: false
+  {{- end }}
+  {{- if eq .Values.metrics.service.type "ClusterIP" }}
+  clusterIP: None
   {{- end }}
   {{- if and .Values.metrics.service.externalName (eq .Values.metrics.service.type "ExternalName") }}
   externalName: {{ .Values.metrics.service.externalName }}
@@ -25,7 +28,12 @@ spec:
   - {{ $externalIP | quote }}
   {{- end }}
   {{- end }}
-  {{- if not (eq .Values.metrics.service.type "ExternalName") }}
+  {{- if or (eq .Values.metrics.service.type "ClusterIP") (eq .Values.metrics.service.type "LoadBalancer") }}
+  ipFamilies:
+    - IPv4
+    {{- if eq .Values.metrics.service.ipFamilyPolicy "PreferDualStack" }}
+    - IPv6
+    {{- end }}
   ipFamilyPolicy: {{ default "SingleStack" .Values.metrics.service.ipFamilyPolicy }}
   {{- end }}
   ports:
