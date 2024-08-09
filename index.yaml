@@ -1710,6 +1710,38 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Add more granular Istio API resources
+        - kind: changed
+          description: Add more granular Kubernetes Gateway API resources
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.7
+    created: "2024-08-09T07:26:20.739922583Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 33017ce5f79f40fa5ac5799ad99c0c3a7d68655b8b40364c69b7d0ec683cc823
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.7/st-common-0.1.7.tgz
+    version: 0.1.7
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Add Flux CD
       category: Infrastructure
     apiVersion: v2
@@ -2023,4 +2055,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-07-05T03:43:03.529160842Z"
+generated: "2024-08-09T07:26:20.740031513Z"
