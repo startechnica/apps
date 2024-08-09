@@ -56,6 +56,36 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 {{- end -}}
 
+{{/* Return the appropriate apiVersion for Istio AuthorizationPolicy. */}}
+{{- define "common.capabilities.istioAuthorizationPolicy.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "security.istio.io/v1beta1/AuthorizationPolicy" -}}
+  {{- print "security.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "security.istio.io/v1/AuthorizationPolicy" -}}
+  {{- print "security.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio DestinationRule. */}}
+{{- define "common.capabilities.istioDestinationRule.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/DestinationRule" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/DestinationRule" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio EnvoyFilter. */}}
+{{- define "common.capabilities.istioEnvoyFilter.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1alpha3/EnvoyFilter" -}}
+  {{- print "networking.istio.io/v1alpha3" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
 
 {{/* Return the appropriate apiVersion for Istio Gateway. */}}
 {{- define "common.capabilities.istioGateway.apiVersion" -}}
@@ -68,11 +98,95 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 {{- end -}}
 
+{{/* Return the appropriate apiVersion for Istio PeerAuthentication. */}}
+{{- define "common.capabilities.istioPeerAuthentication.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "security.istio.io/v1beta1/PeerAuthentication" -}}
+  {{- print "security.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "security.istio.io/v1/PeerAuthentication" -}}
+  {{- print "security.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio ProxyConfig. */}}
+{{- define "common.capabilities.istioProxyConfig.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/ProxyConfig" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio RequestAuthentication. */}}
+{{- define "common.capabilities.istioRequestAuthentication.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "security.istio.io/v1beta1/RequestAuthentication" -}}
+  {{- print "security.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "security.istio.io/v1/RequestAuthentication" -}}
+  {{- print "security.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio Sidecar. */}}
+{{- define "common.capabilities.istioSidecar.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/Sidecar" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/Sidecar" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio ServiceEntry. */}}
+{{- define "common.capabilities.istioServiceEntry.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/ServiceEntry" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/ServiceEntry" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the appropriate apiVersion for Istio VirtualService. */}}
 {{- define "common.capabilities.istioVirtualService.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/VirtualService" -}}
   {{- print "networking.istio.io/v1beta1" -}}
 {{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/VirtualService" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio WasmPlugin. */}}
+{{- define "common.capabilities.istioWasmPlugin.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "extensions.istio.io/v1alpha1/WasmPlugin" -}}
+  {{- print "extensions.istio.io/v1alpha1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio WorkloadEntry. */}}
+{{- define "common.capabilities.istioWorkloadEntry.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/WorkloadEntry" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/WorkloadEntry" -}}
+  {{- print "networking.istio.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Istio WorkloadGroup. */}}
+{{- define "common.capabilities.istioWorkloadGroup.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.istio.io/v1beta1/WorkloadGroup" -}}
+  {{- print "networking.istio.io/v1beta1" -}}
+{{- else if .Capabilities.APIVersions.Has "networking.istio.io/v1/WorkloadGroup" -}}
   {{- print "networking.istio.io/v1" -}}
 {{- else -}}
   {{- false -}}
