@@ -12,6 +12,7 @@ metadata:
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
   {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .service.annotations $.Values.commonAnnotations) "context" $ ) }}
   annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+    istio.io/rev: {{ default "default" .revision | quote }}
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}

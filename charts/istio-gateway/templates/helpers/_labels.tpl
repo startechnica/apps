@@ -1,28 +1,7 @@
-
 {{/*
-Kubernetes standard labels
-{{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) }}
+Copyright Firmansyah Nainggolan <firmansyah@nanggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
 */}}
-{{- define "gateway.labels.standard" -}}
-{{- $gatewayName := .name -}}
-app.kubernetes.io/name: {{ .name }}
-gateway.istio.io/managed: {{ .context.Release.Service }}
-helm.sh/chart: {{ include "gateways.names.chart" .context }}
-istio.io/dataplane-mode: none
-istio.io/gateway-name: {{ $gatewayName }}
-{{- end -}}
-
-{{/*
-Kubernetes standard labels
-{{ include "gateway.labels.standard" (dict "gatewayName" .gatewayName "context" $) }}
-*/}}
-{{- define "gatewaysz.labels.standard" -}}
-app.kubernetes.io/name: {{ .gatewayName }}
-gateway.istio.io/managed: {{ .context.Release.Service }}
-helm.sh/chart: {{ include "gateways.names.chart" .context }}
-istio.io/dataplane-mode: none
-istio.io/gateway-name: {{ .gatewayName }}
-{{- end -}}
 
 {{/*
 Kubernetes standard labels
@@ -70,16 +49,6 @@ istio.io/dataplane-mode: none
 app.kubernetes.io/version: {{ . | quote }}
 {{- end -}}
 {{- end -}}
-{{- end -}}
-
-{{/*
-Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
-{{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) }}
-*/}}
-{{- define "gateway.labels.matchLabels" -}}
-{{- $gatewayName := .name -}}
-app.kubernetes.io/name: {{ .name }}
-istio.io/gateway-name: {{ $gatewayName }}
 {{- end -}}
 
 {{/*

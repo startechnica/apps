@@ -1,3 +1,7 @@
+{{/*
+Copyright Firmansyah Nainggolan <firmansyah@nanggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
 {{/* affinity - https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ */}}
 
 {{ define "nodeaffinity" }}

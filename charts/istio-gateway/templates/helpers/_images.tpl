@@ -1,4 +1,9 @@
 {{/*
+Copyright Firmansyah Nainggolan <firmansyah@nanggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
 Return the proper image name
 {{ include "gateway.image" ( dict "imageRoot" .Values.path.to.the.image "global" .Values.global ) }}
 */}}
