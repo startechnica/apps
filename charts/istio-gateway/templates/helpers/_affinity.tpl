@@ -2,103 +2,138 @@
 Copyright Firmansyah Nainggolan <firmansyah@nanggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
-{{/* affinity - https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ */}}
 
-{{ define "nodeaffinity" }}
-nodeAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-  {{- include "nodeAffinityRequiredDuringScheduling" . }}
-  preferredDuringSchedulingIgnoredDuringExecution:
-  {{- include "nodeAffinityPreferredDuringScheduling" . }}
-{{- end }}
+{{/* vim: set filetype=mustache: */}}
 
-{{- define "nodeAffinityRequiredDuringScheduling" }}
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/arch
+{{/*
+Return a soft nodeAffinity definition
+{{ include "gateways.affinities.nodes.soft" (dict "key" "FOO" "values" (list "BAR" "BAZ")) -}}
+*/}}
+{{- define "gateways.affinities.nodes.soft" -}}
+preferredDuringSchedulingIgnoredDuringExecution:
+  - preference:
+      matchExpressions:
+        - key: {{ .key }}
           operator: In
           values:
-        {{- range $key, $val := .global.arch }}
-          {{- if gt ($val | int) 0 }}
-          - {{ $key | quote }}
-          {{- end }}
-        {{- end }}
-        {{- $nodeSelector := default .global.defaultNodeSelector .nodeSelector -}}
-        {{- range $key, $val := $nodeSelector }}
-        - key: {{ $key }}
-          operator: In
-          values:
-          - {{ $val | quote }}
-        {{- end }}
-{{- end }}
-
-{{- define "nodeAffinityPreferredDuringScheduling" }}
-  {{- range $key, $val := .global.arch }}
-    {{- if gt ($val | int) 0 }}
-    - weight: {{ $val | int }}
-      preference:
-        matchExpressions:
-        - key: kubernetes.io/arch
-          operator: In
-          values:
-          - {{ $key | quote }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-
-{{- define "podAntiAffinity" }}
-{{- if or .podAntiAffinityLabelSelector .podAntiAffinityTermLabelSelector}}
-  podAntiAffinity:
-    {{- if .podAntiAffinityLabelSelector }}
-    requiredDuringSchedulingIgnoredDuringExecution:
-    {{- include "podAntiAffinityRequiredDuringScheduling" . }}
-    {{- end }}
-    {{- if .podAntiAffinityTermLabelSelector }}
-    preferredDuringSchedulingIgnoredDuringExecution:
-    {{- include "podAntiAffinityPreferredDuringScheduling" . }}
-    {{- end }}
-{{- end }}
-{{- end }}
-
-{{- define "podAntiAffinityRequiredDuringScheduling" }}
-    {{- range $index, $item := .podAntiAffinityLabelSelector }}
-    - labelSelector:
-        matchExpressions:
-        - key: {{ $item.key }}
-          operator: {{ $item.operator }}
-          {{- if $item.values }}
-          values:
-          {{- $vals := split "," $item.values }}
-          {{- range $i, $v := $vals }}
-          - {{ $v | quote }}
-          {{- end }}
-          {{- end }}
-      topologyKey: {{ $item.topologyKey }}
-      {{- if $item.namespaces }}
-      namespaces:
-      {{- $ns := split "," $item.namespaces }}
-      {{- range $i, $n := $ns }}
-      - {{ $n | quote }}
-      {{- end }}
-      {{- end }}
-    {{- end }}
-{{- end }}
-
-{{- define "podAntiAffinityPreferredDuringScheduling" }}
-    {{- range $index, $item := .podAntiAffinityTermLabelSelector }}
-    - podAffinityTerm:
-        labelSelector:
-          matchExpressions:
-          - key: {{ $item.key }}
-            operator: {{ $item.operator }}
-            {{- if $item.values }}
-            values:
-            {{- $vals := split "," $item.values }}
-            {{- range $i, $v := $vals }}
-            - {{ $v | quote }}
+            {{- range .values }}
+            - {{ . | quote }}
             {{- end }}
+    weight: 1
+{{- end -}}
+
+{{/*
+Return a hard nodeAffinity definition
+{{ include "gateways.affinities.nodes.hard" (dict "key" "FOO" "values" (list "BAR" "BAZ")) -}}
+*/}}
+{{- define "gateways.affinities.nodes.hard" -}}
+requiredDuringSchedulingIgnoredDuringExecution:
+  nodeSelectorTerms:
+    - matchExpressions:
+        - key: {{ .key }}
+          operator: In
+          values:
+            {{- range .values }}
+            - {{ . | quote }}
             {{- end }}
-        topologyKey: {{ $item.topologyKey }}
-      weight: 100
-    {{- end }}
-{{- end }}
+{{- end -}}
+
+{{/*
+Return a nodeAffinity definition
+{{ include "gateways.affinities.nodes" (dict "type" "soft" "key" "FOO" "values" (list "BAR" "BAZ")) -}}
+*/}}
+{{- define "gateways.affinities.nodes" -}}
+  {{- if eq .type "soft" }}
+    {{- include "gateways.affinities.nodes.soft" . -}}
+  {{- else if eq .type "hard" }}
+    {{- include "gateways.affinities.nodes.hard" . -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Return a topologyKey definition
+{{ include "gateways.affinities.topologyKey" (dict "topologyKey" "BAR") -}}
+*/}}
+{{- define "gateways.affinities.topologyKey" -}}
+{{ .topologyKey | default "kubernetes.io/hostname" -}}
+{{- end -}}
+
+{{/*
+Return a soft podAffinity/podAntiAffinity definition
+{{ include "gateways.affinities.pods.soft" (dict "component" "FOO" "customLabels" .Values.podLabels "extraMatchLabels" .Values.extraMatchLabels "topologyKey" "BAR" "extraPodAffinityTerms" .Values.extraPodAffinityTerms "context" $) -}}
+*/}}
+{{- define "gateways.affinities.pods.soft" -}}
+{{- $component := default "" .component -}}
+{{- $customLabels := default (dict) .customLabels -}}
+{{- $extraMatchLabels := default (dict) .extraMatchLabels -}}
+{{- $extraPodAffinityTerms := default (list) .extraPodAffinityTerms -}}
+preferredDuringSchedulingIgnoredDuringExecution:
+  - podAffinityTerm:
+      labelSelector:
+        matchLabels: {{- (include "gateways.labels.matchLabels" ( dict "customLabels" $customLabels "context" .context )) | nindent 10 }}
+          {{- if not (empty $component) }}
+          {{ printf "istio.io/gateway-name: %s" $component }}
+          {{- end }}
+          {{- range $key, $value := $extraMatchLabels }}
+          {{ $key }}: {{ $value | quote }}
+          {{- end }}
+      topologyKey: {{ include "gateways.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
+    weight: 1
+  {{- range $extraPodAffinityTerms }}
+  - podAffinityTerm:
+      labelSelector:
+        matchLabels: {{- (include "gateways.labels.matchLabels" ( dict "customLabels" $customLabels "context" $.context )) | nindent 10 }}
+          {{- if not (empty $component) }}
+          {{ printf "istio.io/gateway-name: %s" $component }}
+          {{- end }}
+          {{- range $key, $value := .extraMatchLabels }}
+          {{ $key }}: {{ $value | quote }}
+          {{- end }}
+      topologyKey: {{ include "gateways.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
+    weight: {{ .weight | default 1 -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Return a hard podAffinity/podAntiAffinity definition
+{{ include "gateways.affinities.pods.hard" (dict "component" "FOO" "customLabels" .Values.podLabels "extraMatchLabels" .Values.extraMatchLabels "topologyKey" "BAR" "extraPodAffinityTerms" .Values.extraPodAffinityTerms "context" $) -}}
+*/}}
+{{- define "gateways.affinities.pods.hard" -}}
+{{- $component := default "" .component -}}
+{{- $customLabels := default (dict) .customLabels -}}
+{{- $extraMatchLabels := default (dict) .extraMatchLabels -}}
+{{- $extraPodAffinityTerms := default (list) .extraPodAffinityTerms -}}
+requiredDuringSchedulingIgnoredDuringExecution:
+  - labelSelector:
+      matchLabels: {{- (include "gateways.labels.matchLabels" ( dict "customLabels" $customLabels "context" .context )) | nindent 8 }}
+        {{- if not (empty $component) }}
+        {{ printf "app.kubernetes.io/component: %s" $component }}
+        {{- end }}
+        {{- range $key, $value := $extraMatchLabels }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+    topologyKey: {{ include "gateways.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
+  {{- range $extraPodAffinityTerms }}
+  - labelSelector:
+      matchLabels: {{- (include "gateways.labels.matchLabels" ( dict "customLabels" $customLabels "context" $.context )) | nindent 8 }}
+        {{- if not (empty $component) }}
+        {{ printf "app.kubernetes.io/component: %s" $component }}
+        {{- end }}
+        {{- range $key, $value := .extraMatchLabels }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+    topologyKey: {{ include "gateways.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Return a podAffinity/podAntiAffinity definition
+{{ include "gateways.affinities.pods" (dict "type" "soft" "key" "FOO" "values" (list "BAR" "BAZ")) -}}
+*/}}
+{{- define "gateways.affinities.pods" -}}
+  {{- if eq .type "soft" }}
+    {{- include "gateways.affinities.pods.soft" . -}}
+  {{- else if eq .type "hard" }}
+    {{- include "gateways.affinities.pods.hard" . -}}
+  {{- end -}}
+{{- end -}}
