@@ -86,7 +86,7 @@ istio.io/gateway-name: {{ $gatewayName }}
 Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 {{ include "gateway.labels.matchLabels" (dict "gatewayName" .gatewayName "context" $) }}
 */}}
-{{- define "gatewaysz.labels.matchLabels" -}}
+{{- define "gatewayz.labels.matchLabels" -}}
 app.kubernetes.io/name: {{ .gatewayName }}
 istio.io/gateway-name: {{ .gatewayName }}
 {{- end -}}
