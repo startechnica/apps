@@ -4,7 +4,7 @@ apiVersion: {{ include "common.capabilities.hpa.apiVersion" (dict "context" $) }
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ .name }}
-  namespace: {{ include "common.names.namespace" $ | quote }}
+  namespace: {{ include "gateways.names.namespace" $ | quote }}
   labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}

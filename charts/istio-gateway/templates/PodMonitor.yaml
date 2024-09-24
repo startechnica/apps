@@ -4,7 +4,7 @@ apiVersion: {{ include "common.capabilities.coreosMonitoringPodMonitor.apiVersio
 kind: PodMonitor
 metadata:
   name: {{ include "common.names.fullname" . }}
-  namespace: {{ default (include "common.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
+  namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
   {{- $labels := include "common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
