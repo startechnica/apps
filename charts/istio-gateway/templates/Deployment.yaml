@@ -22,6 +22,7 @@ spec:
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
   selector:
     matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 6 }}
+      sidecar.istio.io/inject: "true"
   template:
     metadata:
       annotations:
