@@ -14,7 +14,7 @@ Kubernetes standard labels
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
+{{ template "gateways.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
@@ -38,7 +38,7 @@ Kubernetes common labels
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
+{{ template "gateways.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
@@ -53,16 +53,6 @@ app.kubernetes.io/version: {{ . | quote }}
 {{- end -}}
 
 {{/*
-Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
-{{ include "gatewayz.labels.matchLabels" (dict "values" .Values.gateway "context" $) }}
-*/}}
-{{- define "gatewayz.labels.matchLabels" -}}
-app.kubernetes.io/name: {{ .values.name }}
-istio.io/gateway-name: {{ .values.name }}
-{{- end -}}
-
-
-{{/*
 Labels used on immutable fields such as deploy.spec.selector.matchLabels or svc.spec.selector
 {{ include "gateways.labels.matchLabels" (dict "gatewayValues" .Values.gateways "customLabels" .Values.podLabels "context" $) -}}
 
@@ -73,7 +63,7 @@ overwrote them on metadata.labels fields.
 */}}
 {{- define "gateways.labels.matchLabels" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{ merge (pick (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "istio.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "istio.io/gateway-name" .gatewayValues.name) | toYaml }}
+{{ merge (pick (include "gateways.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "istio.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "istio.io/gateway-name" .gatewayValues.name) | toYaml }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}

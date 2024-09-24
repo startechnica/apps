@@ -1,0 +1,33 @@
+{{- if .Values.telemetry.enabled -}}
+{{- if not (eq (include "common.capabilities.istioTelemetry.apiVersion" .) "false") -}}
+apiVersion: {{ include "common.capabilities.istioTelemetry.apiVersion" . }}
+kind: Telemetry
+metadata:
+  name: {{ include "gateways.names.fullname" . }}
+  namespace: {{ include "gateways.names.namespace" . | quote }}
+spec:
+  accessLogging:
+  {{- if .Values.telemetry.accessLogging }}
+    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.accessLogging "context" .) | nindent 4 }}
+  {{- else }}
+    - providers:
+        - name: envoy
+  {{- end }}
+  {{- if .Values.telemetry.metrics }}
+  metrics:
+    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.metrics "context" .) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.telemetry.selector }}
+  selector:
+    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.selector "context" .) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.telemetry.targetRefs }}
+  targetRefs:
+    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.targetRefs "context" .) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.telemetry.tracing }}
+  tracing:
+    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.tracing "context" .) | nindent 4 }}
+  {{- end }}
+{{- end -}}
+{{- end -}}

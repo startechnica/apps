@@ -37,15 +37,6 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 
 {{/*
-Return the proper Istio Gateway fullname
-{{ include "gateway.fullname" (dict "name" .name "context" $) }}
-*/}}
-{{- define "gateway.fullname" -}}
-{{- $gatewayName := .name -}}
-{{- printf "%s" $gatewayName | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
 Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
 */}}
 {{- define "gateways.names.namespace" -}}

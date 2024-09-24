@@ -156,13 +156,13 @@ global:
 ## @param kubeVersion Override Kubernetes version
 ##
 kubeVersion: ""
-## @param nameOverride String to partially override common.names.fullname
+## @param nameOverride String to partially override gateways.names.fullname
 ##
 nameOverride: ""
-## @param namespaceOverride String to fully override common.names.namespace
+## @param namespaceOverride String to fully override gateways.names.namespace
 ##
 namespaceOverride: ""
-## @param fullnameOverride String to fully override common.names.fullname
+## @param fullnameOverride String to fully override gateways.names.fullname
 ##
 fullnameOverride: ""
 ## @param commonLabels Labels to add to all deployed objects
@@ -866,3 +866,28 @@ gateways:
       ##       - list
       ##
       rules: []
+
+## @section Istio Telemetry parameters
+## Telemetry defines how the telemetry is generated for workloads within a mesh.
+##
+
+telemetry:
+  enabled: false
+  ## @param telemetry.accessLogging  Configures the access logging behavior for all selected workloads.
+  ## ref: https://preliminary.istio.io/latest/docs/reference/config/telemetry/#AccessLogging
+  ##
+  accessLogging: []
+  ## @param telemetry.metrics  Configures the metrics behavior for all selected workloads.
+  ##
+  metrics: []
+  ## @param telemetry.selector  The selector decides where to apply the policy. If not set, the policy will be applied 
+  ## to all workloads in the same namespace as the policy.
+  ##
+  selector: []
+  ## @param telemetry.targetRefs  Specifies a list of resources the policy should be applied to. The targeted resources
+  ## specified will determine which workloads the policy applies to.
+  ##
+  targetRefs: []
+  ## @param telemetry.tracing   Configures the tracing behavior for all selected workloads.
+  ##
+  tracing: []

@@ -6,12 +6,12 @@ metadata:
   name: {{ .name }}
   namespace: {{ include "gateways.names.namespace" $ | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
-  {{- $labels := include "common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .service.annotations $.Values.commonAnnotations) "context" $ ) }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "gateways.tplvalues.merge" (dict "values" (list .service.annotations $.Values.gatewaysAnnotations) "context" $ ) }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
     istio.io/rev: {{ default "default" .revision | quote }}
   {{- end }}
 spec:
@@ -39,7 +39,7 @@ spec:
   sessionAffinity: {{ default "None" .service.sessionAffinity }}
   {{- end }}
   {{- if .service.sessionAffinityConfig }}
-  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
+  sessionAffinityConfig: {{- include "gateways.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
   {{- if .networkGateway }}
@@ -93,7 +93,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+      {{- include "gateways.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- else }}
     - name: tcp-status
@@ -109,7 +109,7 @@ spec:
       protocol: TCP
       targetPort: 443
     {{- if .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+      {{- include "gateways.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
   selector: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}

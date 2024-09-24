@@ -1,6 +1,6 @@
 {{- range $gateway := .Values.gateways }}
 {{- if .enabled }}
-apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
+apiVersion: {{ include "gateways.capabilities.deployment.apiVersion" $ }}
 kind: Deployment
 metadata:
   name: {{ .name }}
@@ -38,7 +38,7 @@ spec:
         service.istio.io/canonical-revision: latest
         sidecar.istio.io/inject: "true"
     spec:
-      {{ include "common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
+      {{ include "gateways.images.renderPullSecrets" (dict "images" (list .image) "context" $) | nindent 6 }}
       {{- if .hostAliases }}
       hostAliases: {{- include "gateways.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -178,7 +178,7 @@ spec:
           {{- if .resources }}
           resources: {{- include "gateways.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
           {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
-          resources: {{- include "common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
+          resources: {{- include "gateways.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if $.Values.extraVolumeMounts }}
           volumeMounts:
