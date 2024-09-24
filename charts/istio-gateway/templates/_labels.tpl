@@ -54,7 +54,7 @@ Kubernetes common labels
 */}}
 {{- define "gateways.labels.common" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{- $default := dict "app.kubernetes.io/name" (include "gateways.names.fullname" .) "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service "gateway.istio.io/managed" .context.Release.Service -}}
+{{- $default := dict "app.kubernetes.io/name" (include "gateways.names.fullname" .context) "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service "gateway.istio.io/managed" .context.Release.Service -}}
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
