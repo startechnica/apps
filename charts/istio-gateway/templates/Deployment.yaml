@@ -22,7 +22,6 @@ spec:
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
   selector:
     matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 6 }}
-      sidecar.istio.io/inject: "true"
   template:
     metadata:
       annotations:
@@ -35,6 +34,8 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
         {{- end }}
       labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 8 }}
+        service.istio.io/canonical-name: {{ printf "%s" $gateway.name }}
+        service.istio.io/canonical-revision: latest
         sidecar.istio.io/inject: "true"
     spec:
       {{ include "common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}

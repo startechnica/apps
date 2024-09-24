@@ -9,11 +9,12 @@ Kubernetes standard labels
 */}}
 {{- define "gateways.labels.standard" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{- $default := dict "app.kubernetes.io/name" .gatewayValues.name "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service "gateway.istio.io/managed" .context.Release.Service -}}
+{{- $default := dict "app.kubernetes.io/name" .gatewayValues.name "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
+{{- $istioLabels := dict "istio.io/dataplane-mode" "none" "istio.io/gateway-name" .gatewayValues.name "gateway.istio.io/managed" .context.Release.Service -}}
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
+{{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
