@@ -34,3 +34,17 @@ Return the proper Istio Gateway fullname
 {{- define "gateways.names.fullname" -}}
 {{- printf "%s" .gatewayName | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
+*/}}
+{{- define "gateways.names.namespace" -}}
+{{- default .Release.Namespace .Values.namespaceOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create a fully qualified app name adding the installation's namespace.
+*/}}
+{{- define "gateways.names.fullname.namespace" -}}
+{{- printf "%s-%s" (include "common.names.fullname" .) (include "common.names.namespace" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}

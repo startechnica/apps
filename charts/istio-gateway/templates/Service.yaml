@@ -7,13 +7,10 @@ metadata:
   namespace: {{ include "common.names.namespace" $ | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "gateway.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
   {{- $labels := include "common.tplvalues.merge" ( dict "values" (list $.Values.commonLabels $versionLabel ) "context" $) }}
-  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayName" .name "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-    {{- if $.Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .service.annotations $.Values.commonAnnotations ) "context" $ ) }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" (list .service.annotations $.Values.commonAnnotations) "context" $ ) }}
   annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
