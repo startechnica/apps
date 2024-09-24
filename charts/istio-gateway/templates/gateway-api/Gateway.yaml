@@ -33,8 +33,8 @@ spec:
         namespaces:
           from: All
     {{- end }}
-    {{- if and .service .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+    {{- if and .gatewayApi .gatewayApi.listeners }}
+      {{- include "common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}

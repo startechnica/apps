@@ -70,11 +70,8 @@ spec:
   {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ include "common.names.namespace" . | quote }}
+      - {{ include "gateways.names.namespace" . | quote }}
   selector:
-    matchLabels: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 6 }}
-      {{- if .Values.metrics.serviceMonitor.selector }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" .) | nindent 6 }}
-      {{- end }}
+    matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" .Values.gateways "customLabels" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
 {{- end }}
 {{- end }}

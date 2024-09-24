@@ -21,8 +21,6 @@ gateways:
         https: ""
         status: ""
 
-      
-
     serviceAccount:
       create: true
 
