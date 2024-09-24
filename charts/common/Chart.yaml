@@ -2,11 +2,13 @@ annotations:
   category: Infrastructure
   artifacthub.io/changes: |
     - kind: changed
-      description: Add more granular Istio API resources
+      description: Fix Istio API resources
     - kind: changed
-      description: Add more granular Kubernetes Gateway API resources
+      description: Fix Kubernetes Gateway API resources
+    - kind: changed
+      description: Fix Prometheus API resources
 apiVersion: v2
-appVersion: 0.1.7
+appVersion: 0.1.8
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
   This chart is not deployable by itself.
 home: https://github.com/startechnica/apps/tree/main/charts/common
@@ -25,4 +27,4 @@ name: st-common
 sources:
   - https://startechnica.github.io/apps
 type: library
-version: 0.1.7
+version: 0.1.8

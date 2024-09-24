@@ -16,11 +16,40 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 {{- end -}}
 
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API BackendLBPolicy */}}
+{{- define "common.capabilities.networkingGatewayBackendLBPolicy.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/BackendLBPolicy" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha2" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API BackendTLSPolicy */}}
+{{- define "common.capabilities.networkingGatewayBackendTLSPolicy.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha3/BackendTLSPolicy" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha3" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API Gateway */}}
 {{- define "common.capabilities.networkingGatewayGateway.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/Gateway" -}}
   {{- print "gateway.networking.k8s.io/v1" -}}
 {{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1beta1/Gateway" -}}
+  {{- print "gateway.networking.k8s.io/v1beta1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API GatewayClass */}}
+{{- define "common.capabilities.networkingGatewayGatewayClass.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/GatewayClass" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1beta1/GatewayClass" -}}
   {{- print "gateway.networking.k8s.io/v1beta1" -}}
 {{- else -}}
   {{- false -}}
@@ -44,6 +73,33 @@ SPDX-License-Identifier: APACHE-2.0
   {{- print "gateway.networking.k8s.io/v1" -}}
 {{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1beta1/HTTPRoute" -}}
   {{- print "gateway.networking.k8s.io/v1beta1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API TCPRoute */}}
+{{- define "common.capabilities.networkingGatewayTCPRoute.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TCPRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha2" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API TLSRoute */}}
+{{- define "common.capabilities.networkingGatewayTLSRoute.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TLSRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha2" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API UDPRoute */}}
+{{- define "common.capabilities.networkingGatewayUDPRoute.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/UDPRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha2" -}}
 {{- else -}}
   {{- false -}}
 {{- end -}}
