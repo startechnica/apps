@@ -13,10 +13,10 @@ is true or default otherwise.
 
 
 {{/*
-{{ include "gateway.rbac.serviceAccountName" ( dict "gatewayValues" .Values.gateways.gateway "context" . ) }}
+{{ include "gateways.rbac.serviceAccountName" (dict "gatewayValues" .Values.gateways.gateway "context" .) }}
 */}}
 
-{{- define "gateway.rbac.serviceAccountName" -}}
+{{- define "gateways.rbac.serviceAccountName" -}}
 {{- if and .gatewayValues.serviceAccount .gatewayValues.serviceAccount.create -}}
   {{ default .gatewayValues.name .gatewayValues.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
