@@ -26,7 +26,10 @@ gateways:
 
   - name: freeradius
     enabled: true
-    nodeAffinityPreset: {}
+    nodeAffinityPreset:
+      type: "soft"
+      key: ""
+      values: []
     service:
       type: LoadBalancer
       extraPorts:
