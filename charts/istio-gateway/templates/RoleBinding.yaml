@@ -2,8 +2,8 @@
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" $ }}
 kind: RoleBinding
 metadata:
-  name: {{ include "gateways.names.fullname" . }}
-  namespace: {{ include "gateways.names.namespace" . | quote }}
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
   {{- if .Values.commonAnnotations }}
