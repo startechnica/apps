@@ -5,7 +5,7 @@ kind: Deployment
 metadata:
   name: {{ .name }}
   namespace: {{ include "gateways.names.namespace" $ | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateway.images.version" (dict "imageRoot" $gateway.image "chart" $.Chart)) }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" $gateway.image "chart" $.Chart)) }}
   {{- $labels := include "common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayName" .name "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
@@ -21,7 +21,7 @@ spec:
   revisionHistoryLimit: 1
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
   selector:
-    matchLabels: {{ include "gatewayz.labels.matchLabels" (dict "gatewayName" .name "customLabels" .podLabels "context" $) | nindent 6 }}
+    matchLabels: {{ include "gatewayz.labels.matchLabels" (dict "values" $gateway "customLabels" .podLabels "context" $) | nindent 6 }}
   template:
     metadata:
       annotations:

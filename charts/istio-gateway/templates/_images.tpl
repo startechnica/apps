@@ -29,9 +29,9 @@ Return the proper image name
 
 {{/*
 Return the proper image version (ingores image revision/prerelease info & fallbacks to chart appVersion)
-{{ include "gateway.images.version" ( dict "imageRoot" .Values.path.to.the.image "chart" .Chart ) }}
+{{ include "gateways.images.version" ( dict "imageRoot" .Values.path.to.the.image "chart" .Chart ) }}
 */}}
-{{- define "gateway.images.version" -}}
+{{- define "gateways.images.version" -}}
 {{- if and .imageRoot .imageRoot.tag }}
     {{- $imageTag := .imageRoot.tag | toString -}}
     {{/* regexp from https://github.com/Masterminds/semver/blob/23f51de38a0866c5ef0bfc42b3f735c73107b700/version.go#L41-L44 */}}

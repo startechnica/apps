@@ -5,7 +5,7 @@ kind: Service
 metadata:
   name: {{ .name }}
   namespace: {{ include "gateways.names.namespace" $ | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "gateway.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
   {{- $labels := include "common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel ) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayName" .name "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
@@ -108,7 +108,7 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-  selector: {{ include "gatewayz.labels.matchLabels" (dict "gatewayName" .name "customLabels" $labels "context" $) | nindent 4 }}
+  selector: {{ include "gatewayz.labels.matchLabels" (dict "values" $gateway "customLabels" $labels "context" $) | nindent 4 }}
 ---
 {{- end }}
 {{- end }}
