@@ -108,7 +108,7 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-  selector: {{ include "gateways.labels.matchLabels" (dict "gatewayName" .name "customLabels" $labels "context" $) | nindent 4 }}
+  selector: {{ include "gatewayz.labels.matchLabels" (dict "gatewayName" .name "customLabels" $labels "context" $) | nindent 4 }}
 ---
 {{- end }}
 {{- end }}

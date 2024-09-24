@@ -21,7 +21,7 @@ spec:
   revisionHistoryLimit: 1
   {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
   selector:
-    matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayName" .name "customLabels" .podLabels "context" $) | nindent 6 }}
+    matchLabels: {{ include "gatewayz.labels.matchLabels" (dict "gatewayName" .name "customLabels" .podLabels "context" $) | nindent 6 }}
   template:
     metadata:
       annotations:
