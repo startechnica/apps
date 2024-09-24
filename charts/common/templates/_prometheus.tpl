@@ -9,8 +9,6 @@ SPDX-License-Identifier: APACHE-2.0
   {{- print "monitoring.coreos.com/v1" -}}
 {{- else if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1beta1" -}}
   {{- print "monitoring.coreos.com/v1beta1" -}}
-{{- else if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1beta1" -}}
-  {{- print "monitoring.coreos.com/v1alpha2" -}}
 {{- else if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1alpha2" -}}
   {{- print "monitoring.coreos.com/v1alpha2" -}}
 {{- else if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1alpha1" -}}
