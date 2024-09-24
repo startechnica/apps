@@ -48,7 +48,6 @@ Return the proper Docker Image Registry Secret Names evaluating values as templa
     {{- end -}}
   {{- end -}}
 
-  {{- if .images -}}
   {{- range .images -}}
     {{- if (hasKey . "pullSecrets") -}}
     {{- range .pullSecrets -}}
@@ -59,7 +58,6 @@ Return the proper Docker Image Registry Secret Names evaluating values as templa
       {{- end -}}
     {{- end -}}
     {{- end -}}
-  {{- end -}}
   {{- end -}}
 
   {{- if (not (empty $pullSecrets)) -}}
