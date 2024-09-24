@@ -6,7 +6,7 @@ Kubernetes standard labels
 {{- define "gateway.labels.standard" -}}
 {{- $gatewayName := .name -}}
 app.kubernetes.io/name: {{ .name }}
-gateway.istio.io/managed: {{ context.Release.Service }}
+gateway.istio.io/managed: {{ .context.Release.Service }}
 helm.sh/chart: {{ include "gateways.names.chart" .context }}
 istio.io/dataplane-mode: none
 istio.io/gateway-name: {{ $gatewayName }}
