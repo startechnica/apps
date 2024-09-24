@@ -18,7 +18,7 @@ is true or default otherwise.
 
 {{- define "gateway.rbac.serviceAccountName" -}}
 {{- if and .gatewayValues.serviceAccount .gatewayValues.serviceAccount.create -}}
-  {{ print .gatewayValues.name | trunc 63 | trimSuffix "-" }}
+  {{ default .gatewayValues.name .gatewayValues.serviceAccount.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
   {{ default "default" .context.Values.serviceAccount.name }}
 {{- end -}}
