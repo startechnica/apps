@@ -94,7 +94,7 @@ istio.io/gateway-name: {{ .values.name }}
 
 {{/*
 Labels used on immutable fields such as deploy.spec.selector.matchLabels or svc.spec.selector
-{{ include "gateways.labels.matchLabels" (dict "gatewayName" .gatewayName "customLabels" .Values.podLabels "context" $) -}}
+{{ include "gateways.labels.matchLabels" (dict "gatewayValues" .Values.gateways "customLabels" .Values.podLabels "context" $) -}}
 
 We don't want to loop over custom labels appending them to the selector
 since it's very likely that it will break deployments, services, etc.
@@ -103,7 +103,7 @@ overwrote them on metadata.labels fields.
 */}}
 {{- define "gateways.labels.matchLabels" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{ merge (pick (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "istio.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayName "app.kubernetes.io/instance" .context.Release.Name "istio.io/gateway-name" .gatewayName) | toYaml }}
+{{ merge (pick (include "common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "istio.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "istio.io/gateway-name" .gatewayValues.name) | toYaml }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}

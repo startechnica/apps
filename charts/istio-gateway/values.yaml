@@ -496,6 +496,9 @@ gateways:
       ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API
       ##
       create: true
+      ## @param gateways.$gateway.gatewayApi.listeners
+      ##
+      listeners: []
 
     ## Istio Ingress Gateway service parameters
     ##

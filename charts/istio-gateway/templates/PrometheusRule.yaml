@@ -3,7 +3,7 @@
 apiVersion: {{ include "common.capabilities.coreosMonitoringPrometheusRule.apiVersion" . }}
 kind: PrometheusRule
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "gateways.names.fullname" . }}
   namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.prometheusRule.namespace }}
   {{- $labels := include "common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.prometheusRule.labels) "context" .) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}

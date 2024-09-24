@@ -5,11 +5,10 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}
   namespace: {{ include "gateways.names.namespace" $ | quote }}
-  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
-    install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
-    {{- if $.Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
   {{- if $.Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
@@ -22,7 +21,6 @@ spec:
   {{- end }}
   selector:
     matchLabels: {{ include "common.labels.matchLabels" $ | nindent 6 }}
-      istio: {{ .name }}
       istio.io/gateway-name: {{ .name }}
 ---
 {{- end }}
