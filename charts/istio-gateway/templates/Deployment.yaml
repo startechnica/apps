@@ -71,7 +71,9 @@ spec:
       affinity:
         podAffinity: {{- include "gateways.affinities.pods" (dict "type" .podAffinityPreset "component" .name "customLabels" $podLabels "context" $) | nindent 10 }}
         podAntiAffinity: {{- include "gateways.affinities.pods" (dict "type" .podAntiAffinityPreset "component" .name "customLabels" $podLabels "context" $) | nindent 10 }}
+        {{- if .nodeAffinityPreset }}
         nodeAffinity: {{- include "gateways.affinities.nodes" (dict "type" .nodeAffinityPreset.type "key" .nodeAffinityPreset.key "values" .nodeAffinityPreset.values) | nindent 10 }}
+        {{- end }}
       {{- end }}
       {{- if .nodeSelector }}
       nodeSelector: {{- include "gateways.tplvalues.render" (dict "value" .nodeSelector "context" $) | nindent 8 }}
