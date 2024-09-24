@@ -1,7 +1,7 @@
-{{- if not (eq (include "common.capabilities.networkingGateway.apiVersion" .) "false") }}
+{{- if not (eq (include "common.capabilities.networkingGatewayGateway.apiVersion" .) "false") }}
 {{- range $gateway := .Values.gateways }}
 {{- if and .enabled (and .gatewayApi .gatewayApi.create) -}}
-apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
+apiVersion: {{ include "common.capabilities.networkingGatewayGateway.apiVersion" $ }}
 kind: Gateway
 metadata:
   name: {{ .name }}
@@ -14,7 +14,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  gatewayClassName: istio
+  gatewayClassName: {{ $.Values.gatewayClassName }}
   addresses:
     - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname

@@ -1,11 +1,3 @@
-{{/*
-Return the proper Istio Gateway fullname
-{{ include "gateway.fullname" (dict "name" .name "context" $) }}
-*/}}
-{{- define "gateway.fullname" -}}
-{{- $gatewayName := .name -}}
-{{- printf "%s" $gatewayName | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
 
 {{/*
 Kubernetes standard labels
@@ -13,19 +5,16 @@ Kubernetes standard labels
 */}}
 {{- define "gateway.labels.standard" -}}
 {{- $gatewayName := .name -}}
-app: {{ include "common.names.name" .context }}
 app.kubernetes.io/name: {{ include "common.names.name" .context }}
+gateway.istio.io/managed: {{ .Release.Service }}
 helm.sh/chart: {{ include "common.names.chart" .context }}
-istio: {{ $gatewayName }}
+istio.io/dataplane-mode: none
 istio.io/gateway-name: {{ $gatewayName }}
-{{- if .revision }}
-istio.io/rev: {{ .revision | quote }}
-{{- end }}
 {{- end -}}
 
 {{/*
 Kubernetes standard labels
-{{ include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) -}}
+{{ include "common.labels.standard" (dict "gatewayName" .gatewayName "customLabels" .Values.commonLabels "context" $) -}}
 */}}
 {{- define "gateways.labels.standard" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
@@ -36,9 +25,11 @@ Kubernetes standard labels
 {{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "common.names.name" . }}
+gateway.istio.io/managed: {{ .Release.Service }}
 helm.sh/chart: {{ include "common.names.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+istio.io/dataplane-mode: none
 {{- with .Chart.AppVersion }}
 app.kubernetes.io/version: {{ . | quote }}
 {{- end -}}
@@ -51,11 +42,6 @@ Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 */}}
 {{- define "gateway.labels.matchLabels" -}}
 {{- $gatewayName := .name -}}
-app: {{ include "common.names.name" .context }}
 app.kubernetes.io/name: {{ include "common.names.name" .context }}
-istio: {{ $gatewayName }}
 istio.io/gateway-name: {{ $gatewayName }}
-{{- if .revision }}
-istio.io/rev: {{ .revision | quote }}
-{{- end }}
 {{- end -}}

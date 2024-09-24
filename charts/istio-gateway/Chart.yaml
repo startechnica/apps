@@ -10,11 +10,11 @@ annotations:
     - name: Kubernetes Gateway
       url: https://gateway-api.sigs.k8s.io/api-types/gateway/
 apiVersion: v2
-appVersion: 1.22.2
+appVersion: 1.23.2
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
-    version: "*"
+    version: 0.1.8
     alias: startechnica-common
   - name: common
     repository: oci://registry-1.docker.io/bitnamicharts

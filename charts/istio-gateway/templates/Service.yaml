@@ -9,9 +9,6 @@ metadata:
   {{- $labels := include "common.tplvalues.merge" ( dict "values" (list $.Values.commonLabels $versionLabel ) "context" $) }}
   labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-    release: {{ $.Release.Name }}
-    install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
-    operator.istio.io/component: {{ $.Values.operator.component }}
     {{- if $.Values.commonLabels }}
       {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}

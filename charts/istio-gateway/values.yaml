@@ -198,6 +198,8 @@ diagnosticMode:
 ##
 istioNamespace: "istio-system"
 
+gatewayClassName: istio
+
 ## @param logLevel Set up Istio Gateway log level
 ##
 logLevel: 2

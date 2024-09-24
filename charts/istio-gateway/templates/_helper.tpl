@@ -4,11 +4,11 @@ in the values file. If the name is not set it will default to either common.name
 is true or default otherwise.
 */}}
 {{- define "gateway.serviceAccountName" -}}
-    {{- if .Values.serviceAccount.create -}}
-        {{ default (printf "%s-sa" (include "common.names.fullname" .)) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" }}
-    {{- else -}}
-        {{ default "default" .Values.serviceAccount.name }}
-    {{- end -}}
+  {{- if .Values.serviceAccount.create -}}
+    {{ default (printf "%s-sa" (include "common.names.fullname" .)) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" }}
+  {{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+  {{- end -}}
 {{- end -}}
 
 
@@ -18,9 +18,9 @@ is true or default otherwise.
 
 {{- define "gateway.rbac.serviceAccountName" -}}
 {{- if and .gatewayValues.serviceAccount .gatewayValues.serviceAccount.create -}}
-    {{ print .gatewayValues.name | trunc 63 | trimSuffix "-" }}
+  {{ print .gatewayValues.name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
-    {{ default "default" .context.Values.serviceAccount.name }}
+  {{ default "default" .context.Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
 
