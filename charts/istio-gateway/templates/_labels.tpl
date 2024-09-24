@@ -49,6 +49,30 @@ app.kubernetes.io/version: {{ . | quote }}
 {{- end -}}
 
 {{/*
+Kubernetes common labels
+{{ include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" $) -}}
+*/}}
+{{- define "gateways.labels.common" -}}
+{{- if and (hasKey . "customLabels") (hasKey . "context") -}}
+{{- $default := dict "app.kubernetes.io/name" (include "gateways.names.fullname" .) "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service "gateway.istio.io/managed" .context.Release.Service -}}
+{{- with .context.Chart.AppVersion -}}
+{{- $_ := set $default "app.kubernetes.io/version" . -}}
+{{- end -}}
+{{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
+{{- else -}}
+app.kubernetes.io/name: {{ include "gateways.names.name" . }}
+gateway.istio.io/managed: {{ .Release.Service }}
+helm.sh/chart: {{ include "gateways.names.chart" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+istio.io/dataplane-mode: none
+{{- with .Chart.AppVersion }}
+app.kubernetes.io/version: {{ . | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) }}
 */}}
