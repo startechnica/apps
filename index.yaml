@@ -1710,6 +1710,40 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Fix Istio API resources
+        - kind: changed
+          description: Fix Kubernetes Gateway API resources
+        - kind: changed
+          description: Fix Prometheus API resources
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.8
+    created: "2024-09-24T04:46:08.319271177Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 79ddaeb25fa26377c599b67798da47cd60214ad756729218747a8fef4c71c8a4
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.8/st-common-0.1.8.tgz
+    version: 0.1.8
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Add more granular Istio API resources
         - kind: changed
           description: Add more granular Kubernetes Gateway API resources
@@ -2055,4 +2089,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-08-09T07:26:20.740031513Z"
+generated: "2024-09-24T04:46:08.31934756Z"
