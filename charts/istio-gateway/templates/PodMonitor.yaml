@@ -1,14 +1,14 @@
 {{- if and .Values.metrics.enabled .Values.metrics.podMonitor.enabled -}}
-{{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
+{{- if not (eq (include "common.capabilities.coreosMonitoringPodMonitor.apiVersion" .) "false") -}}
+apiVersion: {{ include "common.capabilities.coreosMonitoringPodMonitor.apiVersion" . }}
 kind: PodMonitor
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ default (include "common.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
-  {{- $labels := include "common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+  name: {{ include "gateways.names.fullname" . }}
+  namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
+  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   jobLabel: {{ .Values.metrics.podMonitor.jobLabel | quote }}
@@ -105,7 +105,7 @@ spec:
   {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ include "common.names.namespace" . | quote }}
+      - {{ include "gateways.names.namespace" . | quote }}
   selector:
     matchExpressions:
     - {key: istio-prometheus-ignore, operator: DoesNotExist}

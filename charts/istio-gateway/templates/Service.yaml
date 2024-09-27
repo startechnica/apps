@@ -4,20 +4,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .name }}
-  namespace: {{ include "common.names.namespace" $ | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "gateway.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" (list $.Values.commonLabels $versionLabel ) "context" $) }}
-  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
+  namespace: {{ include "gateways.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-    release: {{ $.Release.Name }}
-    install.operator.istio.io/owning-resource: {{ $.Values.ownerName | default "unknown" }}
-    operator.istio.io/component: {{ $.Values.operator.component }}
-    {{- if $.Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .service.annotations $.Values.commonAnnotations ) "context" $ ) }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "gateways.tplvalues.merge" (dict "values" (list .service.annotations $.Values.gatewaysAnnotations) "context" $ ) }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+    istio.io/rev: {{ default "default" .revision | quote }}
   {{- end }}
 spec:
   type: {{ default "LoadBalancer" .service.type }}
@@ -44,7 +39,7 @@ spec:
   sessionAffinity: {{ default "None" .service.sessionAffinity }}
   {{- end }}
   {{- if .service.sessionAffinityConfig }}
-  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
+  sessionAffinityConfig: {{- include "gateways.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
   {{- if .networkGateway }}
@@ -60,9 +55,10 @@ spec:
     - name: tls-webhook
       port: 15017
       targetPort: 15017
-  {{- else if and .service .containerPorts }}
+  {{- else if and (hasKey . "service") (hasKey . "containerPorts") }}
     {{- if hasKey .service.ports "status" }}
     - name: tcp-status
+      appProtocol: tcp
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
       targetPort: {{ default 15021 .containerPorts.status | int }}
@@ -74,6 +70,7 @@ spec:
     {{- end }}
     {{- if hasKey .service.ports "http2" }}
     - name: http2
+      appProtocol: http
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
       targetPort: {{ default 80 .containerPorts.http2 | int }}
@@ -85,6 +82,7 @@ spec:
     {{- end }}
     {{- if hasKey .service.ports "https" }}
     - name: https
+      appProtocol: https
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
       targetPort: {{ default 443 .containerPorts.https | int }}
@@ -95,7 +93,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+      {{- include "gateways.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- else }}
     - name: tcp-status
@@ -111,10 +109,10 @@ spec:
       protocol: TCP
       targetPort: 443
     {{- if .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+      {{- include "gateways.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
-  selector: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
+  selector: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
 ---
 {{- end }}
 {{- end }}

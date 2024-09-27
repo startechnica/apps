@@ -64,9 +64,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | Name                       | Description                                                                                                       | Value           |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- |
 | `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                                              | `""`            |
-| `nameOverride`             | String to partially override common.names.fullname template with a string (will prepend the release name)         | `""`            |
-| `namespaceOverride`        | String to fully override common.names.namespace                                                                   | `""`            |
-| `fullnameOverride`         | String to fully override common.names.fullname template with a string                                             | `""`            |
+| `nameOverride`             | String to partially override gateways.names.fullname template with a string (will prepend the release name)       | `""`            |
+| `namespaceOverride`        | String to fully override gateways.names.namespace                                                                 | `""`            |
+| `fullnameOverride`         | String to fully override gateways.names.fullname template with a string                                           | `""`            |
 | `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
 | `commonLabels`             | Labels to add to all deployed objects                                                                             | `{}`            |
 | `schedulerName`            | Name of the Kubernetes scheduler (other than default)                                                             | `""`            |

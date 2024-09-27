@@ -1,18 +1,20 @@
 {{- range $gateway := .Values.gateways }}
 {{- if and .enabled $.Values.autoscaling.enabled }}
-apiVersion: {{ include "common.capabilities.hpa.apiVersion" (dict "context" $) }}
+apiVersion: {{ include "gateways.capabilities.hpa.apiVersion" (dict "context" $) }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ .name }}
-  namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
-    operator.istio.io/component: {{ $.Values.operator.component }}
-    {{- if $.Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  namespace: {{ include "gateways.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 spec:
   scaleTargetRef:
-    apiVersion: {{ include "common.capabilities.deployment.apiVersion" $ }}
+    apiVersion: {{ include "gateways.capabilities.deployment.apiVersion" $ }}
     kind: Deployment
     name: {{ .name }}
   minReplicas: {{ $.Values.autoscaling.minReplicas }}
@@ -21,7 +23,7 @@ spec:
     - type: Resource
       resource:
         name: cpu
-        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" $) }}
+        {{- if semverCompare "<1.23-0" (include "gateways.capabilities.kubeVersion" $) }}
         targetAverageUtilization: {{ $.Values.autoscaling.targetCPU }}
         {{- else }}
         target:
@@ -31,7 +33,7 @@ spec:
     - type: Resource
       resource:
         name: memory
-        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" $) }}
+        {{- if semverCompare "<1.23-0" (include "gateways.capabilities.kubeVersion" $) }}
         targetAverageUtilization: {{ $.Values.autoscaling.targetMemory }}
         {{- else }}
         target:

@@ -2,16 +2,30 @@ gateways:
   - name: webapps
     enabled: true
 
+    containerPorts:
+      http2: ""
+      https: ""
+      status: ""
+
     service:
-      type: LoadBalancer
-      ipFamilyPolicy: PreferDualStack
+      type: NodePort
+      ipFamilyPolicy: SingleStack
+
+      ports:
+        http2: ""
+        https: ""
+        status: ""
+
+      nodePorts:
+        http2: 32380
+        https: ""
+        status: ""
 
     serviceAccount:
       create: true
 
   - name: freeradius
     enabled: true
-
     service:
       type: LoadBalancer
       extraPorts:

@@ -156,13 +156,13 @@ global:
 ## @param kubeVersion Override Kubernetes version
 ##
 kubeVersion: ""
-## @param nameOverride String to partially override common.names.fullname
+## @param nameOverride String to partially override gateways.names.fullname
 ##
 nameOverride: ""
-## @param namespaceOverride String to fully override common.names.namespace
+## @param namespaceOverride String to fully override gateways.names.namespace
 ##
 namespaceOverride: ""
-## @param fullnameOverride String to fully override common.names.fullname
+## @param fullnameOverride String to fully override gateways.names.fullname
 ##
 fullnameOverride: ""
 ## @param commonLabels Labels to add to all deployed objects
@@ -197,6 +197,8 @@ diagnosticMode:
 ## @param istioNamespace Used to locate istiod.
 ##
 istioNamespace: "istio-system"
+
+gatewayClassName: istio
 
 ## @param logLevel Set up Istio Gateway log level
 ##
@@ -494,6 +496,9 @@ gateways:
       ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API
       ##
       create: true
+      ## @param gateways.$gateway.gatewayApi.listeners
+      ##
+      listeners: []
 
     ## Istio Ingress Gateway service parameters
     ##
@@ -569,7 +574,7 @@ gateways:
       ##     timeoutSeconds: 300
       sessionAffinityConfig: {}
 
-    ## @param containerPorts.http Istio Gateway HTTP container port
+    ## @param gateways.$gateway.containerPorts.http Istio Gateway HTTP container port
     ##
     containerPorts:
       status: 15021
@@ -606,17 +611,27 @@ gateways:
       # runAsUser: 1337
       # runAsNonRoot: true
 
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## Resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "nano"
+    ## @param resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 2
+    ##     memory: 512Mi
+    ##   limits:
+    ##     cpu: 3
+    ##     memory: 1024Mi
+    ##
     resources: {}
-      # limits:
-      #   cpu: 2000m
-      #   memory: 1024Mi
-      # requests:
-      #   cpu: 100m
-      #   memory: 128Mi
 
     ## Configure extra options for Istio Gateway containers' liveness, readiness and startup probes
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
@@ -704,10 +719,11 @@ gateways:
     ## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsCM: ""
+    extraEnvVarsCMs: []
     ## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Istio Gateway containers
     ##
     extraEnvVarsSecret: ""
-
+    extraEnvVarsSecrets: []
     ## @param primary.extraVolumes Optionally specify extra list of additional volumes to the MariaDB Primary pod(s)
     ##
     extraVolumes: []
@@ -850,3 +866,28 @@ gateways:
       ##       - list
       ##
       rules: []
+
+## @section Istio Telemetry parameters
+## Telemetry defines how the telemetry is generated for workloads within a mesh.
+##
+
+telemetry:
+  enabled: false
+  ## @param telemetry.accessLogging  Configures the access logging behavior for all selected workloads.
+  ## ref: https://preliminary.istio.io/latest/docs/reference/config/telemetry/#AccessLogging
+  ##
+  accessLogging: []
+  ## @param telemetry.metrics  Configures the metrics behavior for all selected workloads.
+  ##
+  metrics: []
+  ## @param telemetry.selector  The selector decides where to apply the policy. If not set, the policy will be applied 
+  ## to all workloads in the same namespace as the policy.
+  ##
+  selector: []
+  ## @param telemetry.targetRefs  Specifies a list of resources the policy should be applied to. The targeted resources
+  ## specified will determine which workloads the policy applies to.
+  ##
+  targetRefs: []
+  ## @param telemetry.tracing   Configures the tracing behavior for all selected workloads.
+  ##
+  tracing: []

@@ -1,22 +1,20 @@
 {{- if .Values.rbac.create }}
-apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
+apiVersion: {{ include "gateways.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
-  name: {{ include "common.names.fullname" . | quote }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    release: {{ .Release.Name }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
-    operator.istio.io/component: {{ .Values.operator.component }}
+  name: {{ include "gateways.names.fullname" . | quote }}
+  namespace: {{ include "gateways.names.namespace" . | quote }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" .) | nindent 4 }}
+    app.kubernetes.io/component: gateway
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" .) | nindent 4 }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" .Values.commonAnnotations "context" .) | nindent 4 }}
   {{- end }}
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "watch", "list"]
     {{- if .Values.rbac.rules }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.rbac.rules "context" .) | nindent 2 }}
+      {{- include "gateways.tplvalues.render" (dict "value" .Values.rbac.rules "context" .) | nindent 2 }}
     {{- end }}
 ---
 {{- end }}

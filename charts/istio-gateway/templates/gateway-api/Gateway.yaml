@@ -1,22 +1,21 @@
-{{- if not (eq (include "common.capabilities.networkingGateway.apiVersion" .) "false") }}
+{{- if not (eq (include "common.capabilities.networkingGatewayGateway.apiVersion" .) "false") }}
 {{- range $gateway := .Values.gateways }}
 {{- if and .enabled (and .gatewayApi .gatewayApi.create) -}}
-apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" $ }}
+apiVersion: {{ include "common.capabilities.networkingGatewayGateway.apiVersion" $ }}
 kind: Gateway
 metadata:
   name: {{ .name }}
-  namespace: {{ include "common.names.namespace" $ | quote }}
-  labels: {{ include "gateway.labels.standard" (dict "name" .name "revision" .revision "context" $) | nindent 4 }}
-  {{- if $.Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" $.Values.commonLabels "context" $) | nindent 4 }}
-  {{- end }}
+  namespace: {{ include "gateways.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
   {{- if $.Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  gatewayClassName: istio
+  gatewayClassName: {{ $.Values.gatewayClassName }}
   addresses:
-    - value: {{ printf "%s.%s.svc.%s" .name (include "common.names.namespace" $) $.Values.clusterDomain }}
+    - value: {{ printf "%s.%s.svc.%s" .name (include "gateways.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname
   listeners:
     {{- if and .service .service.ports }}
@@ -34,8 +33,8 @@ spec:
         namespaces:
           from: All
     {{- end }}
-    {{- if and .service .service.extraPorts }}
-      {{- include "common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+    {{- if and .gatewayApi .gatewayApi.listeners }}
+      {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}

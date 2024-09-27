@@ -1,62 +1,41 @@
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
-{{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
+{{- if not (eq (include "common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) "false") -}}
+apiVersion: {{ include "common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
 kind: ServiceMonitor
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ default (include "common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
-  {{- $labels := include "common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.serviceMonitor.labels) "context" .) }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" .) | nindent 4 }}
+  name: {{ include "gateways.names.fullname" . }}
+  namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.serviceMonitor.labels) "context" .) }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
+  {{- $annotations := merge .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
+  {{- if $annotations }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
+  {{- if .Values.metrics.serviceMonitor.jobLabel }}
   jobLabel: {{ .Values.metrics.serviceMonitor.jobLabel | quote }}
+  {{- end }}
   endpoints:
-    - port: {{ .Values.metrics.serviceMonitor.port }}
-      {{- if .Values.metrics.serviceMonitor.interval }}
-      interval: {{ .Values.metrics.serviceMonitor.interval }}
+    {{- $defaultEndpoint := pick .Values.metrics.serviceMonitor "port" "interval" "scrapeTimeout" "relabelings" "metricRelabelings" "honorLabels" }}
+    {{- $endpoints := ternary (.Values.metrics.serviceMonitor.endpoints) (list (dict "path" .Values.metrics.serviceMonitor.path)) (empty .Values.metrics.serviceMonitor.path) }}
+    {{- range $endpoints }}
+    {{- $endpoint := merge . $defaultEndpoint }}
+    - port: {{ $endpoint.port | quote }}
+      path: {{ include "gateways.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
+      {{- if $endpoint.interval }}
+      interval: {{ $endpoint.interval }}
       {{- end }}
-      {{- if .Values.metrics.serviceMonitor.scrapeTimeout }}
-      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- if $endpoint.scrapeTimeout }}
+      scrapeTimeout: {{ $endpoint.scrapeTimeout }}
       {{- end }}
-      {{- if .Values.metrics.serviceMonitor.honorLabels }}
-      honorLabels: {{ .Values.metrics.serviceMonitor.honorLabels }}
+      {{- if $endpoint.relabelings }}
+      relabelings: {{- include "gateways.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
       {{- end }}
-      {{- if .Values.metrics.serviceMonitor.metricRelabelings }}
-      metricRelabelings: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.metricRelabelings "context" .) | nindent 8 }}
+      {{- if $endpoint.metricRelabelings }}
+      metricRelabelings: {{- include "gateways.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
       {{- end }}
-      {{- if .Values.metrics.serviceMonitor.relabelings }}
-      relabelings: {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.relabelings "context" .) | nindent 8 }}
-      {{- end }}
-    {{- range .Values.metrics.serviceMonitor.additionalEndpoints }}
-    - port: {{ .port }}
-      {{- if .interval }}
-      interval: {{ .interval }}
-      {{- end }}
-      {{- if .scrapeTimeout }}
-      scrapeTimeout: {{ .scrapeTimeout }}
-      {{- end }}
-      {{- if .honorLabels }}
-      honorLabels: {{ .honorLabels }}
-      {{- end }}
-      {{- with concat .Values.metrics.serviceMonitor.relabelings .Values.metrics.serviceMonitor.relabellings }}
-      relabelings: {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- if .metricRelabelings }}
-      metricRelabelings: {{- toYaml .metricRelabelings | nindent 6 }}
-      {{- end }}
-      {{- if .path }}
-      path: {{ .path }}
-      {{- end }}
-      {{- if .params }}
-      params:
-        {{- range $key, $value := .params }}
-        {{ $key }}:
-          {{- range $value }}
-          - {{ . | quote }}
-          {{- end }}
-        {{- end }}
+      {{- if $endpoint.honorLabels }}
+      honorLabels: {{ $endpoint.honorLabels }}
       {{- end }}
     {{- end }}
   {{- if .Values.metrics.serviceMonitor.podTargetLabels }}
@@ -70,11 +49,9 @@ spec:
   {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ include "common.names.namespace" . | quote }}
+      - {{ include "gateways.names.namespace" . | quote }}
+  {{- $selectors := merge .Values.metrics.serviceMonitor.selector .Values.commonLabels }}
   selector:
-    matchLabels: {{ include "gateway.labels.matchLabels" (dict "name" .name "revision" .revision "context" $) | nindent 6 }}
-      {{- if .Values.metrics.serviceMonitor.selector }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" .) | nindent 6 }}
-      {{- end }}
+    matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" .Values.gateways "customLabels" $selectors "context" $) | nindent 4 }}
 {{- end }}
 {{- end }}
