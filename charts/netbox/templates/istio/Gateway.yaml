@@ -27,7 +27,7 @@ spec:
         {{- range .Values.ingress.extraHosts }}
         - {{ .name | quote }}
         {{- end }}
-    {{- if .Values.tls.enabled }}
+    {{- if .Values.ingress.tls.enabled }}
     - port:
         name: https
         number: 443

@@ -2718,10 +2718,11 @@ gateway:
   ## @param gateway.enabled  Enable Istio Gateway and VirtualService
   ##
   enabled: false
-  ## @param gateway.dedicated 
+  ## @param gateway.dedicated  **DEPRECATED**
   ## 
   dedicated: false
   ## @param gateway.gatewayApi 
+  ## ref: https://gateway-api.sigs.k8s.io/
   ## 
   gatewayApi:
     ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway HTTPRoute
@@ -2731,11 +2732,13 @@ gateway:
   ##
   clusterDomain: cluster.local
   ## @param gateway.name  Name of the Gateway resource
+  ## If you already have Istio ingress gateway deployment, and still want to use Gateway API, set this to Istio ingress gateway service name.
   ## e.g.
   ## name: istio-ingressgateway
   ## 
   name: ""
   ## @param gateway.namespace  Namespace for the Gateway resource
+  ## If you already have Istio ingress gateway deployment, and still want to use Gateway API, set this to Istio ingress gateway service namespace.
   ## e.g.:
   ## namespace: istio-ingressgateway
   ## 

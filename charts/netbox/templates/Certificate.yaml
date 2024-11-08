@@ -1,4 +1,4 @@
-{{- if or .Values.tls.enabled .Values.ingress.tls -}}
+{{- if and .Values.ingress.tls (not .Values.ingress.selfSigned) .Values.tls.autoGenerator.certManager.enabled -}}
 {{- if not (eq (include "common.capabilities.certManager.apiVersion" .) "false") -}}
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
@@ -50,7 +50,7 @@ spec:
     size: 256
   subject:
     organizations:
-      - {{ .Release.Name | quote }}
+      - {{ include "common.names.namespace" . | quote }}
     organizationalUnits:
       - {{ include "netbox.fullname" . }}
   dnsNames:
