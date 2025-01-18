@@ -1759,6 +1759,36 @@ entries:
   st-common:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: Add more popular common helper
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.9
+    created: "2025-01-18T17:22:37.149961897Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: f58a1a6d577d53a163dfd986ac8b43d2a57ec9948ad6326efecdc45f2d8f114d
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.9/st-common-0.1.9.tgz
+    version: 0.1.9
+  - annotations:
+      artifacthub.io/changes: |
         - kind: changed
           description: Fix Istio API resources
         - kind: changed
@@ -2139,4 +2169,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2024-09-27T10:26:32.646565301Z"
+generated: "2025-01-18T17:22:37.150094464Z"
