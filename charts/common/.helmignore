@@ -23,3 +23,6 @@
 .idea/
 *.tmproj
 .vscode/
+
+# Artifact 2.29.0
+# https://github.com/bitnami/charts/blob/main/bitnami/common/Chart.yaml
