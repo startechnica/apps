@@ -13,6 +13,10 @@ These presets are for basic testing and not meant to be used in production
 {{- define "st-common.resources.preset" -}}
 {{/* The limits are the requests increased by 50% (except ephemeral-storage and xlarge/2xlarge sizes)*/}}
 {{- $presets := dict 
+  "g-3xsmall" (dict 
+      "requests" (dict "cpu" "50m" "memory" "128Mi" "ephemeral-storage" "50Mi")
+      "limits" (dict "cpu" "1" "memory" "1Gi" "ephemeral-storage" "2Gi")
+   )
   "3xsmall" (dict 
       "requests" (dict "cpu" "50m" "memory" "128Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "150m" "memory" "192Mi" "ephemeral-storage" "2Gi")
@@ -21,6 +25,10 @@ These presets are for basic testing and not meant to be used in production
       "requests" (dict "cpu" "100m" "memory" "128Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "150m" "memory" "192Mi" "ephemeral-storage" "2Gi")
    )
+  "g-2xsmall" (dict 
+      "requests" (dict "cpu" "100m" "memory" "128Mi" "ephemeral-storage" "50Mi")
+      "limits" (dict "cpu" "1" "memory" "1Gi" "ephemeral-storage" "2Gi")
+   )
   "2xsmall" (dict 
       "requests" (dict "cpu" "100m" "memory" "128Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "150m" "memory" "192Mi" "ephemeral-storage" "2Gi")
@@ -28,6 +36,10 @@ These presets are for basic testing and not meant to be used in production
   "micro" (dict 
       "requests" (dict "cpu" "250m" "memory" "256Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "375m" "memory" "384Mi" "ephemeral-storage" "2Gi")
+   )
+  "g-xsmall" (dict 
+      "requests" (dict "cpu" "250m" "memory" "256Mi" "ephemeral-storage" "50Mi")
+      "limits" (dict "cpu" "1" "memory" "1Gi" "ephemeral-storage" "2Gi")
    )
   "xsmall" (dict 
       "requests" (dict "cpu" "250m" "memory" "256Mi" "ephemeral-storage" "50Mi")
