@@ -2,19 +2,19 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ include "common.names.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
-  {{- include "common.tplvalues.render" (dict "value" .Values.metrics.prometheusRules.additionalLabels "context" $) | nindent 4 }}
+  {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.prometheusRules.additionalLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   groups:
-  - name: {{ include "common.names.fullname" . }}
+  - name: {{ include "st-common.names.fullname" . }}
     rules:
       {{- toYaml .Values.metrics.prometheusRules.rules | nindent 6 }}
 {{ end }}

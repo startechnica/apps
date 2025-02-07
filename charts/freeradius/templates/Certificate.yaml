@@ -1,9 +1,9 @@
 {{- if and (include "freeradius.createTlsSecret" .) .Values.tls.autoGenerator.certmanager.enabled }}
 {{- if not (eq (include "common.capabilities.certManager.apiVersion" .) "false") }}
-{{- $releaseNamespace := include "common.names.namespace" . }}
+{{- $releaseNamespace := include "st-common.names.namespace" . }}
 {{- $clusterDomain := .Values.clusterDomain }}
-{{- $fullname := include "common.names.fullname" . }}
-{{- $serviceName := include "common.names.fullname" . }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- $serviceName := include "st-common.names.fullname" . }}
 {{- $altNames := list (printf "%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 {{/*
 {{- $altNames := list (printf "*.%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
@@ -11,14 +11,14 @@
 apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "common.names.fullname" . }}-tls
-  namespace: {{ include "common.names.namespace" . | quote }}
+  name: {{ include "st-common.names.fullname" . }}-tls
+  namespace: {{ include "st-common.names.namespace" . | quote }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
 spec:
   secretName: {{ include "freeradius.tlsSecretName" . }}
@@ -35,7 +35,7 @@ spec:
     organizations:
       - {{ .Release.Name | quote }}
     organizationalUnits:
-      - {{ include "common.names.fullname" . }}
+      - {{ include "st-common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
     {{- range .Values.ingress.extraHosts }}
