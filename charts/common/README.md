@@ -28,15 +28,15 @@ This chart provides a common template helpers which can be used to develop new c
 
 The following table lists the helpers available in the library which are scoped in different sections.
 
-### istio
+### Istio
 
 | Helper identifier                                 | Description                                                              | Expected Input    |
 |---------------------------------------------------|--------------------------------------------------------------------------|-------------------|
-| `common.capabilities.istioExtensions.apiVersion`  | Return the appropriate apiVersion for Istio Extension.                   | `.` Chart context |
-| `common.capabilities.istioInstall.apiVersion`     | Return the appropriate apiVersion for Istio Install.                     | `.` Chart context |
-| `common.capabilities.istioNetworking.apiVersion`  | Return the appropriate apiVersion for Istio Networking.                  | `.` Chart context |
-| `common.capabilities.istioSecurity.apiVersion`    | Return the appropriate apiVersion for Istio Security.                    | `.` Chart context |
-| `common.capabilities.istioTelemetry.apiVersion`   | Return the appropriate apiVersion for Istio Telemetry.                   | `.` Chart context |
+| `st-common.capabilities.istiolWasmPugin.apiVersion`  | Return the appropriate apiVersion for Istio WasmPlugin.                   | `.` Chart context |
+| `st-common.capabilities.istioIstioOperator.apiVersion`     | Return the appropriate apiVersion for Istio IstioOperator.                     | `.` Chart context |
+| `st-common.capabilities.istioAuthorizationPolicy.apiVersion`  | Return the appropriate apiVersion for Istio AuthorizationPolicy.                  | `.` Chart context |
+| `st-common.capabilities.istioDestinationRule.apiVersion`    | Return the appropriate apiVersion for Istio DestinationRule.                    | `.` Chart context |
+| `st-common.capabilities.istioTelemetry.apiVersion`   | Return the appropriate apiVersion for Istio Telemetry.                   | `.` Chart context |
 
 ### cert-manager
 
@@ -71,7 +71,7 @@ metadata:
 
 ## License
 
-Copyright &copy; 2022 Startechnica
+Copyright &copy; 2025 Startechnica
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
