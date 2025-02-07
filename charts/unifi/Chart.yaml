@@ -20,8 +20,8 @@ dependencies:
   - name: mongodb
     condition: mongodb.enabled
     repository: https://charts.bitnami.com/bitnami
-    version: 10.x.x
-description: UniFi Network Application to manage UniFi devices 
+    version: 16.x.x
+description: UniFi Network Application to manage UniFi devices
 home: https://github.com/startechnica/apps/tree/main/charts/unifi
 icon: https://prd-www-cdn.ubnt.com/static/favicon-152.png
 keywords:
