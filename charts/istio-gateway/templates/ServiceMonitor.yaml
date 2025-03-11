@@ -1,6 +1,6 @@
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
-{{- if not (eq (include "common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
+{{- if not (eq (include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
 kind: ServiceMonitor
 metadata:
   name: {{ include "gateways.names.fullname" . }}
