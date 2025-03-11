@@ -2,9 +2,7 @@ annotations:
   category: ServiceMesh
   artifacthub.io/changes: |
     - kind: changed
-      description: Cleanup
-    - kind: changed
-      description: Remove Bitnami Common dependencies
+      description: Bump appVersion to 1.25.0
   artifacthub.io/links: |
     - name: Chart Source
       url: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
@@ -43,4 +41,4 @@ name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
-version: 1.0.4
+version: 1.0.5
