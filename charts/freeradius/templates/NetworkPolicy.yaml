@@ -4,7 +4,7 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if .Values.networkPolicy.enabled }}
-apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.networkPolicy.apiVersion" . }}
 kind: NetworkPolicy
 metadata:
   name: {{ include "st-common.names.fullname" . }}
@@ -19,7 +19,7 @@ metadata:
   {{- end }}
 spec:
   podSelector:
-    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+    matchLabels: {{- include "st-common.labels.matchLabels" . | nindent 6 }}
   ingress:
     - ports:
         - port: {{ .Values.containerPorts.auth }}
@@ -48,7 +48,7 @@ spec:
             matchLabels:
               {{ include "st-common.names.fullname" . }}-client: "true"
         - podSelector:
-            matchLabels: {{- include "common.labels.matchLabels" . | nindent 14 }}
+            matchLabels: {{- include "st-common.labels.matchLabels" . | nindent 14 }}
               app.kubernetes.io/component: freeradius
         {{- if .Values.networkPolicy.additionalRules }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.networkPolicy.additionalRules "context" $) | nindent 8 }}

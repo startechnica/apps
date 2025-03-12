@@ -4,7 +4,7 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if and (include "freeradius.createTlsSecret" .) .Values.tls.autoGenerator.certmanager.enabled }}
-{{- if not (eq (include "common.capabilities.certManager.apiVersion" .) "false") }}
+{{- if not (eq (include "st-common.capabilities.certManager.apiVersion" .) "false") }}
 {{- $releaseNamespace := include "st-common.names.namespace" . }}
 {{- $clusterDomain := .Values.clusterDomain }}
 {{- $fullname := include "st-common.names.fullname" . }}
@@ -13,7 +13,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{/*
 {{- $altNames := list (printf "*.%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 */}}
-apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "st-common.names.fullname" . }}-tls

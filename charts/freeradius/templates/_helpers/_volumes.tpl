@@ -14,5 +14,5 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the proper image name (for the init container volume-permissions image) */}}
 {{- define "freeradius.volumePermissions.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
+  {{ include "st-common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
 {{- end -}}

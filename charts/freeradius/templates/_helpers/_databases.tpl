@@ -5,7 +5,7 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Create a default fully qualified app name. We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec). */}}
 {{- define "freeradius.mariadb.fullname" -}}
-  {{- include "common.names.dependency.fullname" (dict "chartName" "mariadb" "chartValues" .Values.mariadb "context" $) -}}
+  {{- include "st-common.names.dependency.fullname" (dict "chartName" "mariadb" "chartValues" .Values.mariadb "context" $) -}}
 {{- end -}}
 
 {{/* Return the Database hostname */}}
@@ -73,7 +73,7 @@ SPDX-License-Identifier: APACHE-2.0
         {{- default (include "freeradius.mariadb.fullname" .) (tpl .Values.mariadb.auth.existingSecret $) -}}
     {{- end -}}
 {{- else -}}
-    {{- default (include "common.secrets.name" (dict "existingSecret" .Values.mariadb.auth.existingSecret "context" $)) (tpl .Values.externalDatabase.existingSecret $) -}}
+    {{- default (include "st-common.secrets.name" (dict "existingSecret" .Values.mariadb.auth.existingSecret "context" $)) (tpl .Values.externalDatabase.existingSecret $) -}}
 {{- end -}}
 {{- end -}}
 
