@@ -1,3 +1,8 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if .Values.telemetry.enabled -}}
 {{- if not (eq (include "st-common.capabilities.istioTelemetry.apiVersion" .) "false") -}}
 apiVersion: {{ include "st-common.capabilities.istioTelemetry.apiVersion" . }}
@@ -5,6 +10,11 @@ kind: Telemetry
 metadata:
   name: {{ include "gateways.names.fullname" . }}
   namespace: {{ include "gateways.names.namespace" . | quote }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" .) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" .Values.commonAnnotations "context" .) | nindent 4 }}
+  {{- end }}
 spec:
   accessLogging:
   {{- if .Values.telemetry.accessLogging }}
@@ -14,20 +24,16 @@ spec:
         - name: envoy
   {{- end }}
   {{- if .Values.telemetry.metrics }}
-  metrics:
-    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.metrics "context" .) | nindent 4 }}
+  metrics: {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.metrics "context" .) | nindent 4 }}
   {{- end }}
   {{- if .Values.telemetry.selector }}
-  selector:
-    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.selector "context" .) | nindent 4 }}
+  selector: {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.selector "context" .) | nindent 4 }}
   {{- end }}
   {{- if .Values.telemetry.targetRefs }}
-  targetRefs:
-    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.targetRefs "context" .) | nindent 4 }}
+  targetRefs: {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.targetRefs "context" .) | nindent 4 }}
   {{- end }}
   {{- if .Values.telemetry.tracing }}
-  tracing:
-    {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.tracing "context" .) | nindent 4 }}
+  tracing: {{- include "gateways.tplvalues.render" (dict "value" .Values.telemetry.tracing "context" .) | nindent 4 }}
   {{- end }}
 {{- end -}}
 {{- end -}}

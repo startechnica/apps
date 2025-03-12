@@ -1,3 +1,8 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
 {{- if not (eq (include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) "false") -}}
 apiVersion: {{ include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
