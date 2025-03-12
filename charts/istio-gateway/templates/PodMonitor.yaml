@@ -1,6 +1,11 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.metrics.enabled .Values.metrics.podMonitor.enabled -}}
-{{- if not (eq (include "common.capabilities.coreosMonitoringPodMonitor.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.coreosMonitoringPodMonitor.apiVersion" . }}
+{{- if not (eq (include "st-common.capabilities.coreosMonitoringPodMonitor.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.coreosMonitoringPodMonitor.apiVersion" . }}
 kind: PodMonitor
 metadata:
   name: {{ include "gateways.names.fullname" . }}

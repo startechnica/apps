@@ -1,6 +1,11 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- range $gateway := .Values.gateways }}
 {{- if and $gateway.enabled $.Values.pdb.create }}
-apiVersion: {{ include "gateways.capabilities.policy.apiVersion" $ }}
+apiVersion: {{ include "st-common.capabilities.policy.apiVersion" $ }}
 kind: PodDisruptionBudget
 metadata:
   name: {{ .name }}

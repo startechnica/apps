@@ -1,7 +1,12 @@
-{{- if not (eq (include "common.capabilities.networkingGatewayGateway.apiVersion" .) "false") }}
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if not (eq (include "st-common.capabilities.networkingGatewayGateway.apiVersion" .) "false") }}
 {{- range $gateway := .Values.gateways }}
 {{- if and .enabled (and .gatewayApi .gatewayApi.create) -}}
-apiVersion: {{ include "common.capabilities.networkingGatewayGateway.apiVersion" $ }}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersion" $ }}
 kind: Gateway
 metadata:
   name: {{ .name }}

@@ -1,6 +1,6 @@
 {{- if .Values.telemetry.enabled -}}
-{{- if not (eq (include "common.capabilities.istioTelemetry.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.istioTelemetry.apiVersion" . }}
+{{- if not (eq (include "st-common.capabilities.istioTelemetry.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.istioTelemetry.apiVersion" . }}
 kind: Telemetry
 metadata:
   name: {{ include "gateways.names.fullname" . }}
