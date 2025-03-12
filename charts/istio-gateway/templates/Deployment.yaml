@@ -136,6 +136,9 @@ spec:
           {{- end }}
           {{- $containerPorts := dict .containerPorts }}
           ports:
+            - containerPort: {{ ternary (get $containerPorts "metricsMerge") 15020 (hasKey $containerPorts "metricsMerge") }}
+              name: metrics
+              protocol: TCP
             - containerPort: {{ ternary (get $containerPorts "status") 15021 (hasKey $containerPorts "status") }}
               name: status-port
               protocol: TCP
