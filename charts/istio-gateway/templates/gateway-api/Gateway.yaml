@@ -22,6 +22,24 @@ spec:
   addresses:
     - value: {{ printf "%s.%s.svc.%s" .name (include "gateways.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname
+  {{- if and .gatewayApi (or .gatewayApi.annotations .gatewayApi.labels .gatewayApi.parametersRef) }}
+  infrastructure:
+    {{- if .gatewayApi.annotations }}
+    annotations: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.annotations "context" $) | nindent 6 }}
+    {{- end }}
+    {{- if .gatewayApi.labels }}
+    labels: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.labels "context" $) | nindent 6 }}
+    {{- end }}
+    {{- if .gatewayApi.parametersRef }}
+    parametersRef: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.parametersRef "context" $) | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  {{- if and .gatewayApi .gatewayApi.backendTLS.clientCertificateRef.name }}
+  backendTLS: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.backendTLS "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if and .gatewayApi .gatewayApi.allowedListeners }}
+  allowedListeners: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.allowedListeners "context" $) | nindent 4 }}
+  {{- end }}
   listeners:
     {{- if and .service .service.ports }}
     - name: http2

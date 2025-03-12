@@ -18,8 +18,8 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "watch", "list"]
-    {{- if .Values.rbac.rules }}
-      {{- include "gateways.tplvalues.render" (dict "value" .Values.rbac.rules "context" .) | nindent 2 }}
-    {{- end }}
+  {{- if .Values.rbac.rules }}
+    {{- include "gateways.tplvalues.render" (dict "value" .Values.rbac.rules "context" .) | nindent 2 }}
+  {{- end }}
 ---
 {{- end }}

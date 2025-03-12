@@ -496,10 +496,36 @@ gateways:
       ## @param gateways.$gateway.gatewayApi.create Create Kubernetes Gateway API
       ##
       create: true
-      ## @param gateways.$gateway.gatewayApi.listeners
+      ## @param gateways.$gateway.gatewayApi.annotations  Annotations that SHOULD be applied to any resources created in response to this Gateway.
+      ## ref: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayInfrastructure
+      ##
+      annotations: {}
+      ## @param gateways.$gateway.gatewayApi.labels  Labels that SHOULD be applied to any resources created in response to this Gateway.
+      ## ref: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayInfrastructure
+      ##
+      labels: {}
+      ## @param gateways.$gateway.gatewayApi.parametersRef  ParametersRef is a reference to a resource that contains the configuration
+      ## parameters corresponding to the Gateway. This is optional if the controller does not require any additional configuration.
+      ## ref: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayInfrastructure
+      ##
+      parametersRef: {}
+      ## @param gateways.$gateway.gatewayApi.backendTLS  BackendTLS configures TLS settings for when this Gateway is connecting to backends with TLS.
+      ##
+      backendTLS:
+        clientCertificateRef: 
+          kind: Secret
+          name: ""
+          namespace: ""
+      ## @param gateways.$gateway.gatewayApi.allowedListeners  AllowedListeners defines which ListenerSets can be attached to this Gateway. While
+      ## this feature is experimental, the default value is to allow no ListenerSets.
+      ##
+      allowedListeners: {}
+      ## @param gateways.$gateway.gatewayApi.listeners Listeners associated with this Gateway. Listeners define logical endpoints that are
+      ## bound on this Gateway’s addresses. At least one Listener MUST be specified.
       ##
       listeners: []
-      ## @param gateways.$gateway.gatewayApi.extraListeners
+      ## @param gateways.$gateway.gatewayApi.extraListeners  Extra listeners associated with this Gateway. Listeners define logical endpoints
+      ## that are bound on this Gateway’s addresses.
       ##
       extraListeners: []
 
@@ -584,6 +610,7 @@ gateways:
       http2: 80
       https: 443
       metrics: 15090
+      metricsMerge: 15020
     ## Istio Gateway Pod security context
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
     ## @param podSecurityContext.enabled Enable security context for Istio Gateway pods

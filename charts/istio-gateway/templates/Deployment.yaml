@@ -14,11 +14,9 @@ metadata:
   {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-  annotations: 
-    istio.io/rev: {{ default "default" .revision | quote }}
-    {{- if $.Values.commonAnnotations }}
-      {{- include "gateways.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "gateways.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 spec:
   {{- if not $.Values.pdb.create }}
   replicas: {{ default 1 .replicaCount | int }}
