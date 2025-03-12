@@ -41,6 +41,9 @@ spec:
     {{- if and .gatewayApi .gatewayApi.listeners }}
       {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
     {{- end }}
+    {{- if and .gatewayApi .gatewayApi.extraListeners }}
+      {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
+    {{- end }}
 ---
 {{- end }}
 {{- end }}

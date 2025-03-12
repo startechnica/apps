@@ -499,6 +499,9 @@ gateways:
       ## @param gateways.$gateway.gatewayApi.listeners
       ##
       listeners: []
+      ## @param gateways.$gateway.gatewayApi.extraListeners
+      ##
+      extraListeners: []
 
     ## Istio Ingress Gateway service parameters
     ##
