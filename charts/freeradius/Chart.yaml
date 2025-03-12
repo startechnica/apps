@@ -1,20 +1,15 @@
 annotations:
   category: AccessManagement
 apiVersion: v2
-appVersion: 3.2.3
+appVersion: 3.2.7
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
-    version: "*"
-  - name: common
-    repository: oci://registry-1.docker.io/bitnamicharts
-    tags:
-      - bitnami-common
-    version: 2.x.x
+    version: 0.1.10
   - name: mariadb
     condition: mariadb.enabled
     repository: oci://registry-1.docker.io/bitnamicharts
-    version: 11.x.x
+    version: 20.x.x
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and 
   distributed under the GNU General Public License, version 2, and is free for download and use.
 home: https://github.com/startechnica/apps/tree/main/charts/freeradius
@@ -25,7 +20,7 @@ keywords:
   - mysql
   - postgresql
   - ldap
-kubeVersion: ">=1.22.0-0"
+kubeVersion: ">=1.24.0-0"
 maintainers:
   - name: firmansyahn
     email: firmansyah@nainggolan.id
@@ -35,4 +30,4 @@ sources:
   - https://freeradius.org/
   - https://github.com/FreeRADIUS/freeradius-server
 type: application
-version: 1.0.1
+version: 1.0.2

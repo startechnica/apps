@@ -1,14 +1,19 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-env" (include "common.names.fullname" .) }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  name: {{ include "freeradius.names.envvars" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
   FREERADIUS_ENABLE_TLS: {{ ternary "true" "false" .Values.tls.enabled | quote }}
@@ -20,7 +25,7 @@ data:
 
   {{- if .Values.modsEnabled.sql.enabled }}
   FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modsEnabled.sql.dialect }}
-  FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.databaseHost" . | quote }}
+  FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.database.host" . | quote }}
   FREERADIUS_MODS_SQL_PORT: {{ include "freeradius.databasePort" . }}
   FREERADIUS_MODS_SQL_LOGIN: {{ include "freeradius.databaseUser" . | quote }}
   FREERADIUS_MODS_SQL_DB: {{ include "freeradius.databaseName" . | quote }}
@@ -34,6 +39,13 @@ data:
   FREERADIUS_MODS_SQL_TABLE_POSTAUTH: {{ .Values.modsEnabled.sql.table.postauth }}
   FREERADIUS_MODS_SQL_TABLE_USERGROUP: {{ .Values.modsEnabled.sql.table.usergroup }}
   FREERADIUS_MODS_SQL_TLS_ENABLE: {{ ternary "yes" "no" .Values.modsEnabled.sql.tls.enabled | quote }}
+
+  FREERADIUS_MODS_SQL_READ_CLIENTS: {{ ternary "yes" "no" .Values.modsEnabled.sql.readClients | quote }}
+  FREERADIUS_MODS_SQL_GROUP_ATTRIBUTE: {{ .Values.modsEnabled.sql.groupAttribute | quote }}
+
+  FREERADIUS_MODS_SQL_SQLITE_FILENAME: /startechnica/freeradius/freeradius.db
+  FREERADIUS_MODS_SQL_SQLITE_BUSY_TIMEOUT: "200"
+
   {{- if .Values.modsEnabled.sql.tls.enabled }}
   FREERADIUS_MODS_SQL_TLS_CACERT: {{ include "freeradius.sqlTlsCACert" . | quote }}
   FREERADIUS_MODS_SQL_TLS_CIPHER: ""
@@ -54,11 +66,10 @@ data:
   FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sitesEnabled.status.listen | quote }}
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
   {{- end }}
-  {{- if .Values.tls.enabled }}
+  {{- if .Values.sitesEnabled.tls.enabled }}
   FREERADIUS_SITES_TLS_PORT: {{ .Values.containerPorts.radsec | quote }}
   FREERADIUS_SITES_TLS_CA_FILE: {{ include "freeradius.tlsCACert" . | quote }}
   FREERADIUS_SITES_TLS_CERTIFICATE_FILE: {{ include "freeradius.tlsCert" . | quote }}
-  FREERADIUS_SITES_TLS_CIPHER: DEFAULT
+  FREERADIUS_SITES_TLS_CIPHER: {{ default "DEFAULT" .Values.sitesEnabled.tls.cipher | quote }}
   FREERADIUS_SITES_TLS_PRIVKEY_FILE: {{ include "freeradius.tlsCertKey" . | quote }}
-  FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD: radsec
   {{- end }}

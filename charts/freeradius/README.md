@@ -79,7 +79,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | ----------------------------------------------| -------------------------------------------------------------------------------------------------------------------------| -------------------------------|
 | `image.registry`                              | FreeRADIUS image registry                                                                                                | `docker.io`                    |
 | `image.repository`                            | FreeRADIUS image repository                                                                                              | `freeradius/freeradius-server` |
-| `image.tag`                                   | FreeRADIUS image tag (immutable tags are recommended)                                                                    | `3.2.0`                        |
+| `image.tag`                                   | FreeRADIUS image tag (immutable tags are recommended)                                                                    | `3.2.3`                        |
 | `image.pullPolicy`                            | FreeRADIUS image pull policy                                                                                             | `IfNotPresent`                 |
 | `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
 | `image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
@@ -96,11 +96,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `service.ports.coa`                           | FreeRADIUS CoA service port                                                                                              | `3799`                         |
 | `service.ports.radsec`                        | FreeRADIUS RadSec service port                                                                                           | `2083`                         |
 | `service.ports.status`                        | FreeRADIUS Status service port                                                                                           | `18121`                        |
-| `service.nodePorts.auth`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.acct`                      | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.coa`                       | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.radsec`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
-| `service.nodePorts.status`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                              | `""`                           |
+| `service.nodePorts.auth`                      | Specify the nodePort value for the LoadBalancer and NodePort for Authentication service types.                           | `""`                           |
+| `service.nodePorts.acct`                      | Specify the nodePort value for the LoadBalancer and NodePort for Accounting service types.                               | `""`                           |
+| `service.nodePorts.coa`                       | Specify the nodePort value for the LoadBalancer and NodePort for CoA service types.                                      | `""`                           |
+| `service.nodePorts.radsec`                    | Specify the nodePort value for the LoadBalancer and NodePort for RadSec service types.                                   | `""`                           |
+| `service.nodePorts.status`                    | Specify the nodePort value for the LoadBalancer and NodePort for Status service types.                                   | `""`                           |
 | `service.extraPorts`                          | Extra ports to expose (normally used with the `sidecar` value)                                                           | `[]`                           |
 | `service.externalIPs`                         | External IP list to use with ClusterIP service type                                                                      | `[]`                           |
 | `service.loadBalancerIP`                      | `loadBalancerIP` if service type is `LoadBalancer`                                                                       | `""`                           |
@@ -126,17 +126,17 @@ The command removes all the Kubernetes components associated with the chart and 
 | `containerSecurityContext.runAsNonRoot`       | Set FreeRADIUS container Security Context runAsNonRoot                                                                   | `true`                         |
 | `tls.enabled`                                 | Enable TLS support for replication traffic                                                                               | `false`                        |
 | `tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
-| `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `""`                           |
+| `tls.autoGenerator.certmanager.enabled`       |                                                                                                                          | `false`                        |
+| `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `"false"`                           |
 | `tls.certFilename`                            | Certificate filename                                                                                                     | `""`                           |
 | `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
 | `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
-| `configuration`                               | Configuration for the FreeRADIUS server                                                                                  | `""`                           |
+| `configuration`                               | Configuration for the FreeRADIUS server (`radiusd.conf`)                                                                 | `""`                           |
 | `configurationConfigMap`                      | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configuration`). The value is evaluated as a template. | `""`                         |
 | `initdbScripts`                               | Specify dictionary of scripts to be run at first boot                                                                    | `{}`                           |
 | `initdbScriptsConfigMap`                      | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                      | `""`                           |
 | `extraFlags`                                  | FreeRADIUS additional command line flags                                                                                 | `""`                           |
 | `replicaCount`                                | Desired number of cluster nodes                                                                                          | `3`                            |
-| `updateStrategy.type`                         | updateStrategy for FreeRADIUS Master StatefulSet                                                                         | `RollingUpdate`                |
 | `podLabels`                                   | Extra labels for FreeRADIUS pods                                                                                         | `{}`                           |
 | `podAnnotations`                              | Annotations for FreeRADIUS  pods                                                                                         | `{}`                           |
 | `podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
@@ -157,7 +157,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `persistence.enabled`                         | Enable persistence using PVC                                                                                             | `true`                         |
 | `persistence.existingClaim`                   | Provide an existing `PersistentVolumeClaim`                                                                              | `""`                           |
 | `persistence.subPath`                         | Subdirectory of the volume to mount                                                                                      | `""`                           |
-| `persistence.mountPath`                       | Path to mount the volume at                                                                                              | `/etc/freeradius`              |
+| `persistence.mountPath`                       | Path to mount the volume at                                                                                              | `/startechnica/freeradius`     |
 | `persistence.selector`                        | Selector to match an existing Persistent Volume (this value is evaluated as a template)                                  | `{}`                           |
 | `persistence.storageClass`                    | Persistent Volume Storage Class                                                                                          | `""`                           |
 | `persistence.annotations`                     | Persistent Volume Claim annotations                                                                                      | `{}`                           |
@@ -226,13 +226,40 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.prometheusRules.rules`               | PrometheusRule rules to configure                                                                                                                                                             | `{}`                      |
 
 
-### Custom FreeRADIUS application parameters
+### Custom FreeRADIUS enabled mods parameters
+
+| Name                                       | Description                                         | Value             |
+| ------------------------------------------ | --------------------------------------------------- | ----------------- |
+| `modsEnabled.sql.enabled`                  | Enable FreeRADIUS SQL module                        | `false`           |
+| `modsEnabled.sql.dialect`                  | The driver module used to execute the queries.      | `mysql`           |
+| `modsEnabled.sql.table.acct1`              | Tables containing 'accounting' items                | `radacct`         |
+| `modsEnabled.sql.table.acct2`              | Tables containing 'accounting' items                | `radacct`         |
+| `modsEnabled.sql.table.authcheck`          | Tables containing 'check' items                     | `radcheck`        |
+| `modsEnabled.sql.table.authreply`          | Tables containing 'reply' items                     | `radreply`        |
+| `modsEnabled.sql.table.client`             | Table to keep radius client info                    | `nas`             |
+| `modsEnabled.sql.table.groupcheck`         | Tables containing 'check' items                     | `radgroupcheck`   |
+| `modsEnabled.sql.table.groupreply`         | Tables containing 'reply' items                     | `radgroupreply`   |
+| `modsEnabled.sql.table.postauth`           | Allow for storing data after authentication         | `radpostauth`     |
+| `modsEnabled.sql.table.usergroup`          | Table to keep group info                            | `radusergroup`    |
+| `modsEnabled.sql.tls.enabled`              | Enable FreeRADIUS SQL TLS module                    | `false`           |
+| `modsEnabled.sql.tls.autoGenerated`        |                                                     | `false`           |
+| `modsEnabled.sql.tls.certificatesSecret`   |                                                     | `""`              |
+| `modsEnabled.sql.tls.certFilename`         |                                                     | `""`              |
+| `modsEnabled.sql.tls.certKeyFilename`      |                                                     | `""`              |
+| `modsEnabled.sql.tls.certCAFilename`       |                                                     | `""`              |
+| `modsEnabled.sql.tls.existingTlsSecret`    |                                                     | `""`              |
+| `modsEnabled.sql.tls.privateKeyPassword`   |                                                     | `""`              |
+
+
+### Custom FreeRADIUS enabled sites parameters
 
 | Name                                       | Description                                                                     | Value             |
 | ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
-| `modsEnabled.sql.enabled`                  | Enable FreeRADIUS SQL module                                                    | `false`           |
-| `sitesEnabled.status.port`                 | FreeRADIUS status port                                                          | `18121`           |
-| `sitesEnabled.status.secret`               | FreRADIUS status secret                                                         | `adminsecret`     |
+| `sitesEnabled.coa.enabled`                 | Enable FreeRADIUS coa service                                                   | `false`           |
+| `sitesEnabled.status.enabled`              | Enable FreeRADIUS status service                                                | `true`            |
+| `sitesEnabled.tls.enabled`                 | Enable FreeRADIUS radsec service                                                | `false`           |
+| `sitesEnabled.tls.cipher`                  |                                                                                 | `false`           |
+| `sitesEnabled.tls.privateKeyPassword`      |                                                                                 | `false`           |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
@@ -240,7 +267,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install my-release \
   --set imagePullPolicy=Always \
-    startechnica/freeradius
+  startechnica/freeradius
 ```
 
 The above command sets the `imagePullPolicy` to `Always`.
