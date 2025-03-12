@@ -3,8 +3,6 @@ Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{/* vim: set filetype=mustache: */}}
-
 {{/* Return the proper FreeRADIUS image name */}}
 {{- define "freeradius.image" -}}
   {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}

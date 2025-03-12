@@ -5,7 +5,7 @@ appVersion: 3.2.7
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
-    version: 0.1.9
+    version: 0.1.10
   - name: common
     repository: oci://registry-1.docker.io/bitnamicharts
     tags:

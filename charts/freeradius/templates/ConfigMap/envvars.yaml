@@ -6,7 +6,7 @@ SPDX-License-Identifier: APACHE-2.0
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-env" (include "st-common.names.fullname" .) }}
+  name: {{ include "freeradius.names.envvars" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}

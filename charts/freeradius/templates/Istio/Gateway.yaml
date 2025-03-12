@@ -1,6 +1,11 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) }}
-{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") }}
-apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+{{- if not (eq (include "st-common.capabilities.istioGateway.apiVersion" .) "false") }}
+apiVersion: {{ include "st-common.capabilities.istioGateway.apiVersion" . }}
 kind: Gateway
 metadata:
   name: {{ include "st-common.names.fullname" . }}
