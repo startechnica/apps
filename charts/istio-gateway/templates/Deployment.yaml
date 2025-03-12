@@ -184,7 +184,7 @@ spec:
           {{- if .resources }}
           resources: {{- include "gateways.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
           {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
-          resources: {{- include "gateways.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if $.Values.extraVolumeMounts }}
           volumeMounts:
