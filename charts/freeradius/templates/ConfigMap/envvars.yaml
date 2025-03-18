@@ -26,9 +26,9 @@ data:
   {{- if .Values.modsEnabled.sql.enabled }}
   FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modsEnabled.sql.dialect }}
   FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.database.host" . | quote }}
-  FREERADIUS_MODS_SQL_PORT: {{ include "freeradius.databasePort" . }}
-  FREERADIUS_MODS_SQL_LOGIN: {{ include "freeradius.databaseUser" . | quote }}
-  FREERADIUS_MODS_SQL_DB: {{ include "freeradius.databaseName" . | quote }}
+  FREERADIUS_MODS_SQL_PORT: {{ include "freeradius.database.port" . }}
+  FREERADIUS_MODS_SQL_LOGIN: {{ include "freeradius.database.user" . | quote }}
+  FREERADIUS_MODS_SQL_DB: {{ include "freeradius.database.name" . | quote }}
   FREERADIUS_MODS_SQL_TABLE_ACCT1: {{ .Values.modsEnabled.sql.table.acct1 }}
   FREERADIUS_MODS_SQL_TABLE_ACCT2: {{ .Values.modsEnabled.sql.table.acct2 }}
   FREERADIUS_MODS_SQL_TABLE_AUTHCHECK: {{ .Values.modsEnabled.sql.table.authcheck }}

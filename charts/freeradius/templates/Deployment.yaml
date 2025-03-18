@@ -138,8 +138,8 @@ spec:
                   name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
                   key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
                 {{- else }}
-                  name: {{ include "freeradius.databaseSecretName" . }}
-                  key: {{ include "freeradius.databaseSecretKey" . }}
+                  name: {{ include "freeradius.database.secretName" . }}
+                  key: {{ include "freeradius.database.secretKey" . }}
                 {{- end }}
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}

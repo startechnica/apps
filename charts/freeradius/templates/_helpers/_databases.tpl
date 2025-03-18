@@ -18,12 +18,12 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 
 {{/* Return the Database port */}}
-{{- define "freeradius.databasePort" -}}
+{{- define "freeradius.database.port" -}}
   {{- ternary "3306" .Values.externalDatabase.port .Values.mariadb.enabled | quote -}}
 {{- end -}}
 
 {{/* Return the Database database name */}}
-{{- define "freeradius.databaseName" -}}
+{{- define "freeradius.database.name" -}}
 {{- if .Values.mariadb.enabled }}
     {{- if .Values.global.mariadb }}
         {{- if .Values.global.mariadb.auth }}
@@ -40,7 +40,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 
 {{/* Return the Database user */}}
-{{- define "freeradius.databaseUser" -}}
+{{- define "freeradius.database.user" -}}
 {{- if .Values.mariadb.enabled }}
   {{- if .Values.global.mariadb }}
     {{- if .Values.global.mariadb.auth }}
@@ -57,7 +57,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 
 {{/* Return the Database encrypted password */}}
-{{- define "freeradius.databaseSecretName" -}}
+{{- define "freeradius.database.secretName" -}}
 {{- if .Values.mariadb.enabled }}
     {{- if .Values.global.mariadb }}
         {{- if .Values.global.mariadb.auth }}
@@ -78,7 +78,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 
 {{/* Add environment variables to configure database values */}}
-{{- define "freeradius.databaseSecretKey" -}}
+{{- define "freeradius.database.secretKey" -}}
 {{- if .Values.mariadb.enabled -}}
   {{- print "mariadb-password" -}}
 {{- else -}}
