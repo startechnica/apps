@@ -285,6 +285,10 @@ spec:
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             {{- end }}
+            {{- if and .Values.modsEnabled.sql.enabled (eq .Values.modsEnabled.sql.dialect "sqlite") }}
+            - name: freeradius-sqlite
+              mountPath: {{ .Values.modsEnabled.sql.sqlite.filename | quote }}
+            {{- end }}
             {{- if .Values.modsEnabled.sql.tls.enabled }}
             - name: freeradius-sql-tls
               mountPath: /opt/startechnica/freeradius/certs
@@ -318,6 +322,10 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if and .Values.modsEnabled.sql.enabled (eq .Values.modsEnabled.sql.dialect "sqlite") }}
+        - name: freeradius-sqlite
+          emptyDir: {}
+        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
