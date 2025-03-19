@@ -317,6 +317,44 @@ entries:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.2.7
+    created: "2025-03-19T10:26:02.810805079Z"
+    dependencies:
+    - name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.10
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 20.x.x
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    digest: 03c12dbc96d31e0ad3bb2c6e0534159b06ce9c1b456c1e89fd1290023977fa06
+    home: https://github.com/startechnica/apps/tree/main/charts/freeradius
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - mysql
+    - postgresql
+    - ldap
+    kubeVersion: '>=1.24.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    - https://github.com/FreeRADIUS/freeradius-server
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-1.0.3/freeradius-1.0.3.tgz
+    version: 1.0.3
+  - annotations:
+      category: AccessManagement
+    apiVersion: v2
+    appVersion: 3.2.7
     created: "2025-03-12T20:14:59.029914657Z"
     dependencies:
     - name: st-common
@@ -2285,4 +2323,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-12T20:14:59.030024834Z"
+generated: "2025-03-19T10:26:02.810926936Z"
