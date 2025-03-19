@@ -31,7 +31,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/env.yaml") . | sha256sum }}
+        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/envvars.yaml") . | sha256sum }}
         checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
         checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
         checksum/secret-credentials: {{ include (print $.Template.BasePath "/Secret/credentials.yaml") . | sha256sum }}
@@ -138,8 +138,8 @@ spec:
                   name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
                   key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
                 {{- else }}
-                  name: {{ include "freeradius.databaseSecretName" . }}
-                  key: {{ include "freeradius.databaseSecretKey" . }}
+                  name: {{ include "freeradius.database.secretName" . }}
+                  key: {{ include "freeradius.database.secretKey" . }}
                 {{- end }}
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}
@@ -206,8 +206,10 @@ spec:
               protocol: UDP
             {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
-          {{- if .Values.startupProbe.enabled }}
-          startupProbe: {{- omit .Values.startupProbe "enabled" | toYaml | nindent 12 }}
+          {{- if .Values.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
             exec:
               command:
                 - sh
@@ -221,7 +223,9 @@ spec:
                   {{- end }}
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
-          {{- if .Values.livenessProbe.enabled }}
+          {{- if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.livenessProbe.enabled }}
           livenessProbe: {{- omit .Values.livenessProbe "enabled" | toYaml | nindent 12 }}
             exec:
               command:
@@ -230,6 +234,8 @@ spec:
                 - >-
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
+          {{- if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe: {{- omit .Values.readinessProbe "enabled" | toYaml | nindent 12 }}
             exec:
@@ -240,8 +246,10 @@ spec:
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- end }}
-          {{- if .Values.resources }}
-          resources: {{ toYaml .Values.resources | nindent 12 }}
+          {{- if .resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
+          {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if .Values.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
@@ -285,6 +293,10 @@ spec:
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             {{- end }}
+            {{- if and .Values.modsEnabled.sql.enabled (eq .Values.modsEnabled.sql.dialect "sqlite") }}
+            - name: freeradius-sqlite
+              mountPath: {{ .Values.modsEnabled.sql.sqlite.filename | quote }}
+            {{- end }}
             {{- if .Values.modsEnabled.sql.tls.enabled }}
             - name: freeradius-sql-tls
               mountPath: /opt/startechnica/freeradius/certs
@@ -318,6 +330,10 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if and .Values.modsEnabled.sql.enabled (eq .Values.modsEnabled.sql.dialect "sqlite") }}
+        - name: freeradius-sqlite
+          emptyDir: {}
+        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
