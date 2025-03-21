@@ -8,7 +8,7 @@ SPDX-License-Identifier: APACHE-2.0
 apiVersion: {{ include "st-common.capabilities.istioTelemetry.apiVersion" . }}
 kind: Telemetry
 metadata:
-  name: {{ include "gateways.names.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" .) | nindent 4 }}
     app.kubernetes.io/component: gateway

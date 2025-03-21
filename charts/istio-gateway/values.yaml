@@ -156,13 +156,13 @@ global:
 ## @param kubeVersion Override Kubernetes version
 ##
 kubeVersion: ""
-## @param nameOverride String to partially override gateways.names.fullname
+## @param nameOverride String to partially override st-common.names.fullname
 ##
 nameOverride: ""
 ## @param namespaceOverride String to fully override st-common.names.namespace
 ##
 namespaceOverride: ""
-## @param fullnameOverride String to fully override gateways.names.fullname
+## @param fullnameOverride String to fully override st-common.names.fullname
 ##
 fullnameOverride: ""
 ## @param commonLabels Labels to add to all deployed objects

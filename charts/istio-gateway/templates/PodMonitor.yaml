@@ -8,7 +8,7 @@ SPDX-License-Identifier: APACHE-2.0
 apiVersion: {{ include "st-common.capabilities.coreosMonitoringPodMonitor.apiVersion" . }}
 kind: PodMonitor
 metadata:
-  name: {{ include "gateways.names.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
   {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
