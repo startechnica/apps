@@ -10,10 +10,10 @@ kind: PodMonitor
 metadata:
   name: {{ include "gateways.names.fullname" . }}
   namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.podMonitor.namespace | quote }}
-  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.podMonitor.labels) "context" . ) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "gateways.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   jobLabel: {{ .Values.metrics.podMonitor.jobLabel | quote }}

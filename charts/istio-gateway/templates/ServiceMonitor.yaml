@@ -10,11 +10,11 @@ kind: ServiceMonitor
 metadata:
   name: {{ include "gateways.names.fullname" . }}
   namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
-  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.serviceMonitor.labels) "context" .) }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.serviceMonitor.labels) "context" .) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
   {{- $annotations := merge .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
   {{- if $annotations }}
-  annotations: {{- include "gateways.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   {{- if .Values.metrics.serviceMonitor.jobLabel }}
@@ -26,7 +26,7 @@ spec:
     {{- range $endpoints }}
     {{- $endpoint := merge . $defaultEndpoint }}
     - port: {{ $endpoint.port | quote }}
-      path: {{ include "gateways.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
+      path: {{ include "st-common.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
       {{- if $endpoint.interval }}
       interval: {{ $endpoint.interval }}
       {{- end }}
@@ -34,10 +34,10 @@ spec:
       scrapeTimeout: {{ $endpoint.scrapeTimeout }}
       {{- end }}
       {{- if $endpoint.relabelings }}
-      relabelings: {{- include "gateways.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
       {{- end }}
       {{- if $endpoint.metricRelabelings }}
-      metricRelabelings: {{- include "gateways.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
       {{- end }}
       {{- if $endpoint.honorLabels }}
       honorLabels: {{ $endpoint.honorLabels }}

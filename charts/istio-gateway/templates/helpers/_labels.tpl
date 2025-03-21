@@ -14,7 +14,7 @@ Kubernetes standard labels
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "gateways.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
+{{ template "st-common.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
@@ -39,7 +39,7 @@ Kubernetes common labels
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "gateways.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
+{{ template "st-common.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
@@ -64,7 +64,7 @@ overwrote them on metadata.labels fields.
 */}}
 {{- define "gateways.labels.matchLabels" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{ merge (pick (include "gateways.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "gateway.networking.k8s.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "gateway.networking.k8s.io/gateway-name" .gatewayValues.name) | toYaml }}
+{{ merge (pick (include "st-common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "gateway.networking.k8s.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "gateway.networking.k8s.io/gateway-name" .gatewayValues.name) | toYaml }}
 {{- else -}}
 app.kubernetes.io/name: {{ include "gateways.names.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}

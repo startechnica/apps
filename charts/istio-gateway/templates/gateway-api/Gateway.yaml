@@ -12,10 +12,10 @@ metadata:
   name: {{ .name }}
   namespace: {{ include "gateways.names.namespace" $ | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
-  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
   {{- if $.Values.commonAnnotations }}
-  annotations: {{- include "gateways.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   gatewayClassName: {{ $.Values.gatewayClassName }}
@@ -25,20 +25,20 @@ spec:
   {{- if and .gatewayApi (or .gatewayApi.annotations .gatewayApi.labels .gatewayApi.parametersRef) }}
   infrastructure:
     {{- if .gatewayApi.annotations }}
-    annotations: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.annotations "context" $) | nindent 6 }}
+    annotations: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.annotations "context" $) | nindent 6 }}
     {{- end }}
     {{- if .gatewayApi.labels }}
-    labels: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.labels "context" $) | nindent 6 }}
+    labels: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.labels "context" $) | nindent 6 }}
     {{- end }}
     {{- if .gatewayApi.parametersRef }}
-    parametersRef: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.parametersRef "context" $) | nindent 6 }}
+    parametersRef: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.parametersRef "context" $) | nindent 6 }}
     {{- end }}
   {{- end }}
   {{- if and .gatewayApi .gatewayApi.backendTLS.clientCertificateRef.name }}
-  backendTLS: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.backendTLS "context" $) | nindent 4 }}
+  backendTLS: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.backendTLS "context" $) | nindent 4 }}
   {{- end }}
   {{- if and .gatewayApi .gatewayApi.allowedListeners }}
-  allowedListeners: {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.allowedListeners "context" $) | nindent 4 }}
+  allowedListeners: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.allowedListeners "context" $) | nindent 4 }}
   {{- end }}
   listeners:
     {{- if and .service .service.ports }}
@@ -57,10 +57,10 @@ spec:
           from: All
     {{- end }}
     {{- if and .gatewayApi .gatewayApi.listeners }}
-      {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
     {{- end }}
     {{- if and .gatewayApi .gatewayApi.extraListeners }}
-      {{- include "gateways.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}
