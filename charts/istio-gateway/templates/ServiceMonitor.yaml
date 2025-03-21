@@ -9,7 +9,7 @@ apiVersion: {{ include "st-common.capabilities.coreosMonitoringServiceMonitor.ap
 kind: ServiceMonitor
 metadata:
   name: {{ include "gateways.names.fullname" . }}
-  namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
   {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.serviceMonitor.labels) "context" .) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
   {{- $annotations := merge .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
@@ -54,7 +54,7 @@ spec:
   {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ include "gateways.names.namespace" . | quote }}
+      - {{ include "st-common.names.namespace" . | quote }}
   {{- $selectors := merge .Values.metrics.serviceMonitor.selector .Values.commonLabels }}
   selector:
     matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" .Values.gateways "customLabels" $selectors "context" $) | nindent 4 }}

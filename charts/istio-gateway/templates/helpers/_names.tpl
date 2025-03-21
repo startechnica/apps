@@ -35,17 +35,3 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 {{- end -}}
-
-{{/*
-Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
-*/}}
-{{- define "gateways.names.namespace" -}}
-{{- default .Release.Namespace .Values.namespaceOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Create a fully qualified app name adding the installation's namespace.
-*/}}
-{{- define "gateways.names.fullname.namespace" -}}
-{{- printf "%s-%s" (include "gateways.names.fullname" .) (include "gateways.names.namespace" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}

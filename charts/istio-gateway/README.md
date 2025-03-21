@@ -65,7 +65,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------- |
 | `kubeVersion`              | Force target Kubernetes version (using Helm capabilities if not set)                                              | `""`            |
 | `nameOverride`             | String to partially override gateways.names.fullname template with a string (will prepend the release name)       | `""`            |
-| `namespaceOverride`        | String to fully override gateways.names.namespace                                                                 | `""`            |
+| `namespaceOverride`        | String to fully override st-common.names.namespace                                                                 | `""`            |
 | `fullnameOverride`         | String to fully override gateways.names.fullname template with a string                                           | `""`            |
 | `commonAnnotations`        | Annotations to add to all deployed objects                                                                        | `{}`            |
 | `commonLabels`             | Labels to add to all deployed objects                                                                             | `{}`            |

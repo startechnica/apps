@@ -159,7 +159,7 @@ kubeVersion: ""
 ## @param nameOverride String to partially override gateways.names.fullname
 ##
 nameOverride: ""
-## @param namespaceOverride String to fully override gateways.names.namespace
+## @param namespaceOverride String to fully override st-common.names.namespace
 ##
 namespaceOverride: ""
 ## @param fullnameOverride String to fully override gateways.names.fullname

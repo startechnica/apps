@@ -9,7 +9,7 @@ apiVersion: {{ include "common.capabilities.coreosMonitoringPrometheusRule.apiVe
 kind: PrometheusRule
 metadata:
   name: {{ include "gateways.names.fullname" . }}
-  namespace: {{ default (include "gateways.names.namespace" .) .Values.metrics.prometheusRule.namespace }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.prometheusRule.namespace }}
   {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.prometheusRule.labels) "context" .) }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway

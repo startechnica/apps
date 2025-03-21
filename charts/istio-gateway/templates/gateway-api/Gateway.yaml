@@ -10,7 +10,7 @@ apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersi
 kind: Gateway
 metadata:
   name: {{ .name }}
-  namespace: {{ include "gateways.names.namespace" $ | quote }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
   {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
@@ -20,7 +20,7 @@ metadata:
 spec:
   gatewayClassName: {{ $.Values.gatewayClassName }}
   addresses:
-    - value: {{ printf "%s.%s.svc.%s" .name (include "gateways.names.namespace" $) $.Values.clusterDomain }}
+    - value: {{ printf "%s.%s.svc.%s" .name (include "st-common.names.namespace" $) $.Values.clusterDomain }}
       type: Hostname
   {{- if and .gatewayApi (or .gatewayApi.annotations .gatewayApi.labels .gatewayApi.parametersRef) }}
   infrastructure:

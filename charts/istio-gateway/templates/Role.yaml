@@ -8,7 +8,7 @@ apiVersion: {{ include "st-common.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
   name: {{ include "gateways.names.fullname" . | quote }}
-  namespace: {{ include "gateways.names.namespace" . | quote }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" .) | nindent 4 }}
     app.kubernetes.io/component: gateway
   {{- if .Values.commonAnnotations }}
