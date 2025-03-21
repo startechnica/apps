@@ -722,6 +722,54 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Remove unused helpers
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
+        - name: Upstream Project
+          url: https://github.com/istio/istio/tree/master/manifests/charts/gateways/istio-ingress
+        - name: Istio Gateway
+          url: https://istio.io/latest/docs/concepts/traffic-management/#gateways
+        - name: Kubernetes Gateway
+          url: https://gateway-api.sigs.k8s.io/api-types/gateway/
+      category: ServiceMesh
+    apiVersion: v2
+    appVersion: 1.25.0
+    created: "2025-03-21T06:06:56.043668687Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.10
+    description: Istio Gateway provides more extensive customization and flexibility
+      than Kubernetes Ingress, and allows Istio features such as monitoring and route
+      rules to be applied to traffic entering the cluster.
+    digest: ea7ca1916b79312ddffdfb1a5769665bf69a5536ad726f8a9ffdb64bc0fddafa
+    home: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
+    icon: https://istio.io/latest/favicons/android-192x192.png
+    keywords:
+    - gateway
+    - gateway-api
+    - istio
+    - ingress
+    - ingressgateway
+    - ingress-gateway
+    - kubernetes-gateway
+    kubeVersion: '>=1.24.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: istio-gateway
+    sources:
+    - http://github.com/istio/istio
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/istio-gateway-1.0.6/istio-gateway-1.0.6.tgz
+    version: 1.0.6
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Bump appVersion to 1.25.0
       artifacthub.io/links: |
         - name: Chart Source
@@ -2323,4 +2371,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-19T10:26:02.810926936Z"
+generated: "2025-03-21T06:06:56.043793299Z"
