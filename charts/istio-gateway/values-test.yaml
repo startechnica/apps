@@ -27,7 +27,7 @@ gateways:
   - name: freeradius
     enabled: true
     service:
-      type: LoadBalancer
+      # type: LoadBalancer
       extraPorts:
         - name: acct
           port: 1813

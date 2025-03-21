@@ -4,22 +4,22 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if .Values.rbac.create }}
-apiVersion: {{ include "gateways.capabilities.rbac.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.rbac.apiVersion" . }}
 kind: Role
 metadata:
-  name: {{ include "gateways.names.fullname" . | quote }}
-  namespace: {{ include "gateways.names.namespace" . | quote }}
+  name: {{ include "st-common.names.fullname" . | quote }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" .) | nindent 4 }}
     app.kubernetes.io/component: gateway
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "gateways.tplvalues.render" (dict "value" .Values.commonAnnotations "context" .) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" .) | nindent 4 }}
   {{- end }}
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "watch", "list"]
-    {{- if .Values.rbac.rules }}
-      {{- include "gateways.tplvalues.render" (dict "value" .Values.rbac.rules "context" .) | nindent 2 }}
-    {{- end }}
+  {{- if .Values.rbac.rules }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.rbac.rules "context" .) | nindent 2 }}
+  {{- end }}
 ---
 {{- end }}

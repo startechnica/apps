@@ -5,26 +5,24 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{- range $gateway := .Values.gateways }}
 {{- if .enabled }}
-apiVersion: {{ include "gateways.capabilities.deployment.apiVersion" $ }}
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" $ }}
 kind: Deployment
 metadata:
   name: {{ .name }}
-  namespace: {{ include "gateways.names.namespace" $ | quote }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" $gateway.image "chart" $.Chart)) }}
-  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
-  annotations: 
-    istio.io/rev: {{ default "default" .revision | quote }}
-    {{- if $.Values.commonAnnotations }}
-      {{- include "gateways.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 spec:
   {{- if not $.Values.pdb.create }}
   replicas: {{ default 1 .replicaCount | int }}
   {{- end }}
   revisionHistoryLimit: 1
-  {{- $podLabels := include "gateways.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
+  {{- $podLabels := include "st-common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
   selector:
     matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 6 }}
   template:
@@ -33,10 +31,10 @@ spec:
         istio.io/rev: {{ default "default" .revision | quote }}
         inject.istio.io/templates: gateway
         {{- if $.Values.metrics.enabled }}
-          {{- include "gateways.tplvalues.render" (dict "value" $.Values.metrics.annotations "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" $.Values.metrics.annotations "context" $) | nindent 8 }}
         {{- end }}
         {{- if .podAnnotations }}
-        {{- include "gateways.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
+        {{- include "st-common.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
         {{- end }}
       labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 8 }}
         gateway.networking.k8s.io/gateway-name: {{ printf "%s" $gateway.name }}
@@ -44,9 +42,9 @@ spec:
         service.istio.io/canonical-revision: latest
         sidecar.istio.io/inject: "true"
     spec:
-      {{ include "gateways.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
+      {{ include "st-common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
       {{- if .hostAliases }}
-      hostAliases: {{- include "gateways.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
       {{- end }}
       {{- if and .podSecurityContext .podSecurityContext.enabled }}
       securityContext: {{- omit .podSecurityContext "enabled" | toYaml | nindent 8 }}
@@ -61,7 +59,7 @@ spec:
       schedulerName: {{ .schedulerName }}
       {{- end }}
       {{- if .topologySpreadConstraints }}
-      topologySpreadConstraints: {{- include "gateways.tplvalues.render" (dict "value" .topologySpreadConstraints "context" .) | nindent 8 }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       {{- if .priorityClassName }}
       priorityClassName: {{ .priorityClassName | quote }}
@@ -72,24 +70,24 @@ spec:
       runtimeClassName: {{ $.Values.runtimeClassName | quote }}
       {{- end }}
       {{- if .affinity }}
-      affinity: {{- include "gateways.tplvalues.render" (dict "value" .affinity "context" $) | nindent 8 }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
         podAffinity: {{- include "gateways.affinities.pods" (dict "type" .podAffinityPreset "component" .name "customLabels" $podLabels "context" $) | nindent 10 }}
         podAntiAffinity: {{- include "gateways.affinities.pods" (dict "type" .podAntiAffinityPreset "component" .name "customLabels" $podLabels "context" $) | nindent 10 }}
         {{- if .nodeAffinityPreset }}
-        nodeAffinity: {{- include "gateways.affinities.nodes" (dict "type" .nodeAffinityPreset.type "key" .nodeAffinityPreset.key "values" .nodeAffinityPreset.values) | nindent 10 }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .nodeAffinityPreset.type "key" .nodeAffinityPreset.key "values" .nodeAffinityPreset.values) | nindent 10 }}
         {{- end }}
       {{- end }}
       {{- if .nodeSelector }}
-      nodeSelector: {{- include "gateways.tplvalues.render" (dict "value" .nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .tolerations }}
-      tolerations: {{- include "gateways.tplvalues.render" (dict "value" .tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .initContainers }}
       initContainers:
-        {{- include "gateways.tplvalues.render" (dict "value" .initContainers "context" $) | nindent 8 }}
+        {{- include "st-common.tplvalues.render" (dict "value" .initContainers "context" $) | nindent 8 }}
       {{- end }}
       containers:
         - name: istio-proxy
@@ -119,7 +117,7 @@ spec:
               value: {{ .networkGateway | quote }}
             {{- end }}
             {{- if .extraEnvVars }}
-              {{- include "gateways.tplvalues.render" (dict "value" .extraEnvVars "context" $) | nindent 12 }}
+              {{- include "st-common.tplvalues.render" (dict "value" .extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           {{- if or .extraEnvVarsCMs .extraEnvVarsSecrets }}
           envFrom:
@@ -138,6 +136,9 @@ spec:
           {{- end }}
           {{- $containerPorts := dict .containerPorts }}
           ports:
+            - containerPort: {{ ternary (get $containerPorts "metricsMerge") 15020 (hasKey $containerPorts "metricsMerge") }}
+              name: metrics
+              protocol: TCP
             - containerPort: {{ ternary (get $containerPorts "status") 15021 (hasKey $containerPorts "status") }}
               name: status-port
               protocol: TCP
@@ -145,9 +146,9 @@ spec:
               name: http-envoy-prom
               protocol: TCP
           {{- if .customStartupProbe }}
-          startupProbe: {{- include "gateways.tplvalues.render" (dict "value" .customStartupProbe "context" $) | nindent 12 }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .customStartupProbe "context" $) | nindent 12 }}
           {{- else if and .startupProbe .startupProbe.enabled }}
-          startupProbe: {{- include "gateways.tplvalues.render" (dict "value" (omit .startupProbe "enabled") "context" $) | nindent 12 }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .startupProbe "enabled") "context" $) | nindent 12 }}
           {{- else }}
           startupProbe:
             failureThreshold: 30
@@ -161,14 +162,14 @@ spec:
             successThreshold: 1
           {{- end }}
           {{- if .customLivenessProbe }}
-          livenessProbe: {{- include "gateways.tplvalues.render" (dict "value" .customLivenessProbe "context" $) | nindent 12 }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .customLivenessProbe "context" $) | nindent 12 }}
           {{- else if and .livenessProbe .livenessProbe.enabled }}
-          livenessProbe: {{- include "gateways.tplvalues.render" (dict "value" (omit .livenessProbe "enabled") "context" $) | nindent 12 }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .livenessProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
           {{- if .customReadinessProbe }}
-          readinessProbe: {{- include "gateways.tplvalues.render" (dict "value" .customReadinessProbe "context" $) | nindent 12 }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .customReadinessProbe "context" $) | nindent 12 }}
           {{- else if and .readinessProbe .readinessProbe.enabled }}
-          readinessProbe: {{- include "gateways.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
           {{- else }}
           readinessProbe:
             failureThreshold: 4
@@ -182,20 +183,20 @@ spec:
             timeoutSeconds: 1
           {{- end }}
           {{- if .resources }}
-          resources: {{- include "gateways.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
           {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
-          resources: {{- include "gateways.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if $.Values.extraVolumeMounts }}
           volumeMounts:
-            {{- include "gateways.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- include "st-common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
           {{- end }}
         {{- if .sidecars }}
-          {{- include "gateways.tplvalues.render" (dict "value" .sidecars "context" $) | trim | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .sidecars "context" $) | trim | nindent 8 }}
         {{- end }}
       {{- if $.Values.extraVolumes }}
       volumes:
-        {{- include "gateways.tplvalues.render" (dict "value" $.Values.extraVolumes "context" $) | nindent 8 }}
+        {{- include "st-common.tplvalues.render" (dict "value" $.Values.extraVolumes "context" $) | nindent 8 }}
       {{- end }}
 ---
 {{- end }}

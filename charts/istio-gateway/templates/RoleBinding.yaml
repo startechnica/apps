@@ -4,20 +4,20 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if and .Values.serviceAccount.create .Values.rbac.create }}
-apiVersion: {{ include "gateways.capabilities.rbac.apiVersion" $ }}
+apiVersion: {{ include "st-common.capabilities.rbac.apiVersion" $ }}
 kind: RoleBinding
 metadata:
-  name: {{ include "gateways.names.fullname" . }}
-  namespace: {{ include "gateways.names.namespace" . | quote }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "gateways.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "gateways.names.fullname" . | quote }}
+  name: {{ include "st-common.names.fullname" . | quote }}
 subjects:
   {{- range $gateway := .Values.gateways }}
   {{- if and $gateway.enabled (and .serviceAccount .serviceAccount.create)}}

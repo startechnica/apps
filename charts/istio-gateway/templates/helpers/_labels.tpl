@@ -9,16 +9,16 @@ Kubernetes standard labels
 */}}
 {{- define "gateways.labels.standard" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{- $default := dict "app.kubernetes.io/name" .gatewayValues.name "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
+{{- $default := dict "app.kubernetes.io/name" .gatewayValues.name "helm.sh/chart" (include "st-common.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
 {{- $istioLabels := dict "istio.io/dataplane-mode" "none" "gateway.istio.io/managed" .context.Release.Service "gateway.networking.k8s.io/gateway-name" .gatewayValues.name -}}
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "gateways.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
+{{ template "st-common.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
 {{- else -}}
-app.kubernetes.io/name: {{ include "gateways.names.name" . }}
+app.kubernetes.io/name: {{ include "st-common.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
-helm.sh/chart: {{ include "gateways.names.chart" . }}
+helm.sh/chart: {{ include "st-common.names.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 istio.io/dataplane-mode: none
@@ -34,16 +34,16 @@ Kubernetes common labels
 */}}
 {{- define "gateways.labels.common" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{- $default := dict "app.kubernetes.io/name" (include "gateways.names.fullname" .context) "helm.sh/chart" (include "gateways.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
+{{- $default := dict "app.kubernetes.io/name" (include "st-common.names.fullname" .context) "helm.sh/chart" (include "st-common.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
 {{- $istioLabels := dict "gateway.istio.io/managed" .context.Release.Service -}}
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "gateways.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
+{{ template "st-common.tplvalues.merge" (dict "values" (list .customLabels $default $istioLabels) "context" .context) }}
 {{- else -}}
-app.kubernetes.io/name: {{ include "gateways.names.name" . }}
+app.kubernetes.io/name: {{ include "st-common.names.name" . }}
 gateway.istio.io/managed: {{ .Release.Service }}
-helm.sh/chart: {{ include "gateways.names.chart" . }}
+helm.sh/chart: {{ include "st-common.names.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 istio.io/dataplane-mode: none
@@ -64,9 +64,9 @@ overwrote them on metadata.labels fields.
 */}}
 {{- define "gateways.labels.matchLabels" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{ merge (pick (include "gateways.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "gateway.networking.k8s.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "gateway.networking.k8s.io/gateway-name" .gatewayValues.name) | toYaml }}
+{{ merge (pick (include "st-common.tplvalues.render" (dict "value" .customLabels "context" .context) | fromYaml) "app.kubernetes.io/name" "app.kubernetes.io/instance" "gateway.networking.k8s.io/gateway-name") (dict "app.kubernetes.io/name" .gatewayValues.name "app.kubernetes.io/instance" .context.Release.Name "gateway.networking.k8s.io/gateway-name" .gatewayValues.name) | toYaml }}
 {{- else -}}
-app.kubernetes.io/name: {{ include "gateways.names.name" . }}
+app.kubernetes.io/name: {{ include "st-common.names.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- end -}}

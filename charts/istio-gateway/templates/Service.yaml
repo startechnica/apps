@@ -9,42 +9,43 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .name }}
-  namespace: {{ include "gateways.names.namespace" $ | quote }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
-  {{- $labels := include "gateways.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
   labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: gateway
   {{- if or (and .service .service.annotations) $.Values.commonAnnotations }}
-  {{- $annotations := include "gateways.tplvalues.merge" (dict "values" (list .service.annotations $.Values.gatewaysAnnotations) "context" $ ) }}
-  annotations: {{- include "gateways.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .service.annotations $.Values.gatewaysAnnotations) "context" $ ) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
     istio.io/rev: {{ default "default" .revision | quote }}
   {{- end }}
 spec:
-  type: {{ default "LoadBalancer" .service.type }}
-  {{- if eq .service.type "LoadBalancer" }}
+  {{- $serviceType := default "LoadBalancer" .service.type }}
+  type: {{ $serviceType }}
+  {{- if eq $serviceType "LoadBalancer" }}
   allocateLoadBalancerNodePorts: false
   {{- end }}
-  {{- if and .service.clusterIP (eq .service.type "ClusterIP") }}
+  {{- if and .service.clusterIP (eq $serviceType "ClusterIP") }}
   clusterIP: {{ .service.clusterIP }}
   {{- end }}
-  {{- if and .service.externalTrafficPolicy (or (eq .service.type "LoadBalancer") (eq .service.type "NodePort")) }}
+  {{- if and .service.externalTrafficPolicy (or (eq $serviceType "LoadBalancer") (eq $serviceType "NodePort")) }}
   externalTrafficPolicy: {{ .service.externalTrafficPolicy | quote }}
   {{- end }}
   ipFamilyPolicy: {{ default "SingleStack" .service.ipFamilyPolicy }}
-  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerClass)) }}
+  {{- if and (eq $serviceType "LoadBalancer") (not (empty .service.loadBalancerClass)) }}
   loadBalancerClass: {{ .service.loadBalancerClass }}
   {{- end }}
-  {{- if (and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerIP))) }}
+  {{- if (and (eq $serviceType "LoadBalancer") (not (empty .service.loadBalancerIP))) }}
   loadBalancerIP: {{ .service.loadBalancerIP }}
   {{- end }}
-  {{- if and (eq .service.type "LoadBalancer") (not (empty .service.loadBalancerSourceRanges)) }}
+  {{- if and (eq $serviceType "LoadBalancer") (not (empty .service.loadBalancerSourceRanges)) }}
   loadBalancerSourceRanges: {{ .service.loadBalancerSourceRanges }}
   {{- end }}
   {{- if .service.sessionAffinity }}
   sessionAffinity: {{ default "None" .service.sessionAffinity }}
   {{- end }}
   {{- if .service.sessionAffinityConfig }}
-  sessionAffinityConfig: {{- include "gateways.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
+  sessionAffinityConfig: {{- include "st-common.tplvalues.render" (dict "value" .service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
   {{- if .networkGateway }}
@@ -67,9 +68,9 @@ spec:
       port: {{ default 15021 .service.ports.status | int }}
       protocol: TCP
       targetPort: {{ default 15021 .containerPorts.status | int }}
-      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.status) }}
+      {{- if (and (or (eq $serviceType "NodePort") (and (eq $serviceType "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.status) }}
       nodePort: {{ .service.nodePorts.status | int }}
-      {{- else if eq .service.type "ClusterIP" }}
+      {{- else if eq $serviceType "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
@@ -79,9 +80,9 @@ spec:
       port: {{ default 80 .service.ports.http2 | int }}
       protocol: TCP
       targetPort: {{ default 80 .containerPorts.http2 | int }}
-      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.http2) }}
+      {{- if (and (or (eq $serviceType "NodePort") (and (eq $serviceType "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.http2) }}
       nodePort: {{ .service.nodePorts.http2 | int }}
-      {{- else if eq .service.type "ClusterIP" }}
+      {{- else if eq $serviceType "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
@@ -91,14 +92,14 @@ spec:
       port: {{ default 443 .service.ports.https | int }}
       protocol: TCP
       targetPort: {{ default 443 .containerPorts.https | int }}
-      {{- if (and (or (eq .service.type "NodePort") (and (eq .service.type "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.https) }}
+      {{- if (and (or (eq $serviceType "NodePort") (and (eq $serviceType "LoadBalancer") (eq .service.allocateLoadBalancerNodePorts "true"))) .service.nodePorts.https) }}
       nodePort: {{ .service.nodePorts.https | int }}
-      {{- else if eq .service.type "ClusterIP" }}
+      {{- else if eq $serviceType "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- end }}
     {{- if .service.extraPorts }}
-      {{- include "gateways.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- else }}
     - name: tcp-status
@@ -114,7 +115,7 @@ spec:
       protocol: TCP
       targetPort: 443
     {{- if .service.extraPorts }}
-      {{- include "gateways.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
   selector: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
