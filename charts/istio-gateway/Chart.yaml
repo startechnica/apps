@@ -2,7 +2,7 @@ annotations:
   category: ServiceMesh
   artifacthub.io/changes: |
     - kind: changed
-      description: Bump appVersion to 1.25.0
+      description: Remove unused helpers
   artifacthub.io/links: |
     - name: Chart Source
       url: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
@@ -41,4 +41,4 @@ name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
-version: 1.0.5
+version: 1.0.6
