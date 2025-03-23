@@ -3,6 +3,8 @@ annotations:
   artifacthub.io/changes: |
     - kind: added
       description: Add Cloudnative PG and MongoDB Community Operator apiversion
+    - kind: added
+      description: Add OpenEBS Local-LVM apiversion
 apiVersion: v2
 appVersion: 0.1.10
 description: A Library Helm Chart for grouping common logic between Startechnica charts.

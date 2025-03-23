@@ -4,3 +4,5 @@
 
 * Add more Cloudnative PG apiVersion
 * Add new MongoDB Community Operator apiversion
+* Add OpenEBS Local-LVM apiversion
+* Add helper to check API versions
