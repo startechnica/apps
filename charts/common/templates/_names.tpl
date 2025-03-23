@@ -69,3 +69,37 @@ Create a fully qualified app name adding the installation's namespace.
 {{- define "st-common.names.fullname.namespace" -}}
 {{- printf "%s-%s" (include "st-common.names.fullname" .) (include "st-common.names.namespace" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Gateway name.
+*/}}
+{{- define "st-common.names.gateway.name" -}}
+{{- default .Values.gateway.gateway.name .Values.gateway.existingGateway -}}
+{{- end -}}
+
+{{/*
+Gateway namespace.
+*/}}
+{{- define "st-common.names.gateway.namespace" -}}
+{{- if .Values.gateway.gateway.namespace -}}
+    {{- .Values.gateway.gateway.namespace -}}
+{{- else -}}
+    {{- include "st-common.names.namespace" . -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "st-common.names.gatewayWaypoint.name" -}}
+{{- if .Values.gateway.waypoint.name -}}
+    {{- print .Values.gateway.waypoint.name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+    {{- printf "%s-waypoint" (include "st-common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "st-common.names.gatewayWaypoint.namespace" -}}
+{{- if .Values.gateway.waypoint.namespace -}}
+    {{- print .Values.gateway.waypoint.namespace | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+    {{- include "st-common.names.namespace" . -}}
+{{- end -}}
+{{- end -}}
