@@ -2,7 +2,7 @@ annotations:
   category: Infrastructure
   artifacthub.io/changes: |
     - kind: added
-      description: Add more resources helper
+      description: Add Cloudnative PG and MongoDB Community Operator apiversion
 apiVersion: v2
 appVersion: 0.1.10
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
