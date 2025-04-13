@@ -83,24 +83,46 @@ Gateway namespace.
 */}}
 {{- define "st-common.names.gateway.namespace" -}}
 {{- if .Values.gateway.gateway.namespace -}}
-    {{- .Values.gateway.gateway.namespace -}}
+  {{- .Values.gateway.gateway.namespace -}}
 {{- else -}}
-    {{- include "st-common.names.namespace" . -}}
+  {{- include "st-common.names.namespace" . -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "st-common.names.gatewayWaypoint.name" -}}
 {{- if .Values.gateway.waypoint.name -}}
-    {{- print .Values.gateway.waypoint.name | trunc 63 | trimSuffix "-" -}}
+  {{- print .Values.gateway.waypoint.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-    {{- printf "%s-waypoint" (include "st-common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+  {{- printf "%s-waypoint" (include "st-common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "st-common.names.gatewayWaypoint.namespace" -}}
 {{- if .Values.gateway.waypoint.namespace -}}
-    {{- print .Values.gateway.waypoint.namespace | trunc 63 | trimSuffix "-" -}}
+  {{- print .Values.gateway.waypoint.namespace | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-    {{- include "st-common.names.namespace" . -}}
+  {{- include "st-common.names.namespace" . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create name of dotenv ConfigMap name
+*/}}
+{{- define "st-common.names.dotenv" -}}
+{{- if .Values.dotenvConfigMap.existingConfigMapName -}}
+  {{- print .Values.dotenvConfigMap.existingConfigMapName | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+  {{- printf "%s-dotenv" (include "st-common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create name of ENV variables ConfigMap name
+*/}}
+{{- define "st-common.names.envvars" -}}
+{{- if .Values.envvarsConfigMap.existingConfigMapName -}}
+  {{- print .Values.envvarsConfigMap.existingConfigMapName | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+  {{- printf "%s-envvars" (include "st-common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
