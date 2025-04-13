@@ -75,3 +75,18 @@ Usage:
 {{- $obj := include (print .context.Template.BasePath .path) .context | fromYaml -}}
 {{ omit $obj "apiVersion" "kind" "metadata" | toYaml | sha256sum }}
 {{- end -}}
+
+{{/*
+Because of Helm bug (https://github.com/helm/helm/issues/3001), Helm converts int value to float64 implictly, like 2748336 becomes 2.748336e+06.
+This breaks the output even when using quote to render.
+
+Use this function when you want to get the string value only. It handles the case when the value is string itself as well.
+Parameters: is string/number
+*/}}
+{{- define "st-common.utils.stringOrNumber" -}}
+{{- if kindIs "string" . }}
+  {{- print . -}}
+{{- else  }}
+  {{- int64 . | toString -}}
+{{- end -}}
+{{- end -}}
