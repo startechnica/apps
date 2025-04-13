@@ -1932,6 +1932,36 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: added
+          description: Add dotenv and envvars names helper
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.12
+    created: "2025-04-13T14:26:55.24952607Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: e3725ed0f0f54cd13285714f0296c0e6cd6bd00157e6f003f06761eeec4b3f70
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.20.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.12/st-common-0.1.12.tgz
+    version: 0.1.12
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
           description: Add Cloudnative PG and MongoDB Community Operator apiversion
         - kind: added
           description: Add OpenEBS Local-LVM apiversion
@@ -2405,4 +2435,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-23T19:07:08.111146593Z"
+generated: "2025-04-13T14:26:55.249671291Z"
