@@ -4,6 +4,7 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{/* vim: set filetype=mustache: */}}
+
 {{/*
 Throw error when upgrading using empty passwords values that must not be empty.
 
