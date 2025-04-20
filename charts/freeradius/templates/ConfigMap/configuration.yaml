@@ -1,0 +1,24 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.configuration }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "freeradius.configurationCM" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels:
+    {{- include "st-common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations:
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  radiusd.conf: |-
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.configuration "context" $) | nindent 4 }}
+{{- end }}
