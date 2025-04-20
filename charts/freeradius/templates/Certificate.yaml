@@ -4,7 +4,7 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if and (include "freeradius.createTlsSecret" .) .Values.tls.autoGenerator.certmanager.enabled }}
-{{- if not (eq (include "st-common.capabilities.certManager.apiVersion" .) "false") }}
+{{- if not (eq (include "st-common.capabilities.certmanager.apiVersion" .) "false") }}
 {{- $releaseNamespace := include "st-common.names.namespace" . }}
 {{- $clusterDomain := .Values.clusterDomain }}
 {{- $fullname := include "st-common.names.fullname" . }}
@@ -13,25 +13,26 @@ SPDX-License-Identifier: APACHE-2.0
 {{/*
 {{- $altNames := list (printf "*.%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 */}}
-apiVersion: {{ include "st-common.capabilities.certManager.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.certmanager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "st-common.names.fullname" . }}-tls
   namespace: {{ include "st-common.names.namespace" . | quote }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations:
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
-  {{- if .Values.commonLabels }}
-    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-  {{- end }}
+  labels:
+    {{- include "st-common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
 spec:
   secretName: {{ include "freeradius.tlsSecretName" . }}
   issuerRef:
     group: cert-manager.io
     kind: {{ .Values.tls.autoGenerator.certmanager.issuerKind }}
     name: {{ .Values.tls.autoGenerator.certmanager.issuerName }}
-    #name: letsencrypt-prd
   privateKey:
     algorithm: ECDSA
     rotationPolicy: Always
