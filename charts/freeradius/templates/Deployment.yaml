@@ -246,6 +246,7 @@ spec:
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- end }}
+          {{- end }}
           {{- if .resources }}
           resources: {{- include "st-common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
           {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
