@@ -391,16 +391,23 @@ extraFlags: ""
 ## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
 ## E.g.
 ## extraEnvVars:
-##  - name: TZ
-##    value: "Europe/Paris"
+##   - name: TZ
+##     value: "Europe/Paris"
 ##
 extraEnvVars: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
+
+## @param extraSecretEnvVars Extra environment variables to be stored in Secret and set on FreeRADIUS containers
+## E.g.
+## extraSecretEnvVars:
+##   FREERADIUS_PROXY_SECRET: test123456
+extraSecretEnvVars: {}
+
+## @param extraEnvVarsExistingCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
 ##
-extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
+extraEnvVarsExistingCM: ""
+## @param extraEnvVarsExistingSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
 ##
-extraEnvVarsSecret: ""
+extraEnvVarsExistingSecret: ""
 
 ## @section Persistence Parameters
 
