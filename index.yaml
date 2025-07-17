@@ -1931,6 +1931,46 @@ entries:
   st-common:
   - annotations:
       artifacthub.io/changes: |
+        - kind: fixed
+          description: Gateway namespace st-common.gateway.namespace
+        - kind: added
+          description: Gateway cluster domain st-common.gateway.clusterDomain
+        - kind: fixed
+          description: st-common.capabilities.vpa.apiVersion context
+        - kind: fixed
+          description: Prevent release name from breaking DNS naming specification
+        - kind: added
+          description: Namespaces to extraPodAffinityTerms for affinities
+        - kind: fixed
+          description: Allows tpl in provided passwords "st-common.secrets.passwords.manage"
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.13
+    created: "2025-07-17T04:20:57.070536137Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: ed507df9941b05c4cbc98df3ee2bd934348070ae34957ec6236f29c79ccc6f94
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.13/st-common-0.1.13.tgz
+    version: 0.1.13
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Add dotenv and envvars names helper
       category: Infrastructure
@@ -2435,4 +2475,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-04-13T14:41:23.769074501Z"
+generated: "2025-07-17T04:20:57.070723911Z"
