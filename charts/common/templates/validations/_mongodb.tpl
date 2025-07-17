@@ -16,7 +16,7 @@ Params:
   {{- if .subchart -}}
     {{- .context.Values.mongodb.auth.existingSecret | quote -}}
   {{- else -}}
-    {{- .context.Values.auth.existingSecret | quote -}}
+    {{- .context.Values.mongodb.existingSecretName | quote -}}
   {{- end -}}
 {{- end -}}
 
@@ -62,6 +62,6 @@ Params:
   {{- if .subchart -}}
     {{- .context.Values.mongodb.architecture -}}
   {{- else -}}
-    {{- .context.Values.architecture -}}
+    {{- .context.Values.mongodb.architecture -}}
   {{- end -}}
 {{- end -}}
