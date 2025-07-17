@@ -1932,6 +1932,36 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: fixed
+          description: Namespaces to extraPodAffinityTerms for affinities
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.14
+    created: "2025-07-17T04:41:09.095925557Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 329c9a011ccf46e6a83d11c916e45f8102f9f3060c2bf3ce47810e0e646c4501
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.14/st-common-0.1.14.tgz
+    version: 0.1.14
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
           description: Gateway namespace st-common.gateway.namespace
         - kind: added
           description: Gateway cluster domain st-common.gateway.clusterDomain
@@ -2475,4 +2505,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-07-17T04:20:57.070723911Z"
+generated: "2025-07-17T04:41:09.09606537Z"
