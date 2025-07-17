@@ -82,7 +82,7 @@ preferredDuringSchedulingIgnoredDuringExecution:
       namespaces:
         - {{ .context.Release.Namespace }}
         {{- with $extraNamespaces }}
-        {{ include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
         {{- end }}
       {{- end }}
       topologyKey: {{ include "st-common.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
@@ -97,6 +97,13 @@ preferredDuringSchedulingIgnoredDuringExecution:
           {{- range $key, $value := .extraMatchLabels }}
           {{ $key }}: {{ $value | quote }}
           {{- end }}
+      {{- if .namespaces }}
+      namespaces:
+        - {{ $.context.Release.Namespace }}
+        {{- with .namespaces }}
+        {{- include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      {{- end }}
       topologyKey: {{ include "st-common.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
     weight: {{ .weight | default 1 -}}
   {{- end -}}
@@ -121,13 +128,14 @@ requiredDuringSchedulingIgnoredDuringExecution:
         {{- range $key, $value := $extraMatchLabels }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
-      {{- if $extraNamespaces }}
-      namespaces:
-        - {{ .context.Release.Namespace }}
-        {{- with $extraNamespaces }}
-        {{ include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+    {{- if $extraNamespaces }}
+    namespaces:
+      - {{ .context.Release.Namespace }}
+      {{- with $extraNamespaces }}
+      {{ include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 6 }}
         {{- end }}
       {{- end }}
+    {{- end }}
     topologyKey: {{ include "st-common.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
   {{- range $extraPodAffinityTerms }}
   - labelSelector:
@@ -138,6 +146,13 @@ requiredDuringSchedulingIgnoredDuringExecution:
         {{- range $key, $value := .extraMatchLabels }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
+    {{- if .namespaces }}
+    namespaces:
+      - {{ $.context.Release.Namespace }}
+      {{- with .namespaces }}
+      {{- include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 6 }}
+      {{- end }}
+    {{- end }}
     topologyKey: {{ include "st-common.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}
   {{- end -}}
 {{- end -}}

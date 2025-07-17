@@ -4,8 +4,9 @@
 
 * fix: gateway namespace st-common.gateway.namespace ([ae63ced](https://github.com/startechnica/apps/commit/ae63ced5a8dcf3b9da297d3329d722e541b52a6c))
 * add: gateway cluster domain st-common.gateway.clusterDomain ([ae63ced](https://github.com/startechnica/apps/commit/ae63ced5a8dcf3b9da297d3329d722e541b52a6c))
-* fix: st-common.capabilities.vpa.apiVersion context
-* fix: Prevent release name from breaking DNS naming specification
+* fix: st-common.capabilities.vpa.apiVersion ([dd59156](https://github.com/startechnica/apps/commit/dd59156337250ca9b89017197a8d90a26833eedc))
+* fix: Prevent release name from breaking DNS naming specification ([dd59156](https://github.com/startechnica/apps/commit/dd59156337250ca9b89017197a8d90a26833eedc))
+* add: namespaces to extraPodAffinityTerms for affinities
 
 ## 0.1.12 (2025-04-13)
 
