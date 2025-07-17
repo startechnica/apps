@@ -6,7 +6,14 @@ SPDX-License-Identifier: APACHE-2.0
 {{/* vim: set filetype=mustache: */}}
 
 {{/*
-Gateway name.
+Gateway cluster domain
+*/}}
+{{- define "st-common.gateway.clusterDomain" -}}
+{{- default "cluster.local" .Values.gateway.clusterDomain  -}}
+{{- end -}}
+
+{{/*
+Gateway name
 */}}
 {{- define "st-common.gateway.fullname" -}}
 {{- if .Values.gateway.existingGateway -}}
@@ -17,12 +24,15 @@ Gateway name.
 {{- end -}}
 
 {{/*
-Gateway namespace.
+Gateway namespace
 */}}
 {{- define "st-common.gateway.namespace" -}}
-{{- default (include "st-common.names.namespace" .) .Values.gateway.namespace  -}}
+{{- default (include "st-common.names.namespace" .) .Values.gateway.gateway.namespace  -}}
 {{- end -}}
 
+{{/*
+Gateway waypoint name
+*/}}
 {{- define "st-common.gatewayWaypoint.fullname" -}}
 {{- if .Values.gateway.waypoint.name -}}
   {{- print .Values.gateway.waypoint.name | trunc 63 | trimSuffix "-" -}}
@@ -31,10 +41,9 @@ Gateway namespace.
 {{- end -}}
 {{- end -}}
 
+{{/*
+Gateway waypoint namespace
+*/}}
 {{- define "st-common.gatewayWaypoint.namespace" -}}
-{{- if .Values.gateway.waypoint.namespace -}}
-  {{- print .Values.gateway.waypoint.namespace | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-  {{- include "st-common.names.namespace" . -}}
-{{- end -}}
+{{- default (include "st-common.names.namespace" .) .Values.gateway.waypoint.namespace  -}}
 {{- end -}}

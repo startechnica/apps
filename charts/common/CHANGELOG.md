@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.13 (2025-07-17)
+
+* Fix gateway name
+* Add gateway cluster domain
+
+
 ## 0.1.12 (2025-04-13)
 
 * Move capabilities helper to its own dir
