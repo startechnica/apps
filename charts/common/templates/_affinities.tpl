@@ -132,8 +132,7 @@ requiredDuringSchedulingIgnoredDuringExecution:
     namespaces:
       - {{ .context.Release.Namespace }}
       {{- with $extraNamespaces }}
-      {{ include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 6 }}
-        {{- end }}
+      {{- include "st-common.tplvalues.render" (dict "value" . "context" $) | nindent 6 }}
       {{- end }}
     {{- end }}
     topologyKey: {{ include "st-common.affinities.topologyKey" (dict "topologyKey" .topologyKey) }}

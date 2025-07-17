@@ -2,17 +2,7 @@ annotations:
   category: Infrastructure
   artifacthub.io/changes: |
     - kind: fixed
-      description: Gateway namespace st-common.gateway.namespace
-    - kind: added
-      description: Gateway cluster domain st-common.gateway.clusterDomain
-    - kind: fixed
-      description: st-common.capabilities.vpa.apiVersion context
-    - kind: fixed
-      description: Prevent release name from breaking DNS naming specification
-    - kind: added
       description: Namespaces to extraPodAffinityTerms for affinities
-    - kind: fixed
-      description: Allows tpl in provided passwords "st-common.secrets.passwords.manage"
 apiVersion: v2
 appVersion: 0.1.13
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
