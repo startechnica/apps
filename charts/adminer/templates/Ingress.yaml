@@ -1,4 +1,4 @@
-{{- if and .Values.ingress.enabled (not .Values.istio.enabled) }}
+{{- if and .Values.ingress.enabled (not .Values.gateway.enabled) }}
 apiVersion: {{ include "common.capabilities.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
@@ -51,9 +51,9 @@ spec:
     {{- if .Values.ingress.extraRules }}
       {{- include "common.tplvalues.render" (dict "value" .Values.ingress.extraRules "context" $) | nindent 4 }}
     {{- end }}
-  {{- if or .Values.ingress.tls .Values.ingress.extraTls }}
+  {{- if or (and .Values.ingress.tls (or (include "common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.selfSigned .Values.ingress.secrets )) .Values.ingress.extraTls }}
   tls:
-    {{- if .Values.ingress.tls }}
+    {{- if and .Values.ingress.tls (or (include "common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.secrets .Values.ingress.selfSigned) }}
     - hosts:
         - {{ .Values.ingress.hostname | quote }}
       secretName: {{ printf "%s-tls" .Values.ingress.hostname }}

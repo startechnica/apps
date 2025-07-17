@@ -1,0 +1,279 @@
+{{- $globalSecretName := printf "%s" (tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: network-application
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  strategy: {{- include "common.tplvalues.render" (dict "value" .Values.updateStrategy "context" $ ) | nindent 4 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: network-application
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secrets: {{ include (print $.Template.BasePath "/Secret.yaml") . | sha256sum }}
+        {{- if .Values.podAnnotations }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "unifi.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- end }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ template "unifi.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if or (and .Values.volumePermissions.enabled .Values.persistence.enabled) .Values.initContainers }}
+      initContainers:
+        {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
+        - name: volume-permissions
+          image: {{ include "unifi.volumePermissions.image" . }}
+          imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |
+              [ ! -d "/unifi/cert" ] && mkdir -p /unifi/cert
+              chown -R "{{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }}" /unifi
+          {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
+          securityContext: {{- omit .Values.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
+          {{- else }}
+          securityContext: {{- .Values.volumePermissions.securityContext | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .Values.volumePermissions.resources }}
+          resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: unifi-data
+              mountPath: /unifi
+        {{- end }}
+        {{- if .Values.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: unifi
+          image: {{ include "unifi.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.lifecycleHooks }}
+          lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+            - name: RUNAS_UID0
+              value: "false"
+            - name: UNIFI_UID
+              value: {{ .Values.containerSecurityContext.runAsUser | quote }}
+            - name: UNIFI_GID
+              value: {{ .Values.podSecurityContext.fsGroup | quote }}
+            - name: UNIFI_HTTP_PORT
+              value: {{ .Values.containerPorts.httpController | quote }}
+            - name: UNIFI_HTTPS_PORT
+              value: {{ .Values.containerPorts.httpsController | quote }}
+            - name: PORTAL_HTTP_PORT
+              value: {{ .Values.containerPorts.httpPortal | quote }}
+            - name: PORTAL_HTTPS_PORT
+              value: {{ .Values.containerPorts.httpsPortal | quote }}
+            - name: DB_NAME
+              value: {{ include "unifi.databaseName" . }}
+            - name: DB_URI
+              value: "mongodb://{{ include "unifi.databaseHost" . }}:{{ include "unifi.databasePort" . }}/{{ include "unifi.databaseName" . }}"
+            - name: STATDB_URI
+              value: "mongodb://{{ include "unifi.databaseHost" . }}:{{ include "unifi.databasePort" . }}/{{ printf "%s_stat" (include "unifi.databaseName" .) }}"
+            - name: UNIFI_STDOUT
+              value: "true"
+            - name: JVM_MAX_HEAP_SIZE
+              value: 1024M
+            {{- if .Values.jvmExtraOpts }}
+            - name: JVM_EXTRA_OPTS
+              value: {{ .Values.jvmExtraOpts | join " " | quote }}
+            {{- end }}
+            {{- if or .Values.auth.tls.keystorePassword .Values.auth.existingSecretPerPassword .Values.auth.tls.autoGenerated }}
+            - name: UNIFI_TLS_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.tlsKeystorePassword "context" $)) $ }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "tlsKeystorePassword") }}
+                {{- else }}
+                  name: {{ $globalSecretName }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "tls-keystore-password") }}
+                {{- end }}
+            {{- end }}
+            {{- if or .Values.auth.tls.truststorePassword .Values.auth.existingSecretPerPassword .Values.auth.tls.autoGenerated }}
+            - name: UNIFI_TLS_TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.tlsTruststorePassword "context" $)) $ }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "tlsTruststorePassword") }}
+                {{- else }}
+                  name: {{ $globalSecretName }}
+                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "tls-truststore-password") }}
+                {{- end }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+          envFrom:
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http-control
+              containerPort: {{ .Values.containerPorts.httpController }}
+              protocol: TCP
+            - name: https-control
+              containerPort: {{ .Values.containerPorts.httpsController }}
+              protocol: TCP
+            - name: http-portal
+              containerPort: {{ .Values.containerPorts.httpPortal }}
+              protocol: TCP
+            - name: https-portal
+              containerPort: {{ .Values.containerPorts.httpsPortal }}
+              protocol: TCP
+            - name: discovery
+              containerPort: {{ .Values.containerPorts.discovery }}
+              protocol: UDP
+            - name: speedtest
+              containerPort: {{ .Values.containerPorts.speedtest }}
+              protocol: TCP
+            - name: stun
+              containerPort: {{ .Values.containerPorts.stun }}
+              protocol: UDP
+            - name: syslog
+              containerPort: {{ .Values.containerPorts.syslog }}
+              protocol: UDP
+          {{- if not .Values.diagnosticMode.enabled }}
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
+            tcpSocket:
+              port: {{ .Values.containerPorts.httpController }}
+          {{- else if .Values.customStartupProbe }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /status
+              port: {{ .Values.containerPorts.httpController }}
+          {{- else if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+            httpGet:
+              path: /status
+              port: {{ .Values.containerPorts.httpController }}
+          {{- else if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: unifi-data
+              mountPath: /unifi
+            {{- if .Values.auth.tls.enabled }}
+            - name: certificates
+              mountPath: /unifi/cert
+            - name: shared-certs
+              mountPath: /unifi/shared-certs
+            {{- end }}
+            {{- if or (.Files.Glob "files/init.d/*") .Values.initScriptsConfigMap .Values.initScripts }}
+            - name: custom-init-d
+              mountPath: /unifi/init.d
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+        {{- if .Values.sidecars }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: unifi-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (include "common.names.fullname" .) (tpl .Values.persistence.existingClaim $) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.auth.tls.enabled }}
+        - name: certificates
+          secret:
+            secretName: {{ include "unifi.tlsSecretName" . }}
+            defaultMode: 420
+        - name: shared-certs
+          emptyDir: {}
+        {{- end }}
+        {{- if or (.Files.Glob "files/init.d/*") .Values.initScriptsConfigMap .Values.initScripts }}
+        - name: custom-init-d
+          configMap:
+            name: {{ include "unifi.initScriptsCM" . }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+---

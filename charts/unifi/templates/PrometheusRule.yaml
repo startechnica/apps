@@ -1,0 +1,31 @@
+{{- if and .Values.metrics.enabled .Values.metrics.prometheusRule.enabled }}
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ include "unifi.prometheusRule.namespace" . }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.metrics.prometheusRule.additionalLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.prometheusRule.additionalLabels "context" $) | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: {{ include "unifi.metrics.fullname" . }}
+      rules:
+        - alert: UnifiPollerAbsent
+          annotations:
+            description: Unifi Poller has disappeared from Prometheus service discovery.
+            summary: Unifi Poller is down.
+          expr: |
+            absent(up{job=~".*{{ include "unifi.metrics.fullname" . }}.*"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+    - name: {{ include "common.names.fullname" . }}
+      rules: {{- include "common.tplvalues.render" ( dict "value" .Values.metrics.prometheusRule.rules "context" $ ) | nindent 8 }}
+{{- end }}
+{{- end }}

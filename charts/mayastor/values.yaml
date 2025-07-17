@@ -234,7 +234,7 @@ volumePermissions:
   image:
     registry: docker.io
     repository: bitnami/bitnami-shell
-    tag: 11-debian-11-r0
+    tag: 11-debian-11-r48
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -287,7 +287,8 @@ service:
   ports:
     http: 1812
     https: 1813
-  ## @param service.nodePorts.mysql Mayastor Kubernetes service node port
+  ## @param service.nodePorts.http Mayastor Kubernetes service node port
+  ## @param service.nodePorts.https Mayastor Kubernetes service node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
   nodePorts:
@@ -343,12 +344,12 @@ csiController:
   logLevel: info
   ## Mayastor CSI Controller image
   ## ref: https://hub.docker.com/r/mayadata/mayastor/tags
-  ## @param image.registry Mayastor CSI Controller image registry
-  ## @param image.repository Mayastor CSI Controller image repository
-  ## @param image.tag Mayastor CSI Controller image tag (immutable tags are recommended)
-  ## @param image.pullPolicy Mayastor CSI Controller image pull policy
-  ## @param image.pullSecrets Specify docker-registry secret names as an array
-  ## @param image.debug Specify if debug logs should be enabled
+  ## @param csiController.image.registry Mayastor CSI Controller image registry
+  ## @param csiController.image.repository Mayastor CSI Controller image repository
+  ## @param csiController.image.tag Mayastor CSI Controller image tag (immutable tags are recommended)
+  ## @param csiController.image.pullPolicy Mayastor CSI Controller image pull policy
+  ## @param csiController.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param csiController.image.debug Specify if debug logs should be enabled
   ##
   image:
     registry: docker.io
@@ -368,8 +369,8 @@ csiController:
     pullSecrets: []
   ## CSI controller resource requests and limits
   ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
-  ## @param controller.resources.limits The resources limits for CSI controller containers
-  ## @param controller.resources.requests The requested resources for CSI controller containers
+  ## @param csiController.resources.limits The resources limits for CSI controller containers
+  ## @param csiController.resources.requests The requested resources for CSI controller containers
   ##
   resources:
     limits:
@@ -388,9 +389,9 @@ csiController:
   attacher:
     enabled: true
     image:
-      registry: k8s.gcr.io
+      registry: registry.k8s.io
       repository: sig-storage/csi-attacher
-      tag: v3.5.0
+      tag: v4.0.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -403,7 +404,7 @@ csiController:
       ##   - myRegistryKeySecretName
       ##
       pullSecrets: []
-    ## @param csiController.attacher.containerPorts.http Mayastor Agent Core GRPC container port
+    ## @param csiController.attacher.containerPorts.metrics Mayastor Agent Core GRPC container port
     ##
     containerPorts:
       metrics: 9601
@@ -436,7 +437,7 @@ csiController:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-external-health-monitor-controller
-      tag: v0.5.0
+      tag: v0.7.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -457,7 +458,7 @@ csiController:
     image:
       registry: k8s.gcr.io
       repository: sig-storage/csi-provisioner
-      tag: v3.1.1
+      tag: v3.3.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -501,7 +502,7 @@ csiNode:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
-  ## @param csiNode.containerPorts.http Mayastor Agent Core GRPC container port
+  ## @param csiNode.containerPorts.grpc Mayastor Agent Core GRPC container port
   ##
   containerPorts:
     grpc: 10199
@@ -566,9 +567,9 @@ csiNode:
       # registry: quay.io
       # repository: k8scsi/csi-node-driver-registrar
       # tag: v2.1.0
-      registry: k8s.gcr.io
+      registry: registry.k8s.io
       repository: sig-storage/csi-node-driver-registrar
-      tag: v2.5.1
+      tag: v2.6.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -606,9 +607,9 @@ csiNode:
       # registry: quay.io
       # repository: k8scsi/csi-node-driver-registrar
       # tag: v2.1.0
-      registry: k8s.gcr.io
+      registry: registry.k8s.io
       repository: sig-storage/livenessprobe
-      tag: v2.7.0
+      tag: v2.8.0
       ## Specify a imagePullPolicy
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -886,7 +887,7 @@ agentCore:
     ##   - myRegistryKeySecretName
     ##
     pullSecrets: []
-  ## @param agentCore.containerPorts.http Mayastor Agent Core GRPC container port
+  ## @param agentCore.containerPorts.grpc Mayastor Agent Core GRPC container port
   ##
   containerPorts:
     grpc: 50051
@@ -1322,12 +1323,12 @@ probe:
   enabled: true
   ## Mayastor CSI Operator image
   ## ref: https://hub.docker.com/r/mayadata/mcp-msp-operator/tags
-  ## @param operator.image.registry Mayastor CSI MSP Operator image registry
-  ## @param operator.image.repository Mayastor CSI MSP Operator image repository
-  ## @param operator.image.tag Mayastor CSI MSP Operator image tag (immutable tags are recommended)
-  ## @param operator.image.pullPolicy Mayastor CSI MSP Operator image pull policy
-  ## @param operator.image.pullSecrets Specify docker-registry secret names as an array
-  ## @param operator.image.debug Specify if debug logs should be enabled
+  ## @param probe.image.registry Mayastor CSI MSP Operator image registry
+  ## @param probe.image.repository Mayastor CSI MSP Operator image repository
+  ## @param probe.image.tag Mayastor CSI MSP Operator image tag (immutable tags are recommended)
+  ## @param probe.image.pullPolicy Mayastor CSI MSP Operator image pull policy
+  ## @param probe.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param probe.image.debug Specify if debug logs should be enabled
   ##
   image:
     registry: docker.io

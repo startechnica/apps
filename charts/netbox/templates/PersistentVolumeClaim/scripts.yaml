@@ -1,0 +1,27 @@
+{{- if and .Values.scriptsPersistence.enabled (not .Values.scriptsPersistence.existingClaim) -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "netbox.scripts.pvcName" . }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/part-of: netbox
+  {{- if or .Values.scriptsPersistence.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.scriptsPersistence.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+  {{- range .Values.scriptsPersistence.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.scriptsPersistence.size | quote }}
+  {{- if .Values.scriptsPersistence.selector }}
+  selector: {{- include "common.tplvalues.render" (dict "value" .Values.scriptsPersistence.selector "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.scriptsPersistence.dataSource }}
+  dataSource: {{- include "common.tplvalues.render" (dict "value" .Values.scriptsPersistence.dataSource "context" $) | nindent 4 }}
+  {{- end }}
+  {{- include "common.storage.class" (dict "persistence" .Values.scriptsPersistence "global" .Values.global) | nindent 2 }}
+{{- end -}}

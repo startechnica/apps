@@ -1,16 +1,16 @@
-{{- if .Capabilities.APIVersions.Has "cert-manager.io/v1" }}
 {{- if and .Values.ingress.tls .Values.ingress.certManager.create (not .Values.ingress.selfSigned) }}
-apiVersion: cert-manager.io/v1
+{{- if (include "common.capabilities.certManager.apiVersion" .) }}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
@@ -23,34 +23,28 @@ spec:
     rotationPolicy: Always
     size: 256
   subject:
-    countries:
-      - ID
     organizations:
-      - {{ .Values.organization | quote }}
-    organizationalUnits:
       - {{ .Release.Name | quote }}
-    localities:
-      - Asgard
-    provinces:
-      - Yggdrasil
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
-    {{- range $.Values.ingress.extraHosts }}
+    {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
 ---
-{{- if .Values.istio.enabled }}
-apiVersion: cert-manager.io/v1
+{{- if .Values.gateway.enabled }}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "common.names.fullname" . }}
-  namespace: {{ .Values.istio.ingressNamespace | quote }}
+  namespace: {{ .Values.gateway.namespace | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
@@ -63,19 +57,13 @@ spec:
     rotationPolicy: Always
     size: 256
   subject:
-    countries:
-      - ID
     organizations:
-      - {{ .Values.organization | quote }}
-    organizationalUnits:
       - {{ .Release.Name | quote }}
-    localities:
-      - Asgard
-    provinces:
-      - Yggdrasil
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
-    {{- range $.Values.ingress.extraHosts }}
+    {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
 {{- end }}

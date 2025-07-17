@@ -1,0 +1,28 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.serviceAccount.create .Values.rbac.create }}
+apiVersion: {{ include "st-common.capabilities.rbac.apiVersion" $ }}
+kind: RoleBinding
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "st-common.names.fullname" . | quote }}
+subjects:
+  {{- range $gateway := .Values.gateways }}
+  {{- if and $gateway.enabled (and .serviceAccount .serviceAccount.create)}}
+  - kind: ServiceAccount
+    name: {{ include "gateways.rbac.serviceAccountName" (dict "gatewayValues" $gateway "context" $) }}
+  {{- end }}
+  {{- end }}
+{{- end -}}

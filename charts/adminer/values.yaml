@@ -136,10 +136,22 @@ replicaCount: 1
 
 # See envs from https://hub.docker.com/_/adminer/
 config:
+  ## @param config.plugins Loading plugins
+  ## This image bundles all official Adminer plugins. You can find the list of plugins on
+  ## GitHub: https://github.com/vrana/adminer/tree/master/plugins.
+  ##
   plugins: ""
+  ## @param config.design Choosing a design
+  ## The image bundles all the designs that are available in the source package of adminer. You can
+  ## find the list of designs on GitHub: https://github.com/vrana/adminer/tree/master/designs.
+  ##
   design: "pepa-linha"
+  ## @param config.design Usage with external server
+  ## You can specify the default host with the ADMINER_DEFAULT_SERVER environment variable. This
+  ## is useful if you are connecting to an external server or a docker container named something other than the default db.
+  ##
   externalserver: ""
-  base_url: ""
+  baseUrl: ""
 
 ## @section Traffic Exposure Parameters
 
@@ -149,11 +161,11 @@ service:
   ## @param service.type Adminer Kubernetes service type
   ##
   type: ClusterIP
-  ## @param service.ports.auth Adminer Kubernetes service port
+  ## @param service.ports.http Adminer Kubernetes service port
   ##
   ports:
     http: 8080
-  ## @param service.nodePorts.mysql Adminer Kubernetes service node port
+  ## @param service.nodePorts.http Adminer Kubernetes service node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
   nodePorts:
@@ -219,6 +231,10 @@ ingress:
   ## NOTE: You may need to set this to '/*' in order to use this with ALB ingress controllers
   ##
   path: /
+  ## @param ingress.servicePort Backend service port to use
+  ## Default is http. Alternative is https.
+  ##
+  servicePort: http
   ## @param ingress.annotations Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.
   ## For a full list of possible ingress annotations, please see
   ## ref: https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md
@@ -445,6 +461,22 @@ extraEnvVarsCM: ""
 ##
 extraEnvVarsSecret: ""
 
+nodeAffinityPreset:
+  ## @param gateways.$gateway.nodeAffinityPreset.type Istio Gateway node affinity preset type. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
+  ##
+  type: ""
+  ## @param gateways.$gateway.nodeAffinityPreset.key Istio Gateway node label key to match Ignored if `gateways.$gateway.affinity` is set.
+  ## E.g.
+  ## key: "kubernetes.io/e2e-az-name"
+  ##
+  key: ""
+  ## @param gateways.$gateway.nodeAffinityPreset.values Istio Gateway node label values to match. Ignored if `gateways.$gateway.affinity` is set.
+  ## E.g.
+  ## values:
+  ##   - e2e-az1
+  ##   - e2e-az2
+  ##
+  values: []
 ## @param affinity Affinity for Adminer pods assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
 ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
@@ -507,25 +539,27 @@ rbac:
   ##
   rules: []
 
-istio:
+gateway:
   enabled: false
-  clusterName: cluster.local
-  ingressGateway: ingressgateway
-  ingressNamespace: istio-ingress
-
-  gateway:
-    enabled: true
-    servers:
-      - name: http-adminer
-        port: 80
-        protocol: HTTP
-      - name: https-adminer
-        port: 443
-        protocol: HTTPS
-    existingGateway: ~
-
-  virtualService:
-    enabled: true
-    existingVirtualService: ~
+  dedicated: false
+  gatewayApi: false
+  name: ""
+  namespace: ""
+  gatewayClassName: istio
+  clusterDomain: "cluster.local"
+  ## @param gateway.listeners
+  ##
+  listeners: []
+    # - name: http
+    #   port: 80
+    #   protocol: HTTP
+    # - name: https
+    #   port: 443
+    #   protocol: HTTPS
+  existingGateway: ~
+  existingVirtualService: ~
+  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
+  ##
+  extraRoute: []
 
 organization: Startechnica

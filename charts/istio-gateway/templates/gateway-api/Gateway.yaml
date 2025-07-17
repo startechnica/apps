@@ -1,0 +1,68 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if not (eq (include "st-common.capabilities.networkingGatewayGateway.apiVersion" .) "false") }}
+{{- range $gateway := .Values.gateways }}
+{{- if and .enabled (and .gatewayApi .gatewayApi.create) -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersion" $ }}
+kind: Gateway
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ $.Values.gatewayClassName }}
+  addresses:
+    - value: {{ printf "%s.%s.svc.%s" .name (include "st-common.names.namespace" $) $.Values.clusterDomain }}
+      type: Hostname
+  {{- if and .gatewayApi (or .gatewayApi.annotations .gatewayApi.labels .gatewayApi.parametersRef) }}
+  infrastructure:
+    {{- if .gatewayApi.annotations }}
+    annotations: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.annotations "context" $) | nindent 6 }}
+    {{- end }}
+    {{- if .gatewayApi.labels }}
+    labels: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.labels "context" $) | nindent 6 }}
+    {{- end }}
+    {{- if .gatewayApi.parametersRef }}
+    parametersRef: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.parametersRef "context" $) | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  {{- if and .gatewayApi .gatewayApi.backendTLS.clientCertificateRef.name }}
+  backendTLS: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.backendTLS "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if and .gatewayApi .gatewayApi.allowedListeners }}
+  allowedListeners: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.allowedListeners "context" $) | nindent 4 }}
+  {{- end }}
+  listeners:
+    {{- if and .service .service.ports }}
+    - name: http2
+      port: {{ default 80 .service.ports.http2 | int }}
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+    {{- else }}
+    - name: http2
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+    {{- end }}
+    {{- if and .gatewayApi .gatewayApi.listeners }}
+      {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
+    {{- end }}
+    {{- if and .gatewayApi .gatewayApi.extraListeners }}
+      {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
+    {{- end }}
+---
+{{- end }}
+{{- end }}
+{{- end }}

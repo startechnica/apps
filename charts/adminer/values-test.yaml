@@ -14,11 +14,14 @@ ingress:
     - name: macam.macam.com
     - name: macam.macam.id
   tls: true
-  selfSigned: true
+  selfSigned: false
 
-istio:
+ipFamilyPolicy: PreferDualStack
+
+gateway:
   enabled: true
-  ingressGateway: ingress-app
+  name: webapps
+  namespace: istio-ingressgateway
 
 tolerations:
   - effect: NoSchedule

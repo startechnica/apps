@@ -1,0 +1,32 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- range $gateway := .Values.gateways }}
+{{- if and $gateway.enabled $.Values.pdb.create }}
+apiVersion: {{ include "st-common.capabilities.policy.apiVersion" $ }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $.Values.pdb.minAvailable }}
+  minAvailable: {{ $.Values.pdb.minAvailable | int }}
+  {{- end }}
+  {{- if $.Values.pdb.minAvailable }}
+  maxUnavailable: {{ $.Values.pdb.maxUnavailable }}
+  {{- end }}
+  {{- $podLabels := include "st-common.tplvalues.merge" (dict "values" (list .podLabels $labels) "context" $) }}
+  selector:
+    matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 6 }}
+---
+{{- end }}
+{{- end }}

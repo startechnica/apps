@@ -1,24 +1,29 @@
-{{- if and (include "freeradius.createTlsSecret" . ) .Values.tls.autoGenerator.certmanager.enabled }}
-{{- if .Capabilities.APIVersions.Has "cert-manager.io/v1" }}
-{{- $releaseNamespace := include "common.names.namespace" . }}
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and (include "freeradius.createTlsSecret" .) .Values.tls.autoGenerator.certmanager.enabled }}
+{{- if not (eq (include "st-common.capabilities.certManager.apiVersion" .) "false") }}
+{{- $releaseNamespace := include "st-common.names.namespace" . }}
 {{- $clusterDomain := .Values.clusterDomain }}
-{{- $fullname := include "common.names.fullname" . }}
-{{- $serviceName := include "common.names.fullname" . }}
-{{- $altNames := list (printf "%s.%s.svc.%s" $fullname $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $fullname $releaseNamespace) (printf "%s.%s" $fullname $releaseNamespace) $fullname }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- $serviceName := include "st-common.names.fullname" . }}
+{{- $altNames := list (printf "%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 {{/*
 {{- $altNames := list (printf "*.%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $fullname }}
 */}}
-apiVersion: cert-manager.io/v1
+apiVersion: {{ include "st-common.capabilities.certManager.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "common.names.fullname" . }}-tls
-  namespace: {{ include "common.names.namespace" . | quote }}
+  name: {{ include "st-common.names.fullname" . }}-tls
+  namespace: {{ include "st-common.names.namespace" . | quote }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
   {{- if .Values.commonLabels }}
-  {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
   {{- end }}
 spec:
   secretName: {{ include "freeradius.tlsSecretName" . }}
@@ -32,12 +37,18 @@ spec:
     rotationPolicy: Always
     size: 256
   subject:
+    organizations:
+      - {{ .Release.Name | quote }}
     organizationalUnits:
-    - {{ .Release.Name | quote }}
+      - {{ include "st-common.names.fullname" . }}
   dnsNames:
-  {{- with $altNames }}
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    - {{ .Values.ingress.hostname | quote }}
+    {{- range .Values.ingress.extraHosts }}
+    - {{ .name | quote }}
+    {{- end }}
+    {{- with $altNames }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
 {{- end }}
 {{- end }}
 ---

@@ -1,0 +1,45 @@
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) (not .Values.gateway.gatewayApi.create) -}}
+{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") -}}
+apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+kind: Gateway
+metadata:
+  name: {{ include "netbox.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" (list .Values.ingress.annotations .Values.commonAnnotations) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- if .Values.gateway.selector }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.gateway.selector "context" $) | nindent 4 }}
+    {{- else }}
+    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
+    {{- end }}
+  servers:
+    - port:
+        name: http
+        number: 80
+        protocol: HTTP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range .Values.ingress.extraHosts }}
+        - {{ .name | quote }}
+        {{- end }}
+    {{- if .Values.tls.enabled }}
+    - port:
+        name: https
+        number: 443
+        protocol: HTTPS
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range .Values.ingress.extraHosts }}
+        - {{ .name | quote }}
+        {{- end }}
+      tls:
+        credentialName: {{ printf "%s-%s" (include "netbox.fullname" .) "tls" }}
+        mode: SIMPLE
+    {{- end }}
+{{- end -}}
+{{- end -}}

@@ -1,0 +1,203 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- range $gateway := .Values.gateways }}
+{{- if .enabled }}
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" $ }}
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" $gateway.image "chart" $.Chart)) }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not $.Values.pdb.create }}
+  replicas: {{ default 1 .replicaCount | int }}
+  {{- end }}
+  revisionHistoryLimit: 1
+  {{- $podLabels := include "st-common.tplvalues.merge" (dict "values" (list .podLabels $.Values.commonLabels $versionLabel) "context" $) }}
+  selector:
+    matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        istio.io/rev: {{ default "default" .revision | quote }}
+        inject.istio.io/templates: gateway
+        {{- if $.Values.metrics.enabled }}
+          {{- include "st-common.tplvalues.render" (dict "value" $.Values.metrics.annotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if .podAnnotations }}
+        {{- include "st-common.tplvalues.render" (dict "value" .podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $podLabels "context" $) | nindent 8 }}
+        gateway.networking.k8s.io/gateway-name: {{ printf "%s" $gateway.name }}
+        service.istio.io/canonical-name: {{ printf "%s" $gateway.name }}
+        service.istio.io/canonical-revision: latest
+        sidecar.istio.io/inject: "true"
+    spec:
+      {{ include "st-common.images.renderPullSecrets" (dict "images" .image "context" $) | nindent 6 }}
+      {{- if .hostAliases }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if and .podSecurityContext .podSecurityContext.enabled }}
+      securityContext: {{- omit .podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- else }}
+      securityContext:
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
+      {{- end }}
+      serviceAccountName: {{ include "gateways.rbac.serviceAccountName" (dict "gatewayValues" $gateway "context" $ ) }}
+      {{- if .schedulerName }}
+      schedulerName: {{ .schedulerName }}
+      {{- end }}
+      {{- if .topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .priorityClassName }}
+      priorityClassName: {{ .priorityClassName | quote }}
+      {{- end }}
+      {{- if .runtimeClassName }}
+      runtimeClassName: {{ .runtimeClassName }}
+      {{- else if $.Values.runtimeClassName }}
+      runtimeClassName: {{ $.Values.runtimeClassName | quote }}
+      {{- end }}
+      {{- if .affinity }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "gateways.affinities.pods" (dict "type" .podAffinityPreset "component" .name "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "gateways.affinities.pods" (dict "type" .podAntiAffinityPreset "component" .name "customLabels" $podLabels "context" $) | nindent 10 }}
+        {{- if .nodeAffinityPreset }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .nodeAffinityPreset.type "key" .nodeAffinityPreset.key "values" .nodeAffinityPreset.values) | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- if .nodeSelector }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .tolerations }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .initContainers }}
+      initContainers:
+        {{- include "st-common.tplvalues.render" (dict "value" .initContainers "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: istio-proxy
+          # "auto" will be populated at runtime by the mutating webhook. See https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#customizing-injection
+          image: {{ include "gateway.image" (dict "imageRoot" .image "global" $.Values.global) }}
+          # image: "auto"
+          {{- if and .image .image.pullPolicy }}
+          imagePullPolicy: {{ default "IfNotPresent" .image.pullPolicy | quote }}
+          {{- end }}
+          {{- if and .containerSecurityContext .containerSecurityContext.enabled }}
+          securityContext: {{- omit .containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1337
+            runAsUser: 1337
+            runAsNonRoot: true
+          {{- end }}
+          env:
+            {{- if .networkGateway }}
+            - name: ISTIO_META_REQUESTED_NETWORK_VIEW
+              value: {{ .networkGateway | quote }}
+            {{- end }}
+            {{- if .extraEnvVars }}
+              {{- include "st-common.tplvalues.render" (dict "value" .extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if or .extraEnvVarsCMs .extraEnvVarsSecrets }}
+          envFrom:
+            {{- if .extraEnvVarsCMs }}
+            {{- range .Values.extraEnvVarsCMs }}
+            - configMapRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+            {{- if .extraEnvVarsSecrets }}
+            {{- range .Values.extraEnvVarsSecrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- $containerPorts := dict .containerPorts }}
+          ports:
+            - containerPort: {{ ternary (get $containerPorts "metricsMerge") 15020 (hasKey $containerPorts "metricsMerge") }}
+              name: metrics
+              protocol: TCP
+            - containerPort: {{ ternary (get $containerPorts "status") 15021 (hasKey $containerPorts "status") }}
+              name: status-port
+              protocol: TCP
+            - containerPort: {{ ternary (get $containerPorts "metrics") 15090 (hasKey $containerPorts "metrics") }}
+              name: http-envoy-prom
+              protocol: TCP
+          {{- if .customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .customStartupProbe "context" $) | nindent 12 }}
+          {{- else if and .startupProbe .startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- else }}
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready
+              port: 15021
+              scheme: HTTP
+            initialDelaySeconds: 1
+            timeoutSeconds: 1
+            periodSeconds: 1
+            successThreshold: 1
+          {{- end }}
+          {{- if .customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if and .livenessProbe .livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if and .readinessProbe .readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- else }}
+          readinessProbe:
+            failureThreshold: 4
+            httpGet:
+              path: /healthz/ready
+              port: 15021
+              scheme: HTTP
+            initialDelaySeconds: 1
+            periodSeconds: 15
+            successThreshold: 1
+            timeoutSeconds: 1
+          {{- end }}
+          {{- if .resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
+          {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if $.Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- include "st-common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
+        {{- if .sidecars }}
+          {{- include "st-common.tplvalues.render" (dict "value" .sidecars "context" $) | trim | nindent 8 }}
+        {{- end }}
+      {{- if $.Values.extraVolumes }}
+      volumes:
+        {{- include "st-common.tplvalues.render" (dict "value" $.Values.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}
+---
+{{- end }}
+{{- end }}

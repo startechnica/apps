@@ -1,22 +1,29 @@
-{{- $globalSecretName := printf "%s" (tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
-apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/* vim: set filetype=mustache: */}}
+
+{{- $globalSecretName := printf "%s" (tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
-  name: {{ template "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: freeradius
     {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+    matchLabels: {{- include "st-common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: freeradius
   {{- if .Values.updateStrategy }}
   strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
@@ -24,32 +31,35 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap-env.yaml") . | sha256sum }}
-        checksum/configmap-mods: {{ include (print $.Template.BasePath "/configmap/mods-enabled.yaml") . | sha256sum }}
-        checksum/configmap-sites: {{ include (print $.Template.BasePath "/configmap/sites-enabled.yaml") . | sha256sum }}
+        checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/envvars.yaml") . | sha256sum }}
+        checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
+        checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
+        checksum/secret-credentials: {{ include (print $.Template.BasePath "/Secret/credentials.yaml") . | sha256sum }}
+        checksum/secret-sql-tls: {{ include (print $.Template.BasePath "/Secret/sql-tls.yaml") . | sha256sum }}
+        checksum/secret-tls: {{ include (print $.Template.BasePath "/Secret/tls.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
-      labels: {{- include "common.labels.standard" . | nindent 8 }}
+      labels: {{- include "st-common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: freeradius
         {{- if .Values.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
       {{- if .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
-        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
-        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
-        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+        podAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-        {{- include "freeradius.imagePullSecrets" . | nindent 6 }}
+      {{- include "freeradius.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.hostAliases }}
-      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName | quote }}
@@ -62,13 +72,16 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "freeradius.serviceAccountName" . }}
       {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
       {{- end }}
       {{- if .Values.topologySpreadConstraints }}
-      topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       {{- if or (and .Values.volumePermissions.enabled .Values.persistence.enabled) .Values.initContainers }}
       initContainers:
+        {{- if .Values.initContainers }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+        {{- end }}
         {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
         - name: volume-permissions
           image: {{ include "freeradius.volumePermissions.image" . }}
@@ -78,11 +91,9 @@ spec:
           args:
             - -ec
             - |
-              whoami
-              mkdir -p /etc/freeradius
-              chown -R "{{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }}" /etc/freeradius
-              chmod 2755 /etc/freeradius
-              ls -liah /etc
+              printf '%s\n' "[system] Change permission" >&2
+              chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.persistence.mountPath }}
+              chmod 0711 {{ .Values.persistence.mountPath }}
           {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
           securityContext: {{- omit .Values.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
           {{- else }}
@@ -92,25 +103,31 @@ spec:
           resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: raddb
-              mountPath: /etc/freeradius
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath }}
+              {{- end }}
         {{- end }}
       {{- end }}
       containers:
         - name: freeradius
-          image: {{ template "freeradius.image" . }}
+          image: {{ include "freeradius.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.diagnosticMode.enabled }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.command }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
           {{- else if .Values.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
-          {{ else }}
-          args: ["-x","-l","/dev/stdout"]
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+          args:
+            - -fxx
+            - -l
+            - stdout
           {{- end }}
           env:
             {{- if .Values.modsEnabled.sql.enabled }}
@@ -118,31 +135,43 @@ spec:
               valueFrom:
                 secretKeyRef:
                 {{- if .Values.auth.existingSecretPerPassword }}
-                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
-                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
+                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
                 {{- else }}
-                  name: {{ include "freeradius.databaseSecretName" . }}
-                  key: {{ include "freeradius.databaseSecretKey" . }}
+                  name: {{ include "freeradius.database.secretName" . }}
+                  key: {{ include "freeradius.database.secretKey" . }}
                 {{- end }}
-            {{- if .Values.extraEnvVars }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
-            {{- end }}
             {{- end }}
             {{- if .Values.sitesEnabled.status.enabled }}
             - name: FREERADIUS_SITES_STATUS_SECRET
               valueFrom:
                 secretKeyRef:
                 {{- if .Values.auth.existingSecretPerPassword }}
-                  name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesStatusSecret "context" $)) $ }}
-                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesStatusSecret") }}
+                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesStatusSecret "context" $)) $ }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesStatusSecret") }}
                 {{- else }}
                   name: {{ $globalSecretName }}
-                  key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
                 {{- end }}
+            {{- end }}
+            {{- if .Values.sitesEnabled.tls.enabled }}
+            - name: FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesTlsPrivKeyPassword "context" $)) $ }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesTlsPrivKeyPassword") }}
+                {{- else }}
+                  name: {{ $globalSecretName }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-tls-privkey-password") }}
+                {{- end }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           envFrom:
             - configMapRef:
-                name: {{ include "common.names.fullname" . }}-env
+                name: {{ include "freeradius.names.envvars" . }}
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:
                 name: {{ .Values.extraEnvVarsCM }}
@@ -152,7 +181,7 @@ spec:
                 name: {{ .Values.extraEnvVarsSecret }}
             {{- end }}
           {{- if .Values.lifecycleHooks }}
-          lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
+          lifecycle: {{- include "st-common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
           ports:
             - name: auth
@@ -177,16 +206,26 @@ spec:
               protocol: UDP
             {{- end }}
           {{- if not .Values.diagnosticMode.enabled }}
-          {{- if .Values.startupProbe.enabled }}
-          startupProbe: {{- omit .Values.startupProbe "enabled" | toYaml | nindent 12 }}
+          {{- if .Values.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
             exec:
               command:
                 - sh
                 - -c
-                - >-
+                - |
+                  {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+                  if [[ ! -f "{{ .Values.persistence.mountPath }}/.user_scripts_initialized" ]]; then
+                      echo "Init scripts still not executed. Skipping check"
+                      exit 1
+                  fi
+                  {{- end }}
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
-          {{- if .Values.livenessProbe.enabled }}
+          {{- if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.livenessProbe.enabled }}
           livenessProbe: {{- omit .Values.livenessProbe "enabled" | toYaml | nindent 12 }}
             exec:
               command:
@@ -195,6 +234,8 @@ spec:
                 - >-
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
+          {{- if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe: {{- omit .Values.readinessProbe "enabled" | toYaml | nindent 12 }}
             exec:
@@ -205,19 +246,28 @@ spec:
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- end }}
-          {{- if .Values.resources }}
-          resources: {{ toYaml .Values.resources | nindent 12 }}
+          {{- if .resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .resources "context" $) | nindent 12 }}
+          {{- else if and .resourcesPreset (ne .resourcesPreset "none") }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if .Values.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if .Values.persistence.enabled }}
-            - name: raddb
-              mountPath: /etc/freeradius
+            - name: data
+              mountPath: {{ default "/startechnica/freeradius" .Values.persistence.mountPath }}
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
+            {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
+            - name: freeradius-config
+              mountPath: /etc/freeradius/radiusd.conf
+              subPath: radiusd.conf
+            {{- end }}
+            {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+            - name: custom-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- if .Values.modsEnabled.sql.enabled }}
             - name: freeradius-mods
@@ -235,47 +285,82 @@ spec:
               mountPath: /etc/freeradius/sites-enabled/coa
               subPath: coa
             {{- end }}
-            - name: temp
-              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.tls.enabled }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/tls
               subPath: tls
             - name: freeradius-tls
-              mountPath: /startechnica/freeradius/certs
-              readOnly: true
-            - name: shared-certs
-              mountPath: /startechnica/freeradius/shared-certs
+              mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             {{- end }}
+            {{- if and .Values.modsEnabled.sql.enabled (eq .Values.modsEnabled.sql.dialect "sqlite") }}
+            - name: freeradius-sqlite
+              mountPath: {{ .Values.modsEnabled.sql.sqlite.filename | quote }}
+            {{- end }}
+            {{- if .Values.modsEnabled.sql.tls.enabled }}
+            - name: freeradius-sql-tls
+              mountPath: /opt/startechnica/freeradius/certs
+            {{- end }}
+            - name: shared-certs
+              mountPath: /opt/startechnica/freeradius/shared-certs
+              readOnly: true
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
             {{- if .Values.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
         {{- if .Values.sidecars }}
-          {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes:
         - name: freeradius-mods
           configMap:
-            name: {{ printf "%s-mods" (include "common.names.fullname" .) }}
+            name: {{ printf "%s-mods" (include "st-common.names.fullname" .) }}
         - name: freeradius-sites
           configMap:
-            name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
+            name: {{ printf "%s-sites" (include "st-common.names.fullname" .) }}
         - name: temp
           emptyDir: {}
-        {{- if .Values.persistence.enabled }}
-        - name: raddb
+        - name: shared-certs
+          emptyDir: {}
+        - name: data
+          {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "freeradius.claimName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if and .Values.modsEnabled.sql.enabled (eq .Values.modsEnabled.sql.dialect "sqlite") }}
+        - name: freeradius-sqlite
+          emptyDir: {}
         {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
             secretName: {{ include "freeradius.tlsSecretName" . }}
-            # defaultMode: 420
-        - name: shared-certs
-          emptyDir: {}
+        {{- end }}
+        {{- if .Values.modsEnabled.sql.tls.enabled }}
+        - name: freeradius-sql-tls
+          secret:
+            secretName: {{ include "freeradius.sqlTlsSecretName" . }}
+            items:
+              - key: tls.crt
+                path: sql-tls.crt
+              - key: tls.key
+                path: sql-tls.key
+              - key: ca.crt
+                path: sql-ca.crt
+        {{- end }}
+        {{- if or (.Files.Glob "files/radiusd.conf") .Values.configuration .Values.configurationConfigMap }}
+        - name: freeradius-config
+          configMap:
+            name: {{ include "freeradius.configurationCM" . }}
+        {{- end }}
+        {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+        - name: custom-init-scripts
+          configMap:
+            name: {{ include "freeradius.initdbScriptsCM" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}

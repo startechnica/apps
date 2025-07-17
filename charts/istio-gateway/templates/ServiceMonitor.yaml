@@ -1,0 +1,62 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
+{{- if not (eq (include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
+kind: ServiceMonitor
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.serviceMonitor.labels) "context" .) }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
+  {{- $annotations := merge .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
+  {{- if $annotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.metrics.serviceMonitor.jobLabel }}
+  jobLabel: {{ .Values.metrics.serviceMonitor.jobLabel | quote }}
+  {{- end }}
+  endpoints:
+    {{- $defaultEndpoint := pick .Values.metrics.serviceMonitor "port" "interval" "scrapeTimeout" "relabelings" "metricRelabelings" "honorLabels" }}
+    {{- $endpoints := ternary (.Values.metrics.serviceMonitor.endpoints) (list (dict "path" .Values.metrics.serviceMonitor.path)) (empty .Values.metrics.serviceMonitor.path) }}
+    {{- range $endpoints }}
+    {{- $endpoint := merge . $defaultEndpoint }}
+    - port: {{ $endpoint.port | quote }}
+      path: {{ include "st-common.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
+      {{- if $endpoint.interval }}
+      interval: {{ $endpoint.interval }}
+      {{- end }}
+      {{- if $endpoint.scrapeTimeout }}
+      scrapeTimeout: {{ $endpoint.scrapeTimeout }}
+      {{- end }}
+      {{- if $endpoint.relabelings }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if $endpoint.metricRelabelings }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if $endpoint.honorLabels }}
+      honorLabels: {{ $endpoint.honorLabels }}
+      {{- end }}
+    {{- end }}
+  {{- if .Values.metrics.serviceMonitor.podTargetLabels }}
+  podTargetLabels: {{- toYaml .Values.metrics.serviceMonitor.podTargetLabels | nindent 4 }}
+  {{- end }}
+  {{- with .Values.metrics.serviceMonitor.sampleLimit }}
+  sampleLimit: {{ . }}
+  {{- end }}
+  {{- with .Values.metrics.serviceMonitor.targetLimit }}
+  targetLimit: {{ . }}
+  {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "st-common.names.namespace" . | quote }}
+  {{- $selectors := merge .Values.metrics.serviceMonitor.selector .Values.commonLabels }}
+  selector:
+    matchLabels: {{ include "gateways.labels.matchLabels" (dict "gatewayValues" .Values.gateways "customLabels" $selectors "context" $) | nindent 4 }}
+{{- end }}
+{{- end }}

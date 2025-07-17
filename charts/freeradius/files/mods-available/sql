@@ -70,11 +70,10 @@ sql {
 	#
 	sqlite {
 		# Path to the sqlite database
-		filename = "/startechnica/freeradius/freeradius.db"
+		filename = $ENV{FREERADIUS_MODS_SQL_SQLITE_FILENAME}
 
-		# How long to wait for write locks on the database to be
-		# released (in ms) before giving up.
-		busy_timeout = 200
+		# How long to wait for write locks on the database to be released (in ms) before giving up.
+		busy_timeout = $ENV{FREERADIUS_MODS_SQL_SQLITE_BUSY_TIMEOUT}
 
 		# If the file above does not exist and bootstrap is set
 		# a new database file will be created, and the SQL statements
@@ -90,6 +89,7 @@ sql {
 #			certificate_file = $ENV{FREERADIUS_MODS_SQL_TLS_CERTIFICATE}
 #			private_key_file = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
 #			cipher = "DHE-RSA-AES256-SHA:AES128-SHA"
+#			cipher = $ENV{FREERADIUS_MODS_SQL_TLS_CIPHER}
 
 			tls_required = $ENV{FREERADIUS_MODS_SQL_TLS_ENABLE}
 			tls_check_cert = no
@@ -151,7 +151,7 @@ sql {
 			certificate_password = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
 			ca_file = $ENV{FREERADIUS_MODS_SQL_TLS_CACERT}
 			ca_dir = /startechnica/freeradius/certs-sql/
-			crl_file = /path/to/file
+			# crl_file = /path/to/file
 			weak_cert_validation = false
 			allow_invalid_hostname = false
 		}
@@ -269,8 +269,7 @@ sql {
 		#  Connections to create during module instantiation.
 		#  If the server cannot create specified number of
 		#  connections during instantiation it will exit.
-		#  Set to 0 to allow the server to start without the
-		#  database being available.
+		#  Set to 0 to allow the server to start without the database being available.
 		start = ${thread[pool].start_servers}
 
 		#  Minimum number of connections to keep open
@@ -345,7 +344,7 @@ sql {
 	#  virtual server, each with a different client list, then
 	#  the SQL clients are added only to the first listener.
 	#
-	read_clients = yes
+	read_clients = $ENV{FREERADIUS_MODS_SQL_READ_CLIENTS}
 
 	# Table to keep radius client info
 	client_table = $ENV{FREERADIUS_MODS_SQL_TABLE_CLIENT}
@@ -360,7 +359,7 @@ sql {
 
 	# This entry should be used for the default instance (sql {})
 	# of the SQL module.
-	group_attribute = "SQL-Group"
+	group_attribute = $ENV{FREERADIUS_MODS_SQL_GROUP_ATTRIBUTE}
 
 	# Read database-specific queries
 	$INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf

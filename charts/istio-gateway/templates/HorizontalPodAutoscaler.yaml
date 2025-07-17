@@ -1,0 +1,50 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- range $gateway := .Values.gateways }}
+{{- if and .enabled $.Values.autoscaling.enabled }}
+apiVersion: {{ include "st-common.capabilities.hpa.apiVersion" (dict "context" $) }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .name }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" (include "gateways.images.version" (dict "imageRoot" .image "chart" $.Chart) ) }}  
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list $.Values.commonLabels $versionLabel) "context" $) }}
+  labels: {{ include "gateways.labels.standard" (dict "gatewayValues" $gateway "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" $ }}
+    kind: Deployment
+    name: {{ .name }}
+  minReplicas: {{ $.Values.autoscaling.minReplicas }}
+  maxReplicas: {{ $.Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        {{- if semverCompare "<1.23-0" (include "st-common.capabilities.kubeVersion" $) }}
+        targetAverageUtilization: {{ $.Values.autoscaling.targetCPU }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ $.Values.autoscaling.targetCPU }}
+        {{- end }}
+    - type: Resource
+      resource:
+        name: memory
+        {{- if semverCompare "<1.23-0" (include "st-common.capabilities.kubeVersion" $) }}
+        targetAverageUtilization: {{ $.Values.autoscaling.targetMemory }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ $.Values.autoscaling.targetMemory }}
+        {{- end }}
+---
+{{- end }}
+{{- end }}

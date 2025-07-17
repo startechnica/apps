@@ -1,0 +1,69 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) }}
+{{- if not (eq (include "st-common.capabilities.istioGateway.apiVersion" .) "false") }}
+apiVersion: {{ include "st-common.capabilities.istioGateway.apiVersion" . }}
+kind: Gateway
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  selector:
+    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
+  servers:
+    - port:
+        name: auth
+        number: {{ .Values.service.ports.auth }}
+        protocol: UDP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+    - port:
+        name: acct
+        number: {{ .Values.service.ports.acct }}
+        protocol: UDP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+    - port:
+        name: coa
+        number: {{ .Values.service.ports.coa }}
+        protocol: UDP
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+    - port:
+        name: radsec
+        number: {{ .Values.service.ports.radsec }}
+        protocol: TLS
+      hosts:
+        - {{ .Values.ingress.hostname }}
+        {{- range $host := .Values.ingress.extraHosts }}
+        - {{ $host.name | quote }}
+        {{- end }}
+      tls:
+        mode: PASSTHROUGH
+        {{- if .Values.sitesEnabled.tls.enabled }}
+        credentialName: {{  include "freeradius.tlsSecretName" . }}
+        {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,63 @@
+{{- if or .Values.tls.enabled .Values.ingress.tls -}}
+{{- if not (eq (include "common.capabilities.certManager.apiVersion" .) "false") -}}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+kind: Certificate
+metadata:
+  name: {{ include "netbox.fullname" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
+  issuerRef:
+    kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
+    name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ include "common.names.namespace" . | quote }}
+    organizationalUnits:
+      - {{ include "common.names.fullname" . }}
+  dnsNames:
+    - {{ .Values.ingress.hostname }}
+    {{- range .Values.ingress.extraHosts }}
+    - {{ .name | quote }}
+    {{- end }}
+---
+{{- if and .Values.gateway.enabled (not (empty .Values.gateway.namespace)) }}
+apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+kind: Certificate
+metadata:
+  name: {{ include "netbox.fullname" . }}
+  namespace: {{ .Values.gateway.namespace | quote }}
+  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
+  issuerRef:
+    kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
+    name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ include "netbox.fullname" . }}
+  dnsNames:
+    - {{ .Values.ingress.hostname }}
+    {{- range .Values.ingress.extraHosts }}
+    - {{ .name | quote }}
+    {{- end }}
+{{- end }}
+{{- end -}}
+{{- end -}}

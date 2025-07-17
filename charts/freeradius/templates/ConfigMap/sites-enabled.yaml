@@ -1,0 +1,29 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-sites" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+{{ (.Files.Glob "files/sites-available/default").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/sites-available/inner-tunnel").AsConfig | indent 2 }}
+{{- if .Values.sitesEnabled.coa.enabled }}
+{{ (.Files.Glob "files/sites-available/coa").AsConfig | indent 2 }}
+{{- end }}
+{{- if .Values.sitesEnabled.status.enabled }}
+{{ (.Files.Glob "files/sites-available/status").AsConfig | indent 2 }}
+{{- end }}
+{{- if .Values.sitesEnabled.tls.enabled }}
+{{ (.Files.Glob "files/sites-available/tls").AsConfig | indent 2 }}
+{{- end }}

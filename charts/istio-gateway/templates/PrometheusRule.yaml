@@ -1,0 +1,22 @@
+{{- /*
+Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.metrics.enabled .Values.metrics.prometheusRule.enabled .Values.metrics.prometheusRule.groups -}}
+{{- if not (eq (include "common.capabilities.coreosMonitoringPrometheusRule.apiVersion" .) "false") -}}
+apiVersion: {{ include "common.capabilities.coreosMonitoringPrometheusRule.apiVersion" . }}
+kind: PrometheusRule
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.prometheusRule.namespace }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.commonLabels .Values.metrics.prometheusRule.labels) "context" .) }}
+  labels: {{- include "gateways.labels.common" (dict "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  groups: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.prometheusRule.groups "context" .) | nindent 4 }}
+{{- end -}}
+{{- end -}}
