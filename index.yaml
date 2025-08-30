@@ -1931,6 +1931,38 @@ entries:
   st-common:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: Strimzi Kafka capabilities
+        - kind: added
+          description: Percona Server MongoDB capabilities
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.15
+    created: "2025-08-30T18:46:05.898092182Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 370bed8317b324755bec1695836f8af780fe894456943348d9985746a29fdb8a
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.15/st-common-0.1.15.tgz
+    version: 0.1.15
+  - annotations:
+      artifacthub.io/changes: |
         - kind: fixed
           description: Namespaces to extraPodAffinityTerms for affinities
       category: Infrastructure
@@ -2505,4 +2537,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-07-17T04:41:09.09606537Z"
+generated: "2025-08-30T18:46:05.898443284Z"
