@@ -1,8 +1,10 @@
 annotations:
   category: Infrastructure
   artifacthub.io/changes: |
-    - kind: fixed
-      description: Namespaces to extraPodAffinityTerms for affinities
+    - kind: added
+      description: Strimzi Kafka capabilities
+    - kind: added
+      description: Percona Server MongoDB capabilities
 apiVersion: v2
 appVersion: 0.1.14
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
