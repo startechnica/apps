@@ -8,12 +8,14 @@ kind: ConfigMap
 metadata:
   name: {{ printf "%s-mods" (include "st-common.names.fullname" .) }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
+  labels:
+    {{- include "st-common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
       {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations:
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
 {{- if .Values.modsEnabled.sql.enabled }}
