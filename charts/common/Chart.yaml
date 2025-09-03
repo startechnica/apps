@@ -2,9 +2,7 @@ annotations:
   category: Infrastructure
   artifacthub.io/changes: |
     - kind: added
-      description: Strimzi Kafka capabilities
-    - kind: added
-      description: Percona Server MongoDB capabilities
+      description: Mail server helper
 apiVersion: v2
 appVersion: 0.1.15
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
@@ -25,4 +23,4 @@ name: st-common
 sources:
   - https://startechnica.github.io/apps
 type: library
-version: 0.1.15
+version: 0.1.16
