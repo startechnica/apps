@@ -5,7 +5,7 @@ appVersion: 3.2.7
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
-    version: 0.1.10
+    version: 0.1.11
   - name: mariadb
     condition: mariadb.enabled
     repository: oci://registry-1.docker.io/bitnamicharts
