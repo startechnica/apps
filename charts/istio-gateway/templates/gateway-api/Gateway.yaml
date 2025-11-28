@@ -34,10 +34,10 @@ spec:
     parametersRef: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.parametersRef "context" $) | nindent 6 }}
     {{- end }}
   {{- end }}
-  {{- if and .gatewayApi .gatewayApi.backendTLS.clientCertificateRef.name }}
+  {{- if .gatewayApi.backendTLS }}
   backendTLS: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.backendTLS "context" $) | nindent 4 }}
   {{- end }}
-  {{- if and .gatewayApi .gatewayApi.allowedListeners }}
+  {{- if and .gatewayApi.allowedListeners }}
   allowedListeners: {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.allowedListeners "context" $) | nindent 4 }}
   {{- end }}
   listeners:
@@ -60,7 +60,7 @@ spec:
       {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
     {{- end }}
     {{- if and .gatewayApi .gatewayApi.extraListeners }}
-      {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.listeners "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .gatewayApi.extraListeners "context" $) | nindent 4 }}
     {{- end }}
 ---
 {{- end }}
