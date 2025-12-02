@@ -1,0 +1,108 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.tuning.enabled (not .Values.playground.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-appsec.tuning.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: tuning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.tuning.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.tuning.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.appsec.tuning.replicaCount }}
+  revisionHistoryLimit: 1
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.tuning.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: tuning
+  template:
+    metadata:
+      {{- if .Values.appsec.tuning.podAnnotations }}
+      {{- $podAnnotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.tuning.podAnnotations ) "context" . ) }}
+      annotations: {{- include "st-common.tplvalues.render" ( dict "value" $podAnnotations "context" $ ) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: tuning
+        group: fog-core
+    spec:
+      serviceAccountName: {{ include "open-appsec.tuning.serviceAccountName" . }}
+      securityContext:
+      {{- with .Values.appsec.tuning.securityContext }}
+        fsGroup: {{ .fsGroup }}
+        runAsGroup: {{ .runAsGroup }}
+        runAsUser: {{ .runAsUser }}
+      {{- end }}
+      containers:
+        - name: tuning
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.appsec.tuning.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.appsec.storage.image.pullPolicy }}
+          {{- if .Values.appsec.storage.containerSecurityContext.enabled }}
+          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.appsec.storage.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: QUERY_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "st-common.names.fullname" .Subcharts.postgresql }}
+                  key: {{ include "postgresql.adminPasswordKey" .Subcharts.postgresql }}
+            - name: QUERY_DB_HOST
+              value: {{ include "postgresql.primary.fullname" .Subcharts.postgresql }}
+            - name: SHARED_STORAGE_HOST
+              value: {{ include "open-appsec.storage.fullname" . }}
+          ports:
+            - containerPort: {{ .Values.appsec.tuning.containerPorts.http }}
+              name: http
+          {{- if .Values.appsec.tuning.resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.appsec.tuning.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.appsec.tuning.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.tuning.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.tuning.livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.tuning.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.tuning.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.tuning.readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.tuning.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.tuning.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.tuning.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.tuning.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        {{- if .Values.appsec.tuning.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.appsec.tuning.tls.certificatesSecretName }}
+        {{- end }}
+        {{- if .Values.appsec.tuning.extraVolumes }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+{{- end }}

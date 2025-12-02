@@ -1,0 +1,23 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appsec.configMapName | default "appsec-settings-configmap" | quote }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: agent 
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- if .Values.crowdSec.enabled }}
+  CROWDSEC_ENABLED: {{ ternary "true" "false" .Values.crowdSec.enabled | quote }}
+  CROWDSEC_API_URL: {{ .Values.crowdSec.api.url | quote }}
+  CROWDSEC_AUTH_METHOD: {{ default "apikey" .Values.crowdSec.auth.method }}
+  CROWDSEC_MODE: {{ default "prevent" .Values.crowdSec.mode  }}
+  CROWDSEC_LOGGING: {{ default "enabled" .Values.crowdSec.logging }}
+  {{- end }}

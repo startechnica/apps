@@ -1,0 +1,55 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.tuning.enabled (not .Values.playground.enabled) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "open-appsec.tuning.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: tuning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.tuning.service.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.tuning.service.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.appsec.tuning.service.type }}
+  {{- if and (eq .Values.appsec.tuning.service.type "LoadBalancer") (not (empty .Values.appsec.tuning.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.appsec.tuning.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.appsec.tuning.service.type "LoadBalancer") (not (empty .Values.appsec.tuning.service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .Values.appsec.tuning.service.loadBalancerClass }}
+  {{- end }}
+  {{- if and (eq .Values.appsec.tuning.service.type "LoadBalancer") (not (empty .Values.appsec.tuning.service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ .Values.appsec.tuning.service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if and .Values.appsec.tuning.service.clusterIP (eq .Values.appsec.tuning.service.type "ClusterIP") }}
+  clusterIP: {{ .Values.appsec.tuning.service.clusterIP }}
+  {{- end }}
+  {{- if or (eq .Values.appsec.tuning.service.type "LoadBalancer") (eq .Values.appsec.tuning.service.type "NodePort") }}
+  externalTrafficPolicy: {{ .Values.appsec.tuning.service.externalTrafficPolicy | quote }}
+  {{- end }}
+  {{- if .Values.appsec.tuning.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.appsec.tuning.service.sessionAffinity }}
+  {{- end }}
+  {{- if .Values.appsec.tuning.service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.appsec.tuning.service.ports.http }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if and (or (eq .Values.appsec.tuning.service.type "NodePort") (eq .Values.appsec.tuning.service.type "LoadBalancer")) (not (empty .Values.appsec.tuning.service.nodePorts.http)) }}
+      nodePort: {{ .Values.appsec.tuning.service.nodePorts.http }}
+      {{- else if eq .Values.appsec.tuning.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.tuning.podLabels .Values.commonLabels ) "context" . ) }}
+  selector: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: tuning
+{{- end }}

@@ -1,0 +1,103 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.storage.enabled (not .Values.playground.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-appsec.storage.fullname" . }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.storage.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.storage.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.appsec.storage.replicaCount }}
+  revisionHistoryLimit: 1
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.storage.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: storage
+  template:
+    metadata:
+      {{- if .Values.appsec.storage.podAnnotations }}
+      {{- $podAnnotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.storage.podAnnotations ) "context" . ) }}
+      annotations: {{- include "st-common.tplvalues.render" ( dict "value" $podAnnotations "context" $ ) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: storage
+        group: fog-core
+    spec:
+      serviceAccountName: {{ include "open-appsec.storage.serviceAccountName" . }}
+      {{- if .Values.appsec.storage.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.appsec.storage.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: storage
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.appsec.storage.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.appsec.storage.image.pullPolicy }}
+          {{- if .Values.appsec.storage.containerSecurityContext.enabled }}
+          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.appsec.storage.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: {{ .Values.appsec.storage.containerPorts.http }}
+              name: http
+          {{- if .Values.appsec.storage.resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.appsec.storage.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.appsec.storage.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.storage.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.storage.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.storage.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.storage.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.storage.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.storage.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.storage.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - mountPath: /db/
+              name: files-volume
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: files-volume
+          {{- if .Values.appsec.storage.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "open-appsec.storage.pvClaim" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- if .Values.appsec.storage.nodeSelector }}
+      nodeSelector: {{ toYaml .Values.appsec.storage.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.appsec.storage.tolerations }}
+      tolerations: {{ toYaml .Values.appsec.storage.tolerations | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,2411 @@
+## Copyright (c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+## SPDX-License-Identifier: APACHE-2.0
+
+## @section Global parameters
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.defaultStorageClass Global default StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  defaultStorageClass: ""
+  ## Compatibility adaptations for Kubernetes platforms
+  ##
+  compatibility:
+    ## Compatibility adaptations for Openshift
+    ##
+    openshift:
+      ## @param global.compatibility.openshift.adaptSecurityContext Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)
+      ##
+      adaptSecurityContext: auto
+    ## @param global.compatibility.omitEmptySeLinuxOptions If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object
+    ##
+    omitEmptySeLinuxOptions: false
+  ## @param global.deploymentAnnotations Annotations to add to the deployment
+  ##
+  deploymentAnnotations: {}
+  ## @param global.podLabels Extra labels for pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+
+## @section OpenAppSec CRD parameters
+## ref: https://raw.githubusercontent.com/openappsec/openappsec/main/config/crds/open-appsec-crd-v1beta2.yaml
+##
+crds:
+  ## @param crd.enabled  Enable or disable the installation of OpenAppSec CRDs
+  ##
+  enabled: false
+  ## @param crd.keep  Keep CRDs on uninstall
+  ## This option makes it so that the "helm.sh/resource-policy": keep
+  ## annotation is added to the CRD. This will prevent Helm from uninstalling the CRD when the Helm release is uninstalled.
+  ## WARNING: when the CRDs are removed, all open-appsec custom resources
+  ## (Certificates, Issuers, ...) will be removed too by the garbage collector.
+  ##
+  keep: true
+  ## @param crd.scope  If you are using CRDs from version v1beta2 or higher this allows you to select if you want to use CRDs scope "cluster" or "namespaced"
+  ## when using CRDs in version v1beta1, this must be set to scope "cluster"
+  ##
+  scope: cluster
+
+## @param nameOverride String to partially override app.fullname template (will maintain the release name)
+##
+nameOverride: ""
+## @param fullnameOverride String to fully override app.fullname template
+##
+fullnameOverride: ""
+## @param namespaceOverride String to fully override common.names.namespace
+##
+namespaceOverride: ""
+## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
+##
+kubeVersion: ""
+## @param dnsPolicy DNS Policy for pod
+## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+## E.g.
+## dnsPolicy: ClusterFirst
+##
+dnsPolicy: ""
+## @param dnsConfig DNS Configuration pod
+## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+## E.g.
+## dnsConfig:
+##   options:
+##   - name: ndots
+##     value: "4"
+##
+dnsConfig: {}
+## @param clusterDomain Default Kubernetes cluster domain
+##
+clusterDomain: cluster.local
+## @param extraDeploy Array of extra objects to deploy with the release
+##
+extraDeploy: []
+## @param commonLabels Add labels to all the deployed resources (sub-charts are not considered). Evaluated as a template
+##
+commonLabels: {}
+## @param commonAnnotations Common annotations to add to all Mongo resources (sub-charts are not considered). Evaluated as a template
+##
+commonAnnotations: {}
+## @param deploymentAnnotations Annotations to add to the deployment
+##
+deploymentAnnotations: {}
+## @param topologyKey Override common lib default topology key. If empty - "kubernetes.io/hostname" is used
+## i.e. topologyKey: topology.kubernetes.io/zone
+##
+topologyKey: ""
+## @param serviceBindings.enabled Create secret for service binding (Experimental)
+## Ref: https://servicebinding.io/service-provider/
+##
+serviceBindings:
+  enabled: false
+## @param enableServiceLinks Whether information about services should be injected into pod's environment variable
+## The environment variables injected by service links are not used, but can lead to slow boot times or slow running of the scripts when there are many services in the current namespace.
+## If you experience slow pod startups or slow running of the scripts you probably want to set this to `false`.
+##
+enableServiceLinks: true
+## Enable diagnostic mode in the deployment
+##
+diagnosticMode:
+  ## @param diagnosticMode.enabled Enable diagnostic mode (all probes will be disabled and the command will be overridden)
+  ##
+  enabled: false
+  ## @param diagnosticMode.command Command to override all containers in the deployment
+  ##
+  command:
+    - sleep
+  ## @param diagnosticMode.args Args to override all containers in the deployment
+  ##
+  args:
+    - infinity
+
+existingSecretName: ""
+
+kind: istio
+
+removeWaf: false
+
+## @param playground.enabled  Enables the AppSec “playground” mode. When set to true, the deployment exposes a sandbox/testing environment intended for demonstrations, rule testing, or 
+## security feature validation. This mode should not be enabled in production environments.
+##
+playground:
+  enabled: false
+
+## CrowdSec is an open-source project which provides crowd-sourced protection against malicious IP addresses.
+## ref: https://docs.crowdsec.net/u/getting_started/installation/kubernetes
+##
+crowdSec:
+  ## @param crowdSec.enabled  Enables or disables CrowdSec integration. When set to true, the application will query CrowdSec to obtain security decisions (ban, captcha, allow, etc.)
+  ## and enforce them.
+  ##
+  enabled: false
+  ## @param crowdSec.mode  Defines how the application behaves when CrowdSec provides a decision.
+  ## - prevent — actively blocks malicious IPs based on CrowdSec decisions.
+  ## - monitor — logs malicious activity but does not block traffic.
+  ##
+  mode: prevent
+  ## @param crowdSec.logging  Controls whether the CrowdSec middleware logs decisions.
+  ## - enabled — logs when a request is allowed, blocked, or challenged.
+  ## - disabled — suppresses all CrowdSec-related logs.
+  ##
+  logging: enabled
+  ## @param crowdSec.api.uri  Specifies the CrowdSec LAPI (Local API) endpoint used to retrieve decision streams. 
+  ## The application connects to this URL to get the latest IP bans and allows.
+  ##
+  api:
+    url: http://crowdsec-service:8080/v1/decisions/stream
+  auth:
+    ## @param crowdSec.auth.method  Defines how the application authenticates against CrowdSec LAPI.
+    ## - apikey — uses an API key for authentication (recommended).
+    ## - none — no authentication (only for trusted environments).
+    ## @param crowdSec.auth.data  The authentication data used by the selected auth method.
+    ## If auth.method: apikey, this value is the API key issued by CrowdSec LAPI. Must match the key configured in your CrowdSec .yaml configurations or cscli output.
+    ##
+    method: apikey
+    data: "00000000000000000000000000000000"
+
+## Fog is the backend service used by the OpenAppSec agent to retrieve configuration, policies, threat intelligence updates, and to send telemetry. By default, the
+## agent communicates with the standard Fog endpoint defined by the system.
+##
+customFog:
+  ## @param customFog.enabled  Enables use of a custom Fog service endpoint. Set to true when you need the agent to connect to a specific Fog URL
+  ##  (e.g., private environment, dedicated tenant, or custom Check Point endpoint).
+  ## @param customFog.fogAddress  Full HTTPS URL of the custom Fog service. Must be reachable from the agent.
+  ##
+  enabled: true
+  fogAddress: "https://inext-agents.cloud.ngen.checkpoint.com/"
+
+## The default configuration files provided above are set to detect-learn mode, which is recommended for new deployments to allow the machine
+## learning engine sufficient learning before moving to prevent-learn mode. You can then later easily reconfigure the open-appsec-best-practice-policy custom policy 
+## resource to prevent-learn mode.
+##
+defaultConfigurations:
+  enabled: false
+  ## @param defaultConfigurations.mode
+  ## options: "detect-learn", "prevent"
+  ##
+  mode: detect-learn
+
+## Agent is injected as an additional sidecar container alongside the Istio proxy inside application pods. When deployed with Istio, the agent receives mirrored
+## inbound traffic from Envoy and applies advanced WAF security controls such as attack detection, anomaly scoring, and policy enforcement. It operates transparently
+## to the application and Istio proxy, requiring no application changes. The injector automates the placement and configuration of the agent based on namespace or pod
+## labels, enabling seamless security integration across the mesh.
+agent:
+  cpu: "200m"
+  ## open-appsec Agent image version
+  ## ref: 
+  ## @param agent.image.registry [default: REGISTRY_NAME] open-appsec Agent image registry
+  ## @param agent.image.repository [default: REPOSITORY_NAME/open-appsec Agent] open-appsec Agent image repository
+  ## @skip agent.image.tag open-appsec Agent image tag (immutable tags are recommended)
+  ## @param agent.image.digest open-appsec Agent image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param agent.image.debug Enable debug mode for open-appsec Agent image
+  ## @param agent.image.pullPolicy open-appsec Agent image pull policy
+  ## @param agent.image.pullSecrets open-appsec Agent image pull secrets
+  ##
+  image:
+    registry: ghcr.io
+    repository: openappsec/agent
+    tag: "1.1.32"
+    digest: ""
+    debug: false
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ##
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    pullSecrets: []
+  namespaceSelector:
+    matchLabels:
+      inject-waf-attachment: "true"
+  objectSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: istio-ingress
+
+  userEmail: ""
+  ## @param agent.agentToken Deployment profile token from central management WebUI (SaaS) to connect your open-appsec deployment to the central WebUI (SaaS), also make
+  ## sure to set appsec.mode to managed when you provide the token.
+  ## ref: https://docs.openappsec.io/getting-started/using-the-web-ui-saas/create-a-profile
+  ##
+  agentToken: ""
+
+  initContainer:
+    image:
+      registry: ghcr.io
+      repository: openappsec/openappsec-envoy-filters
+      tag: "1.1.32"
+      digest: ""
+      debug: false
+
+  ## @param agent.command Override default container command (useful when using custom images)
+  ##
+  command:
+    - /cp-nano-agent
+  ## @param agent.args Override default container args (useful when using custom images)
+  ##
+  args: []
+
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+  ## @param agent.persistence.enabled Enable persistence
+  ## @param agent.persistence.annotations Persistent Volume Claim annotations
+  ## @param agent.persistence.accessMode Persistent Volume Access Mode
+  ## @param agent.persistence.accessModes Persistent Volume Access Modes
+  ## @param agent.persistence.storageClass Storage class to use with the PVC
+  ## @param agent.persistence.existingClaim If you want to reuse an existing claim, you can pass the name of the PVC using the existingClaim variable.
+  ## @param agent.persistence.size Size for the PV
+  ##
+  persistence:
+    enabled: false
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    config:
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 1Gi
+      annotations: {}
+      existingClaim: ""
+      ## @param agent.persistence.config.selector Selector to match an existing Persistent Volume for Agent config data PVC
+      ## If set, the PVC can't have a PV dynamically provisioned for it
+      ## E.g.
+      ## selector:
+      ##   matchLabels:
+      ##     app: my-app
+      ##
+      selector: {}
+      ## @param agent.persistence.config.dataSource Custom PVC data source
+      ##
+      dataSource: {}
+    data:
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 10Gi
+      annotations: {}
+      existingClaim: ""
+      ## @param agent.persistence.data.selector Selector to match an existing Persistent Volume for Agent config data PVC
+      ## If set, the PVC can't have a PV dynamically provisioned for it
+      ## E.g.
+      ## selector:
+      ##   matchLabels:
+      ##     app: my-app
+      ##
+      selector: {}
+      ## @param agent.persistence.data.dataSource Custom PVC data source
+      ##
+      dataSource: {}
+
+appsec:
+  configMapName: appsec-settings-configmap
+  secretName: appsec-settings-secret
+
+  className: ""
+  proxy: ""
+
+  command: /cp-nano-agent
+
+  #proxy:
+
+  learning:
+    enabled: true
+    ## @param appsec.learning.nameOverride String to partially override app.fullname template (will maintain the release name)
+    ##
+    nameOverride: ""
+    ## @param appsec.learning.fullnameOverride String to fully override app.fullname template
+    ##
+    fullnameOverride: ""
+    ## @param appsec.learning.dnsPolicy DNS Policy for pod
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+    ## E.g.
+    ## dnsPolicy: ClusterFirst
+    ##
+    dnsPolicy: ""
+    ## @param appsec.learning.dnsConfig DNS Configuration pod
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+    ## E.g.
+    ## dnsConfig:
+    ##   options:
+    ##   - name: ndots
+    ##     value: "4"
+    ##
+    dnsConfig: {}
+    ## @param hostUsers controls whether the container is allowed to share user namespaces
+    ## with the host. When enabled, the pod may run with host-level user mappings,
+    ## which can grant elevated privileges. This should remain disabled unless the
+    ## workload explicitly requires host user access for system-level operations.
+    ##
+    hostUsers: false
+
+    ## open-appsec Learning image version
+    ## ref: 
+    ## @param learning.image.registry [default: REGISTRY_NAME] open-appsec Learning image registry
+    ## @param learning.image.repository [default: REPOSITORY_NAME/open-appsec Learning] open-appsec Learning image repository
+    ## @skip learning.image.tag open-appsec Learning image tag (immutable tags are recommended)
+    ## @param learning.image.digest open-appsec Learning image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+    ## @param learning.image.pullPolicy open-appsec Learning image pull policy
+    ## @param learning.image.pullSecrets open-appsec Learning image pull secrets
+    ##
+    image:
+      registry: ghcr.io
+      repository: openappsec/smartsync
+      tag: latest
+      digest: ""
+      debug: false
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+      ##
+      pullPolicy: Always
+      ## Optionally specify an array of imagePullSecrets.
+      ## Secrets must be manually created in the namespace.
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ##
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      pullSecrets: []
+
+    ## @param appsec.learning.replicaCount Number of open-appsec appsec.learning nodes
+    ##
+    replicaCount: 1
+    ## @param appsec.learning.revisionHistoryLimit  
+    ##
+    revisionHistoryLimit: 1
+    ## @param appsec.learning.updateStrategy.type Set up update strategy for open-appsec appsec.learning installation.
+    ## Set to Recreate if you use persistent volume that cannot be mounted by more than one pods to make sure the pods is destroyed first.
+    ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+    ## Example:
+    ## updateStrategy:
+    ##  type: RollingUpdate
+    ##  rollingUpdate:
+    ##    maxSurge: 25%
+    ##    maxUnavailable: 25%
+    ##
+    updateStrategy:
+      type: RollingUpdate
+    ## @param appsec.learning.automountServiceAccountToken Mount Service Account token in pod
+    ##
+    automountServiceAccountToken: false
+    ## @param appsec.learning.hostAliases Add deployment host aliases
+    ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+    ##
+    hostAliases: []
+    ## @param appsec.learning.schedulerName Alternative scheduler
+    ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+    ##
+    schedulerName: ""
+    ## @param appsec.learning.terminationGracePeriodSeconds In seconds, time the given to the open-appsec appsec.learning pod needs to terminate gracefully
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
+    ##
+    terminationGracePeriodSeconds: ""
+    ## @param appsec.learning.priorityClassName Priority class name
+    ## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+    ##
+    priorityClassName: ""
+    ## @param appsec.learning.deploymentAnnotations Annotations to add to the deployment
+    ##
+    deploymentAnnotations: {}
+    ## @param appsec.learning.podLabels Extra labels for open-appsec appsec.learning pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    podLabels: {}
+    ## @param appsec.learning.podAnnotations open-appsec appsec.learning Pod annotations
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    ##
+    podAnnotations: {}
+    ## @param appsec.learning.podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAffinityPreset: ""
+    ## @param appsec.learning.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAntiAffinityPreset: soft
+    ## @param containerName  Name of the container
+    ##
+    containerName: learning
+    ## @param appsec.learning.containerPorts.http Container HTTP port
+    ##
+    containerPorts:
+      http: 80
+    ## @param extraPorts Extra ports for container deployment
+    ##
+    extraPorts: []
+    ## Node affinity preset
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+    ## @param appsec.learning.nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## @param appsec.learning.nodeAffinityPreset.key Node label key to match Ignored if `affinity` is set.
+    ## @param appsec.learning.nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+    ##
+    nodeAffinityPreset:
+      type: ""
+      ## E.g.
+      ## key: "kubernetes.io/e2e-az-name"
+      ##
+      key: ""
+      ## E.g.
+      ## values:
+      ##   - e2e-az1
+      ##   - e2e-az2
+      ##
+      values: []
+    ## @param appsec.learning.affinity Affinity for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+    ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+    ##
+    affinity: {}
+    ## @param nodeSelector Node labels for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ##
+    nodeSelector: {}
+    ## @param appsec.learning.tolerations Tolerations for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    ##
+    tolerations: []
+    ## @param appsec.learning.topologySpreadConstraints Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in
+    ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    ##
+    ## topologySpreadConstraints:
+    ##   - maxSkew: 1
+    ##     topologyKey: failure-domain.beta.kubernetes.io/zone
+    ##     whenUnsatisfiable: DoNotSchedule
+    ##
+    topologySpreadConstraints: []
+    ## @param appsec.learning.podSecurityContext.enabled Enable securityContext on for open-appsec appsec.learning deployment
+    ## @param appsec.learning.podSecurityContext.fsGroup Group to configure permissions for volumes
+    ## @param appsec.learning.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+    ## @param appsec.learning.podSecurityContext.runAsNonRoot Set pod's Security Context runAsNonRoot
+    ## @param appsec.learning.podSecurityContext.sysctls Set kernel settings using the sysctl interface
+    ## @param appsec.learning.podSecurityContext.seccompProfile Set pod's Security Context seccomp profile
+    ## @param appsec.learning.podSecurityContext.supplementalGroups Set filesystem extra groups
+    ##
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1000
+      fsGroupChangePolicy: Always
+      runAsNonRoot: true
+      sysctls: []
+      supplementalGroups: []
+      seccompProfile:
+        type: RuntimeDefault
+    ## Configure Container Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ## @param appsec.learning.containerSecurityContext.enabled Enabled containers' Security Context
+    ## @param appsec.learning.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+    ## @param appsec.learning.containerSecurityContext.runAsUser Set containers' Security Context runAsUser
+    ## @param appsec.learning.containerSecurityContext.runAsGroup Set containers' Security Context runAsGroup
+    ## @param appsec.learning.containerSecurityContext.runAsNonRoot Set container's Security Context runAsNonRoot
+    ## @param appsec.learning.containerSecurityContext.privileged Set container's Security Context privileged
+    ## @param appsec.learning.containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
+    ## @param appsec.learning.containerSecurityContext.allowPrivilegeEscalation Set container's Security Context allowPrivilegeEscalation
+    ## @param appsec.learning.containerSecurityContext.capabilities.drop List of capabilities to be dropped
+    ## @param appsec.learning.containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+    ##
+    containerSecurityContext:
+      enabled: true
+      seLinuxOptions: {}
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      privileged: false
+      readOnlyRootFilesystem: false
+      allowPrivilegeEscalation: false
+      # capabilities:
+      #   drop: ["ALL"]
+      seccompProfile:
+        type: "RuntimeDefault"
+    ## open-appsec appsec.learning containers' resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, 
+    ## large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "gs-3xsmall"
+    ## @param appsec.learning.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 2
+    ##     memory: 512Mi
+    ##   limits:
+    ##     cpu: 3
+    ##     memory: 1024Mi
+    ##
+    resources: {}
+    ## open-appsec appsec.learning containers' liveness probe
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+    ## @param appsec.learning.livenessProbe.enabled Enable livenessProbe
+    ## @param appsec.learning.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+    ## @param appsec.learning.livenessProbe.periodSeconds Period seconds for livenessProbe
+    ## @param appsec.learning.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+    ## @param appsec.learning.livenessProbe.failureThreshold Failure threshold for livenessProbe
+    ## @param appsec.learning.livenessProbe.successThreshold Success threshold for livenessProbe
+    ##
+    livenessProbe:
+      enabled: true
+      httpGet:
+        path: /health/live
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 20
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 10
+    ## open-appsec appsec.learning containers' readinessProbe probe
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+    ## @param appsec.learning.readinessProbe.enabled Enable readinessProbe
+    ## @param appsec.learning.readinessProbe.path Path for readinessProbe
+    ## @param appsec.learning.readinessProbe.scheme Scheme for readinessProbe
+    ## @param appsec.learning.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+    ## @param appsec.learning.readinessProbe.periodSeconds Period seconds for readinessProbe
+    ## @param appsec.learning.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+    ## @param appsec.learning.readinessProbe.failureThreshold Failure threshold for readinessProbe
+    ## @param appsec.learning.readinessProbe.successThreshold Success threshold for readinessProbe
+    ##
+    readinessProbe:
+      enabled: true
+      httpGet:
+        path: /health/ready
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 3
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 10
+    ## @param appsec.learning.startupProbe.enabled Enable startupProbe
+    ## @param appsec.learning.startupProbe.path Path for readinessProbe
+    ## @param appsec.learning.startupProbe.scheme Scheme for readinessProbe
+    ## @param appsec.learning.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+    ## @param appsec.learning.startupProbe.periodSeconds Period seconds for startupProbe
+    ## @param appsec.learning.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+    ## @param appsec.learning.startupProbe.failureThreshold Failure threshold for startupProbe
+    ## @param appsec.learning.startupProbe.successThreshold Success threshold for startupProbe
+    ##
+    startupProbe:
+      enabled: false
+      httpGet:
+        path: ""
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 5
+    ## @param appsec.learning.customLivenessProbe Custom livenessProbe that overrides the default one
+    ##
+    customLivenessProbe: {}
+    ## @param appsec.learning.customReadinessProbe Custom readinessProbe that overrides the default one
+    ##
+    customReadinessProbe: {}
+    ## @param appsec.learning.customStartupProbe Custom startupProbe that overrides the default one
+    ##
+    customStartupProbe: {}
+    ## @param appsec.learning.lifecycleHooks for the open-appsec appsec.learning container(s) to automate configuration before or after startup
+    ##
+    lifecycleHooks: {}
+    ## @param appsec.learning.sidecars Attach additional sidecar containers to the open-appsec appsec.learning pod
+    ## Example:
+    ## sidecars:
+    ##   - name: your-image-name
+    ##     image: your-image
+    ##     imagePullPolicy: Always
+    ##     ports:
+    ##       - name: portname
+    ##         containerPort: 1234
+    ##
+    sidecars: []
+    ## @param initContainers Add additional init containers to the open-appsec appsec.learning pod(s)
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+    ## e.g:
+    ## initContainers:
+    ##  - name: your-image-name
+    ##    image: your-image
+    ##    imagePullPolicy: Always
+    ##    command: ['sh', '-c', 'echo "hello world"']
+    ##
+    initContainers: []
+    ## @param extraVolumes Additional volumes for the open-appsec appsec.learning pod
+    ## Example:
+    ## extraVolumes:
+    ##   - name: my-volume
+    ##     emptyDir: {}
+    ##
+    extraVolumes: []
+    ## @param extraVolumeMounts Additional volume mounts for the open-appsec appsec.learning container
+    ## Example:
+    ## extraVolumeMounts:
+    ##   - name: my-volume
+    ##     mountPath: /opt/startechnica/bav/my-stuff
+    ##
+    extraVolumeMounts: []
+    ## @param extraEnvVarsCM List of existing ConfigMap containing extra env vars for open-appsec appsec.learning nodes
+    ##
+    extraEnvVarsCMs: []
+    ## @param extraEnvVarsSecrets List of secrets with extra environment variables for open-appsec appsec.learning pods
+    ##
+    extraEnvVarsSecrets: []
+    ## @param extraEnvVars Array containing extra env vars to configure open-appsec appsec.learning
+    ## For example:
+    ## extraEnvVars:
+    ##  - name: GF_DEFAULT_INSTANCE_NAME
+    ##    value: my-instance
+    ##
+    extraEnvVars: []
+    ## @param extraConfigmaps Array to mount extra ConfigMaps to configure open-appsec appsec.learning
+    ## For example:
+    ## extraConfigmaps:
+    ##   - name: myconfigmap
+    ##     mountPath: /opt/bitnami/desired-path
+    ##     subPath: file-name.extension (optional)
+    ##     readOnly: true
+    ##
+    extraConfigmaps: []
+    ## @param appsec.learning.command Override default container command (useful when using custom images)
+    ##
+    command: []
+    ## @param appsec.learning.args Override default container args (useful when using custom images)
+    ##
+    args: []
+
+    ## Service parameters
+    ##
+    service:
+      ## @param appsec.learning.service.type Kubernetes Service type
+      ##
+      type: ClusterIP
+      ## @param appsec.learning.service.clusterIP Gunicorn service Cluster IP
+      ## e.g.:
+      ## clusterIP: None
+      ##
+      clusterIP: ""
+      ## @param appsec.learning.service.ports.http AppSec learning HTTP service port
+      ##
+      ports:
+        http: 80
+        https: 443
+      ## @param appsec.learning.service.nodePorts.https Specify the nodePort value for the LoadBalancer and NodePort HTTPS service types
+      ## @param appsec.learning.service.nodePorts.metrics Specify the nodePort value for the LoadBalancer and NodePort metrics service types
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      ##
+      nodePorts:
+        http: ""
+        https: ""
+      ## @param appsec.learning.service.loadBalancerIP loadBalancerIP if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ##
+      loadBalancerIP: ""
+      ## @param appsec.learning.service.loadBalancerClass loadBalancerClass if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ##
+      loadBalancerClass: ""
+      ## @param appsec.learning.service.loadBalancerSourceRanges loadBalancerSourceRanges if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ## e.g:
+      ## loadBalancerSourceRanges:
+      ##   - 10.10.10.0/24
+      ##
+      loadBalancerSourceRanges: []
+      ## @param appsec.learning.service.annotations Provide any additional annotations which may be required.
+      ## This can be used to set the LoadBalancer service type to internal only.
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+      ##
+      annotations: {}
+      ## @param appsec.learning.service.externalTrafficPolicy Gunicorn service external traffic policy
+      ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+      ##
+      externalTrafficPolicy: Cluster
+      ## @param appsec.learning.service.extraPorts Extra port to expose on Gunicorn service
+      ##
+      extraPorts: []
+      ## @param appsec.learning.service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+      ## If "ClientIP", consecutive client requests will be directed to the same Pod
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+      ##
+      sessionAffinity: None
+      ## @param appsec.learning.service.sessionAffinityConfig Additional settings for the sessionAffinity
+      ## sessionAffinityConfig:
+      ##   clientIP:
+      ##     timeoutSeconds: 300
+      ##
+      sessionAffinityConfig: {}
+
+    ## Enable persistence using Persistent Volume Claims
+    ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+    ## @param appsec.learning.storage.persistence.enabled Enable persistence
+    ## @param appsec.learning.storage.persistence.accessModes Persistent Volume Access Modes
+    ## @param appsec.learning.storage.persistence.annotations Persistent Volume Claim annotations
+    ## @param appsec.learning.storage.persistence.storageClass Storage class to use with the PVC
+    ## @param appsec.learning.storage.persistence.existingClaim If you want to reuse an existing claim, you can pass the name of the PVC using the existingClaim variable.
+    ## @param appsec.learning.storage.persistence.size Size for the PV
+    ##
+    persistence:
+      enabled: false
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      ##
+      storageClass: ""
+      accessModes:
+        - ReadWriteMany
+      size: 10Gi
+      annotations: {}
+      existingClaim: ""
+      ## @param appsec.learning.storage.persistence.selector Selector to match an existing Persistent Volume for Storage PVC
+      ## If set, the PVC can't have a PV dynamically provisioned for it
+      ## E.g.
+      ## selector:
+      ##   matchLabels:
+      ##     app: my-app
+      ##
+      selector: {}
+      ## @param appsec.learning.storage.persistence.dataSource Custom PVC data source
+      ##
+      dataSource: {}
+
+    ## ServiceAccount configuration for the open-appsec Learning
+    ##
+    serviceAccount:
+      ## @param appsec.learning.serviceAccount.create Specifies whether a ServiceAccount should be created
+      ##
+      create: true
+      ## @param appsec.learning.serviceAccount.name The name of the ServiceAccount to use.
+      ## If not set and create is true, a name is generated using the common.names.fullname template
+      ##
+      name: ""
+      ## @param appsec.learning.serviceAccount.automountServiceAccountToken Automount service account token for the open-appsec learning service account
+      ##
+      automountServiceAccountToken: false
+      ## @param appsec.learning.serviceAccount.annotations Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
+      ##
+      annotations: {}
+
+  storage:
+    enabled: true
+
+    ## open-appsec Storage image version
+    ## ref: 
+    ## @param storage.image.registry [default: REGISTRY_NAME] open-appsec Storage image registry
+    ## @param storage.image.repository [default: REPOSITORY_NAME/open-appsec Storage] open-appsec Storage image repository
+    ## @skip storage.image.tag open-appsec Storage image tag (immutable tags are recommended)
+    ## @param storage.image.digest open-appsec Storage image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+    ## @param storage.image.pullPolicy open-appsec Storage image pull policy
+    ## @param storage.image.pullSecrets open-appsec Storage image pull secrets
+    ##
+    image:
+      registry: ghcr.io
+      repository: openappsec/smartsync-shared-files
+      tag: latest
+      digest: ""
+      debug: false
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+      ##
+      pullPolicy: Always
+      ## Optionally specify an array of imagePullSecrets.
+      ## Secrets must be manually created in the namespace.
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ##
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      pullSecrets: []
+
+    ## @param appsec.storage.replicaCount Number of open-appsec appsec.storage nodes
+    ##
+    replicaCount: 1
+    ## @param appsec.storage.revisionHistoryLimit  
+    ##
+    revisionHistoryLimit: 1
+    ## @param appsec.storage.updateStrategy.type Set up update strategy for open-appsec appsec.storage installation.
+    ## Set to Recreate if you use persistent volume that cannot be mounted by more than one pods to make sure the pods is destroyed first.
+    ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+    ## Example:
+    ## updateStrategy:
+    ##  type: RollingUpdate
+    ##  rollingUpdate:
+    ##    maxSurge: 25%
+    ##    maxUnavailable: 25%
+    ##
+    updateStrategy:
+      type: RollingUpdate
+    ## @param appsec.storage.automountServiceAccountToken Mount Service Account token in pod
+    ##
+    automountServiceAccountToken: false
+    ## @param appsec.storage.hostAliases Add deployment host aliases
+    ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+    ##
+    hostAliases: []
+    ## @param appsec.storage.schedulerName Alternative scheduler
+    ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+    ##
+    schedulerName: ""
+    ## @param appsec.storage.terminationGracePeriodSeconds In seconds, time the given to the open-appsec appsec.storage pod needs to terminate gracefully
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
+    ##
+    terminationGracePeriodSeconds: ""
+    ## @param appsec.storage.priorityClassName Priority class name
+    ## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+    ##
+    priorityClassName: ""
+    ## @param appsec.storage.deploymentAnnotations Annotations to add to the deployment
+    ##
+    deploymentAnnotations: {}
+    ## @param appsec.storage.podLabels Extra labels for open-appsec appsec.storage pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    podLabels: {}
+    ## @param appsec.storage.podAnnotations open-appsec appsec.storage Pod annotations
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    ##
+    podAnnotations: {}
+    ## @param appsec.storage.podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAffinityPreset: ""
+    ## @param appsec.storage.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAntiAffinityPreset: soft
+    ## @param containerName  Name of the container
+    ##
+    containerName: storage
+    ## @param appsec.storage.containerPorts.http Container HTTP port
+    ##
+    containerPorts:
+      http: 80
+    ## @param extraPorts Extra ports for container deployment
+    ##
+    extraPorts: []
+    ## Node affinity preset
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+    ## @param appsec.storage.nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## @param appsec.storage.nodeAffinityPreset.key Node label key to match Ignored if `affinity` is set.
+    ## @param appsec.storage.nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+    ##
+    nodeAffinityPreset:
+      type: ""
+      ## E.g.
+      ## key: "kubernetes.io/e2e-az-name"
+      ##
+      key: ""
+      ## E.g.
+      ## values:
+      ##   - e2e-az1
+      ##   - e2e-az2
+      ##
+      values: []
+    ## @param appsec.storage.affinity Affinity for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+    ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+    ##
+    affinity: {}
+    ## @param nodeSelector Node labels for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ##
+    nodeSelector: {}
+    ## @param appsec.storage.tolerations Tolerations for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    ##
+    tolerations: []
+    ## @param appsec.storage.topologySpreadConstraints Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in
+    ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    ##
+    ## topologySpreadConstraints:
+    ##   - maxSkew: 1
+    ##     topologyKey: failure-domain.beta.kubernetes.io/zone
+    ##     whenUnsatisfiable: DoNotSchedule
+    ##
+    topologySpreadConstraints: []
+    ## @param appsec.storage.podSecurityContext.enabled Enable securityContext on for open-appsec appsec.storage deployment
+    ## @param appsec.storage.podSecurityContext.fsGroup Group to configure permissions for volumes
+    ## @param appsec.storage.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+    ## @param appsec.storage.podSecurityContext.runAsNonRoot Set pod's Security Context runAsNonRoot
+    ## @param appsec.storage.podSecurityContext.sysctls Set kernel settings using the sysctl interface
+    ## @param appsec.storage.podSecurityContext.seccompProfile Set pod's Security Context seccomp profile
+    ## @param appsec.storage.podSecurityContext.supplementalGroups Set filesystem extra groups
+    ##
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1000
+      fsGroupChangePolicy: Always
+      runAsNonRoot: true
+      sysctls: []
+      supplementalGroups: []
+      seccompProfile:
+        type: RuntimeDefault
+    ## Configure Container Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ## @param appsec.storage.containerSecurityContext.enabled Enabled containers' Security Context
+    ## @param appsec.storage.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+    ## @param appsec.storage.containerSecurityContext.runAsUser Set containers' Security Context runAsUser
+    ## @param appsec.storage.containerSecurityContext.runAsGroup Set containers' Security Context runAsGroup
+    ## @param appsec.storage.containerSecurityContext.runAsNonRoot Set container's Security Context runAsNonRoot
+    ## @param appsec.storage.containerSecurityContext.privileged Set container's Security Context privileged
+    ## @param appsec.storage.containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
+    ## @param appsec.storage.containerSecurityContext.allowPrivilegeEscalation Set container's Security Context allowPrivilegeEscalation
+    ## @param appsec.storage.containerSecurityContext.capabilities.drop List of capabilities to be dropped
+    ## @param appsec.storage.containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+    ##
+    containerSecurityContext:
+      enabled: true
+      seLinuxOptions: {}
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      privileged: false
+      readOnlyRootFilesystem: false
+      allowPrivilegeEscalation: false
+      # capabilities:
+      #   drop: ["ALL"]
+      seccompProfile:
+        type: "RuntimeDefault"
+    ## open-appsec appsec.storage containers' resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, 
+    ## large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "gs-3xsmall"
+    ## @param appsec.storage.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 2
+    ##     memory: 512Mi
+    ##   limits:
+    ##     cpu: 3
+    ##     memory: 1024Mi
+    ##
+    resources: {}
+    ## open-appsec appsec.storage containers' liveness probe
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+    ## @param appsec.storage.livenessProbe.enabled Enable livenessProbe
+    ## @param appsec.storage.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+    ## @param appsec.storage.livenessProbe.periodSeconds Period seconds for livenessProbe
+    ## @param appsec.storage.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+    ## @param appsec.storage.livenessProbe.failureThreshold Failure threshold for livenessProbe
+    ## @param appsec.storage.livenessProbe.successThreshold Success threshold for livenessProbe
+    ##
+    livenessProbe:
+      enabled: true
+      httpGet:
+        path: /health/live
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 20
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 10
+    ## open-appsec appsec.storage containers' readinessProbe probe
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+    ## @param appsec.storage.readinessProbe.enabled Enable readinessProbe
+    ## @param appsec.storage.readinessProbe.path Path for readinessProbe
+    ## @param appsec.storage.readinessProbe.scheme Scheme for readinessProbe
+    ## @param appsec.storage.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+    ## @param appsec.storage.readinessProbe.periodSeconds Period seconds for readinessProbe
+    ## @param appsec.storage.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+    ## @param appsec.storage.readinessProbe.failureThreshold Failure threshold for readinessProbe
+    ## @param appsec.storage.readinessProbe.successThreshold Success threshold for readinessProbe
+    ##
+    readinessProbe:
+      enabled: true
+      httpGet:
+        path: /health/ready
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 3
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 10
+    ## @param appsec.storage.startupProbe.enabled Enable startupProbe
+    ## @param appsec.storage.startupProbe.path Path for readinessProbe
+    ## @param appsec.storage.startupProbe.scheme Scheme for readinessProbe
+    ## @param appsec.storage.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+    ## @param appsec.storage.startupProbe.periodSeconds Period seconds for startupProbe
+    ## @param appsec.storage.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+    ## @param appsec.storage.startupProbe.failureThreshold Failure threshold for startupProbe
+    ## @param appsec.storage.startupProbe.successThreshold Success threshold for startupProbe
+    ##
+    startupProbe:
+      enabled: false
+      httpGet:
+        path: ""
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 5
+    ## @param appsec.storage.customLivenessProbe Custom livenessProbe that overrides the default one
+    ##
+    customLivenessProbe: {}
+    ## @param appsec.storage.customReadinessProbe Custom readinessProbe that overrides the default one
+    ##
+    customReadinessProbe: {}
+    ## @param appsec.storage.customStartupProbe Custom startupProbe that overrides the default one
+    ##
+    customStartupProbe: {}
+    ## @param appsec.storage.lifecycleHooks for the open-appsec appsec.storage container(s) to automate configuration before or after startup
+    ##
+    lifecycleHooks: {}
+    ## @param appsec.storage.sidecars Attach additional sidecar containers to the open-appsec appsec.storage pod
+    ## Example:
+    ## sidecars:
+    ##   - name: your-image-name
+    ##     image: your-image
+    ##     imagePullPolicy: Always
+    ##     ports:
+    ##       - name: portname
+    ##         containerPort: 1234
+    ##
+    sidecars: []
+    ## @param appsec.storage.initContainers Add additional init containers to the open-appsec appsec.storage pod(s)
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+    ## e.g:
+    ## initContainers:
+    ##  - name: your-image-name
+    ##    image: your-image
+    ##    imagePullPolicy: Always
+    ##    command: ['sh', '-c', 'echo "hello world"']
+    ##
+    initContainers: []
+    ## @param appsec.storage.extraVolumes Additional volumes for the open-appsec appsec.storage pod
+    ## Example:
+    ## extraVolumes:
+    ##   - name: my-volume
+    ##     emptyDir: {}
+    ##
+    extraVolumes: []
+    ## @param appsec.storage.extraVolumeMounts Additional volume mounts for the open-appsec appsec.storage container
+    ## Example:
+    ## extraVolumeMounts:
+    ##   - name: my-volume
+    ##     mountPath: /opt/startechnica/bav/my-stuff
+    ##
+    extraVolumeMounts: []
+    ## @param appsec.storage.extraEnvVarsCM List of existing ConfigMap containing extra env vars for open-appsec appsec.storage nodes
+    ##
+    extraEnvVarsCMs: []
+    ## @param appsec.storage.extraEnvVarsSecrets List of secrets with extra environment variables for open-appsec appsec.storage pods
+    ##
+    extraEnvVarsSecrets: []
+    ## @param appsec.storage.extraEnvVars Array containing extra env vars to configure open-appsec appsec.storage
+    ## For example:
+    ## extraEnvVars:
+    ##  - name: GF_DEFAULT_INSTANCE_NAME
+    ##    value: my-instance
+    ##
+    extraEnvVars: []
+    ## @param appsec.storage.extraConfigmaps Array to mount extra ConfigMaps to configure open-appsec appsec.storage
+    ## For example:
+    ## extraConfigmaps:
+    ##   - name: myconfigmap
+    ##     mountPath: /opt/bitnami/desired-path
+    ##     subPath: file-name.extension (optional)
+    ##     readOnly: true
+    ##
+    extraConfigmaps: []
+    ## @param appsec.storage.command Override default container command (useful when using custom images)
+    ##
+    command: []
+    ## @param appsec.storage.args Override default container args (useful when using custom images)
+    ##
+    args: []
+
+    ## Enable persistence using Persistent Volume Claims
+    ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+    ## @param appsec.storage.persistence.enabled Enable persistence
+    ## @param appsec.storage.persistence.accessModes Persistent Volume Access Modes
+    ## @param appsec.storage.persistence.annotations Persistent Volume Claim annotations
+    ## @param appsec.storage.persistence.storageClass Storage class to use with the PVC
+    ## @param appsec.storage.persistence.existingClaim If you want to reuse an existing claim, you can pass the name of the PVC using the existingClaim variable.
+    ## @param appsec.storage.persistence.size Size for the PV
+    ##
+    persistence:
+      enabled: false
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      ##
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 1Gi
+      annotations: {}
+      existingClaim: ""
+      ## @param appsec.storage.persistence.selector Selector to match an existing Persistent Volume for Storage PVC
+      ## If set, the PVC can't have a PV dynamically provisioned for it
+      ## E.g.
+      ## selector:
+      ##   matchLabels:
+      ##     app: my-app
+      ##
+      selector: {}
+      ## @param appsec.storage.persistence.dataSource Custom PVC data source
+      ##
+      dataSource: {}
+
+    ## Service parameters
+    ##
+    service:
+      ## @param appsec.storage.service.type Kubernetes Service type
+      ##
+      type: ClusterIP
+      ## @param appsec.storage.service.clusterIP Gunicorn service Cluster IP
+      ## e.g.:
+      ## clusterIP: None
+      ##
+      clusterIP: ""
+      ## @param appsec.storage.service.ports.http AppSec Storage HTTP service port
+      ##
+      ports:
+        http: 80
+        https: 443
+      ## @param appsec.storage.service.nodePorts.https Specify the nodePort value for the LoadBalancer and NodePort HTTPS service types
+      ## @param appsec.storage.service.nodePorts.metrics Specify the nodePort value for the LoadBalancer and NodePort metrics service types
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      ##
+      nodePorts:
+        http: ""
+        https: ""
+      ## @param appsec.storage.service.loadBalancerIP loadBalancerIP if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ##
+      loadBalancerIP: ""
+      ## @param appsec.storage.service.loadBalancerClass loadBalancerClass if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ##
+      loadBalancerClass: ""
+      ## @param appsec.storage.service.loadBalancerSourceRanges loadBalancerSourceRanges if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ## e.g:
+      ## loadBalancerSourceRanges:
+      ##   - 10.10.10.0/24
+      ##
+      loadBalancerSourceRanges: []
+      ## @param appsec.storage.service.annotations Provide any additional annotations which may be required.
+      ## This can be used to set the LoadBalancer service type to internal only.
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+      ##
+      annotations: {}
+      ## @param appsec.storage.service.externalTrafficPolicy Gunicorn service external traffic policy
+      ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+      ##
+      externalTrafficPolicy: Cluster
+      ## @param appsec.storage.service.extraPorts Extra port to expose on Gunicorn service
+      ##
+      extraPorts: []
+      ## @param appsec.storage.service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+      ## If "ClientIP", consecutive client requests will be directed to the same Pod
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+      ##
+      sessionAffinity: None
+      ## @param appsec.storage.service.sessionAffinityConfig Additional settings for the sessionAffinity
+      ## sessionAffinityConfig:
+      ##   clientIP:
+      ##     timeoutSeconds: 300
+      ##
+      sessionAffinityConfig: {}
+
+    ## ServiceAccount configuration for the open-appsec Storage
+    ##
+    serviceAccount:
+      ## @param appsec.storage.serviceAccount.create Specifies whether a ServiceAccount should be created
+      ##
+      create: true
+      ## @param appsec.storage.serviceAccount.name The name of the ServiceAccount to use.
+      ## If not set and create is true, a name is generated using the common.names.fullname template
+      ##
+      name: ""
+      ## @param appsec.storage.serviceAccount.automountServiceAccountToken Automount service account token for the open-appsec storage service account
+      ##
+      automountServiceAccountToken: true
+      ## @param appsec.storage.serviceAccount.annotations Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
+      ##
+      annotations: {}
+
+  tuning:
+    enabled: false
+
+    ## open-appsec Tuning image version
+    ## ref: 
+    ## @param tuning.image.registry [default: REGISTRY_NAME] open-appsec Tuning image registry
+    ## @param tuning.image.repository [default: REPOSITORY_NAME/open-appsec Tuning] open-appsec Tuning image repository
+    ## @skip tuning.image.tag open-appsec Tuning image tag (immutable tags are recommended)
+    ## @param tuning.image.digest open-appsec Tuning image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+    ## @param tuning.image.pullPolicy open-appsec Tuning image pull policy
+    ## @param tuning.image.pullSecrets open-appsec Tuning image pull secrets
+    ##
+    image:
+      registry: ghcr.io
+      repository: openappsec/smartsync-tuning
+      tag: latest
+      digest: ""
+      debug: false
+      ## Specify a imagePullPolicy
+      ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+      ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+      ##
+      pullPolicy: Always
+      ## Optionally specify an array of imagePullSecrets.
+      ## Secrets must be manually created in the namespace.
+      ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      ##
+      ## pullSecrets:
+      ##   - myRegistryKeySecretName
+      pullSecrets: []
+
+    ## @param appsec.tuning.replicaCount Number of open-appsec appsec.tuning nodes
+    ##
+    replicaCount: 1
+    ## @param appsec.tuning.revisionHistoryLimit  
+    ##
+    revisionHistoryLimit: 1
+    ## @param appsec.tuning.updateStrategy.type Set up update strategy for open-appsec appsec.tuning installation.
+    ## Set to Recreate if you use persistent volume that cannot be mounted by more than one pods to make sure the pods is destroyed first.
+    ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+    ## Example:
+    ## updateStrategy:
+    ##  type: RollingUpdate
+    ##  rollingUpdate:
+    ##    maxSurge: 25%
+    ##    maxUnavailable: 25%
+    ##
+    updateStrategy:
+      type: RollingUpdate
+    ## @param appsec.tuning.automountServiceAccountToken Mount Service Account token in pod
+    ##
+    automountServiceAccountToken: true
+    ## @param appsec.tuning.hostAliases Add deployment host aliases
+    ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+    ##
+    hostAliases: []
+    ## @param appsec.tuning.schedulerName Alternative scheduler
+    ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+    ##
+    schedulerName: ""
+    ## @param appsec.tuning.terminationGracePeriodSeconds In seconds, time the given to the open-appsec appsec.tuning pod needs to terminate gracefully
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
+    ##
+    terminationGracePeriodSeconds: ""
+    ## @param appsec.tuning.priorityClassName Priority class name
+    ## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+    ##
+    priorityClassName: ""
+    ## @param appsec.tuning.deploymentAnnotations Annotations to add to the deployment
+    ##
+    deploymentAnnotations: {}
+    ## @param appsec.tuning.podLabels Extra labels for open-appsec appsec.tuning pods
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+    ##
+    podLabels: {}
+    ## @param appsec.tuning.podAnnotations open-appsec appsec.tuning Pod annotations
+    ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+    ##
+    podAnnotations: {}
+    ## @param appsec.tuning.podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAffinityPreset: ""
+    ## @param appsec.tuning.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+    ##
+    podAntiAffinityPreset: soft
+    ## @param containerName  Name of the container
+    ##
+    containerName: tuning
+    ## @param appsec.tuning.containerPorts.http Container HTTP port
+    ##
+    containerPorts:
+      http: 80
+    ## @param extraPorts Extra ports for container deployment
+    ##
+    extraPorts: []
+    ## Node affinity preset
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+    ## @param appsec.tuning.nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+    ## @param appsec.tuning.nodeAffinityPreset.key Node label key to match Ignored if `affinity` is set.
+    ## @param appsec.tuning.nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+    ##
+    nodeAffinityPreset:
+      type: ""
+      ## E.g.
+      ## key: "kubernetes.io/e2e-az-name"
+      ##
+      key: ""
+      ## E.g.
+      ## values:
+      ##   - e2e-az1
+      ##   - e2e-az2
+      ##
+      values: []
+    ## @param appsec.tuning.affinity Affinity for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+    ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+    ##
+    affinity: {}
+    ## @param nodeSelector Node labels for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+    ##
+    nodeSelector: {}
+    ## @param appsec.tuning.tolerations Tolerations for pod assignment
+    ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+    ##
+    tolerations: []
+    ## @param appsec.tuning.topologySpreadConstraints Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in
+    ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    ##
+    ## topologySpreadConstraints:
+    ##   - maxSkew: 1
+    ##     topologyKey: failure-domain.beta.kubernetes.io/zone
+    ##     whenUnsatisfiable: DoNotSchedule
+    ##
+    topologySpreadConstraints: []
+    ## @param appsec.tuning.podSecurityContext.enabled Enable securityContext on for open-appsec appsec.tuning deployment
+    ## @param appsec.tuning.podSecurityContext.fsGroup Group to configure permissions for volumes
+    ## @param appsec.tuning.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+    ## @param appsec.tuning.podSecurityContext.runAsNonRoot Set pod's Security Context runAsNonRoot
+    ## @param appsec.tuning.podSecurityContext.sysctls Set kernel settings using the sysctl interface
+    ## @param appsec.tuning.podSecurityContext.seccompProfile Set pod's Security Context seccomp profile
+    ## @param appsec.tuning.podSecurityContext.supplementalGroups Set filesystem extra groups
+    ##
+    podSecurityContext:
+      enabled: true
+      fsGroup: 2000
+      # fsGroupChangePolicy: Always
+      # runAsNonRoot: true
+      sysctls: []
+      supplementalGroups: []
+      seccompProfile:
+        type: RuntimeDefault
+    ## Configure Container Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ## @param appsec.tuning.containerSecurityContext.enabled Enabled containers' Security Context
+    ## @param appsec.tuning.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+    ## @param appsec.tuning.containerSecurityContext.runAsUser Set containers' Security Context runAsUser
+    ## @param appsec.tuning.containerSecurityContext.runAsGroup Set containers' Security Context runAsGroup
+    ## @param appsec.tuning.containerSecurityContext.runAsNonRoot Set container's Security Context runAsNonRoot
+    ## @param appsec.tuning.containerSecurityContext.privileged Set container's Security Context privileged
+    ## @param appsec.tuning.containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
+    ## @param appsec.tuning.containerSecurityContext.allowPrivilegeEscalation Set container's Security Context allowPrivilegeEscalation
+    ## @param appsec.tuning.containerSecurityContext.capabilities.drop List of capabilities to be dropped
+    ## @param appsec.tuning.containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+    ##
+    containerSecurityContext:
+      enabled: true
+      seLinuxOptions: {}
+      runAsUser: 1000
+      runAsGroup: 2000
+      # runAsNonRoot: true
+      privileged: false
+      readOnlyRootFilesystem: false
+      # allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: "RuntimeDefault"
+    ## open-appsec appsec.tuning containers' resource requests and limits
+    ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, 
+    ## large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+    ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+    ##
+    resourcesPreset: "gs-3xsmall"
+    ## @param appsec.tuning.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+    ## Example:
+    ## resources:
+    ##   requests:
+    ##     cpu: 2
+    ##     memory: 512Mi
+    ##   limits:
+    ##     cpu: 3
+    ##     memory: 1024Mi
+    ##
+    resources: {}
+    ## open-appsec appsec.tuning containers' liveness probe
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+    ## @param appsec.tuning.livenessProbe.enabled Enable livenessProbe
+    ## @param appsec.tuning.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+    ## @param appsec.tuning.livenessProbe.periodSeconds Period seconds for livenessProbe
+    ## @param appsec.tuning.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+    ## @param appsec.tuning.livenessProbe.failureThreshold Failure threshold for livenessProbe
+    ## @param appsec.tuning.livenessProbe.successThreshold Success threshold for livenessProbe
+    ##
+    livenessProbe:
+      enabled: true
+      httpGet:
+        path: /health/live
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 20
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 10
+    ## open-appsec appsec.tuning containers' readinessProbe probe
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+    ## @param appsec.tuning.readinessProbe.enabled Enable readinessProbe
+    ## @param appsec.tuning.readinessProbe.path Path for readinessProbe
+    ## @param appsec.tuning.readinessProbe.scheme Scheme for readinessProbe
+    ## @param appsec.tuning.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+    ## @param appsec.tuning.readinessProbe.periodSeconds Period seconds for readinessProbe
+    ## @param appsec.tuning.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+    ## @param appsec.tuning.readinessProbe.failureThreshold Failure threshold for readinessProbe
+    ## @param appsec.tuning.readinessProbe.successThreshold Success threshold for readinessProbe
+    ##
+    readinessProbe:
+      enabled: true
+      httpGet:
+        path: /health/ready
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 3
+      periodSeconds: 15
+      successThreshold: 1
+      timeoutSeconds: 10
+    ## @param appsec.tuning.startupProbe.enabled Enable startupProbe
+    ## @param appsec.tuning.startupProbe.path Path for readinessProbe
+    ## @param appsec.tuning.startupProbe.scheme Scheme for readinessProbe
+    ## @param appsec.tuning.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+    ## @param appsec.tuning.startupProbe.periodSeconds Period seconds for startupProbe
+    ## @param appsec.tuning.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+    ## @param appsec.tuning.startupProbe.failureThreshold Failure threshold for startupProbe
+    ## @param appsec.tuning.startupProbe.successThreshold Success threshold for startupProbe
+    ##
+    startupProbe:
+      enabled: false
+      httpGet:
+        path: ""
+        port: http
+        scheme: HTTP
+      failureThreshold: 6
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 5
+    ## @param appsec.tuning.customLivenessProbe Custom livenessProbe that overrides the default one
+    ##
+    customLivenessProbe: {}
+    ## @param appsec.tuning.customReadinessProbe Custom readinessProbe that overrides the default one
+    ##
+    customReadinessProbe: {}
+    ## @param appsec.tuning.customStartupProbe Custom startupProbe that overrides the default one
+    ##
+    customStartupProbe: {}
+    ## @param appsec.tuning.lifecycleHooks for the open-appsec appsec.tuning container(s) to automate configuration before or after startup
+    ##
+    lifecycleHooks: {}
+    ## @param appsec.tuning.sidecars Attach additional sidecar containers to the open-appsec appsec.tuning pod
+    ## Example:
+    ## sidecars:
+    ##   - name: your-image-name
+    ##     image: your-image
+    ##     imagePullPolicy: Always
+    ##     ports:
+    ##       - name: portname
+    ##         containerPort: 1234
+    ##
+    sidecars: []
+    ## @param initContainers Add additional init containers to the open-appsec appsec.tuning pod(s)
+    ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+    ## e.g:
+    ## initContainers:
+    ##  - name: your-image-name
+    ##    image: your-image
+    ##    imagePullPolicy: Always
+    ##    command: ['sh', '-c', 'echo "hello world"']
+    ##
+    initContainers: []
+    ## @param extraVolumes Additional volumes for the open-appsec appsec.tuning pod
+    ## Example:
+    ## extraVolumes:
+    ##   - name: my-volume
+    ##     emptyDir: {}
+    ##
+    extraVolumes: []
+    ## @param extraVolumeMounts Additional volume mounts for the open-appsec appsec.tuning container
+    ## Example:
+    ## extraVolumeMounts:
+    ##   - name: my-volume
+    ##     mountPath: /opt/startechnica/bav/my-stuff
+    ##
+    extraVolumeMounts: []
+    ## @param extraEnvVarsCM List of existing ConfigMap containing extra env vars for open-appsec appsec.tuning nodes
+    ##
+    extraEnvVarsCMs: []
+    ## @param extraEnvVarsSecrets List of secrets with extra environment variables for open-appsec appsec.tuning pods
+    ##
+    extraEnvVarsSecrets: []
+    ## @param extraEnvVars Array containing extra env vars to configure open-appsec appsec.tuning
+    ## For example:
+    ## extraEnvVars:
+    ##  - name: GF_DEFAULT_INSTANCE_NAME
+    ##    value: my-instance
+    ##
+    extraEnvVars: []
+    ## @param extraConfigmaps Array to mount extra ConfigMaps to configure open-appsec appsec.tuning
+    ## For example:
+    ## extraConfigmaps:
+    ##   - name: myconfigmap
+    ##     mountPath: /opt/bitnami/desired-path
+    ##     subPath: file-name.extension (optional)
+    ##     readOnly: true
+    ##
+    extraConfigmaps: []
+    ## @param appsec.tuning.command Override default container command (useful when using custom images)
+    ##
+    command: []
+    ## @param appsec.tuning.args Override default container args (useful when using custom images)
+    ##
+    args: []
+
+    securityContext:
+        fsGroup: 2000
+        runAsGroup: 2000
+        runAsUser: 1000
+    port: 80
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 10
+    successThreshold: 1
+
+    ## Service parameters
+    ##
+    service:
+      ## @param appsec.tuning.service.type Kubernetes Service type
+      ##
+      type: ClusterIP
+      ## @param appsec.tuning.service.clusterIP Gunicorn service Cluster IP
+      ## e.g.:
+      ## clusterIP: None
+      ##
+      clusterIP: ""
+      ## @param appsec.tuning.service.ports.http AppSec Tuning HTTP service port
+      ##
+      ports:
+        http: 80
+      ## @param appsec.tuning.service.nodePorts.https Specify the nodePort value for the LoadBalancer and NodePort HTTPS service types
+      ## @param appsec.tuning.service.nodePorts.metrics Specify the nodePort value for the LoadBalancer and NodePort metrics service types
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      ##
+      nodePorts:
+        http: ""
+      ## @param appsec.tuning.service.loadBalancerIP loadBalancerIP if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ##
+      loadBalancerIP: ""
+      ## @param appsec.tuning.service.loadBalancerClass loadBalancerClass if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ##
+      loadBalancerClass: ""
+      ## @param appsec.tuning.service.loadBalancerSourceRanges loadBalancerSourceRanges if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+      ## e.g:
+      ## loadBalancerSourceRanges:
+      ##   - 10.10.10.0/24
+      ##
+      loadBalancerSourceRanges: []
+      ## @param appsec.tuning.service.annotations Provide any additional annotations which may be required.
+      ## This can be used to set the LoadBalancer service type to internal only.
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+      ##
+      annotations: {}
+      ## @param appsec.tuning.service.externalTrafficPolicy Gunicorn service external traffic policy
+      ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+      ##
+      externalTrafficPolicy: Cluster
+      ## @param appsec.tuning.service.extraPorts Extra port to expose on Gunicorn service
+      ##
+      extraPorts: []
+      ## @param appsec.tuning.service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+      ## If "ClientIP", consecutive client requests will be directed to the same Pod
+      ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+      ##
+      sessionAffinity: None
+      ## @param appsec.tuning.service.sessionAffinityConfig Additional settings for the sessionAffinity
+      ## sessionAffinityConfig:
+      ##   clientIP:
+      ##     timeoutSeconds: 300
+      ##
+      sessionAffinityConfig: {}
+
+    ## ServiceAccount configuration for the open-appsec Tuning
+    ##
+    serviceAccount:
+      ## @param appsec.tuning.serviceAccount.create Specifies whether a ServiceAccount should be created
+      ##
+      create: true
+      ## @param appsec.tuning.serviceAccount.name The name of the ServiceAccount to use.
+      ## If not set and create is true, a name is generated using the common.names.fullname template
+      ##
+      name: ""
+      ## @param appsec.tuning.serviceAccount.automountServiceAccountToken Automount service account token for the open-appsec tuning service account
+      ##
+      automountServiceAccountToken: true
+      ## @param appsec.tuning.serviceAccount.annotations Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
+      ##
+      annotations: {}
+
+webhook:
+  ## @param webhook.nameOverride String to partially override app.fullname template (will maintain the release name)
+  ##
+  nameOverride: ""
+  ## @param webhook.fullnameOverride String to fully override app.fullname template
+  ##
+  fullnameOverride: ""
+  ## @param webhook.dnsPolicy DNS Policy for pod
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+  ## E.g.
+  ## dnsPolicy: ClusterFirst
+  ##
+  dnsPolicy: ""
+  ## @param webhook.dnsConfig DNS Configuration pod
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+  ## E.g.
+  ## dnsConfig:
+  ##   options:
+  ##   - name: ndots
+  ##     value: "4"
+  ##
+  dnsConfig: {}
+  ## @param hostUsers controls whether the container is allowed to share user namespaces
+  ## with the host. When enabled, the pod may run with host-level user mappings,
+  ## which can grant elevated privileges. This should remain disabled unless the
+  ## workload explicitly requires host user access for system-level operations.
+  ##
+  hostUsers: false
+
+  ## open-appsec Webhook image version
+  ## ref: 
+  ## @param webhook.image.registry [default: REGISTRY_NAME] open-appsec Webhook image registry
+  ## @param webhook.image.repository [default: REPOSITORY_NAME/open-appsec Webhook] open-appsec Webhook image repository
+  ## @skip webhook.image.tag open-appsec Webhook image tag (immutable tags are recommended)
+  ## @param webhook.image.digest open-appsec Webhook image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
+  ## @param webhook.image.pullPolicy open-appsec Webhook image pull policy
+  ## @param webhook.image.pullSecrets open-appsec Webhook image pull secrets
+  ##
+  image:
+    registry: ghcr.io
+    repository: openappsec/openappsec-waf-webhook
+    tag: "1.1.32"
+    digest: ""
+    debug: false
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ##
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    pullSecrets: []
+
+  ## @param webhook.name Name of the MutatingWebhookConfiguration and webhook service
+  ##
+  integrationType: istioIngressGateway
+  name: openappsec-waf.injector.cp
+  # name: waf-injector.open-appsec.io
+  namePretty: openappsec-waf-injector-webhook
+  namespace: open-appsec
+  path: /mutate
+  debugLevel: Warning
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  imagePullPolicy: Always
+  timeoutSeconds: 5
+  istiodPort: 15014
+  scope: Namespaced
+  istioIngressGatewayAttachmentLibrary: /usr/lib/attachment
+  istioIngressGatewayImageName: istio-proxy
+  concurrencyCalculation: istioCpuLimit
+  concurrencyNumber: 1
+  configPort: 15000
+  deployAttachment: true
+
+  objectSelector:
+    labelName: "app"
+    labelValue: "istio-ingressgateway"
+
+  caBundle: ""
+
+  removeInjectedData: false
+
+  rbac:
+    create: true
+    serviceAccount:
+      create: true
+      name: openappsec-waf-injector-webhook-sa
+
+  ## @param webhook.replicaCount Number of open-appsec webhook nodes
+  ##
+  replicaCount: 1
+  ## @param webhook.revisionHistoryLimit  
+  ##
+  revisionHistoryLimit: 1
+  ## @param webhook.updateStrategy.type Set up update strategy for open-appsec webhook installation.
+  ## Set to Recreate if you use persistent volume that cannot be mounted by more than one pods to make sure the pods is destroyed first.
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+  ## Example:
+  ## updateStrategy:
+  ##  type: RollingUpdate
+  ##  rollingUpdate:
+  ##    maxSurge: 25%
+  ##    maxUnavailable: 25%
+  ##
+  updateStrategy:
+    type: RollingUpdate
+  ## @param webhook.automountServiceAccountToken Mount Service Account token in pod
+  ##
+  automountServiceAccountToken: true
+  ## @param webhook.hostAliases Add deployment host aliases
+  ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  ##
+  hostAliases: []
+  ## @param webhook.schedulerName Alternative scheduler
+  ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+  ##
+  schedulerName: ""
+  ## @param webhook.terminationGracePeriodSeconds In seconds, time the given to the open-appsec webhook pod needs to terminate gracefully
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
+  ##
+  terminationGracePeriodSeconds: ""
+  ## @param webhook.priorityClassName Priority class name
+  ## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+  ##
+  priorityClassName: ""
+  ## @param webhook.deploymentAnnotations Annotations to add to the deployment
+  ##
+  deploymentAnnotations: {}
+  ## @param webhook.podLabels Extra labels for open-appsec webhook pods
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+  ##
+  podLabels: {}
+  ## @param webhook.podAnnotations open-appsec webhook Pod annotations
+  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+  ##
+  podAnnotations: {}
+  ## @param webhook.podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAffinityPreset: ""
+  ## @param webhook.podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+  ##
+  podAntiAffinityPreset: soft
+  ## @param containerName  Name of the container
+  ##
+  containerName: webhook
+  ## @param containerPorts.http Container HTTP port
+  ## @param containerPorts.https Ccontainer HTTPS port
+  ##
+  containerPorts:
+    https: 443
+    metrics: 7465
+  ## @param extraPorts Extra ports for container deployment
+  ##
+  extraPorts: []
+  ## Node affinity preset
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+  ## @param webhook.nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## @param webhook.nodeAffinityPreset.key Node label key to match Ignored if `affinity` is set.
+  ## @param webhook.nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+  ##
+  nodeAffinityPreset:
+    type: ""
+    ## E.g.
+    ## key: "kubernetes.io/e2e-az-name"
+    ##
+    key: ""
+    ## E.g.
+    ## values:
+    ##   - e2e-az1
+    ##   - e2e-az2
+    ##
+    values: []
+  ## @param webhook.affinity Affinity for pod assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+  ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+  ##
+  affinity: {}
+  ## @param nodeSelector Node labels for pod assignment
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
+  ##
+  nodeSelector: {}
+  ## @param webhook.tolerations Tolerations for pod assignment
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  ##
+  tolerations: []
+  ## @param webhook.topologySpreadConstraints Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in
+  ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  ##
+  ## topologySpreadConstraints:
+  ##   - maxSkew: 1
+  ##     topologyKey: failure-domain.beta.kubernetes.io/zone
+  ##     whenUnsatisfiable: DoNotSchedule
+  ##
+  topologySpreadConstraints: []
+  ## @param webhook.podSecurityContext.enabled Enable securityContext on for open-appsec webhook deployment
+  ## @param webhook.podSecurityContext.fsGroup Group to configure permissions for volumes
+  ## @param webhook.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
+  ## @param webhook.podSecurityContext.runAsNonRoot Set pod's Security Context runAsNonRoot
+  ## @param webhook.podSecurityContext.sysctls Set kernel settings using the sysctl interface
+  ## @param webhook.podSecurityContext.seccompProfile Set pod's Security Context seccomp profile
+  ## @param webhook.podSecurityContext.supplementalGroups Set filesystem extra groups
+  ##
+  podSecurityContext:
+    enabled: false
+    # fsGroup: 1001
+    # fsGroupChangePolicy: Always
+    # runAsNonRoot: true
+    sysctls: []
+    supplementalGroups: []
+    seccompProfile:
+      type: RuntimeDefault
+  ## Configure Container Security Context
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  ## @param webhook.containerSecurityContext.enabled Enabled containers' Security Context
+  ## @param webhook.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
+  ## @param webhook.containerSecurityContext.runAsUser Set containers' Security Context runAsUser
+  ## @param webhook.containerSecurityContext.runAsGroup Set containers' Security Context runAsGroup
+  ## @param webhook.containerSecurityContext.runAsNonRoot Set container's Security Context runAsNonRoot
+  ## @param webhook.containerSecurityContext.privileged Set container's Security Context privileged
+  ## @param webhook.containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
+  ## @param webhook.containerSecurityContext.allowPrivilegeEscalation Set container's Security Context allowPrivilegeEscalation
+  ## @param webhook.containerSecurityContext.capabilities.drop List of capabilities to be dropped
+  ## @param webhook.containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+  ##
+  containerSecurityContext:
+    enabled: false
+    seLinuxOptions: {}
+    # runAsUser: 1001
+    # runAsGroup: 1001
+    # runAsNonRoot: true
+    privileged: false
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
+  ## open-appsec webhook containers' resource requests and limits
+  ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, 
+  ## large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+  ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+  ##
+  resourcesPreset: "gs-3xsmall"
+  ## @param webhook.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+  ## Example:
+  ## resources:
+  ##   requests:
+  ##     cpu: 2
+  ##     memory: 512Mi
+  ##   limits:
+  ##     cpu: 3
+  ##     memory: 1024Mi
+  ##
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  ## open-appsec webhook containers' liveness probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param webhook.livenessProbe.enabled Enable livenessProbe
+  ## @param webhook.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ## @param webhook.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ## @param webhook.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ## @param webhook.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ## @param webhook.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: false
+    httpGet:
+      path: /ping
+      port: http
+      scheme: HTTP
+    failureThreshold: 6
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  ## open-appsec webhook containers' readinessProbe probe
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ## @param webhook.readinessProbe.enabled Enable readinessProbe
+  ## @param webhook.readinessProbe.path Path for readinessProbe
+  ## @param webhook.readinessProbe.scheme Scheme for readinessProbe
+  ## @param webhook.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ## @param webhook.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ## @param webhook.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ## @param webhook.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ## @param webhook.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: false
+    httpGet:
+      path: /ping
+      port: http
+      scheme: HTTP
+    failureThreshold: 6
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  ## @param webhook.startupProbe.enabled Enable startupProbe
+  ## @param webhook.startupProbe.path Path for readinessProbe
+  ## @param webhook.startupProbe.scheme Scheme for readinessProbe
+  ## @param webhook.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  ## @param webhook.startupProbe.periodSeconds Period seconds for startupProbe
+  ## @param webhook.startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  ## @param webhook.startupProbe.failureThreshold Failure threshold for startupProbe
+  ## @param webhook.startupProbe.successThreshold Success threshold for startupProbe
+  ##
+  startupProbe:
+    enabled: false
+    httpGet:
+      path: /ping
+      port: http
+      scheme: HTTP
+    failureThreshold: 6
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  ## @param webhook.customLivenessProbe Custom livenessProbe that overrides the default one
+  ##
+  customLivenessProbe: {}
+  ## @param webhook.customReadinessProbe Custom readinessProbe that overrides the default one
+  ##
+  customReadinessProbe: {}
+  ## @param webhook.customStartupProbe Custom startupProbe that overrides the default one
+  ##
+  customStartupProbe: {}
+  ## @param webhook.lifecycleHooks for the open-appsec webhook container(s) to automate configuration before or after startup
+  ##
+  lifecycleHooks: {}
+  ## @param webhook.sidecars Attach additional sidecar containers to the open-appsec webhook pod
+  ## Example:
+  ## sidecars:
+  ##   - name: your-image-name
+  ##     image: your-image
+  ##     imagePullPolicy: Always
+  ##     ports:
+  ##       - name: portname
+  ##         containerPort: 1234
+  ##
+  sidecars: []
+  ## @param initContainers Add additional init containers to the open-appsec webhook pod(s)
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ## e.g:
+  ## initContainers:
+  ##  - name: your-image-name
+  ##    image: your-image
+  ##    imagePullPolicy: Always
+  ##    command: ['sh', '-c', 'echo "hello world"']
+  ##
+  initContainers: []
+  ## @param extraVolumes Additional volumes for the open-appsec webhook pod
+  ## Example:
+  ## extraVolumes:
+  ##   - name: my-volume
+  ##     emptyDir: {}
+  ##
+  extraVolumes: []
+  ## @param extraVolumeMounts Additional volume mounts for the open-appsec webhook container
+  ## Example:
+  ## extraVolumeMounts:
+  ##   - name: my-volume
+  ##     mountPath: /opt/startechnica/bav/my-stuff
+  ##
+  extraVolumeMounts: []
+  ## @param extraEnvVarsCM List of existing ConfigMap containing extra env vars for open-appsec webhook nodes
+  ##
+  extraEnvVarsCMs: []
+  ## @param extraEnvVarsSecrets List of secrets with extra environment variables for open-appsec webhook pods
+  ##
+  extraEnvVarsSecrets: []
+  ## @param extraEnvVars Array containing extra env vars to configure open-appsec webhook
+  ## For example:
+  ## extraEnvVars:
+  ##  - name: GF_DEFAULT_INSTANCE_NAME
+  ##    value: my-instance
+  ##
+  extraEnvVars: []
+  ## @param extraConfigmaps Array to mount extra ConfigMaps to configure open-appsec webhook
+  ## For example:
+  ## extraConfigmaps:
+  ##   - name: myconfigmap
+  ##     mountPath: /opt/bitnami/desired-path
+  ##     subPath: file-name.extension (optional)
+  ##     readOnly: true
+  ##
+  extraConfigmaps: []
+  ## @param webhook.command Override default container command (useful when using custom images)
+  ##
+  command: []
+  ## @param webhook.args Override default container args (useful when using custom images)
+  ##
+  args: []
+
+  ## Service parameters
+  ##
+  service:
+    name: openappsec-waf-webhook-svc
+    ## @param webhook.service.type Kubernetes Service type
+    ##
+    type: ClusterIP
+    ## @param webhook.service.clusterIP Gunicorn service Cluster IP
+    ## e.g.:
+    ## clusterIP: None
+    ##
+    clusterIP: ""
+    ## @param webhook.service.ports.http Gunicorn HTTP service port
+    ## @param webhook.service.ports.https Gunicorn HTTPS service port
+    ##
+    ports:
+      https: 443
+      metrics: 7465
+    ## @param webhook.service.nodePorts.https Specify the nodePort value for the LoadBalancer and NodePort HTTPS service types
+    ## @param webhook.service.nodePorts.metrics Specify the nodePort value for the LoadBalancer and NodePort metrics service types
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    nodePorts:
+      https: ""
+      metrics: ""
+    ## @param webhook.service.loadBalancerIP loadBalancerIP if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+    ##
+    loadBalancerIP: ""
+    ## @param webhook.service.loadBalancerClass loadBalancerClass if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+    ##
+    loadBalancerClass: ""
+    ## @param webhook.service.loadBalancerSourceRanges loadBalancerSourceRanges if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+    ## e.g:
+    ## loadBalancerSourceRanges:
+    ##   - 10.10.10.0/24
+    ##
+    loadBalancerSourceRanges: []
+    ## @param webhook.service.annotations Provide any additional annotations which may be required.
+    ## This can be used to set the LoadBalancer service type to internal only.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    annotations: {}
+    ## @param webhook.service.externalTrafficPolicy Gunicorn service external traffic policy
+    ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+    ##
+    externalTrafficPolicy: Cluster
+    ## @param webhook.service.extraPorts Extra port to expose on Gunicorn service
+    ##
+    extraPorts: []
+    ## @param webhook.service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
+    ## If "ClientIP", consecutive client requests will be directed to the same Pod
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
+    ##
+    sessionAffinity: None
+    ## @param webhook.service.sessionAffinityConfig Additional settings for the sessionAffinity
+    ## sessionAffinityConfig:
+    ##   clientIP:
+    ##     timeoutSeconds: 300
+    ##
+    sessionAffinityConfig: {}
+
+  ## @section Webhook TLS configuration
+  ## @param webhoo.tls.enabled  Enable SSL/TLS encryption for server (HTTPS)
+  ## @param webhoo.tls.autoGenerated  Create self-signed TLS certificates. Currently only supports PEM certificates.
+  ## @param webhoo.tls.certificatesMountPath  Where certifcates are mounted.
+  ## @param webhoo.tls.certificatesSecretName  Name of the secret that contains the certificates
+  ## @param webhoo.tls.CAFilename  CA certificate filename. Should match with the CA entry key in the tls.certificatesSecretName.
+  ## @param webhoo.tls.certFilename  Client certificate filename to authenticate against the server. Should match with certificate the entry key in the tls.certificatesSecretName.
+  ## @param webhoo.tls.certKeyFilename  Client Key filename to authenticate against the server. Should match with certificate the entry key in the tls.certificatesSecretName.
+  ## @param webhoo.tls.existingSecret  Name of the existing secret containing  server certificates
+  ##
+  ##
+  tls:
+    enabled: false
+    autoGenerated: false
+    certificatesMountPath: /certs/
+    certificatesSecretName: ""
+    certFilename: server.crt
+    certKeyFilename: server.key
+    certCAFilename: ca.crt
+    existingSecretName: ""
+    ## @param tls.usePemCerts Use this variable if your secrets contain PEM certificates instead of PKCS12
+    ## Note: Ignored when using autoGenerated certs.
+    ##
+    usePemCerts: false
+    ## @param tls.keyPassword Password to access the PEM key when it is password-protected.
+    ##
+    keyPassword: ""
+    ## @param tls.keystorePassword Password to access the PKCS12 keystore when it is password-protected.
+    ##
+    keystorePassword: ""
+    ## @param tls.passwordsSecret Name of a existing secret containing the Keystore or PEM key password
+    ##
+    passwordsSecret: ""
+
+  ## ServiceAccount configuration for the open-appsec Webhook
+  ##
+  serviceAccount:
+    ## @param webhook.serviceAccount.create Specifies whether a ServiceAccount should be created
+    ##
+    create: true
+    ## @param webhook.serviceAccount.name The name of the ServiceAccount to use.
+    ## If not set and create is true, a name is generated using the common.names.fullname template
+    ##
+    name: ""
+    ## @param webhook.serviceAccount.automountServiceAccountToken Automount service account token for the open-appsec webhook service account
+    ##
+    automountServiceAccountToken: true
+    ## @param webhook.serviceAccount.annotations Annotations for service account. Evaluated as a template. Only used if `create` is `true`.
+    ##
+    annotations: {}
+
+  ## Prometheus metrics
+  ##
+  metrics:
+    ## Prometheus Operator ServiceMonitor configuration
+    ## @param webhook.metrics.service.annotations [object] Annotations for Prometheus metrics service
+    ##
+    service:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7465"
+        prometheus.io/path: "/metrics"
+    serviceMonitor:
+      ## @param webhook.metrics.serviceMonitor.enabled if `true`, creates a Prometheus Operator ServiceMonitor (also requires `metrics.enabled` to be `true`)
+      ##
+      enabled: false
+      ## @param webhook.metrics.serviceMonitor.port Metrics service HTTP port
+      ##
+      port: http-metrics
+      ## @param webhook.metrics.serviceMonitor.endpoints [array] The endpoint configuration of the ServiceMonitor. Path is mandatory. Interval, timeout and labellings can be overwritten.
+      ##
+      endpoints:
+        - path: /metrics
+      ## @param webhook.metrics.serviceMonitor.namespace Namespace in which Prometheus is running
+      ##
+      namespace: ""
+      ## @param webhook.metrics.serviceMonitor.interval Interval at which metrics should be scraped.
+      ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+      ## e.g:
+      ## interval: 10s
+      ##
+      interval: ""
+      ## @param webhook.metrics.serviceMonitor.scrapeTimeout Timeout after which the scrape is ended
+      ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+      ## e.g:
+      ## scrapeTimeout: 10s
+      ##
+      scrapeTimeout: ""
+      ## @param webhook.metrics.serviceMonitor.selector Prometheus instance selector labels
+      ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
+      ## e.g:
+      ## selector:
+      ##   prometheus: my-prometheus
+      ##
+      selector: {}
+      ## @param webhook.metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+      ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+      ##
+      relabelings: []
+      ## @param webhook.metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+      ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+      ##
+      metricRelabelings: []
+      ## @param webhook.metrics.serviceMonitor.honorLabels Labels to honor to add to the scrape endpoint
+      ##
+      honorLabels: false
+      ## @param webhook.metrics.serviceMonitor.labels Additional custom labels for the ServiceMonitor
+      ##
+      labels: {}
+      annotations: {}
+      ## @param webhook.metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+      ##
+      jobLabel: ""
+      ## TLS configuration for Prometheus scraping
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.insecureSkipVerify  Skip certificate verification (not recommended)
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.serverName  Override the TLS server name for SNI
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.caFile  Path to CA certificate file
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.certFile  Path to client certificate file
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.keyFile  Path to client key file
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.caSecretName  Kubernetes secret containing CA file
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.certSecretName  Kubernetes secret containing client cert/key
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.certSecretCertKey  Key in the secret containing the certificate
+      ## @param webhook.metrics.tlsConfig.serviceMonitor.certSecretKeyKey  Key in the secret containing the private key
+      tlsConfig: {}
+
+
+
+## @section Metrics parameters
+
+## Prometheus metrics
+##
+metrics:
+  ## @param metrics.enabled Enable the export of Prometheus metrics
+  ##
+  enabled: false
+  podAnnotations: ""
+  ## Prometheus Operator ServiceMonitor configuration
+  ## @param metrics.service.annotations [object] Annotations for Prometheus metrics service
+  ##
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "7465"
+      prometheus.io/path: "/metrics"
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled if `true`, creates a Prometheus Operator ServiceMonitor (also requires `metrics.enabled` to be `true`)
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.port Metrics service HTTP port
+    ##
+    port: http-metrics
+    ## @param metrics.serviceMonitor.endpoints [array] The endpoint configuration of the ServiceMonitor. Path is mandatory. Interval, timeout and labellings can be overwritten.
+    ##
+    endpoints:
+      - path: /metrics
+    ## @param metrics.serviceMonitor.path Metrics service HTTP path. Deprecated: Use @param metrics.serviceMonitor.endpoints instead
+    ##
+    path: ""
+    ## @param metrics.serviceMonitor.namespace Namespace in which Prometheus is running
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.interval Interval at which metrics should be scraped.
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+    ## e.g:
+    ## interval: 10s
+    ##
+    interval: ""
+    ## @param metrics.serviceMonitor.scrapeTimeout Timeout after which the scrape is ended
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint
+    ## e.g:
+    ## scrapeTimeout: 10s
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.selector Prometheus instance selector labels
+    ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
+    ## e.g:
+    ## selector:
+    ##   prometheus: my-prometheus
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply to samples before ingestion
+    ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.honorLabels Labels to honor to add to the scrape endpoint
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.labels Additional custom labels for the ServiceMonitor
+    ##
+    labels: {}
+    annotations: {}
+    ## @param webhook.metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
+    ##
+    jobLabel: ""
+    ## TLS configuration for Prometheus scraping
+    ## @param metrics.tlsConfig.serviceMonitor.insecureSkipVerify  Skip certificate verification (not recommended)
+    ## @param metrics.tlsConfig.serviceMonitor.serverName  Override the TLS server name for SNI
+    ## @param metrics.tlsConfig.serviceMonitor.caFile  Path to CA certificate file
+    ## @param metrics.tlsConfig.serviceMonitor.certFile  Path to client certificate file
+    ## @param metrics.tlsConfig.serviceMonitor.keyFile  Path to client key file
+    ## @param metrics.tlsConfig.serviceMonitor.caSecretName  Kubernetes secret containing CA file
+    ## @param metrics.tlsConfig.serviceMonitor.certSecretName  Kubernetes secret containing client cert/key
+    ## @param metrics.tlsConfig.serviceMonitor.certSecretCertKey  Key in the secret containing the certificate
+    ## @param metrics.tlsConfig.serviceMonitor.certSecretKeyKey  Key in the secret containing the private key
+    tlsConfig:
+      insecureSkipVerify: false
+      serverName: ""
+      caFile: ""
+      certFile: ""
+      keyFile: ""
+      caSecretName: ""
+      certSecretName: ""
+      certSecretCertKey: "tls.crt"
+      certSecretKeyKey: "tls.key"
+  ## Prometheus Operator PrometheusRule configuration
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true` and `metrics.prometheusRule.rules`)
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace for the PrometheusRule Resource (defaults to the Release Namespace)
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.labels Additional labels that can be used so PrometheusRule will be discovered by Prometheus
+    ##
+    labels: {}
+    ## @param metrics.prometheusRule.groups Groups, containing the alert rules.
+    ## Example:
+    ##   groups:
+    ##     - name: open-appsec webhook
+    ##       rules:
+    ##         - alert: GoInstanceNotAvailable
+    ##           annotations:
+    ##             message: "open-appsec webhook instance in namespace {{ `{{` }} $labels.namespace {{ `}}` }} has not been available for the last 5 minutes."
+    ##           expr: |
+    ##             absent(kube_pod_status_ready{namespace="{{ include "st-common.names.namespace" . }}", condition="true"} * on (pod) kube_pod_labels{pod=~"{{ include "st-common.names.fullname" . }}-\\d+", namespace="{{ include "st-common.names.namespace" . }}"}) != 0
+    ##           for: 5m
+    ##           labels:
+    ##             severity: critical
+    groups: []
+
+postgresql:
+  # -- docker image for built-in postgresql - overriding to use bitnamilegacy repository
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    # -- Using bitnamilegacy/postgresql for compatibility with older image versions.
+    # You can switch back to bitnami/postgresql if needed.

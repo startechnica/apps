@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 1.1.32
+dependencies:
+  - condition: appsec.tuning.enabled
+    name: postgresql
+    repository: https://charts.bitnami.com/bitnami
+    version: 12.2.8
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: 0.1.16
+description: A Helm chart for deploying a mutating webhook to inject a sidecar container.
+name: open-appsec-injector
+version: 1.0.0

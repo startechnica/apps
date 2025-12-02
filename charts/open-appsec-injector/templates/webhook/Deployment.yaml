@@ -1,0 +1,266 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-appsec.webhook.fullname" . | quote }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.webhook.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.webhook.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.webhook.replicaCount }}
+  revisionHistoryLimit: 1
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.webhook.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: webhook
+  template:
+    metadata:
+      {{- if or .Values.webhook.podAnnotations (and .Values.metrics.enabled .Values.metrics.podAnnotations) }}
+      {{- $podAnnotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.webhook.podAnnotations .Values.metrics.podAnnotations ) "context" . ) }}
+      annotations: {{- include "st-common.tplvalues.render" ( dict "value" $podAnnotations "context" $ ) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: webhook
+    spec:
+      {{- if .Values.webhook.affinity }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.webhook.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.webhook.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .Values.webhook.nodeAffinityPreset.type "key" .Values.webhook.nodeAffinityPreset.key "values" .Values.webhook.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.webhook.automountServiceAccountToken }}
+      {{- if .Values.webhook.dnsConfig }}
+      dnsConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.dnsConfig "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webhook.dnsPolicy }}
+      dnsPolicy: {{ .Values.webhook.dnsPolicy }}
+      {{- end }}
+      {{- if semverCompare ">= 1.13" (include "st-common.capabilities.kubeVersion" .) }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
+      {{- end }}
+      {{- include "st-common.images.renderPullSecrets" (dict "images" (list .Values.webhook.image) "context" $) | nindent 6 }}
+      {{- if .Values.webhook.hostAliases }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if semverCompare ">= 1.33" (include "st-common.capabilities.kubeVersion" .) }}
+      hostUsers: {{ .Values.webhook.hostUsers }}
+      {{- end }}
+      {{- if .Values.webhook.nodeSelector }}
+      nodeSelector: {{- include "st-common.tplvalues.render" ( dict "value" .Values.webhook.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webhook.priorityClassName }}
+      priorityClassName: {{ .Values.webhook.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.webhook.schedulerName }}
+      {{- end }}
+      {{- if .Values.webhook.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.webhook.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "open-appsec.webhook.serviceAccountName" . }}
+      {{- if .Values.webhook.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.webhook.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- if .Values.webhook.tolerations }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webhook.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: webhook
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.webhook.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.webhook.image.pullPolicy }}
+          {{- if .Values.webhook.containerSecurityContext.enabled }}
+          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.webhook.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.webhook.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.webhook.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: AGENT_IMAGE
+              value: {{ include "open-appsec.images.repository" (dict "imageRoot" .Values.agent.image "global" .Values.global) }}
+            - name: AGENT_TAG
+              value: {{ .Values.agent.image.tag | quote }}
+            - name: AGENT_CPU
+              value: {{ .Values.agent.cpu | quote }}
+            - name: PROXY_KIND
+              value: {{ .Values.kind }}
+            {{- if eq .Values.kind "istio" }}
+            - name: INIT_CONTAINER_IMAGE
+              value: {{ include "open-appsec.images.repository" (dict "imageRoot" .Values.agent.initContainer.image "global" .Values.global) }}
+            - name: INIT_CONTAINER_TAG
+              value: {{ .Values.agent.initContainer.image.tag | quote }}
+            - name: LIBRARY_PATH_VALUE
+              value: {{ .Values.webhook.istioIngressGatewayAttachmentLibrary }}
+            - name: ISTIO_CONTAINER_NAME
+              value: {{ .Values.webhook.istioIngressGatewayImageName }}
+            - name: CONCURRENCY_CALC
+              value: {{ .Values.webhook.concurrencyCalculation | quote }}
+            - name: CONCURRENCY_NUMBER
+              value: {{ .Values.webhook.concurrencyNumber | quote }}
+            - name: CONFIG_PORT
+              value: {{ .Values.webhook.configPort | quote }}
+            - name: ISTIOD_PORT
+              value: {{ .Values.webhook.istiodPort | quote }}
+            - name: DEPLOY_ENVOY_FILTER
+              value: {{ .Values.webhook.deployAttachment | quote }}
+            {{- end }}
+            - name: DEBUG_LEVEL
+              value: {{ .Values.webhook.debugLevel }}
+            - name: SELECTOR_LABEL_NAME
+              value: {{ include "open-appsec.utils.firstKey" .Values.agent.objectSelector.matchLabels | quote }}
+            - name: SELECTOR_LABEL_VALUE
+              value: {{ include "open-appsec.utils.firstValue" .Values.agent.objectSelector.matchLabels | quote }}
+            - name: REMOVE_INJECTED_DATA
+              value: {{ ternary "true" "false" .Values.webhook.removeInjectedData | quote }}
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RELEASE_NAME
+              value: {{ .Release.Name }}
+            - name: appsecClassName
+              value: {{ .Values.appsec.className }}
+            - name: user_email
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "open-appsec.names.secretName" . }}
+                  key: user-email
+            - name: REGISTERED_SERVER
+            {{- if eq .Values.kind "istio" }}
+              value: "ISTIO Server"
+            {{- else }}
+              value: "KONG Server"
+            {{- end }}
+            - name: LOCAL_TUNING_ENABLED
+              value: {{ ternary "true" "false" .Values.appsec.tuning.enabled | quote }}
+            {{- if .Values.appsec.prometheus }}
+            - name: PROMETHEUS
+              value: {{ ternary "true" "false" .Values.agent.metrics.enabled | quote }}
+            {{- end }}
+            {{- if .Values.playground.enabled }}
+            - name: PLAYGROUND
+              value: {{ ternary "true" "false" .Values.playground.enabled | quote }}
+            {{- else }}
+            - name: SHARED_STORAGE_HOST
+              value: {{ include "open-appsec.storage.fullname" . | quote }}
+            - name: LEARNING_HOST
+              value: {{ include "open-appsec.learning.fullname" . | quote }}
+            - name: TUNING_HOST
+              value: {{ include "open-appsec.tuning.fullname" . | quote }}
+            {{- end }}
+            - name: CRDS_SCOPE
+              value: {{ .Values.crds.scope }}
+            {{- if .Values.agent.agentToken }}
+            - name: TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "open-appsec.names.secretName" . }}
+                  key: agent-token
+            {{- else }}
+            - name: HYBRID_MODE
+              value: "true"
+            {{- end }}
+            {{- if .Values.customFog.enabled }}
+            - name: CUSTOM_FOG_ENABLED
+              value: {{ ternary "true" "false" .Values.customFog.enabled | quote }}
+            - name: FOG_ADDRESS
+              value: {{ .Values.customFog.fogAddress | quote }}
+            {{- end }}
+            {{- if .Values.appsec.proxy }}
+            - name: APPSEC_PROXY
+              value: {{ .Values.appsec.proxy }}
+            {{- end }}
+            - name: CONFIG_MAP_REF
+              value: {{ .Values.appsec.configMapName | default "appsec-settings-configmap" }}
+            - name: SECRET_REF
+              value: {{ .Values.appsec.secretName | default "appsec-settings-secret" }}
+            - name: APPSEC_PERSISTENCE_ENABLED
+              value: {{ ternary "true" "false" .Values.agent.persistence.enabled | quote }}
+            {{- if .Values.webhook.extraEnvVars }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.webhook.extraEnvVarsCMs .Values.webhook.extraEnvVarsSecrets }}
+          envFrom:
+            {{- range $extraEnvVarsCM := .Values.webhook.extraEnvVarsCMs }}
+            - configMapRef:
+                name: {{ $extraEnvVarsCM }}
+            {{- end }}
+            {{- range $extraEnvVarsSecret := .Values.webhook.extraEnvVarsSecrets }}
+            - secretRef:
+                name: {{ $extraEnvVarsSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.webhook.containerPorts.https }}
+              name: https
+            {{- if .Values.metrics.enabled }}
+            - containerPort: {{ .Values.webhook.containerPorts.metrics }}
+              name: http-metrics
+            {{- end }}
+            {{- if .Values.webhook.extraPorts }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.extraPorts "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if .Values.webhook.resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.webhook.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.webhook.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.webhook.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.webhook.livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.webhook.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.webhook.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.webhook.readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.webhook.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.webhook.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.webhook.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.webhook.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.webhook.tls.enabled .Values.webhook.extraVolumeMounts }}
+          volumeMounts:
+            {{- if .Values.webhook.tls.enabled }}
+            - name: tls-certs
+              mountPath: {{ .Values.webhook.tls.certificatesMountPath }}
+            {{- end }}
+            {{- if .Values.webhook.extraVolumeMounts }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+          {{- end }}
+        {{- if .Values.webhook.sidecars }}
+          {{- include "st-common.tplvalues.render" ( dict "value" .Values.webhook.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        {{- if .Values.webhook.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.webhook.tls.certificatesSecretName }}
+        {{- end }}
+        {{- if .Values.webhook.extraVolumes }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}

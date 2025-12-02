@@ -1,0 +1,33 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.agent.persistence.enabled (not .Values.agent.persistence.config.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "open-appsec.agent-config.pvClaim" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: agent
+  {{- if or .Values.agent.persistence.config.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.agent.persistence.config.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" .) | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+  {{- range .Values.agent.persistence.config.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.agent.persistence.config.size | quote }}
+  {{- if .Values.agent.persistence.config.selector }}
+  selector: {{- include "st-common.tplvalues.render" (dict "value" .Values.agent.persistence.config.selector "context" .) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.agent.persistence.config.dataSource }}
+  dataSource: {{- include "st-common.tplvalues.render" (dict "value" .Values.agent.persistence.config.dataSource "context" .) | nindent 4 }}
+  {{- end }}
+  {{- include "st-common.storage.class" (dict "persistence" .Values.agent.persistence.config "global" .Values.global) -}}
+{{- end }}
