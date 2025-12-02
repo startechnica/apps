@@ -1,0 +1,14 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ printf "%s:openappsec.io" (include "st-common.names.fullname" .) }}
+rules:
+  - apiGroups:
+      - openappsec.io
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]

@@ -1,0 +1,16 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+##ref: https://raw.githubusercontent.com/openappsec/openappsec/main/config/k8s/v1beta2/open-appsec-k8s-default-config-v1beta2.yaml
+
+{{- if and .Values.defaultConfigurations.enabled (eq .Values.defaultConfigurations.mode "detect-learn" )}}
+apiVersion: openappsec.io/v1beta2
+kind: CustomResponse
+metadata:
+  name: default-web-user-response
+spec:
+  mode: response-code-only
+  httpResponseCode: 403
+{{- end }}

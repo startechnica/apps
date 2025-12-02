@@ -1,0 +1,33 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.storage.enabled .Values.appsec.storage.persistence.enabled (not .Values.appsec.storage.persistence.existingClaim) (not .Values.playground.enabled) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "open-appsec.storage.pvClaim" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: storage
+  {{- if or .Values.appsec.storage.persistence.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.appsec.storage.persistence.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" .) | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+  {{- range .Values.appsec.storage.persistence.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.appsec.storage.persistence.size | quote }}
+  {{- if .Values.appsec.storage.persistence.selector }}
+  selector: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.persistence.selector "context" .) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.appsec.storage.persistence.dataSource }}
+  dataSource: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.persistence.dataSource "context" .) | nindent 4 }}
+  {{- end }}
+  {{- include "st-common.storage.class" (dict "persistence" .Values.appsec.storage.persistence "global" .Values.global) -}}
+{{- end }}
