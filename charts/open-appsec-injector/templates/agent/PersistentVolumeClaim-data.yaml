@@ -11,6 +11,7 @@ metadata:
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: agent
+    app.kubernetes.io/part-of: open-appsec
   {{- if or .Values.agent.persistence.data.annotations .Values.commonAnnotations }}
   {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.agent.persistence.data.annotations .Values.commonAnnotations) "context" .) }}
   annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" .) | nindent 4 }}

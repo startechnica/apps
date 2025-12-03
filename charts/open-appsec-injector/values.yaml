@@ -27,13 +27,6 @@ global:
     ## @param global.compatibility.omitEmptySeLinuxOptions If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object
     ##
     omitEmptySeLinuxOptions: false
-  ## @param global.deploymentAnnotations Annotations to add to the deployment
-  ##
-  deploymentAnnotations: {}
-  ## @param global.podLabels Extra labels for pods
-  ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-  ##
-  podLabels: {}
 
 ## @section OpenAppSec CRD parameters
 ## ref: https://raw.githubusercontent.com/openappsec/openappsec/main/config/crds/open-appsec-crd-v1beta2.yaml
@@ -226,6 +219,7 @@ agent:
     ## pullSecrets:
     ##   - myRegistryKeySecretName
     pullSecrets: []
+
   namespaceSelector:
     matchLabels:
       inject-waf-attachment: "true"
@@ -275,6 +269,7 @@ agent:
     ##   GKE, AWS & OpenStack)
     ##
     config:
+      name: open-appsec-conf
       storageClass: ""
       accessModes:
         - ReadWriteOnce
@@ -293,6 +288,7 @@ agent:
       ##
       dataSource: {}
     data:
+      name: open-appsec-data
       storageClass: ""
       accessModes:
         - ReadWriteOnce
@@ -1404,7 +1400,7 @@ appsec:
     ##
     podSecurityContext:
       enabled: true
-      fsGroup: 2000
+      fsGroup: 1000
       # fsGroupChangePolicy: Always
       # runAsNonRoot: true
       sysctls: []
@@ -1428,13 +1424,13 @@ appsec:
       enabled: true
       seLinuxOptions: {}
       runAsUser: 1000
-      runAsGroup: 2000
-      # runAsNonRoot: true
+      runAsGroup: 1000
+      runAsNonRoot: true
       privileged: false
       readOnlyRootFilesystem: false
-      # allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
+      allowPrivilegeEscalation: false
+      # capabilities:
+      #   drop: ["ALL"]
       seccompProfile:
         type: "RuntimeDefault"
     ## open-appsec appsec.tuning containers' resource requests and limits

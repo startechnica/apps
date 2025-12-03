@@ -1,3 +1,10 @@
+annotations:
+  category: WAF
+  artifacthub.io/links: |
+    - name: Chart Source
+      url: https://github.com/startechnica/apps/tree/main/charts/open-appsec-injector
+    - name: Upstream Project
+      url: https://github.com/openappsec/openappsec
 apiVersion: v2
 appVersion: 1.1.32
 dependencies:
@@ -8,6 +15,20 @@ dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
     version: 0.1.16
-description: A Helm chart for deploying a mutating webhook to inject a sidecar container.
+description: A Helm chart for deploying open-appsec mutating webhook to inject a sidecar container.
+icon: https://i2-s3-ui-static-content-prod-10.s3.eu-west-1.amazonaws.com/elpis/tree-no-bg-256.png
+keywords:
+  - waf
+  - open-apssec
+  - istio
+  - kong
+kubeVersion: ">=1.25.0-0"
+maintainers:
+  - name: firmansyahn
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
 name: open-appsec-injector
-version: 1.0.0
+sources:
+  - https://github.com/openappsec/openappsec
+type: application
+version: 1.0.1

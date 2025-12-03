@@ -1,5 +1,9 @@
 # OpenAppSec WAF Injector – Helm Chart for Kubernetes
 
+<div align=center>
+<img src="https://i2-s3-ui-static-content-prod-10.s3.eu-west-1.amazonaws.com/elpis/tree-no-bg-256.png" width="100" height="100"> 
+</div>
+
 A Kubernetes Helm chart for deploying the OpenAppSec WAF Injector, which automatically injects the OpenAppSec security agent into pods using a Mutating Admission Webhook.
 This chart manages:
 
@@ -19,17 +23,18 @@ This chart manages:
 ## Prerequisites
 - Kubernetes 1.24+
 - Helm 3.10.0+
-- Istio Gateway <=1.26
+- Istio Gateway <=1.26.6
+- Envoy Proxy <=1.34.10
 
 ## Installing the Chart
 Add repo (example)
-To install the chart with the release name `openappsec-waf-injector` on `istio-ingress` namespace:
+To install the chart with the release name `open-appsec-injector` on `istio-ingress` namespace:
 
 ```bash
 helm repo add startechnica https://startechnica.github.io/apps
 helm repo update
 
-helm install openappsec-waf-injector startechnica/openappsec-waf-injector \
+helm install open-appsec-injector startechnica/open-appsec-injector \
   --set kind=istio
   --set agent.userEmail=<your-email-address> \
   --set agent.agentToken=<agent-token-from-UI> \
@@ -39,7 +44,7 @@ helm install openappsec-waf-injector startechnica/openappsec-waf-injector \
 
 Install with cert-manager Webhook TLS auto-injection
 ```bash
-helm install openappsec-waf-injector startechnica/openappsec-waf-injector \
+helm install open-appsec-injector startechnica/open-appsec-injector \
   --set webhook.tls.useCertManager=true
 ```
 
@@ -67,10 +72,10 @@ kubectl rollout restart deployment istio-ingress -n istio-ingress
 
 ## Uninstalling the Chart
 
-To uninstall/delete the `openappsec-waf-injector` deployment:
+To uninstall/delete the `open-appsec-injector` deployment:
 
 ```console
-helm delete openappsec-waf-injector --namespace istio-ingress
+helm delete open-appsec-injector --namespace istio-ingress
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
@@ -102,7 +107,7 @@ If disabled, the agent will use OpenAppSec default cloud endpoints.
 ## 🔧 Examples
 Install with custom Fog & CrowdSec enabled
 ```bash
-helm install openappsec-waf-injector startechnica/openappsec-waf-injector \
+helm install open-appsec-injector startechnica/open-appsec-injector \
   --set customFog.enabled=true \
   --set customFog.fogAddress="https://inext-agents.cloud.ngen.checkpoint.com" \
   --set crowdSec.enabled=true \
@@ -111,14 +116,14 @@ helm install openappsec-waf-injector startechnica/openappsec-waf-injector \
 
 Disable webhook TLS (not recommended)
 ```bash
-helm install openappsec-waf-injector startechnica/openappsec-waf-injector \
+helm install open-appsec-injector startechnica/open-appsec-injector \
   --set webhook.tls.useCertManager=false
 ```
 
 ## 🧪 Testing
 Render templates:
 ```bash
-helm template ./openappsec-waf-injector
+helm template ./open-appsec-injector
 ```
 
 Test webhook health:
@@ -136,7 +141,7 @@ Fix:
 - Or recreate secret + restart pods
 - Or to remove mutatingwebhookconfiguration, run:
 ```bash
-kubectl delete mutatingwebhookconfiguration openappsec-waf-injector
+kubectl delete mutatingwebhookconfiguration open-appsec-injector
 ```
 
 ## ⚙️ Parameters
@@ -148,9 +153,7 @@ kubectl delete mutatingwebhookconfiguration openappsec-waf-injector
 | `global.imageRegistry`         | Global Docker image registry                                                                                            | `""`  |
 | `global.imagePullSecrets`      | Global Docker registry secret names as an array                                                                         | `[]`  |
 | `global.defaultStorageClass`   | Global StorageClass for Persistent Volume(s)                                                                            | `""`  |
-| `global.namespaceOverride`     | Override the namespace for resource deployed by the chart, but can itself be overridden by the local namespaceOverride  | `""`  |
-| `global.deploymentAnnotations` | Annotations to add to the all deployments                                                                               | `""`  |
-| `global.podLabels`             | Extra labels for all pods                                                                                               | `""`  |
+| `global.compatibility.openshift.adaptSecurityContext` | Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) | `auto`  |
 
 
 ### Common parameters
