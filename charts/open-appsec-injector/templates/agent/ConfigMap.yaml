@@ -9,7 +9,8 @@ metadata:
   name: {{ .Values.appsec.configMapName | default "appsec-settings-configmap" | quote }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: agent 
+    app.kubernetes.io/component: agent
+    app.kubernetes.io/part-of: open-appsec
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}

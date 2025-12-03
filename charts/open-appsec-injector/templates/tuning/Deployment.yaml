@@ -34,28 +34,25 @@ spec:
         group: fog-core
     spec:
       serviceAccountName: {{ include "open-appsec.tuning.serviceAccountName" . }}
-      securityContext:
-      {{- with .Values.appsec.tuning.securityContext }}
-        fsGroup: {{ .fsGroup }}
-        runAsGroup: {{ .runAsGroup }}
-        runAsUser: {{ .runAsUser }}
+      {{- if .Values.appsec.tuning.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.appsec.tuning.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
       containers:
         - name: tuning
           image: {{ include "st-common.images.image" (dict "imageRoot" .Values.appsec.tuning.image "global" .Values.global) }}
-          imagePullPolicy: {{ .Values.appsec.storage.image.pullPolicy }}
-          {{- if .Values.appsec.storage.containerSecurityContext.enabled }}
-          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.appsec.storage.containerSecurityContext "context" $) | nindent 12 }}
+          imagePullPolicy: {{ .Values.appsec.tuning.image.pullPolicy }}
+          {{- if .Values.appsec.tuning.containerSecurityContext.enabled }}
+          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.appsec.tuning.containerSecurityContext "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
-          {{- else if .Values.appsec.storage.command }}
-          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.command "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.tuning.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.command "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
           args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
-          {{- else if .Values.appsec.storage.args }}
-          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.args "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.tuning.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.args "context" $) | nindent 12 }}
           {{- end }}
           env:
             - name: K8S_NAMESPACE
