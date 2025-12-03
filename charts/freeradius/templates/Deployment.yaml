@@ -34,9 +34,11 @@ spec:
         checksum/configmap-env: {{ include (print $.Template.BasePath "/ConfigMap/envvars.yaml") . | sha256sum }}
         checksum/configmap-mods: {{ include (print $.Template.BasePath "/ConfigMap/mods-enabled.yaml") . | sha256sum }}
         checksum/configmap-sites: {{ include (print $.Template.BasePath "/ConfigMap/sites-enabled.yaml") . | sha256sum }}
+        checksum/configmap-configuration: {{ include (print $.Template.BasePath "/ConfigMap/configuration.yaml") . | sha256sum }}
         checksum/secret-credentials: {{ include (print $.Template.BasePath "/Secret/credentials.yaml") . | sha256sum }}
         checksum/secret-sql-tls: {{ include (print $.Template.BasePath "/Secret/sql-tls.yaml") . | sha256sum }}
         checksum/secret-tls: {{ include (print $.Template.BasePath "/Secret/tls.yaml") . | sha256sum }}
+        checksum/secret-env: {{ include (print $.Template.BasePath "/Secret/envvars.yaml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
@@ -172,13 +174,17 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "freeradius.names.envvars" . }}
-            {{- if .Values.extraEnvVarsCM }}
-            - configMapRef:
-                name: {{ .Values.extraEnvVarsCM }}
-            {{- end }}
-            {{- if .Values.extraEnvVarsSecret }}
+            {{- if .Values.extraSecretEnvVars }}
             - secretRef:
-                name: {{ .Values.extraEnvVarsSecret }}
+                name: {{ include "freeradius.names.envvars" . }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsExistingCM }}
+            - configMapRef:
+                name: {{ .Values.extraEnvVarsExistingCM }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsExistingSecret }}
+            - secretRef:
+                name: {{ .Values.extraEnvVarsExistingSecret }}
             {{- end }}
           {{- if .Values.lifecycleHooks }}
           lifecycle: {{- include "st-common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
@@ -244,6 +250,7 @@ spec:
                 - -c
                 - >-
                   /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+          {{- end }}
           {{- end }}
           {{- end }}
           {{- if .resources }}

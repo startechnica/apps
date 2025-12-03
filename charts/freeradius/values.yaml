@@ -391,16 +391,23 @@ extraFlags: ""
 ## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
 ## E.g.
 ## extraEnvVars:
-##  - name: TZ
-##    value: "Europe/Paris"
+##   - name: TZ
+##     value: "Europe/Paris"
 ##
 extraEnvVars: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
+
+## @param extraSecretEnvVars Extra environment variables to be stored in Secret and set on FreeRADIUS containers
+## E.g.
+## extraSecretEnvVars:
+##   FREERADIUS_PROXY_SECRET: test123456
+extraSecretEnvVars: {}
+
+## @param extraEnvVarsExistingCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
 ##
-extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
+extraEnvVarsExistingCM: ""
+## @param extraEnvVarsExistingSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
 ##
-extraEnvVarsSecret: ""
+extraEnvVarsExistingSecret: ""
 
 ## @section Persistence Parameters
 
@@ -899,6 +906,27 @@ tls:
       enabled: false
       issuerKind: ClusterIssuer
       issuerName: selfsigned-issuer
+      privateKey:
+        algorithm: ECDSA
+        rotationPolicy: Always
+        size: 256
+      subject: |-
+        organizations:
+          - {{ .Release.Name | quote }}
+        organizationalUnits:
+          - {{ include "st-common.names.fullname" . | quote }}
+      dnsNames: |-
+        {{- $releaseNamespace := include "st-common.names.namespace" . }}
+        {{- $clusterDomain := .Values.clusterDomain }}
+        {{- $serviceName := include "st-common.names.fullname" . }}
+        {{- $altNames := list (printf "%s.%s.svc.%s" $serviceName $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $serviceName $releaseNamespace) (printf "%s.%s" $serviceName $releaseNamespace) $serviceName -}}
+        - {{ .Values.ingress.hostname | quote }}
+        {{- range .Values.ingress.extraHosts }}
+        - {{ .name | quote }}
+        {{- end }}
+        {{- with $altNames }}
+        {{ toYaml . }}
+        {{- end }}
   ## @param tls.certificatesSecret Name of the secret that contains the certificates
   ##
   certificatesSecret: ""
