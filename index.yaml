@@ -1977,6 +1977,45 @@ entries:
     - https://github.com/startechnica/apps/releases/download/netbox-5.0.0/netbox-5.0.0.tgz
     version: 5.0.0
   open-appsec-injector:
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/open-appsec-injector
+        - name: Upstream Project
+          url: https://github.com/openappsec/openappsec
+      category: WAF
+    apiVersion: v2
+    appVersion: 1.1.32
+    created: "2025-12-03T06:24:54.264510372Z"
+    dependencies:
+    - condition: appsec.tuning.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.2.8
+    - name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.16
+    description: A Helm chart for deploying open-appsec mutating webhook to inject
+      a sidecar container.
+    digest: 7371abc7781fc83f135a9d43e108d3fca76d1de549c6f535f8b061432a517aa6
+    icon: https://i2-s3-ui-static-content-prod-10.s3.eu-west-1.amazonaws.com/elpis/tree-no-bg-256.png
+    keywords:
+    - waf
+    - open-apssec
+    - istio
+    - kong
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: open-appsec-injector
+    sources:
+    - https://github.com/openappsec/openappsec
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/open-appsec-injector-1.0.1/open-appsec-injector-1.0.1.tgz
+    version: 1.0.1
   - apiVersion: v2
     appVersion: 1.1.32
     created: "2025-12-02T22:24:24.360410053Z"
@@ -2634,4 +2673,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2025-12-02T22:24:24.360554132Z"
+generated: "2025-12-03T06:24:54.264666494Z"
