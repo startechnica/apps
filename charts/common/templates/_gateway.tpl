@@ -16,8 +16,8 @@ Gateway cluster domain
 Gateway name
 */}}
 {{- define "st-common.gateway.fullname" -}}
-{{- if .Values.gateway.existingGateway -}}
-  {{- .Values.gateway.existingGateway -}}
+{{- if .Values.global.gateway.name -}}
+  {{- .Values.global.gateway.name -}}
 {{- else -}}
   {{- default (include "st-common.names.fullname" .) .Values.gateway.gateway.name  -}}
 {{- end -}}
@@ -28,6 +28,17 @@ Gateway namespace
 */}}
 {{- define "st-common.gateway.namespace" -}}
 {{- default (include "st-common.names.namespace" .) .Values.gateway.gateway.namespace  -}}
+{{- end -}}
+
+{/*
+Gateway class name
+*/}}
+{{- define "st-common.gateway.className" -}}
+{{- if .Values.global.gateway.className -}}
+  {{- .Values.global.gateway.className -}}
+{{- else -}}
+  {{- .Values.gateway.className -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

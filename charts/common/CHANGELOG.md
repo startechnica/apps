@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.17 (2025-12-16)
+
+* Removes the annotations.category field, which was only used by Kubeapps (recently discontinued).
+* Replace "+" symbol to "_" in label app.kubernetes.io/version. ([#34112](https://github.com/bitnami/charts/issues/34112))
+* Adapts the common.errors.insecureImages for BSI for upcoming BSI changes. ([#35751](https://github.com/bitnami/charts/pull/35751))
+* Add 'gs-4xsmall' to resources helper
+* Add 'st-common.gateway.className' helper
+* Add Gateway API Experimental
+
+
 ## 0.1.14 (2025-07-17)
 
 * fix: Namespaces to extraPodAffinityTerms for affinities

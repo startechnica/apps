@@ -13,6 +13,10 @@ These presets are for basic testing and not meant to be used in production
 {{- define "st-common.resources.preset" -}}
 {{/* The limits are the requests increased by 50% (except ephemeral-storage and xlarge/2xlarge sizes)*/}}
 {{- $presets := dict 
+  "gs-4xsmall" (dict 
+      "requests" (dict "cpu" "25m" "memory" "128Mi" "ephemeral-storage" "50Mi")
+      "limits" (dict "cpu" "500m" "memory" "1Gi" "ephemeral-storage" "2Gi")
+   )
   "gs-3xsmall" (dict 
       "requests" (dict "cpu" "50m" "memory" "128Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "500m" "memory" "1Gi" "ephemeral-storage" "2Gi")
@@ -69,7 +73,7 @@ These presets are for basic testing and not meant to be used in production
       "requests" (dict "cpu" "1.0" "memory" "2048Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "1.5" "memory" "3072Mi" "ephemeral-storage" "2Gi")
    )
-  "xlarge" (dict 
+  "xlarge" (dict
       "requests" (dict "cpu" "1.0" "memory" "3072Mi" "ephemeral-storage" "50Mi")
       "limits" (dict "cpu" "3.0" "memory" "6144Mi" "ephemeral-storage" "2Gi")
    )

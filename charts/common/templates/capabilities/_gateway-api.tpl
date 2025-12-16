@@ -149,6 +149,17 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 {{- end -}}
 
+{{/* Return the appropriate apiVersion for Kubernetes Gateway API BackendTrafficPolicy */}}
+{{- define "st-common.capabilities.networkingGatewayBackendTrafficPolicy.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha1/BackendTrafficPolicy" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.x-k8s.io/v1alpha1/XBackendTrafficPolicy" -}}
+  {{- print "gateway.networking.x-k8s.io/v1alpha1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API Gateway */}}
 {{- define "st-common.capabilities.networkingGatewayGateway.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/Gateway" -}}
@@ -188,6 +199,17 @@ SPDX-License-Identifier: APACHE-2.0
   {{- print "gateway.networking.k8s.io/v1" -}}
 {{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1beta1/HTTPRoute" -}}
   {{- print "gateway.networking.k8s.io/v1beta1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{/* Return the appropriate apiVersion for Kubernetes Gateway API ListenerSet */}}
+{{- define "st-common.capabilities.networkingGatewayListenerSet.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha1/ListenerSet" -}}
+  {{- print "gateway.networking.k8s.io/v1alpha1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.x-k8s.io/v1alpha1/XListenerSet" -}}
+  {{- print "gateway.networking.x-k8s.io/v1alpha1" -}}
 {{- else -}}
   {{- false -}}
 {{- end -}}
