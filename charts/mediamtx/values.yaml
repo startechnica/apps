@@ -314,12 +314,14 @@ containerName: mediamtx
 ## @param containerPorts.https Ccontainer HTTPS port
 ##
 containerPorts:
+  rtp: 8000
+  rtcp: 8001
   rtsp: 8554
   rtmp: 1935
   hls: 8888
   webrtc: 8889
   webrtcUdp: 8890
-  stun: 8189
+  srt: 8189
 ## @param extraPorts Extra ports for container deployment
 ##
 extraPorts: []
@@ -580,23 +582,28 @@ service:
   ## @param service.ports.https Gunicorn HTTPS service port
   ##
   ports:
+    rtp: 8000
+    rtcp: 8001
     rtsp: 8554
     rtmp: 1935
     hls: 8888
     webrtc: 8889
     webrtcUdp: 8890
-    stun: 8189
+    srt: 8189
   ## @param service.nodePorts.http Specify the nodePort value for the LoadBalancer and NodePort HTTP service types
   ## @param service.nodePorts.https Specify the nodePort value for the LoadBalancer and NodePort HTTPS service types
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
   nodePorts:
+    rtp: ""
+    rtcp: ""
     rtsp: ""
     rtmp: ""
     hls: ""
     webrtc: ""
     webrtcUdp: ""
     stun: ""
+    srt: ""
   ## @param service.loadBalancerIP loadBalancerIP if Gunicorn service type is `LoadBalancer` (optional, cloud specific)
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
   ##

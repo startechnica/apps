@@ -86,12 +86,12 @@ spec:
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    - port: {{ .Values.service.ports.stun }}
-      targetPort: stun
+    - port: {{ .Values.service.ports.srt }}
+      targetPort: srt
       protocol: UDP
-      name: stun
-      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.stun)) }}
-      nodePort: {{ .Values.service.nodePorts.stun }}
+      name: srt
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.srt)) }}
+      nodePort: {{ .Values.service.nodePorts.srt }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}

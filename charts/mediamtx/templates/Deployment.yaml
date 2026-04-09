@@ -135,6 +135,12 @@ spec:
             {{- end }}
           {{- end }}
           ports:
+            - name: rtp
+              containerPort: {{ .Values.containerPorts.rtp }}
+              protocol: UDP
+            - name: rtcp
+              containerPort: {{ .Values.containerPorts.rtcp }}
+              protocol: UDP
             - name: rtsp
               containerPort: {{ .Values.containerPorts.rtsp }}
               protocol: TCP
@@ -150,8 +156,8 @@ spec:
             - name: webrtc-udp
               containerPort: {{ .Values.containerPorts.webrtcUdp }}
               protocol: UDP
-            - name: stun
-              containerPort: {{ .Values.containerPorts.stun }}
+            - name: srt
+              containerPort: {{ .Values.containerPorts.srt }}
               protocol: UDP
             {{- if .Values.extraPorts }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraPorts "context" $) | nindent 12 }}
