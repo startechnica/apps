@@ -7,7 +7,7 @@ SPDX-License-Identifier: APACHE-2.0
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "st-common.names.dotenv" . }}
+  name: mediamtx
   namespace: {{ include "st-common.names.namespace" . }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
 data:

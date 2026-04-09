@@ -200,12 +200,12 @@ extraConfig: []
 ##
 
 
-## @param dotenvConfigMap.enabled  Enable loading environment variables from a ConfigMap containing a .env file.
-## @param dotenvConfigMap.extraConfigs  Additional key-value entries to include in the generated dotenv ConfigMap.
-## @param dotenvConfigMap.existingConfigMapName  Use an existing ConfigMap instead of creating a new dotenv ConfigMap.
-## @param dotenvConfigMap.volumeMounts.name  Name of the volume used to mount the .env file.
-## @param dotenvConfigMap.volumeMounts.path  Target file path where the .env file will be mounted inside the container.
-## @param dotenvConfigMap.volumeMounts.subPath  Sub-path of the .env file inside the ConfigMap volume.
+## @param configs.enabled  Enable loading environment variables from a ConfigMap containing a .env file.
+## @param configs.extraConfigs  Additional key-value entries to include in the generated config ConfigMap.
+## @param configs.existingConfigMapName  Use an existing ConfigMap instead of creating a new config ConfigMap.
+## @param configs.volumeMounts.name  Name of the volume used to mount the .env file.
+## @param configs.volumeMounts.path  Target file path where the .env file will be mounted inside the container.
+## @param configs.volumeMounts.subPath  Sub-path of the .env file inside the ConfigMap volume.
 ##
 configs:
   enabled: true
@@ -372,7 +372,7 @@ topologySpreadConstraints: []
 ## @param podSecurityContext.supplementalGroups Set filesystem extra groups
 ##
 podSecurityContext:
-  enabled: true
+  enabled: false
   fsGroup: 1001
   fsGroupChangePolicy: Always
   runAsNonRoot: true
@@ -394,7 +394,7 @@ podSecurityContext:
 ## @param containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
 ##
 containerSecurityContext:
-  enabled: true
+  enabled: false
   seLinuxOptions: {}
   runAsUser: 1001
   runAsGroup: 1001

@@ -41,43 +41,62 @@ spec:
   sessionAffinityConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
-    - port: {{ .Values.service.ports.http }}
-      targetPort: http
+    - port: {{ .Values.service.ports.rtsp }}
+      targetPort: rtsp
       protocol: TCP
-      appProtocol: http
-      name: http
-      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.http)) }}
-      nodePort: {{ .Values.service.nodePorts.http }}
+      name: rtsp
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.rtsp)) }}
+      nodePort: {{ .Values.service.nodePorts.rtsp }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- if and (or .Values.metrics.enabled .Values.global.metrics.enabled) (not (empty .Values.service.ports.metrics)) }}
-    - port: {{ .Values.service.ports.metrics }}
-      targetPort: metrics
+    - port: {{ .Values.service.ports.rtmp }}
+      targetPort: rtmp
       protocol: TCP
-      appProtocol: http
-      name: http-metrics
-      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.metrics)) }}
-      nodePort: {{ .Values.service.nodePorts.metrics }}
+      name: rtmp
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.rtmp)) }}
+      nodePort: {{ .Values.service.nodePorts.rtmp }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- end }}
-    {{- if and .Values.tls.enabled (not (empty .Values.service.ports.https)) }}
-    - port: {{ .Values.service.ports.https }}
-      targetPort: https
+    - port: {{ .Values.service.ports.hls }}
+      targetPort: hls
       protocol: TCP
-      appProtocol: http2
-      name: https
-      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.https)) }}
-      nodePort: {{ .Values.service.nodePorts.https }}
+      name: hls
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.hls)) }}
+      nodePort: {{ .Values.service.nodePorts.hls }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- end }}
+    - port: {{ .Values.service.ports.webrtc }}
+      targetPort: webrtc
+      protocol: TCP
+      name: webrtc
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.webrtc)) }}
+      nodePort: {{ .Values.service.nodePorts.webrtc }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - port: {{ .Values.service.ports.webrtcUdp }}
+      targetPort: webrtc-udp
+      protocol: UDP
+      name: webrtc-udp
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.webrtcUdp)) }}
+      nodePort: {{ .Values.service.nodePorts.webrtcUdp }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - port: {{ .Values.service.ports.stun }}
+      targetPort: stun
+      protocol: UDP
+      name: stun
+      {{- if and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.stun)) }}
+      nodePort: {{ .Values.service.nodePorts.stun }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
     {{- if .Values.service.extraPorts }}
     {{- include "st-common.tplvalues.render" (dict "value" .Values.service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
   {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.podLabels .Values.commonLabels ) "context" . ) }}
   selector: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: mediamtx

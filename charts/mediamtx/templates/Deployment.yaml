@@ -27,8 +27,8 @@ spec:
   template:
     metadata:
       annotations:
-        {{- if and .Values.dotenvConfigMap.enabled (not .Values.dotenvConfigMap.existingConfigMapName) }}
-        checksum/dotenv: {{ include (print $.Template.BasePath "/ConfigMap/dotenv.yaml") . | sha256sum }}
+        {{- if and .Values.configs.enabled (not .Values.configs.existingConfigMapName) }}
+        checksum/mediamtx: {{ include (print $.Template.BasePath "/ConfigMap/mediamtx.yaml") . | sha256sum }}
         {{- end }}
         {{- if and .Values.envvarsConfigMap.enabled (not .Values.envvarsConfigMap.existingConfigMapName) }}
         checksum/envvars: {{ include (print $.Template.BasePath "/ConfigMap/envvars.yaml") . | sha256sum }}
@@ -183,12 +183,12 @@ spec:
             - name: tls-certs
               mountPath: {{ .Values.tls.certificatesMountPath }}
             {{- end }}
-            {{- if .Values.dotenvConfigMap.enabled }}
-            - mountPath: {{ .Values.dotenvConfigMap.volumeMounts.path }}
-              name: {{ default "dotenv" .Values.dotenvConfigMap.volumeMounts.name }}
+            {{- if .Values.configs.enabled }}
+            - mountPath: {{ .Values.configs.volumeMounts.path }}
+              name: {{ default "mediamtx" .Values.configs.volumeMounts.name }}
               readOnly: true
-              {{- if .Values.dotenvConfigMap.volumeMounts.subPath }}
-              subPath: {{ .Values.dotenvConfigMap.volumeMounts.subPath }}
+              {{- if .Values.configs.volumeMounts.subPath }}
+              subPath: {{ .Values.configs.volumeMounts.subPath }}
               {{- end }}
             {{- end }}
             {{- if .Values.logging.enabled }}
@@ -216,11 +216,11 @@ spec:
           secret:
             secretName: {{ .Values.tls.certificatesSecretName }}
         {{- end }}
-        {{- if .Values.dotenvConfigMap.enabled }}
-        - name: {{ default "dotenv" .Values.dotenvConfigMap.volumeMounts.name }}
+        {{- if .Values.configs.enabled }}
+        - name: {{ default "mediamtx" .Values.configs.volumeMounts.name }}
           configMap:
             defaultMode: 420
-            name: {{ include "st-common.names.dotenv" . }}
+            name: mediamtx
         {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
