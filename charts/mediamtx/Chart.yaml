@@ -1,0 +1,35 @@
+## (c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+
+annotations:
+  category: Multimedia
+  artifacthub.io/links: |
+    - name: Chart Source
+      url: https://github.com/startechnica/apps/tree/main/charts/mediamtx
+    - name: Upstream Project
+      url: https://github.com/bluenviron/mediamtx
+apiVersion: v2
+appVersion: 1.17.1
+dependencies:
+  - name: st-common
+    repository: https://startechnica.github.io/apps
+    version: 0.1.16
+    alias: startechnica-common
+description: |
+  MediaMTX is a ready-to-use and zero-dependency real-time media server and media proxy 
+  that allows to publish, read, proxy, record and playback video and audio streams. It
+  has been conceived as a "media router" that routes media streams from one end to the
+  other, with a focus on efficiency and portability.
+home: https://github.com/startechnica/apps/tree/main/charts/mediamtx
+icon: https://raw.githubusercontent.com/bluenviron/mediamtx/master/.github/logo.png
+keywords:
+  - mediamtx
+kubeVersion: ">=1.25.0"
+maintainers:
+  - name: Firmansyah Nainggolan
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
+name: mediamtx
+sources:
+  - https://github.com/bluenviron/mediamtx
+type: application
+version: 0.1.0

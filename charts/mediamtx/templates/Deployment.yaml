@@ -1,0 +1,233 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if or .Values.commonAnnotations .Values.deploymentAnnotations .Values.global.deploymentAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.deploymentAnnotations .Values.global.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.horizontalPodAutoscaler.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.podLabels .Values.global.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+  {{- if .Values.updateStrategy }}
+  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      annotations:
+        {{- if and .Values.configs.enabled (not .Values.configs.existingConfigMapName) }}
+        checksum/mediamtx: {{ include (print $.Template.BasePath "/ConfigMap/mediamtx.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.envvarsConfigMap.enabled (not .Values.envvarsConfigMap.existingConfigMapName) }}
+        checksum/envvars: {{ include (print $.Template.BasePath "/ConfigMap/envvars.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.envvarsSecret.enabled (not .Values.envvarsSecret.existingConfigMapName) }}
+        checksum/sec-envvars: {{ include (print $.Template.BasePath "/Secret/envvars.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.podAnnotations }}
+        {{- include "st-common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.metrics.enabled .Values.metrics.podAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+    spec:
+      {{- if .Values.affinity }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.podAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      {{- if .Values.dnsConfig }}
+      dnsConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.dnsConfig "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.dnsPolicy }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      {{- end }}
+      {{- if semverCompare ">= 1.13" (include "st-common.capabilities.kubeVersion" .) }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
+      {{- end }}
+      {{- include "st-common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "st-common.tplvalues.render" ( dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- end }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "st-common.rbac.serviceAccountName" . }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.tolerations "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.containerName }}
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.timezone .Values.extraEnvVars }}
+          env:
+            {{- if .Values.timezone }}
+            - name: TZ
+              value: {{ default "UTC" .Values.timezone | quote }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- if or .Values.envvarsConfigMap.enabled .Values.extraEnvVarsCMs .Values.extraEnvVarsSecrets }}
+          envFrom:
+            {{- if .Values.envvarsConfigMap.enabled }}
+            - configMapRef:
+                name: {{ include "st-common.names.envvars" . }}
+            {{- end }}
+            {{- if .Values.envvarsSecret.enabled }}
+            - secretRef:
+                name: {{ include "st-common.names.envvars" . }}
+            {{- end }}
+            {{- range $extraEnvVarsCM := .Values.extraEnvVarsCMs }}
+            - configMapRef:
+                name: {{ $extraEnvVarsCM }}
+            {{- end }}
+            {{- range $extraEnvVarsSecret := .Values.extraEnvVarsSecrets }}
+            - secretRef:
+                name: {{ $extraEnvVarsSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: rtp
+              containerPort: {{ .Values.containerPorts.rtp }}
+              protocol: UDP
+            - name: rtcp
+              containerPort: {{ .Values.containerPorts.rtcp }}
+              protocol: UDP
+            - name: rtsp
+              containerPort: {{ .Values.containerPorts.rtsp }}
+              protocol: TCP
+            - name: rtmp
+              containerPort: {{ .Values.containerPorts.rtmp }}
+              protocol: TCP
+            - name: hls
+              containerPort: {{ .Values.containerPorts.hls }}
+              protocol: TCP
+            - name: webrtc
+              containerPort: {{ .Values.containerPorts.webrtc }}
+              protocol: TCP
+            - name: webrtc-udp
+              containerPort: {{ .Values.containerPorts.webrtcUdp }}
+              protocol: UDP
+            - name: srt
+              containerPort: {{ .Values.containerPorts.srt }}
+              protocol: UDP
+            {{- if .Values.extraPorts }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraPorts "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if .Values.resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - mountPath: /data
+              name: data-dir
+            {{- if .Values.tls.enabled }}
+            - name: tls-certs
+              mountPath: {{ .Values.tls.certificatesMountPath }}
+            {{- end }}
+            {{- if .Values.configs.enabled }}
+            - mountPath: {{ .Values.configs.volumeMounts.path }}
+              name: {{ default "mediamtx" .Values.configs.volumeMounts.name }}
+              readOnly: true
+              {{- if .Values.configs.volumeMounts.subPath }}
+              subPath: {{ .Values.configs.volumeMounts.subPath }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.logging.enabled }}
+            - mountPath: {{ .Values.logging.volumeMounts.path }}
+              name: {{ default "logs-dir" .Values.logging.volumeMounts.name }}
+              {{- if .Values.logging.volumeMounts.subPath }}
+              subPath: {{ .Values.logging.volumeMounts.subPath }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+        {{- if .Values.sidecars }}
+          {{- include "st-common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: data-dir
+          emptyDir: {}
+        {{- if .Values.logging.enabled }}
+        - name: {{ default "logs-dir" .Values.logging.volumeMounts.name }}
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.tls.certificatesSecretName }}
+        {{- end }}
+        {{- if .Values.configs.enabled }}
+        - name: {{ default "mediamtx" .Values.configs.volumeMounts.name }}
+          configMap:
+            defaultMode: 420
+            name: mediamtx
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
