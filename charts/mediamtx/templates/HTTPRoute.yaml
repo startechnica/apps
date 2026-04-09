@@ -1,0 +1,56 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled .Values.gateway.httpRoute.enabled (not .Values.gateway.httpRoute.existingHTTPRouteName) -}}
+{{- if not (eq (include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" . }}
+kind: HTTPRoute
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+  {{- if .Values.gateway.httpRoute.parentRefs }}
+  {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.parentRefs "context" $) | nindent 4 }}
+  {{- else }}
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ include "st-common.gateway.fullname" . }}
+      namespace: {{ include "st-common.gateway.namespace" .}}
+  {{- end }}
+  {{- if .Values.gateway.hostnames }}
+  hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
+  {{- end }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ include "st-common.names.fullname" . }}
+          namespace: {{ include "st-common.names.namespace" . | quote }}
+          port: {{ .Values.service.ports.http }}
+          weight: 1
+        {{- if .Values.gateway.httpRoute.rules.extraBackendRefs }}
+        {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.extraBackendRefs "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.gateway.httpRoute.rules.matches }}
+      matches: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.matches "context" $) | nindent 8 }}
+      {{- else }}
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+      {{- end }}
+      {{- if .Values.gateway.httpRoute.rules.filters }}
+      filters: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.filters "context" $) | nindent 8 }}
+      {{- end }}
+    {{- if .Values.gateway.httpRoute.extraRules }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.extraRules "context" $) | nindent 4 }}
+    {{- end }}
+{{- end -}}
+{{- end -}}
