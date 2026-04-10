@@ -1324,6 +1324,42 @@ entries:
       category: Multimedia
     apiVersion: v2
     appVersion: 1.17.1
+    created: "2026-04-10T00:45:19.273301853Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.16
+    description: 'MediaMTX is a ready-to-use and zero-dependency real-time media server
+      and media proxy  that allows to publish, read, proxy, record and playback video
+      and audio streams. It has been conceived as a "media router" that routes media
+      streams from one end to the other, with a focus on efficiency and portability. '
+    digest: db354a72045bb70d16d7c983474bc50d046ff2d78fc1fa89c5757106b85cd430
+    home: https://github.com/startechnica/apps/tree/main/charts/mediamtx
+    icon: https://raw.githubusercontent.com/bluenviron/mediamtx/master/.github/logo.png
+    keywords:
+    - mediamtx
+    kubeVersion: '>=1.25.0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: Firmansyah Nainggolan
+      url: https://firmansyah.nainggolan.id
+    name: mediamtx
+    sources:
+    - https://github.com/bluenviron/mediamtx
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/mediamtx-0.1.1/mediamtx-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/mediamtx
+        - name: Upstream Project
+          url: https://github.com/bluenviron/mediamtx
+      category: Multimedia
+    apiVersion: v2
+    appVersion: 1.17.1
     created: "2026-04-09T05:28:29.062366494Z"
     dependencies:
     - alias: startechnica-common
@@ -2710,4 +2746,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-09T05:28:29.062474714Z"
+generated: "2026-04-10T00:45:19.273407279Z"
