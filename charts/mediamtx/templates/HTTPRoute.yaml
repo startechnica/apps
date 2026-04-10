@@ -33,7 +33,7 @@ spec:
           kind: Service
           name: {{ include "st-common.names.fullname" . }}
           namespace: {{ include "st-common.names.namespace" . | quote }}
-          port: {{ .Values.service.ports.http }}
+          port: {{ .Values.service.ports.hls }}
           weight: 1
         {{- if .Values.gateway.httpRoute.rules.extraBackendRefs }}
         {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.extraBackendRefs "context" $) | nindent 8 }}
