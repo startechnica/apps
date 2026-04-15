@@ -236,7 +236,7 @@ spec:
           {{- end }}
           {{- if .Values.customReadinessProbe }}
           readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
-          {{- if .Values.readinessProbe.enabled }}
+          {{- else if .Values.readinessProbe.enabled }}
           readinessProbe: {{- omit .Values.readinessProbe "enabled" | toYaml | nindent 12 }}
             exec:
               command:
