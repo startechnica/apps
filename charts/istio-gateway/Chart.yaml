@@ -1,8 +1,8 @@
 annotations:
   category: ServiceMesh
   artifacthub.io/changes: |
-    - kind: changed
-      description: Remove unused helpers
+    - kind: fixed
+      description: Obey rbca.create per gateway based
   artifacthub.io/links: |
     - name: Chart Source
       url: https://github.com/startechnica/apps/tree/main/charts/istio-gateway
@@ -13,11 +13,11 @@ annotations:
     - name: Kubernetes Gateway
       url: https://gateway-api.sigs.k8s.io/api-types/gateway/
 apiVersion: v2
-appVersion: 1.25.0
+appVersion: 1.28.0
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
-    version: 0.1.10
+    version: 0.1.16
     alias: startechnica-common
 description: Istio Gateway provides more extensive customization and flexibility than 
   Kubernetes Ingress, and allows Istio features such as monitoring and route rules to be applied 
@@ -41,4 +41,4 @@ name: istio-gateway
 sources:
   - http://github.com/istio/istio
 type: application
-version: 1.0.6
+version: 1.0.7

@@ -1,0 +1,69 @@
+<svg width="880" height="520" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Title -->
+  <text x="50%" y="40" font-size="24" text-anchor="middle" font-family="Arial" fill="#333">
+    OpenAppSec WAF Injector Architecture
+  </text>
+
+  <!-- Webhook box -->
+  <rect x="310" y="80" width="260" height="90" rx="10" ry="10" fill="#4A90E2" opacity="0.15" stroke="#4A90E2" stroke-width="2"></rect>
+  <text x="440" y="120" font-size="16" text-anchor="middle" font-family="Arial" fill="#1a4a80">
+    Mutating Admission Webhook
+  </text>
+  <text x="440" y="140" font-size="13" text-anchor="middle" font-family="Arial" fill="#1a4a80">
+    openappsec-waf-injector
+  </text>
+
+  <!-- Arrow: Webhook to Pod -->
+  <line x1="440" y1="170" x2="440" y2="215" stroke="#000" stroke-width="2" marker-end="url(#arrow)"></line>
+
+  <!-- Pod Box -->
+  <rect x="260" y="215" width="360" height="200" rx="12" ry="12" fill="#8BC34A" opacity="0.18" stroke="#558B2F" stroke-width="2"></rect>
+  <text x="440" y="245" font-size="16" text-anchor="middle" font-family="Arial" fill="#33691E">
+    Target Pod (Deployment)
+  </text>
+
+  <!-- Init Container -->
+  <rect x="290" y="270" width="300" height="50" rx="8" ry="8" fill="#AED581" stroke="#558B2F" stroke-width="1.5"></rect>
+  <text x="440" y="300" font-size="14" text-anchor="middle" font-family="Arial" fill="#2E7D32">
+    openappsec-init (initContainer)
+  </text>
+
+  <!-- Agent Sidecar -->
+  <rect x="290" y="340" width="300" height="50" rx="8" ry="8" fill="#C5E1A5" stroke="#558B2F" stroke-width="1.5"></rect>
+  <text x="440" y="370" font-size="14" text-anchor="middle" font-family="Arial" fill="#2E7D32">
+    openappsec-agent (sidecar)
+  </text>
+
+  <!-- Fog Service -->
+  <rect x="40" y="280" width="180" height="80" rx="10" ry="10" fill="#FFECB3" stroke="#FFC107" stroke-width="2"></rect>
+  <text x="130" y="315" font-size="14" text-anchor="middle" font-family="Arial" fill="#8a6d00">
+    Fog Service
+  </text>
+  <text x="130" y="335" font-size="12" text-anchor="middle" font-family="Arial" fill="#8a6d00">
+    (Cloud or customFog)
+  </text>
+
+  <!-- Arrow Fog → Agent -->
+  <line x1="220" y1="320" x2="290" y2="365" stroke="#000" stroke-width="2" marker-end="url(#arrow)"></line>
+
+  <!-- CrowdSec -->
+  <rect x="660" y="280" width="180" height="80" rx="10" ry="10" fill="#FFCDD2" stroke="#E57373" stroke-width="2"></rect>
+  <text x="750" y="315" font-size="14" text-anchor="middle" font-family="Arial" fill="#c62828">
+    CrowdSec API
+  </text>
+  <text x="750" y="335" font-size="12" text-anchor="middle" font-family="Arial" fill="#c62828">
+    (Optional decisions stream)
+  </text>
+
+  <!-- Arrow Agent → CrowdSec -->
+  <line x1="590" y1="365" x2="660" y2="320" stroke="#000" stroke-width="2" marker-end="url(#arrow)"></line>
+
+  <!-- Arrowhead Definition -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 7 3, 0 6" fill="#000"></polygon>
+    </marker>
+  </defs>
+
+</svg>

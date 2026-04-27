@@ -1,0 +1,61 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and (or .Values.metrics.enabled .Values.global.metrics.enabled) (or .Values.metrics.serviceMonitor.enabled .Values.global.metrics.serviceMonitor.enabled) -}}
+{{- if not (eq (include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) "false") }}
+apiVersion: {{ include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
+kind: ServiceMonitor
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.metrics.serviceMonitor.labels .Values.commonLabels) "context" .) }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: metrics
+   {{- if or .Values.commonAnnotations .Values.metrics.serviceMonitor.annotations }}
+   {{- $annotations := merge .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.metrics.serviceMonitor.jobLabel }}
+  jobLabel: {{ .Values.metrics.serviceMonitor.jobLabel }}
+  {{- end }}
+  endpoints:
+    {{- $defaultEndpoint := pick .Values.metrics.serviceMonitor "port" "interval" "scrapeTimeout" "relabelings" "metricRelabelings" "honorLabels" "tlsConfig" }}
+    {{- $endpoints := ternary (.Values.metrics.serviceMonitor.endpoints) (list (dict "path" .Values.metrics.serviceMonitor.path)) (empty .Values.metrics.serviceMonitor.path) }}
+    {{- range $endpoints }}
+    {{- $endpoint := merge . $defaultEndpoint }}
+    - port: {{ $endpoint.port | quote }}
+      path: {{ include "st-common.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
+      {{- if $endpoint.tlsConfig }}
+      scheme: https
+      tlsConfig: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.tlsConfig "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $endpoint.interval }}
+      interval: {{ $endpoint.interval }}
+      {{- end }}
+      {{- if $endpoint.scrapeTimeout }}
+      scrapeTimeout: {{ $endpoint.scrapeTimeout }}
+      {{- end }}
+      {{- if $endpoint.relabelings }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if $endpoint.metricRelabelings }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
+      {{- end }}
+      {{- if $endpoint.honorLabels }}
+      honorLabels: {{ $endpoint.honorLabels }}
+      {{- end }}
+    {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "st-common.names.namespace" . | quote }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: mediamtx
+      {{- if .Values.metrics.serviceMonitor.selector }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
+      {{- end }}
+{{- end }}
+{{- end -}}

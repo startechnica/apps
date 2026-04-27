@@ -1,0 +1,58 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: LicenseRef-ETB
+*/}}
+
+{{- if and .Values.webhook.metrics.enabled .Values.webhook.metrics.serviceMonitor.enabled -}}
+{{- if not (eq (include "st-common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
+apiVersion: {{ include "st-common.capabilities.coreosMonitoring.apiVersion" . }}
+kind: ServiceMonitor
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.webhook.metrics.serviceMonitor.namespace | quote }}
+  {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.webhook.metrics.serviceMonitor.labels .Values.commonLabels) "context" .) }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $labels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/part-of: open-appsec
+   {{- if or .Values.commonAnnotations .Values.webhook.metrics.serviceMonitor.annotations }}
+   {{- $annotations := merge .Values.webhook.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.webhook.metrics.serviceMonitor.jobLabel }}
+  jobLabel: {{ .Values.webhook.metrics.serviceMonitor.jobLabel }}
+  {{- end }}
+  endpoints:
+    - port: metrics
+      path: "/metrics"
+      {{- if .Values.webhook.metrics.serviceMonitor.tlsConfig }}
+      scheme: https
+      tlsConfig: {{- toYaml .Values.webhook.metrics.serviceMonitor.tlsConfig | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webhook.metrics.serviceMonitor.interval }}
+      interval: {{ .Values.webhook.metrics.serviceMonitor.interval }}
+      {{- end }}
+      {{- if .Values.webhook.metrics.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ .Values.webhook.metrics.serviceMonitor.scrapeTimeout }}
+      {{- end }}
+      {{- if .Values.webhook.metrics.serviceMonitor.honorLabels }}
+      honorLabels: {{ .Values.webhook.metrics.serviceMonitor.honorLabels }}
+      {{- end }}
+      {{- if .Values.webhook.metrics.serviceMonitor.relabelings }}
+      relabelings: {{- include "st-common.tplvalues.render" ( dict "value" .Values.webhook.metrics.serviceMonitor.relabelings "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webhook.metrics.serviceMonitor.metricRelabelings }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" ( dict "value" .Values.webhook.metrics.serviceMonitor.metricRelabelings "context" $) | nindent 8 }}
+      {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "st-common.names.namespace" . | quote }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+      {{- if .Values.webhook.metrics.serviceMonitor.selector }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
+      {{- end }}
+      app.kubernetes.io/component: webhook
+      app.kubernetes.io/part-of: open-appsec
+{{- end }}
+{{- end -}}

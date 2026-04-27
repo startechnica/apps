@@ -1,0 +1,60 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.crds.enabled }}
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: exceptionsns.openappsec.io
+  {{- if .Values.crds.keep }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  group: openappsec.io
+  versions:
+    - name: v1beta2
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - action
+                - condition
+              properties:
+                appsecClassName:
+                  type: string
+                action:
+                  type: string
+                  enum:
+                    - skip
+                    - accept
+                    - drop
+                    - suppressLog
+                  default: accept
+                condition:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - key
+                      - value
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
+  scope: Namespaced
+  names:
+    plural: exceptionsns
+    singular: exceptionns
+    kind: ExceptionNS
+    shortNames:
+      - exceptionns
+{{- end }}

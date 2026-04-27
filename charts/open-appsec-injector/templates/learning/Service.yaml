@@ -1,0 +1,64 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.learning.enabled (not .Values.playground.enabled) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "open-appsec.learning.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: learning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.learning.service.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.learning.service.annotations .Values.metrics.service.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.appsec.learning.service.type }}
+  {{- if and (eq .Values.appsec.learning.service.type "LoadBalancer") (not (empty .Values.appsec.learning.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.appsec.learning.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.appsec.learning.service.type "LoadBalancer") (not (empty .Values.appsec.learning.service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .Values.appsec.learning.service.loadBalancerClass }}
+  {{- end }}
+  {{- if and (eq .Values.appsec.learning.service.type "LoadBalancer") (not (empty .Values.appsec.learning.service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ .Values.appsec.learning.service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if and .Values.appsec.learning.service.clusterIP (eq .Values.appsec.learning.service.type "ClusterIP") }}
+  clusterIP: {{ .Values.appsec.learning.service.clusterIP }}
+  {{- end }}
+  {{- if or (eq .Values.appsec.learning.service.type "LoadBalancer") (eq .Values.appsec.learning.service.type "NodePort") }}
+  externalTrafficPolicy: {{ .Values.appsec.learning.service.externalTrafficPolicy | quote }}
+  {{- end }}
+  {{- if .Values.appsec.learning.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.appsec.learning.service.sessionAffinity }}
+  {{- end }}
+  {{- if .Values.appsec.learning.service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.appsec.learning.service.ports.http }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if and (or (eq .Values.appsec.learning.service.type "NodePort") (eq .Values.appsec.learning.service.type "LoadBalancer")) (not (empty .Values.appsec.learning.service.nodePorts.http)) }}
+      nodePort: {{ .Values.appsec.learning.service.nodePorts.http }}
+      {{- else if eq .Values.appsec.learning.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - port: {{ .Values.appsec.learning.service.ports.https }}
+      targetPort: http
+      protocol: TCP
+      name: https
+      {{- if and (or (eq .Values.appsec.learning.service.type "NodePort") (eq .Values.appsec.learning.service.type "LoadBalancer")) (not (empty .Values.appsec.learning.service.nodePorts.https)) }}
+      nodePort: {{ .Values.appsec.learning.service.nodePorts.https }}
+      {{- else if eq .Values.appsec.learning.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.learning.podLabels .Values.commonLabels ) "context" . ) }}
+  selector: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: learning
+{{- end }}

@@ -1,0 +1,34 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.learning.enabled .Values.appsec.learning.persistence.enabled (not .Values.appsec.learning.persistence.existingClaim) (not .Values.playground.enabled) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "open-appsec.learning.pvClaim" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: learning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.learning.persistence.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.appsec.learning.persistence.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" .) | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+  {{- range .Values.appsec.learning.persistence.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.appsec.learning.persistence.size | quote }}
+  {{- if .Values.appsec.learning.persistence.selector }}
+  selector: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.persistence.selector "context" .) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.appsec.learning.persistence.dataSource }}
+  dataSource: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.persistence.dataSource "context" .) | nindent 4 }}
+  {{- end }}
+  {{- include "st-common.storage.class" (dict "persistence" .Values.appsec.learning.persistence "global" .Values.global) -}}
+{{- end }}

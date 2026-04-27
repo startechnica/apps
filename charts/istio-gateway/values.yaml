@@ -511,11 +511,11 @@ gateways:
       parametersRef: {}
       ## @param gateways.$gateway.gatewayApi.backendTLS  BackendTLS configures TLS settings for when this Gateway is connecting to backends with TLS.
       ##
-      backendTLS:
-        clientCertificateRef: 
-          kind: Secret
-          name: ""
-          namespace: ""
+      backendTLS: {}
+        # clientCertificateRef: 
+        #   kind: Secret
+        #   name: ""
+        #   namespace: ""
       ## @param gateways.$gateway.gatewayApi.allowedListeners  AllowedListeners defines which ListenerSets can be attached to this Gateway. While
       ## this feature is experimental, the default value is to allow no ListenerSets.
       ##

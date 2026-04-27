@@ -1,0 +1,64 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.storage.enabled (not .Values.playground.enabled) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "open-appsec.storage.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.storage.service.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.storage.service.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.appsec.storage.service.type }}
+  {{- if and (eq .Values.appsec.storage.service.type "LoadBalancer") (not (empty .Values.appsec.storage.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.appsec.storage.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.appsec.storage.service.type "LoadBalancer") (not (empty .Values.appsec.storage.service.loadBalancerClass)) }}
+  loadBalancerClass: {{ .Values.appsec.storage.service.loadBalancerClass }}
+  {{- end }}
+  {{- if and (eq .Values.appsec.storage.service.type "LoadBalancer") (not (empty .Values.appsec.storage.service.loadBalancerSourceRanges)) }}
+  loadBalancerSourceRanges: {{ .Values.appsec.storage.service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if and .Values.appsec.storage.service.clusterIP (eq .Values.appsec.storage.service.type "ClusterIP") }}
+  clusterIP: {{ .Values.appsec.storage.service.clusterIP }}
+  {{- end }}
+  {{- if or (eq .Values.appsec.storage.service.type "LoadBalancer") (eq .Values.appsec.storage.service.type "NodePort") }}
+  externalTrafficPolicy: {{ .Values.appsec.storage.service.externalTrafficPolicy | quote }}
+  {{- end }}
+  {{- if .Values.appsec.storage.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.appsec.storage.service.sessionAffinity }}
+  {{- end }}
+  {{- if .Values.appsec.storage.service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.storage.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.appsec.storage.service.ports.http }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if and (or (eq .Values.appsec.storage.service.type "NodePort") (eq .Values.appsec.storage.service.type "LoadBalancer")) (not (empty .Values.appsec.storage.service.nodePorts.http)) }}
+      nodePort: {{ .Values.appsec.storage.service.nodePorts.http }}
+      {{- else if eq .Values.appsec.storage.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - port: {{ .Values.appsec.storage.service.ports.https }}
+      targetPort: http
+      protocol: TCP
+      name: https
+      {{- if and (or (eq .Values.appsec.storage.service.type "NodePort") (eq .Values.appsec.storage.service.type "LoadBalancer")) (not (empty .Values.appsec.storage.service.nodePorts.https)) }}
+      nodePort: {{ .Values.appsec.storage.service.nodePorts.https }}
+      {{- else if eq .Values.appsec.storage.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.storage.podLabels .Values.commonLabels ) "context" . ) }}
+  selector: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: storage
+{{- end }}

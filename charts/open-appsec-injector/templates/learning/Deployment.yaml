@@ -1,0 +1,105 @@
+{{- /*
+(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.appsec.learning.enabled (not .Values.playground.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-appsec.learning.fullname" . }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: learning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if or .Values.appsec.learning.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.learning.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.appsec.learning.replicaCount }}
+  revisionHistoryLimit: 1
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.learning.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: learning
+  template:
+    metadata:
+      {{- if .Values.appsec.learning.podAnnotations }}
+      {{- $podAnnotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.learning.podAnnotations ) "context" . ) }}
+      annotations: {{- include "st-common.tplvalues.render" ( dict "value" $podAnnotations "context" $ ) | nindent 8 }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: learning
+        group: fog-core
+    spec:
+      serviceAccountName: {{ include "open-appsec.learning.serviceAccountName" . }}
+      {{- if .Values.appsec.learning.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.appsec.learning.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: learning
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.appsec.learning.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.appsec.learning.image.pullPolicy }}
+          {{- if .Values.appsec.learning.containerSecurityContext.enabled }}
+          securityContext: {{- include "st-common.compatibility.renderSecurityContext" (dict "secContext" .Values.appsec.learning.containerSecurityContext "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.learning.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.learning.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.args "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: SHARED_STORAGE_HOST
+              value: {{ include "open-appsec.storage.fullname" . | quote }}
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: {{ .Values.appsec.learning.containerPorts.http }}
+              name: http
+          {{- if .Values.appsec.learning.resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.appsec.learning.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.appsec.learning.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.learning.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.learning.livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.learning.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.learning.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.learning.readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.learning.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.appsec.learning.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.learning.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.appsec.learning.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.appsec.learning.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - mountPath: /tmp/locks/
+              name: flock
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: flock
+          {{- if .Values.appsec.learning.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "open-appsec.learning.pvClaim" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+    {{- if .Values.appsec.learning.nodeSelector }}
+      nodeSelector: {{ toYaml .Values.appsec.learning.nodeSelector | nindent 8 }}
+    {{- end }}
+    {{- if .Values.appsec.learning.tolerations }}
+      tolerations: {{ toYaml .Values.appsec.learning.tolerations | nindent 8 }}
+    {{- end }}
+{{- end }}
