@@ -93,7 +93,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API TCPRoute */}}
 {{- define "common.capabilities.networkingGatewayTCPRoute.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TCPRoute" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/TCPRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TCPRoute" -}}
   {{- print "gateway.networking.k8s.io/v1alpha2" -}}
 {{- else -}}
   {{- false -}}
@@ -103,6 +105,8 @@ SPDX-License-Identifier: APACHE-2.0
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API TLSRoute */}}
 {{- define "common.capabilities.networkingGatewayTLSRoute.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TLSRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TLSRoute" -}}
   {{- print "gateway.networking.k8s.io/v1alpha2" -}}
 {{- else -}}
   {{- false -}}
@@ -111,6 +115,8 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API UDPRoute */}}
 {{- define "common.capabilities.networkingGatewayUDPRoute.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/UDPRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
 {{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/UDPRoute" -}}
   {{- print "gateway.networking.k8s.io/v1alpha2" -}}
 {{- else -}}
@@ -205,8 +211,10 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API ListenerSet */}}
-{{- define "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha1/ListenerSet" -}}
+{{- define "st-common.capabilities.networkingGatewayListenerSet.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/ListenerSet" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha1/ListenerSet" -}}
   {{- print "gateway.networking.k8s.io/v1alpha1" -}}
 {{- else if .Capabilities.APIVersions.Has "gateway.networking.x-k8s.io/v1alpha1/XListenerSet" -}}
   {{- print "gateway.networking.x-k8s.io/v1alpha1" -}}
@@ -228,7 +236,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API TCPRoute */}}
 {{- define "st-common.capabilities.networkingGatewayTCPRoute.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TCPRoute" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/TCPRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TCPRoute" -}}
   {{- print "gateway.networking.k8s.io/v1alpha2" -}}
 {{- else -}}
   {{- false -}}
@@ -237,7 +247,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API TLSRoute */}}
 {{- define "st-common.capabilities.networkingGatewayTLSRoute.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TLSRoute" -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/TLSRoute" -}}
+  {{- print "gateway.networking.k8s.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha2/TLSRoute" -}}
   {{- print "gateway.networking.k8s.io/v1alpha2" -}}
 {{- else -}}
   {{- false -}}
