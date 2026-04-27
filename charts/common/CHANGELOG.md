@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.19 (2025-04-27)
+
+* fix: Adjust stray if on Gateway API helper
+
+
 ## 0.1.18 (2025-04-27)
 
 * add: ListenerSet to Kubernetes API Gateway helper
