@@ -1,5 +1,5 @@
 {{/*
-Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -90,4 +90,39 @@ Parameters: is string/number
 {{- else  }}
   {{- int64 . | toString -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Build a URI of the form Scheme://Host[:Port][/Path].
+
+Usage:
+  {{ include "st-common.utils.createUri" (dict "scheme" "https" "host" "api.example.com" "port" 8443 "path" "/v1") }}
+  {{ include "st-common.utils.createUri" (dict "scheme" "http"  "host" "svc.local") }}
+
+Behavior:
+  - port is included whenever provided (and non-zero).
+  - path is optional; a leading "/" is added if missing.
+  - scheme and host are required; fails loudly otherwise.
+*/}}
+{{- define "st-common.utils.createUri" -}}
+{{- $scheme := required "st-common.utils.createUri: 'scheme' is required" .scheme | lower -}}
+{{- $host   := required "st-common.utils.createUri: 'host' is required"   .host -}}
+{{- $port   := .port | default "" -}}
+{{- $path   := .path | default "" -}}
+
+{{- $portStr := "" -}}
+{{- if and $port (ne (printf "%v" $port) "0") -}}
+  {{- $portStr = printf ":%v" $port -}}
+{{- end -}}
+
+{{- $pathStr := "" -}}
+{{- if $path -}}
+  {{- if hasPrefix "/" $path -}}
+    {{- $pathStr = $path -}}
+  {{- else -}}
+    {{- $pathStr = printf "/%s" $path -}}
+  {{- end -}}
+{{- end -}}
+
+{{- printf "%s://%s%s%s" $scheme $host $portStr $pathStr -}}
 {{- end -}}
