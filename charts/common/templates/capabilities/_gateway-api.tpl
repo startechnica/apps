@@ -156,7 +156,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{- end -}}
 
 {{/* Return the appropriate apiVersion for Kubernetes Gateway API BackendTrafficPolicy */}}
-{{- define "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" -}}
+{{- define "st-common.capabilities.networkingGatewayBackendTrafficPolicy.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1alpha1/BackendTrafficPolicy" -}}
   {{- print "gateway.networking.k8s.io/v1alpha1" -}}
 {{- else if .Capabilities.APIVersions.Has "gateway.networking.x-k8s.io/v1alpha1/XBackendTrafficPolicy" -}}
