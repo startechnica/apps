@@ -2114,6 +2114,36 @@ entries:
           description: Create URI helper
       category: Infrastructure
     apiVersion: v2
+    appVersion: 0.1.18
+    created: "2026-04-27T16:09:41.080800408Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 2f8b07b6453c3e706bd446e89ee8b38f49d2ec33b6da93782c63fe94685d485f
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.18/st-common-0.1.18.tgz
+    version: 0.1.18
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Create URI helper
+      category: Infrastructure
+    apiVersion: v2
     appVersion: 0.1.17
     created: "2026-04-27T15:50:55.73730175Z"
     description: A Library Helm Chart for grouping common logic between Startechnica
@@ -2776,4 +2806,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-27T15:50:55.737557806Z"
+generated: "2026-04-27T16:09:41.081007747Z"
