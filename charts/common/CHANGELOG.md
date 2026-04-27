@@ -1,8 +1,13 @@
 # Changelog
 
+## 0.1.17 (2025-04-27)
+
+* add: "st-common.utils.createUri" Build a URI of the form Scheme://Host[:Port][/Path].
+
+
 ## 0.1.14 (2025-07-17)
 
-* fix: Namespaces to extraPodAffinityTerms for affinities
+* fix: Namespaces to extraPodAffinityTerms for affinities [19fcd37](https://github.com/startechnica/apps/commit/19fcd37440ef5b352662ef81e55ffca47ad8383b)
 
 
 ## 0.1.13 (2025-07-17)
