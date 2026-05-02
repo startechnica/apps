@@ -7,13 +7,14 @@ affinity:
         - key: node-role.kubernetes.io/worker
           operator: Exists
 
-ipFamilyPolicy: PreferDualStack
+service:
+  ipFamilyPolicy: PreferDualStack
 
 gateway:
   enabled: true
   gateway:
     name: webapps
-    namespace: istio-ingressgateway
+    namespace: istio-ingress
   hostnames:
     - adminer.dxm.nainggolan.id
     - macam.macam.com
