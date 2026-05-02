@@ -18,8 +18,9 @@ gateway:
     - adminer.dxm.nainggolan.id
     - macam.macam.com
     - macam.macam.id
-  tls: true
-  selfSigned: true
+  tls:
+    enabled: true
+    selfSigned: true
 
 tolerations:
   - effect: NoSchedule
