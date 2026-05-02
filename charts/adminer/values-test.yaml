@@ -1,3 +1,5 @@
+fullnameOverride: adminer
+
 affinity:
   nodeAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
