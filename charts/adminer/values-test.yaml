@@ -9,6 +9,10 @@ affinity:
         - key: node-role.kubernetes.io/worker
           operator: Exists
 
+config:
+  plugins:
+    - login-ip
+
 service:
   ipFamilyPolicy: PreferDualStack
 
