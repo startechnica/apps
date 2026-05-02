@@ -451,9 +451,11 @@ extraPorts: []
 ## @param podSecurityContext.runAsUser User ID for the Adminer pod
 ##
 podSecurityContext:
-  enabled: false
+  enabled: true
+  fsGroupChangePolicy: Always
+  sysctls: []
+  supplementalGroups: []
   fsGroup: 101
-  runAsUser: 101
 ## Adminer container security context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
 ## All values below this `enabled` flag are passed through verbatim (the `enabled`
@@ -468,14 +470,18 @@ podSecurityContext:
 ## @param containerSecurityContext.seccompProfile Seccomp profile applied to the container. `RuntimeDefault` is what the PSS "restricted" profile expects.
 ##
 containerSecurityContext:
-  enabled: false
-  capabilities: {}
-  runAsUser: 101
+  enabled: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  privileged: false
+  runAsUser: 100
+  runAsGroup: 101
   runAsNonRoot: true
   readOnlyRootFilesystem: false
-  allowPrivilegeEscalation: false
   seccompProfile:
     type: RuntimeDefault
+  seLinuxOptions: {}
 
 ## Adminer containers' resource requests and limits
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
