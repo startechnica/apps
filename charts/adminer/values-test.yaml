@@ -7,15 +7,6 @@ affinity:
         - key: node-role.kubernetes.io/worker
           operator: Exists
 
-ingress:
-  enabled: true
-  hostname: adminer.dxm.nainggolan.id
-  extraHosts:
-    - name: macam.macam.com
-    - name: macam.macam.id
-  tls: true
-  selfSigned: false
-
 ipFamilyPolicy: PreferDualStack
 
 gateway:
@@ -23,6 +14,12 @@ gateway:
   gateway:
     name: webapps
     namespace: istio-ingressgateway
+  hostnames:
+    - adminer.dxm.nainggolan.id
+    - macam.macam.com
+    - macam.macam.id
+  tls: true
+  selfSigned: true
 
 tolerations:
   - effect: NoSchedule
