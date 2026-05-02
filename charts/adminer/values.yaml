@@ -712,10 +712,6 @@ metrics:
     ## @param metrics.serviceMonitor.tlsConfig TLS configuration for the scrape endpoint (switches scheme to https when set)
     ##
     tlsConfig: {}
-    ## @param metrics.serviceMonitor.endpoints Full endpoint definitions; overrides the single-endpoint shorthand built from `port`/`path`/etc. above.
-    ##
-    endpoints: []
-
 
 ## =============================================================================
 ## @section Traffic Exposure parameters

@@ -2,6 +2,11 @@
 
 # Helm chart for Adminer
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/startechnica)](https://artifacthub.io/packages/helm/startechnica/adminer)
+![Version: 1.0.1](https://img.shields.io/badge/Version-1.0.1-informational?style=flat-square)
+![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![AppVersion: 5.4.2](https://img.shields.io/badge/AppVersion-5.4.2-informational?style=flat-square)
+
 Adminer (formerly phpMinAdmin) is a full-featured database management tool written in PHP. Conversely to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer is available for MySQL, PostgreSQL, SQLite, MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB.
 
 [Overview of Adminer](https://www.adminer.org/)

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.1 (2026-05-02)
+
+Documentation and validation polish on top of 1.0.0. No template or values
+default changes — installs from 1.0.0 upgrade in place with no action.
+
+### Added
+
+- `values.schema.json` — JSON Schema generated from `values.yaml` defaults. Permissive (no `required`, no `additionalProperties: false`); catches gross type mistakes (`replicaCount: "two"`, `service.type: 8080`) at `helm install`/`upgrade` time. Null defaults map to `{}` (any), so existing overrides continue to validate.
+- `README.md`: Artifact Hub repository badge plus static `Version` / `Type` / `AppVersion` shields under the title.
+
+### Fixed
+
+- `values.yaml`: duplicate `metrics.serviceMonitor.endpoints` key under `metrics.serviceMonitor`. Helm's YAML loader silently kept the last value (`endpoints: []`) and discarded the shorthand `endpoints: [{path: /metrics}]` that the section above intended. Behavior of the rendered ServiceMonitor is unchanged because `templates/ServiceMonitor.yaml` already falls back to the synthetic single-endpoint when `endpoints` is empty — but stricter YAML loaders (yaml.v3, js-yaml, kubeval pipelines) rejected the file outright.
+
 ## 1.0.0 (2026-05-02)
 
 Major release. Substantial restructuring of TLS / cert-manager values, plus a
