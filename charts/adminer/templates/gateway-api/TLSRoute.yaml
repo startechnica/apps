@@ -19,6 +19,7 @@ spec:
   parentRefs: {{- include "adminer.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.tlsRoute.parentRefs "context" $) | nindent 4 }}
   {{- if .Values.gateway.hostnames }}
   hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
+  {{- end }}
   rules:
     - backendRefs:
         - group: ""
