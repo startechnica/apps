@@ -23,6 +23,9 @@ gateway:
     enabled: true
     selfSigned: true
 
+tls:
+  enabled: true
+
 tolerations:
   - effect: NoSchedule
     key: node-role.kubernetes.io/control-plane
