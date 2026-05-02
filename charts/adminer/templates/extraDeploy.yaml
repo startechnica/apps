@@ -1,0 +1,9 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- range .Values.extraDeploy }}
+---
+{{ include "st-common.tplvalues.render" (dict "value" . "context" $) }}
+{{- end }}

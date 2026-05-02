@@ -1,19 +1,22 @@
 1. Get the application URL by running these commands:
-{{- if .Values.ingress.enabled }}
-  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ if $.Values.ingress.host }}{{.Values.ingress.host}}{{else}}your-cluster-ip{{end}}{{ $.Values.ingress.path }}
-  {{if not $.Values.ingress.host}}
-{{- end }}
+{{- if .Values.gateway.enabled }}
+{{- $gwHost := default .Values.ingress.hostname (first .Values.gateway.hostnames) }}
+  http{{ if .Values.gateway.tls.enabled }}s{{ end }}://{{ $gwHost }}/
+  NOTE: routing is provided by the {{ .Values.gateway.implementation }} Gateway.
+        Make sure DNS for "{{ $gwHost }}" resolves to the gateway's external address.
+{{- else if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ default "your-cluster-ip" .Values.ingress.hostname }}{{ .Values.ingress.path }}
 {{- else if contains "NodePort" .Values.service.type }}
-  export NODE_PORT=$(kubectl get --namespace {{ include "common.labels.standard" . }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "common.names.fullname" . }})
-  export NODE_IP=$(kubectl get nodes --namespace {{ include "common.labels.standard" . }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  export NODE_PORT=$(kubectl get --namespace {{ include "st-common.names.namespace" . }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "st-common.names.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ include "st-common.names.namespace" . }} -o jsonpath="{.items[0].status.addresses[0].address}")
   echo http://$NODE_IP:$NODE_PORT
 {{- else if contains "LoadBalancer" .Values.service.type }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
-           You can watch the status of by running 'kubectl get --namespace {{ include "common.labels.standard" . }} svc -w {{ include "common.names.fullname" . }}'
-  export SERVICE_IP=$(kubectl get svc --namespace {{ include "common.labels.standard" . }} {{ include "common.names.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-  echo http://$SERVICE_IP:{{ .Values.service.port }}
+           You can watch the status by running 'kubectl get --namespace {{ include "st-common.names.namespace" . }} svc -w {{ include "st-common.names.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ include "st-common.names.namespace" . }} {{ include "st-common.names.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo http://$SERVICE_IP:{{ .Values.service.ports.http }}
 {{- else if contains "ClusterIP" .Values.service.type }}
-  export POD_NAME=$(kubectl get pods --namespace {{ include "common.labels.standard" . }} -l "app.kubernetes.io/name={{ include "common.names.fullname" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  echo "Visit http://127.0.0.1:8080 to use your application"
-  kubectl port-forward $POD_NAME 8080:80
+  export POD_NAME=$(kubectl get pods --namespace {{ include "st-common.names.namespace" . }} -l "app.kubernetes.io/name={{ .Chart.Name }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  echo "Visit http://127.0.0.1:{{ .Values.service.ports.http }} to use your application"
+  kubectl --namespace {{ include "st-common.names.namespace" . }} port-forward $POD_NAME {{ .Values.service.ports.http }}:{{ .Values.containerPorts.http }}
 {{- end }}

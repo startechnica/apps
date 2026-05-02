@@ -1,7 +1,13 @@
+# (c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+
+## =============================================================================
 ## @section Global parameters
-## Global Docker image parameters
-## Please, note that this will override the image parameters, including dependencies, configured to use the global value
-## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+## -----------------------------------------------------------------------------
+## Global Docker image parameters shared across this chart and any dependencies.
+## Currently available: imageRegistry, imagePullSecrets, storageClass, and
+## platform compatibility adaptations (OpenShift, SELinux).
+## =============================================================================
 
 ## @param global.imageRegistry Global Docker image registry
 ## @param global.imagePullSecrets Global Docker registry secret names as an array
@@ -15,8 +21,27 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
+  ## Compatibility adaptations for Kubernetes platforms
+  ##
+  compatibility:
+    ## Compatibility adaptations for Openshift
+    ##
+    openshift:
+      ## @param global.compatibility.openshift.adaptSecurityContext Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)
+      ##
+      adaptSecurityContext: auto
+    ## @param global.compatibility.omitEmptySeLinuxOptions If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object
+    ##
+    omitEmptySeLinuxOptions: false
 
+
+## =============================================================================
 ## @section Common parameters
+## -----------------------------------------------------------------------------
+## Generic chart-wide parameters that affect every rendered resource:
+## naming, labels/annotations applied to all objects, cluster domain,
+## arbitrary extra manifests, and diagnostic-mode overrides.
+## =============================================================================
 
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
 ##
@@ -27,10 +52,6 @@ nameOverride: ""
 ## @param fullnameOverride String to fully override adminer.fullname
 ##
 fullnameOverride: ""
-## @param hostAliases Add deployment host aliases
-## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
-##
-hostAliases: []
 ## @param commonLabels Labels to add to all deployed objects
 ##
 commonLabels: {}
@@ -59,10 +80,16 @@ diagnosticMode:
   args:
     - infinity
 
-## @section Adminer common parameters
+
+## =============================================================================
+## @section Adminer Image parameters
+## -----------------------------------------------------------------------------
+## The Docker image used to run Adminer. Override these to pin a specific
+## version, point at a private registry, or change the pull policy.
+## =============================================================================
 
 ## Adminer image
-## ref: https://hub.docker.com/r/bitnami/mariadb/tags/
+## ref: https://hub.docker.com/_/adminer
 ## @param image.registry Adminer image registry
 ## @param image.repository Adminer image repository
 ## @param image.tag Adminer image tag (immutable tags are recommended)
@@ -73,7 +100,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: adminer
-  tag: 4.8.1-standalone
+  tag: 5.4.2-standalone
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -87,9 +114,119 @@ image:
   ##
   pullSecrets: []
   ## Set to true if you would like to see extra information on logs
-  ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
+
+
+## =============================================================================
+## @section Adminer Configuration parameters
+## -----------------------------------------------------------------------------
+## Adminer application configuration: bundled plugins/designs, default
+## upstream server, custom config file, init scripts, and extra environment
+## variables / startup flags.
+## See env vars supported by the upstream image: https://hub.docker.com/_/adminer
+## =============================================================================
+
+## Adminer behaviour configuration (passed to the container as env vars)
+##
+config:
+  ## @param config.plugins List of Adminer plugins to enable. Accepts either a YAML list (preferred) or a pre-formatted space-separated string; the `adminer.config.plugins` helper joins lists into the space-separated form the upstream image's ADMINER_PLUGINS env var expects.
+  ## This image bundles all official Adminer plugins. You can find the list of plugins on
+  ## GitHub: https://github.com/vrana/adminer/tree/master/plugins.
+  ## E.g.
+  ## plugins:
+  ##   - login-servers
+  ##   - tables-filter
+  ##   - dump-json
+  ##
+  plugins: []
+  ## @param config.design Choosing a design
+  ## The image bundles all the designs that are available in the source package of adminer. You can
+  ## find the list of designs on GitHub: https://github.com/vrana/adminer/tree/master/designs.
+  ##
+  design: "pepa-linha"
+  ## @param config.externalserver [DEPRECATED — use `config.defaultServer`] Default upstream database server.
+  ## Kept as a fallback so existing overrides keep working: the `adminer.config.defaultServer` helper
+  ## prefers `config.defaultServer` and falls back to this key when `defaultServer` is empty.
+  ## Slated for removal in the next major chart bump — please migrate.
+  ##
+  externalserver: ""
+  ## @param config.defaultServer Default value for the "Server" field on the Adminer login screen (ADMINER_DEFAULT_SERVER). Canonical replacement for the deprecated `config.externalserver`.
+  ##
+  defaultServer: ""
+  ## @param config.defaultDriver Default value for the "System" field on the login screen (ADMINER_DEFAULT_DRIVER). Recognised by login-servers / login-password-less plugins and common derivative images.
+  ## E.g. server, pgsql, sqlite, mssql, oracle, mongo, firebird, simpledb, elastic, clickhouse
+  ##
+  defaultDriver: ""
+  ## @param config.defaultUsername Default value for the "Username" field on the login screen (ADMINER_DEFAULT_USERNAME). Requires a compatible plugin or derivative image — silently ignored by the stock docker.io/adminer image.
+  ##
+  defaultUsername: ""
+  ## @param config.defaultPassword Default value for the "Password" field on the login screen (ADMINER_DEFAULT_PASSWORD). Requires a compatible plugin or derivative image; consider sourcing from a Secret via `extraEnvVarsSecret` instead of putting cleartext here.
+  ##
+  defaultPassword: ""
+  ## @param config.defaultDatabase Default value for the "Database" field on the login screen (ADMINER_DEFAULT_DATABASE). Requires a compatible plugin or derivative image.
+  ##
+  defaultDatabase: ""
+  ## @param config.autoLogin Auto-submit the login form when used with the login-servers / login-password-less plugins (ADMINER_AUTO_LOGIN).
+  ##
+  autoLogin: false
+  ## @param config.permanentLogin Persist the Adminer login session across browser restarts (ADMINER_PERMANENT_LOGIN).
+  ##
+  permanentLogin: false
+  ## @param config.baseUrl Base URL Adminer is served from (ADMINER_BASE_URL). Used when running behind a path-based reverse proxy.
+  ##
+  baseUrl: ""
+
+## @param configuration Inline Adminer configuration file content (rendered into a ConfigMap)
+##
+configuration: ""
+## @param existingConfigmap Name of existing ConfigMap with Adminer configuration
+## NOTE: When it's set the configuration parameter is ignored
+##
+existingConfigmap: ""
+## @param extraStartupArgs Extra default startup args
+##
+extraStartupArgs: ""
+## @param extraFlags Adminer additional command line flags
+## Can be used to specify command line flags, for example:
+## E.g.
+## extraFlags: "--max-connect-errors=1000 --max_connections=155"
+##
+extraFlags: ""
+## @param initdbScripts Dictionary of initdb scripts
+## Specify dictionary of scripts to be run at first boot
+## Example:
+## initdbScripts:
+##   my_init_script.sh: |
+##      #!/bin/bash
+##      echo "Do something."
+##
+initdbScripts: {}
+## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
+##
+initdbScriptsConfigMap: ""
+## @param extraEnvVars Extra environment variables to be set on Adminer containers
+## E.g.
+## extraEnvVars:
+##  - name: TZ
+##    value: "Europe/Paris"
+##
+extraEnvVars: []
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Adminer containers
+##
+extraEnvVarsCM: ""
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Adminer containers
+##
+extraEnvVarsSecret: ""
+
+
+## =============================================================================
+## @section Adminer Authentication parameters
+## -----------------------------------------------------------------------------
+## How Adminer obtains the credentials it uses to talk to the configured
+## upstream database. Use these to bring your own Secret instead of the
+## chart-managed one.
+## =============================================================================
 
 auth:
   ## @param auth.existingSecret An already existing secret containing auth info
@@ -111,49 +248,430 @@ auth:
   ##
   existingSecretPerPassword: {}
 
-configuration: ""
-## @param existingConfigmap Name of existing ConfigMap with Adminer configuration
-## NOTE: When it's set the configuration parameter is ignored
-##
-existingConfigmap: ""
-## @param extraStartupArgs Extra default startup args
-##
-extraStartupArgs: ""
-## @param initdbScripts Dictionary of initdb scripts
-## Specify dictionary of scripts to be run at first boot
-## Example:
-## initdbScripts:
-##   my_init_script.sh: |
-##      #!/bin/bash
-##      echo "Do something."
-##
-initdbScripts: {}
-## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
-##
-initdbScriptsConfigMap: ""
 
+## =============================================================================
+## @section Deployment / Workload parameters
+## -----------------------------------------------------------------------------
+## Workload-level concerns: how many replicas, rollout strategy, scheduler,
+## host aliases, deployment-only annotations, and termination behaviour.
+## Pod-level scheduling and security live in the next two sections.
+## =============================================================================
+
+## @param replicaCount Number of Adminer pods. Ignored when `horizontalPodAutoscaler.enabled` is true.
+##
 replicaCount: 1
+## Horizontal Pod Autoscaler. When enabled, the chart renders an HPA targeting the Adminer
+## Deployment and stops setting `spec.replicas` on the Deployment so the two don't fight.
+## See `templates/HorizontalPodAutoscaler.yaml`.
+##
+horizontalPodAutoscaler:
+  ## @param horizontalPodAutoscaler.enabled Render an HPA and skip setting `replicas` on the Deployment.
+  ##
+  enabled: false
+  ## @param horizontalPodAutoscaler.minReplicas Lower bound for HPA-managed replica count.
+  ##
+  minReplicas: 1
+  ## @param horizontalPodAutoscaler.maxReplicas Upper bound for HPA-managed replica count.
+  ##
+  maxReplicas: 5
+  ## @param horizontalPodAutoscaler.targetCPU Target average CPU utilization (percent). Set to "" to disable CPU-based scaling — be sure to set `targetMemory` in that case (an HPA without metrics is rejected).
+  ##
+  targetCPU: 80
+  ## @param horizontalPodAutoscaler.targetMemory Target average memory utilization (percent). Set to "" to disable memory-based scaling.
+  ##
+  targetMemory: 80
+  ## @param horizontalPodAutoscaler.metrics Full HPA `metrics` list passthrough. When non-empty, takes precedence over `targetCPU`/`targetMemory` and is rendered verbatim — use this for custom/external metrics or any HPA shape the simple shorthand can't express.
+  ## E.g.
+  ## metrics:
+  ##   - type: Resource
+  ##     resource:
+  ##       name: cpu
+  ##       target:
+  ##         type: Utilization
+  ##         averageUtilization: 75
+  ##   - type: External
+  ##     external:
+  ##       metric:
+  ##         name: queue_depth
+  ##       target:
+  ##         type: AverageValue
+  ##         averageValue: "30"
+  ##
+  metrics: []
+## @param revisionHistoryLimit Number of old ReplicaSets retained for rollback
+##
+revisionHistoryLimit: 1
+## @param updateStrategy.type Set up update strategy for the Adminer Deployment.
+## Set to Recreate if you use persistent volume that cannot be mounted by more than one pods to make sure the pods is destroyed first.
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+## Example:
+## updateStrategy:
+##  type: RollingUpdate
+##  rollingUpdate:
+##    maxSurge: 25%
+##    maxUnavailable: 25%
+##
+updateStrategy:
+  type: RollingUpdate
+## @param schedulerName Alternative scheduler
+## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+##
+schedulerName: ""
+## @param terminationGracePeriodSeconds In seconds, time the given to the Adminer pod needs to terminate gracefully
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods
+##
+terminationGracePeriodSeconds: ""
+## @param priorityClassName Priority class name
+## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+##
+priorityClassName: ""
+## @param hostAliases Add deployment host aliases
+## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+##
+hostAliases: []
+## @param deploymentAnnotations Annotations to add to the deployment
+##
+deploymentAnnotations: {}
 
-# See envs from https://hub.docker.com/_/adminer/
-config:
-  ## @param config.plugins Loading plugins
-  ## This image bundles all official Adminer plugins. You can find the list of plugins on
-  ## GitHub: https://github.com/vrana/adminer/tree/master/plugins.
-  ##
-  plugins: ""
-  ## @param config.design Choosing a design
-  ## The image bundles all the designs that are available in the source package of adminer. You can
-  ## find the list of designs on GitHub: https://github.com/vrana/adminer/tree/master/designs.
-  ##
-  design: "pepa-linha"
-  ## @param config.design Usage with external server
-  ## You can specify the default host with the ADMINER_DEFAULT_SERVER environment variable. This
-  ## is useful if you are connecting to an external server or a docker container named something other than the default db.
-  ##
-  externalserver: ""
-  baseUrl: ""
 
-## @section Traffic Exposure Parameters
+## =============================================================================
+## @section Pod parameters
+## -----------------------------------------------------------------------------
+## Anything that lives on the PodSpec: labels/annotations on the pod itself,
+## affinity/anti-affinity, node selection, tolerations, topology spread, and
+## service-account token mounting.
+## =============================================================================
+
+## @param automountServiceAccountToken Mount Service Account token in pod
+##
+automountServiceAccountToken: false
+## @param podLabels Extra labels for Adminer pods
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+##
+podLabels: {}
+## @param podAnnotations Adminer Pod annotations
+## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+##
+podAnnotations: {}
+## @param podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAffinityPreset: ""
+## @param podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+##
+podAntiAffinityPreset: soft
+## Node affinity preset for Adminer pods. Ignored if `affinity` is set.
+##
+nodeAffinityPreset:
+  ## @param nodeAffinityPreset.type Node affinity preset type. Allowed values: `soft` or `hard`
+  ##
+  type: ""
+  ## @param nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
+  ## E.g.
+  ## key: "kubernetes.io/e2e-az-name"
+  ##
+  key: ""
+  ## @param nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
+  ## E.g.
+  ## values:
+  ##   - e2e-az1
+  ##   - e2e-az2
+  ##
+  values: []
+## @param affinity Affinity for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+##
+affinity: {}
+## @param nodeSelector Node labels for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+## @param tolerations Tolerations for Adminer pods assignment
+## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+## @param topologySpreadConstraints Topology Spread Constraints for Adminer pods assignment
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+## E.g.
+## topologySpreadConstraints:
+##   - maxSkew: 1
+##     topologyKey: topology.kubernetes.io/zone
+##     whenUnsatisfiable: DoNotSchedule
+##
+topologySpreadConstraints: {}
+
+
+## =============================================================================
+## @section Container parameters
+## -----------------------------------------------------------------------------
+## Anything that lives on the Adminer container spec: command/args overrides,
+## ports, security context, resources, probes (startup / liveness / readiness,
+## plus full overrides), lifecycle hooks, extra volumes, and sidecars.
+## =============================================================================
+
+## @param command Override the default container command (useful when the bundled image's entrypoint isn't what you want).
+## Ignored when `diagnosticMode.enabled` is true (that mode supplies its own command).
+## E.g.
+## command:
+##   - /bin/sh
+##   - -c
+##   - "exec php -S 0.0.0.0:8080"
+##
+command: []
+## @param args Override the default container args. Ignored when `diagnosticMode.enabled` is true.
+## E.g.
+## args:
+##   - "--some-flag"
+##
+args: []
+## @param lifecycleHooks lifecycleHooks for the Adminer container(s) to automate configuration before or after startup
+## ref: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+## E.g.
+## lifecycleHooks:
+##   preStop:
+##     exec:
+##       command: ["/bin/sh", "-c", "sleep 5"]
+##
+lifecycleHooks: {}
+## @param containerPorts.http Adminer HTTP container port
+## @param containerPorts.https Adminer HTTPS container port
+##
+containerPorts:
+  http: 8080
+  https: 8443
+## @param extraPorts Extra ports for container deployment
+##
+extraPorts: []
+## Adminer Pod security context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+## @param podSecurityContext.enabled Enable security context for Adminer pods
+## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
+## @param podSecurityContext.runAsUser User ID for the Adminer pod
+##
+podSecurityContext:
+  enabled: false
+  fsGroup: 101
+  runAsUser: 101
+## Adminer container security context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+## All values below this `enabled` flag are passed through verbatim (the `enabled`
+## key itself is stripped). Defaults follow the Pod Security Standard "restricted"
+## profile so flipping `enabled: true` immediately yields a hardened container.
+## @param containerSecurityContext.enabled Adminer container securityContext
+## @param containerSecurityContext.capabilities Linux capabilities to add/drop on the Adminer container
+## @param containerSecurityContext.runAsUser User ID for the Adminer container
+## @param containerSecurityContext.runAsNonRoot Set Adminer container's Security Context runAsNonRoot
+## @param containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only. Adminer doesn't write to disk by default but extensions or session storage may need a writable volume — pair with `extraVolumes`/`extraVolumeMounts` (e.g. an emptyDir at /tmp) if you flip this on.
+## @param containerSecurityContext.allowPrivilegeEscalation Set to false to block child processes from gaining more privileges than the parent (required by the PSS "restricted" profile)
+## @param containerSecurityContext.seccompProfile Seccomp profile applied to the container. `RuntimeDefault` is what the PSS "restricted" profile expects.
+##
+containerSecurityContext:
+  enabled: false
+  capabilities: {}
+  runAsUser: 101
+  runAsNonRoot: true
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+
+## Adminer containers' resource requests and limits
+## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+## We usually recommend not to specify default resources and to leave this as a conscious
+## choice for the user. This also increases chances charts run on environments with little
+## resources, such as Minikube. If you do want to specify resources, uncomment the following
+## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, 
+## large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+##
+resourcesPreset: "gs-3xsmall"
+## @param resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+## Example:
+## resources:
+##   requests:
+##     cpu: 2
+##     memory: 512Mi
+##   limits:
+##     cpu: 3
+##     memory: 1024Mi
+##
+resources: {}
+
+## Configure extra options for Adminer containers' liveness, readiness and startup probes
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+## @param startupProbe.enabled Enable startupProbe
+## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+## @param startupProbe.periodSeconds Period seconds for startupProbe
+## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
+## @param startupProbe.failureThreshold Failure threshold for startupProbe
+## @param startupProbe.successThreshold Success threshold for startupProbe
+##
+startupProbe:
+  enabled: false
+  initialDelaySeconds: 120
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+## Configure extra options for liveness probe
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+## @param livenessProbe.enabled Enable livenessProbe
+## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+## @param livenessProbe.periodSeconds Period seconds for livenessProbe
+## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
+## @param livenessProbe.successThreshold Success threshold for livenessProbe
+##
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 120
+  periodSeconds: 60
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+## @param readinessProbe.enabled Enable readinessProbe
+## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+## @param readinessProbe.periodSeconds Period seconds for readinessProbe
+## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
+## @param readinessProbe.successThreshold Success threshold for readinessProbe
+##
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+## @param customStartupProbe Override default startup probe for Adminer containers
+##
+customStartupProbe: {}
+## @param customLivenessProbe Override default liveness probe for Adminer containers
+##
+customLivenessProbe: {}
+## @param customReadinessProbe Override default readiness probe for Adminer containers
+##
+customReadinessProbe: {}
+## @param startupWaitOptions Override default builtin startup wait check options for Adminer containers
+## Example (with default options):
+## startupWaitOptions:
+##   retries: 300
+##   waitTime: 2
+##
+startupWaitOptions: {}
+
+## @param extraVolumes Additional volumes attached to the Adminer pod. Pair with `extraVolumeMounts` below.
+## E.g.
+## extraVolumes:
+##   - name: tmp
+##     emptyDir: {}
+##
+extraVolumes: []
+## @param extraVolumeMounts Additional volume mounts attached to the Adminer container. References volumes declared in `extraVolumes`.
+## E.g.
+## extraVolumeMounts:
+##   - name: tmp
+##     mountPath: /tmp
+##
+extraVolumeMounts: []
+## @param sidecars Additional sidecar containers added to the Adminer pod
+## E.g.
+## sidecars:
+##   - name: companion
+##     image: alpine:3
+##     command: ["sleep", "infinity"]
+##
+sidecars: []
+
+
+## =============================================================================
+## @section Metrics parameters
+## -----------------------------------------------------------------------------
+## Prometheus scraping configuration. Adminer itself doesn't expose metrics —
+## you'll need an exporter sidecar (declared via `sidecars` above) listening on
+## the port referenced here. The ServiceMonitor is only rendered when both
+## `metrics.enabled` and `metrics.serviceMonitor.enabled` are true and the
+## Prometheus Operator CRDs are present in the cluster.
+## =============================================================================
+
+metrics:
+  ## @param metrics.enabled Enable metrics collection for the Adminer pod
+  ##
+  enabled: false
+  ## Annotations attached to the Service when metrics are enabled — typically Prometheus
+  ## scrape annotations for clusters not running the Prometheus Operator. Merged into
+  ## `Service.metadata.annotations` only when both `metrics.enabled` and these annotations
+  ## are non-empty.
+  ##
+  service:
+    ## @param metrics.service.annotations Extra annotations merged into the Service when `metrics.enabled` is true. E.g. `prometheus.io/scrape: "true"`, `prometheus.io/port: "8080"`.
+    ##
+    annotations: {}
+  ## ServiceMonitor (Prometheus Operator) configuration
+  ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitor
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create a ServiceMonitor resource for the Prometheus Operator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace in which to create the ServiceMonitor (defaults to the release namespace)
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.jobLabel The label on the target Service used by Prometheus as the job name
+    ##
+    jobLabel: ""
+    ## @param metrics.serviceMonitor.port Service port the ServiceMonitor scrapes
+    ##
+    port: http
+    ## @param metrics.serviceMonitor.endpoints [array] The endpoint configuration of the ServiceMonitor. Path is mandatory. Interval, timeout and labellings can be overwritten.
+    ##
+    endpoints:
+      - path: /metrics
+    ## @param metrics.serviceMonitor.path HTTP path the exporter exposes
+    ##
+    path: /metrics
+    ## @param metrics.serviceMonitor.interval Scrape interval (defaults to the Prometheus default if empty)
+    ##
+    interval: ""
+    ## @param metrics.serviceMonitor.scrapeTimeout Per-scrape timeout (defaults to the Prometheus default if empty)
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.honorLabels Honor labels coming from the scraped target
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor resource
+    ##
+    labels: {}
+    ## @param metrics.serviceMonitor.annotations Extra annotations for the ServiceMonitor resource
+    ##
+    annotations: {}
+    ## @param metrics.serviceMonitor.selector Selector to filter which Services this ServiceMonitor matches (merged with chart defaults)
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply before scraping
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply on collected samples
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.tlsConfig TLS configuration for the scrape endpoint (switches scheme to https when set)
+    ##
+    tlsConfig: {}
+    ## @param metrics.serviceMonitor.endpoints Full endpoint definitions; overrides the single-endpoint shorthand built from `port`/`path`/etc. above.
+    ##
+    endpoints: []
+
+
+## =============================================================================
+## @section Traffic Exposure parameters
+## -----------------------------------------------------------------------------
+## How traffic reaches Adminer from outside the pod: the Service and the
+## (optional) Ingress. TLS material is configured in the next section; the
+## Gateway API path lives further down.
+## =============================================================================
 
 ## Adminer service parameters
 ##
@@ -161,15 +679,19 @@ service:
   ## @param service.type Adminer Kubernetes service type
   ##
   type: ClusterIP
-  ## @param service.ports.http Adminer Kubernetes service port
+  ## @param service.ports.http Adminer Kubernetes service HTTP port
+  ## @param service.ports.https Adminer Kubernetes service HTTPS port
   ##
   ports:
     http: 8080
-  ## @param service.nodePorts.http Adminer Kubernetes service node port
+    https: 8443
+  ## @param service.nodePorts.http Adminer Kubernetes service HTTP node port
+  ## @param service.nodePorts.https Adminer Kubernetes service HTTPS node port
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
   nodePorts:
     http: ""
+    https: ""
   ## @param service.clusterIP Adminer Kubernetes service clusterIP IP
   ##
   clusterIP: ""
@@ -211,11 +733,12 @@ service:
   ##   clientIP:
   ##     timeoutSeconds: 300
   sessionAffinityConfig: {}
-## Configure the ingress resource that allows you to access the Jenkins installation
-## ref: https://kubernetes.io/docs/user-guide/ingress/
+
+## Configure the Ingress resource that allows you to reach Adminer from outside the cluster
+## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ##
 ingress:
-  ## @param ingress.enabled Enable ingress record generation for Jenkins
+  ## @param ingress.enabled Enable ingress record generation for Adminer
   ##
   enabled: false
   ## @param ingress.pathType Ingress path type
@@ -251,19 +774,10 @@ ingress:
   ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.ingress.hostname }}`
   ## You can:
   ##   - Use the `ingress.secrets` parameter to create this TLS secret
-  ##   - Rely on cert-manager to create it by setting the corresponding annotations
+  ##   - Rely on cert-manager to issue it by setting `tls.certManager.create=true` (chart renders a `Certificate` resource)
   ##   - Rely on Helm to create self-signed certificates by setting `ingress.selfSigned=true`
   ##
   tls: false
-  ## @param ingress.certManager Create a TLS secret for this ingress record using self-signed certificates generated by cert-manager
-  ##
-  certManager:
-    create: false
-    issuerRef:
-      group: cert-manager.io
-      kind: ClusterIssuer
-      name: selfsigned-issuer
-    tlsAcme: true
   ## @param ingress.selfSigned Create a TLS secret for this ingress record using self-signed certificates generated by Helm
   ##
   selfSigned: false
@@ -332,178 +846,76 @@ ingress:
   ##
   extraRules: []
 
-## @param containerPorts.http Adminer HTTP container port
+
+## =============================================================================
+## @section TLS configuration
+## -----------------------------------------------------------------------------
+## Enable in-pod TLS termination for the Adminer HTTP server. This is
+## independent of `ingress.tls` (which terminates TLS at the Ingress).
+## =============================================================================
+
+## @param tls.enabled  Enable SSL/TLS encryption for the Adminer server (HTTPS)
+## @param tls.autoGenerated  Create self-signed TLS certificates. Currently only supports PEM certificates.
+## @param tls.certificatesMountPath  Where Adminer certificates are mounted.
+## @param tls.certificatesSecretName  Name of the secret that contains the certificates
+## @param tls.certCAFilename  CA certificate filename. Should match with the CA entry key in the tls.certificatesSecretName.
+## @param tls.certFilename  Client certificate filename to authenticate against the Adminer server. Should match with certificate the entry key in the tls.certificatesSecretName.
+## @param tls.certKeyFilename  Client key filename to authenticate against the Adminer server. Should match with certificate the entry key in the tls.certificatesSecretName.
+## @param tls.existingSecretName  Name of the existing secret containing Adminer server certificates
 ##
-containerPorts:
-  http: 8080
-## Adminer Pod security context
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-## @param podSecurityContext.enabled Enable security context for Adminer pods
-## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
-##
-podSecurityContext:
+tls:
   enabled: false
-  fsGroup: 101
-  runAsUser: 101
-## Adminer container security context
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-## @param containerSecurityContext.enabled Adminer container securityContext
-## @param containerSecurityContext.runAsUser User ID for the Adminer container
-## @param containerSecurityContext.runAsNonRoot Set Controller container's Security Context runAsNonRoot
-##
-containerSecurityContext:
-  enabled: false
-  capabilities: {}
-  runAsUser: 101
-  runAsNonRoot: true
-
-#resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
-resources:
-  limits:
-    cpu: 1000m
-    memory: 1Gi
-  requests:
-    cpu: 50m
-    memory: 64Mi
-## Configure extra options for Adminer containers' liveness, readiness and startup probes
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
-## @param startupProbe.enabled Enable startupProbe
-## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
-## @param startupProbe.periodSeconds Period seconds for startupProbe
-## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
-## @param startupProbe.failureThreshold Failure threshold for startupProbe
-## @param startupProbe.successThreshold Success threshold for startupProbe
-##
-startupProbe:
-  enabled: false
-  initialDelaySeconds: 120
-  periodSeconds: 15
-  timeoutSeconds: 5
-  failureThreshold: 10
-  successThreshold: 1
-## Configure extra options for liveness probe
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-## @param livenessProbe.enabled Enable livenessProbe
-## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-## @param livenessProbe.periodSeconds Period seconds for livenessProbe
-## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
-## @param livenessProbe.successThreshold Success threshold for livenessProbe
-##
-livenessProbe:
-  enabled: true
-  initialDelaySeconds: 120
-  periodSeconds: 60
-  timeoutSeconds: 2
-  failureThreshold: 3
-  successThreshold: 1
-## @param readinessProbe.enabled Enable readinessProbe
-## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-## @param readinessProbe.periodSeconds Period seconds for readinessProbe
-## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
-## @param readinessProbe.successThreshold Success threshold for readinessProbe
-##
-readinessProbe:
-  enabled: true
-  initialDelaySeconds: 10
-  periodSeconds: 10
-  timeoutSeconds: 1
-  failureThreshold: 3
-  successThreshold: 1
-## @param customStartupProbe Override default startup probe for Adminer containers
-##
-customStartupProbe: {}
-## @param customLivenessProbe Override default liveness probe for Adminer containers
-##
-customLivenessProbe: {}
-## @param customReadinessProbe Override default readiness probe for Adminer containers
-##
-customReadinessProbe: {}
-## @param startupWaitOptions Override default builtin startup wait check options for Adminer containers
-## `bitnami/mariadb` Docker image has built-in startup check mechanism,
-## which periodically checks if Adminer service has started up and stops it
-## if all checks have failed after X tries. Use these to control these checks.
-## ref: https://github.com/bitnami/bitnami-docker-mariadb/pull/240
-## Example (with default options):
-## startupWaitOptions:
-##   retries: 300
-##   waitTime: 2
-##
-startupWaitOptions: {}
-## @param extraFlags Adminer additional command line flags
-## Can be used to specify command line flags, for example:
-## E.g.
-## extraFlags: "--max-connect-errors=1000 --max_connections=155"
-##
-extraFlags: ""
-## @param extraEnvVars Extra environment variables to be set on Adminer containers
-## E.g.
-## extraEnvVars:
-##  - name: TZ
-##    value: "Europe/Paris"
-##
-extraEnvVars: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Adminer containers
-##
-extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for Adminer containers
-##
-extraEnvVarsSecret: ""
-
-nodeAffinityPreset:
-  ## @param gateways.$gateway.nodeAffinityPreset.type Istio Gateway node affinity preset type. Ignored if `gateways.$gateway.affinity` is set. Allowed values: `soft` or `hard`
+  autoGenerated: false
+  certificatesMountPath: /app/certs/
+  certificatesSecretName: ""
+  certFilename: ""
+  certKeyFilename: ""
+  certCAFilename: ""
+  existingSecretName: ""
+  ## @param tls.usePemCerts Use this variable if your secrets contain PEM certificates instead of PKCS12
+  ## Note: Ignored when using autoGenerated certs.
   ##
-  type: ""
-  ## @param gateways.$gateway.nodeAffinityPreset.key Istio Gateway node label key to match Ignored if `gateways.$gateway.affinity` is set.
-  ## E.g.
-  ## key: "kubernetes.io/e2e-az-name"
+  usePemCerts: false
+  ## @param tls.keyPassword Password to access the PEM key when it is password-protected.
   ##
-  key: ""
-  ## @param gateways.$gateway.nodeAffinityPreset.values Istio Gateway node label values to match. Ignored if `gateways.$gateway.affinity` is set.
-  ## E.g.
-  ## values:
-  ##   - e2e-az1
-  ##   - e2e-az2
+  keyPassword: ""
+  ## @param tls.keystorePassword Password to access the PKCS12 keystore when it is password-protected.
   ##
-  values: []
-## @param affinity Affinity for Adminer pods assignment
-## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
-##
-affinity: {}
-## @param nodeSelector Node labels for Adminer pods assignment
-## Ref: https://kubernetes.io/docs/user-guide/node-selection/
-##
-nodeSelector: {}
-## @param tolerations Tolerations for Adminer pods assignment
-## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-##
-tolerations: []
-## @param topologySpreadConstraints Topology Spread Constraints for Adminer pods assignment
-## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
-## E.g.
-## topologySpreadConstraints:
-##   - maxSkew: 1
-##     topologyKey: topology.kubernetes.io/zone
-##     whenUnsatisfiable: DoNotSchedule
-##
-topologySpreadConstraints: {}
+  keystorePassword: ""
+  ## @param tls.passwordsSecret Name of a existing secret containing the Keystore or PEM key password
+  ##
+  passwordsSecret: ""
+  ## Cert-manager driven TLS certificate issuance. Single canonical location consumed by
+  ## both the ingress (`templates/Certificate.yaml` release-namespace block) and the gateway
+  ## (`templates/Certificate.yaml` gateway-namespace block) — flip `create: true` once and
+  ## the chart issues a Certificate wherever a TLS-enabled exposure is also active:
+  ##   - Ingress cert is rendered when `ingress.tls && tls.certManager.create && !ingress.selfSigned`
+  ##   - Gateway cert is rendered when `gateway.enabled && gateway.tls.enabled && tls.certManager.create`
+  ## Both certs share `issuerRef`. If you need different issuers per path, leave this off and
+  ## bring your own `Certificate` resources via `extraDeploy`.
+  ##
+  certManager:
+    ## @param tls.certManager.create Render cert-manager `Certificate` resources for any TLS-enabled exposure (ingress and/or gateway).
+    ##
+    create: false
+    ## @param tls.certManager.issuerRef Reference to the cert-manager Issuer / ClusterIssuer that signs the certificate(s).
+    ##
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: selfsigned-issuer
+    ## @param tls.certManager.tlsAcme Add the legacy `kubernetes.io/tls-acme: "true"` annotation to the Ingress so older controllers / cert-manager-acme integrations can pick it up.
+    ##
+    tlsAcme: true
 
-## @section RBAC parameter
-#
 
-## Specifies whether a ServiceAccount should be created
+## =============================================================================
+## @section RBAC parameters
+## -----------------------------------------------------------------------------
+## ServiceAccount and Role/RoleBinding generation for the Adminer pod.
+## =============================================================================
+
+## ServiceAccount used by the Adminer pod
 ##
 serviceAccount:
   ## @param serviceAccount.create Enable the creation of a ServiceAccount for Adminer pods
@@ -519,8 +931,9 @@ serviceAccount:
   ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
   ##
   annotations: {}
-## Role Based Access
-## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
+
+## Role Based Access Control rules
+## Ref: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 ##
 rbac:
   ## @param rbac.create Specify whether RBAC resources should be created and used
@@ -539,27 +952,386 @@ rbac:
   ##
   rules: []
 
+## Network Policies
+## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+##
+networkPolicy:
+  ## @param networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+  ##
+  enabled: true
+  ## @param networkPolicy.allowExternal Don't require server label for connections
+  ## The Policy model to apply. When set to false, only pods with the correct
+  ## server label will have network access to the ports server is listening
+  ## on. When true, server will accept connections from any source
+  ## (with the correct destination port).
+  ##
+  allowExternal: true
+  ## @param networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
+  ##
+  allowExternalEgress: true
+  ## @param networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolicy
+  ## e.g:
+  ## extraIngress:
+  ##   - ports:
+  ##       - port: 1234
+  ##     from:
+  ##       - podSelector:
+  ##           - matchLabels:
+  ##               - role: frontend
+  ##       - podSelector:
+  ##           - matchExpressions:
+  ##               - key: role
+  ##                 operator: In
+  ##                 values:
+  ##                   - frontend
+  extraIngress: []
+  ## @param networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
+  ## e.g:
+  ## extraEgress:
+  ##   - ports:
+  ##       - port: 1234
+  ##     to:
+  ##       - podSelector:
+  ##           - matchLabels:
+  ##               - role: frontend
+  ##       - podSelector:
+  ##           - matchExpressions:
+  ##               - key: role
+  ##                 operator: In
+  ##                 values:
+  ##                   - frontend
+  ##
+  extraEgress: []
+  ## @param networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
+  ## @param networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
+  ##
+  ingressNSMatchLabels: {}
+  ingressNSPodMatchLabels: {}
+
+## =============================================================================
+## @section Gateway API parameters
+## -----------------------------------------------------------------------------
+## Optional Gateway API integration. When `gateway.enabled` is true the chart
+## renders one of two stacks based on `gateway.implementation`:
+##   - "gateway-api" → Kubernetes Gateway API (Gateway + HTTPRoute + ReferenceGrant)
+##   - "istio"       → Istio CRDs (networking.istio.io Gateway + VirtualService)
+## Sub-blocks below cover the Gateway resource itself, HTTPRoute, ReferenceGrant,
+## ambient mesh / waypoint proxies, and AuthorizationPolicy.
+## ref: https://gateway-api.sigs.k8s.io/  |  https://istio.io/latest/docs/reference/config/networking/gateway/
+## =============================================================================
+
 gateway:
+  ## @param gateway.enabled Enable the creation of Gateway API resources (Gateway, HTTPRoute, ReferenceGrant) to manage incoming traffic to the application.
+  ## When set to false, the chart will not create or manage any Gateway API resources, and it will be expected that they are managed externally.
+  ##
   enabled: false
-  dedicated: false
-  gatewayApi: false
-  name: ""
-  namespace: ""
+  ## @param gateway.implementation Gateway implementation to render. Allowed values:
+  ##   - "gateway-api" → Kubernetes Gateway API (Gateway + HTTPRoute)
+  ##   - "istio"       → Istio CRDs (networking.istio.io Gateway + VirtualService)
+  ##
+  implementation: gateway-api
+
+  ## ---- Gateway resource -----------------------------------------------------
+  ## Configuration for the Gateway resource itself (created here, or referenced
+  ## externally via `existingGateway`).
+  ##
+  gateway:
+    ## @param gateway.gateway.create  Enable the creation of a Gateway API Gateway resource to manage incoming traffic to the application.
+    ## When set to false, the chart will expect an existing Gateway resource to be referenced in the HTTPRoute parentRefs or via the existingGateway parameter.
+    ##
+    create: false
+    ## @param gateway.gateway.name  Name of the Gateway resource to create and manage. This is required when gateway.create is true.
+    ## e.g.
+    ## name: istio-ingressgateway
+    ##
+    name: ""
+    ## @param gateway.gateway.namespace  Namespace for the Gateway resource to be created in or attached to. This is required when gateway.create is true.
+    ## e.g.:
+    ## namespace: istio-ingressgateway
+    ##
+    namespace: ""
+  ## @param gateway.clusterDomain  Cluster domain for the Gateway resource
+  ##
+  clusterDomain: ""
+  ## @param gateway.serviceAccountName  Service Account name for the Gateway resource
+  ##
+  serviceAccountName: ""
+  ## @param gateway.selector  Gateway instance selector labels. One or more labels that indicate a specific set of pods/VMs on
+  ## which this gateway configuration should be applied.
+  ## ref: https://istio.io/latest/docs/reference/config/networking/gateway/#Gateway
+  ## e.g.
+  ## selector:
+  ##   istio.io/gateway-name: istio-ingressgateway
+  ##
+  selector: {}
+  ## @param gateway.gatewayClassName  Cluster-scoped resource defined by the infrastructure provider. This resource represents a
+  ## class of Gateways that can be instantiated.
+  ## ref: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+  ##
   gatewayClassName: istio
-  clusterDomain: "cluster.local"
   ## @param gateway.listeners
+  ## e.g.
+  ## listeners:
+  ##   - name: http
+  ##     port: 80
+  ##     protocol: HTTP
+  ##   - name: https
+  ##     port: 443
+  ##     protocol: HTTPS
   ##
   listeners: []
-    # - name: http
-    #   port: 80
-    #   protocol: HTTP
-    # - name: https
-    #   port: 443
-    #   protocol: HTTPS
-  existingGateway: ~
-  existingVirtualService: ~
-  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
+  ## @param gateway.existingGateway  Name of an existing Gateway API Gateway resource to attach the generated HTTPRoute/ListenerSet to. When set, the chart will reference
+  ## this Gateway instead of creating or expecting a Gateway managed elsewhere.
+  ## If empty (~), the chart expects parentRefs to explicitly define the Gateway reference.
   ##
-  extraRoute: []
+  existingGateway: ~
+  ## @param gateway.hostnames  List of hostnames that the generated HTTPRoute / VirtualService / Gateway listeners should match. The first entry is also used as the single `hostname` field on the gateway-api default HTTPS listener (gateway-api allows only one hostname per listener).
+  ## If empty, routing matches all hostnames allowed by the parent Gateway listener and Gateway listener `hosts` falls back to `["*"]`.
+  ##
+  hostnames: []
 
+  ## TLS configuration applied to the default Gateway listener generation and
+  ## to the chart-managed TLS Secret rendered by `templates/secret/gateway-tls.yaml`.
+  ## Has no effect when `gateway.listeners` is set (then the user controls
+  ## listener TLS verbatim). The certificate Secret name is computed by the
+  ## `adminer.gateway.tlsSecretName` helper — single source of truth shared by
+  ## both Gateway templates and the gateway-tls Secret, so listener and secret
+  ## can never drift apart. The helper honors `gateway.tls.existingSecret`
+  ## first, otherwise falls back to `<ingress.hostname>-tls` to match what
+  ## `templates/Certificate.yaml` produces.
+  ##
+  tls:
+    ## @param gateway.tls.enabled Render an HTTPS server (istio) / HTTPS terminate listener (gateway-api) on the default Gateway. Has no effect when `gateway.listeners` is set. **Mutually exclusive with `tls.enabled`** on the gateway-api path: if both are true, the chart skips the HTTPS terminate listener and renders only the TLS passthrough listener (terminating at the Gateway is wasted work when the pod also serves HTTPS).
+    ##
+    enabled: false
+    ## @param gateway.tls.existingSecret Name of an externally-managed Kubernetes Secret holding the TLS material the Gateway HTTPS listener references. When set, the chart skips its own self-signed / certManager / `secrets[]` rendering and the listener's `credentialName`/`certificateRefs[].name` points at this Secret directly. Applies to both `gateway.implementation: istio` and `gateway-api`.
+    ##
+    existingSecret: ""
+    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret` is set (since the user is bringing their own).
+    ##
+    selfSigned: false
+    ## @param gateway.tls.secrets Custom TLS certificates rendered as Secrets in the gateway's namespace. Same shape as `ingress.secrets`. 'name' should match what the Gateway listener references (see the `adminer.gateway.tlsSecretName` helper).
+    ## E.g.
+    ## secrets:
+    ##   - name: adminer.local-tls
+    ##     key: |-
+    ##       -----BEGIN RSA PRIVATE KEY-----
+    ##       ...
+    ##       -----END RSA PRIVATE KEY-----
+    ##     certificate: |-
+    ##       -----BEGIN CERTIFICATE-----
+    ##       ...
+    ##       -----END CERTIFICATE-----
+    ##
+    secrets: []
+
+  ## ---- HTTPRoute ------------------------------------------------------------
+  ## Routing rules attached to the Gateway above. Only used when implementation
+  ## is "gateway-api"; the Istio path renders a VirtualService instead.
+  ##
+  httpRoute:
+    ## @param gateway.httpRoute.enabled  Enable the creation of a HTTPRoute resource attached to the Gateway
+    ##
+    enabled: true
+    ## @param gateway.httpRoute.parentRefs  List of parentRefs to attach the HTTPRoute to. Each parentRef should reference a listener defined in the parent Gateway resource.
+    ## If empty, the chart will attempt to attach the HTTPRoute to the Gateway using default rules (e.g. matching hostnames or using the existingGateway reference).
+    ##
+    parentRefs: []
+    ## @param gateway.httpRoute.rules  Rules are a list of HTTP matchers, filters and actions.
+    ##
+    rules:
+      ## @param gateway.httpRoute.rules.filters  List of filters to apply to the route. Filters can be used for things like authentication, rate limiting, retries, etc.
+      ##
+      filters: []
+      ## @param gateway.httpRoute.rules.matches  List of HTTP matchers that select which requests this rule applies to.
+      ##
+      matches: []
+      ## @param gateway.httpRoute.rules.extraBackendRefs  List of additional backendRefs to route traffic to. This can be used in conjunction with the main 'backendRefs' to
+      ## add more destinations for the route.
+      ##
+      extraBackendRefs: []
+    ## @param gateway.httpRoute.extraRules  Additional rule entries appended to the generated HTTPRoute.
+    ##
+    extraRules: []
+    ## @param gateway.httpRoute.existingHTTPRouteName  Name of an existing HTTPRoute resource to use instead of creating a new one.
+    ## When set, the chart will not create or manage an HTTPRoute resource, but will reference this existing one instead.
+    ## If empty (~), the chart expects parentRefs to explicitly define the HTTPRoute reference.
+    ##
+    existingHTTPRouteName: ""
+
+  ## ---- VirtualService -------------------------------------------------------
+  ## Routing rules attached to the Gateway above. Only used when implementation
+  ## is "istio"; the gateway-api path renders an HTTPRoute instead.
+  ## ref: https://istio.io/latest/docs/reference/config/networking/virtual-service/
+  ##
+  virtualService:
+    ## @param gateway.virtualService.existingVirtualService Name of an existing VirtualService to reference instead of creating one. When set, the chart will not render its own VirtualService.
+    ##
+    existingVirtualService: ""
+    ## @param gateway.virtualService.http Istio VirtualService `http` rules (full istio HTTPRoute schema). If empty, a default rule routes prefix `/` to the chart's Service.
+    ## E.g.
+    ## http:
+    ##   - match:
+    ##       - uri:
+    ##           prefix: /api
+    ##     route:
+    ##       - destination:
+    ##           host: my-service.my-ns.svc.cluster.local
+    ##           port:
+    ##             number: 8080
+    ##
+    http: []
+
+  ## ---- ListenerSet ----------------------------------------------------------
+  ## Optional Gateway API ListenerSet. Lets a separate resource attach
+  ## additional listeners to a parent Gateway without modifying the Gateway
+  ## resource itself — useful when ownership of the Gateway and the listeners
+  ## lives in different teams or namespaces. Stable as `ListenerSet` in
+  ## `gateway.networking.k8s.io/v1`; the chart falls back to `XListenerSet`
+  ## on `gateway.networking.x-k8s.io/v1alpha1` clusters.
+  ##
+  listenerSet:
+    ## @param gateway.listenerSet.enabled Create a ListenerSet attached to the parent Gateway. The resource is silently skipped unless `listenerSet.listeners` is also non-empty.
+    ##
+    enabled: false
+    ## @param gateway.listenerSet.parentRef Override the parent Gateway reference. If empty, defaults to this release's Gateway (resolved via `st-common.gateway.fullname`/`namespace`).
+    ## E.g.
+    ## parentRef:
+    ##   group: gateway.networking.k8s.io
+    ##   kind: Gateway
+    ##   name: my-gateway
+    ##   namespace: gateway-system
+    ##
+    parentRef: {}
+    ## @param gateway.listenerSet.listeners Listeners attached to the parent Gateway. Same shape as `Gateway.spec.listeners`.
+    ## E.g.
+    ## listeners:
+    ##   - name: extra-http
+    ##     port: 8080
+    ##     protocol: HTTP
+    ##     allowedRoutes:
+    ##       namespaces:
+    ##         from: Same
+    ##
+    listeners: []
+
+  ## ---- ReferenceGrant -------------------------------------------------------
+  ## Cross-namespace permission grant. Only needed when the Gateway and the
+  ## HTTPRoute (or the backend Service) live in different namespaces.
+  ##
+  referenceGrant:
+    ## @param gateway.referenceGrant.enabled  Enable the creation of a ReferenceGrant resource to allow cross-namespace references between the Gateway and HTTPRoute
+    ##
+    enabled: false
+    ## @param gateway.referenceGrant.from List of source resource references granted access to this namespace.
+    ## If empty, defaults to allowing HTTPRoutes from `gateway.gateway.namespace` (or the release namespace if not set).
+    ## E.g.
+    ## from:
+    ##   - group: gateway.networking.k8s.io
+    ##     kind: HTTPRoute
+    ##     namespace: my-gateway-ns
+    ##
+    from: []
+    ## @param gateway.referenceGrant.to List of target resources permitted to be referenced.
+    ## If empty, defaults to this chart's Service.
+    ## E.g.
+    ## to:
+    ##   - group: ""
+    ##     kind: Service
+    ##     name: my-service
+    ##
+    to: []
+
+  ## ---- Ambient mesh & Waypoint proxies --------------------------------------
+  ## Optional Istio Ambient Mesh integration. A waypoint proxy is an Envoy-based
+  ## proxy that adds Layer 7 processing to a defined set of workloads.
+  ## ref: https://istio.io/latest/docs/ambient/
+  ##
+  mesh:
+    ## @param gateway.mesh.enabled  Enable Ambient Mesh integration for the workload
+    ##
+    enabled: false
+  waypoint:
+    ## @param gateway.waypoint.enabled  Enable Kubernetes Gateway API waypoint
+    ##
+    enabled: false
+    ## @param gateway.waypoint.type  Waypoint traffic types
+    ## Options: service, workload, all, none
+    ## ref: https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types
+    ##
+    type: service
+    ## @param gateway.waypoint.gatewayClassName  GatewayClass that will be used to implement the Waypoint Gateway (Kubernetes 1.18+)
+    ##
+    gatewayClassName: istio-waypoint
+    ## @param gateway.waypoint.extraListeners
+    ## e.g.
+    ## extraListeners:
+    ##   - name: http
+    ##     port: 80
+    ##     protocol: HTTP
+    ##   - name: https
+    ##     port: 443
+    ##     protocol: HTTPS
+    ##
+    extraListeners: []
+
+  ## ---- AuthorizationPolicy --------------------------------------------------
+  ## Optional Istio AuthorizationPolicy that gates traffic reaching the
+  ## workload through the Gateway above.
+  ##
+  authorizationPolicy:
+    ## @param gateway.authorizationPolicy.enabled  Enable the creation of an AuthorizationPolicy resource to enforce access control policies for traffic to the application through the Gateway
+    ## When enabled, this will create an AuthorizationPolicy resource that applies to the application when accessed through the Gateway. This allows you to define fine-grained access control policies to restrict or allow traffic based on various conditions such as source, destination, and request properties.
+    ##
+    enabled: true
+    ## @param gateway.authorizationPolicy.rules  Configuration block for defining allow and deny rules in the AuthorizationPolicy. This allows you to specify the conditions
+    ## under which traffic to the application through the Gateway should be allowed or denied.
+    ##
+    rules:
+      enabled: false
+      ## @param gateway.authorizationPolicy.rules.allowAll  Allow all traffic to the application when accessed through the Gateway
+      ## When set to true, this will create an AuthorizationPolicy that allows all traffic to the application. This can be useful for testing or in scenarios where you want to disable access control temporarily.
+      ## When set to false, you can define specific allow and deny rules in the 'rules.allow' and 'rules.deny' sections.
+      ## If both 'allowAll' and 'denyAll' are set to false, no AuthorizationPolicy will be created.
+      ##
+      allowAll: false
+      ## @param gateway.authorizationPolicy.rules.denyAll  Deny all traffic to the application when accessed through the Gateway
+      ## When set to true, this will create an AuthorizationPolicy that denies all traffic to the application. This can be useful for testing or in scenarios where you want to block access temporarily.
+      ## When set to false, you can define specific allow and deny rules in the 'rules.allow' and 'rules.deny' sections.
+      ## If both 'allowAll' and 'denyAll' are set to false, no AuthorizationPolicy will be created.
+      ##
+      denyAll: false
+      ## @param gateway.authorizationPolicy.rules.allow  List of allow rules to create in the AuthorizationPolicy. Each rule should specify the conditions under which traffic should be allowed to the application when accessed through the Gateway.
+      ## e.g.
+      ## allow:
+      ##   - from:
+      ##       - source:
+      ##           principals: ["cluster.local/ns/default/sa/some-service-account"]
+      ##     to:
+      ##       - operation:
+      ##           methods: ["GET"]
+      ##
+      allow: []
+      ## @param gateway.authorizationPolicy.rules.deny  List of deny rules to create in the AuthorizationPolicy. Each rule should specify the conditions under which traffic should be denied to the application when accessed through the Gateway.
+      ## e.g.
+      ## deny:
+      ##   - from:
+      ##       - source:
+      ##           principals: ["cluster.local/ns/default/sa/some-service-account"]
+      ##     to:
+      ##       - operation:
+      ##           methods: ["POST"]
+      ##
+      deny: []
+
+
+## =============================================================================
+## @section Miscellaneous
+## -----------------------------------------------------------------------------
+## Catch-all for chart-level metadata that doesn't belong to any of the
+## groups above.
+## =============================================================================
+
+## @param organization Organization label rendered into chart metadata
+##
 organization: Startechnica

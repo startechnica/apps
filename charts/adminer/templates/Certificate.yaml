@@ -1,23 +1,26 @@
-{{- if and .Values.ingress.tls .Values.ingress.certManager.create (not .Values.ingress.selfSigned) }}
-{{- if (include "common.capabilities.certManager.apiVersion" .) }}
-apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if (include "st-common.capabilities.certmanagerCertificate.apiVersion" .) }}
+{{- $apiVersion := include "st-common.capabilities.certmanagerCertificate.apiVersion" . -}}
+{{- if and .Values.ingress.tls .Values.tls.certManager.create (not .Values.ingress.selfSigned) }}
+apiVersion: {{ $apiVersion }}
 kind: Certificate
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
   issuerRef:
-    group: {{ .Values.ingress.certManager.issuerRef.group }}
-    kind: {{ .Values.ingress.certManager.issuerRef.kind }}
-    name: {{ .Values.ingress.certManager.issuerRef.name }}
+    group: {{ .Values.tls.certManager.issuerRef.group }}
+    kind: {{ .Values.tls.certManager.issuerRef.kind }}
+    name: {{ .Values.tls.certManager.issuerRef.name }}
   privateKey:
     algorithm: ECDSA
     rotationPolicy: Always
@@ -26,46 +29,46 @@ spec:
     organizations:
       - {{ .Release.Name | quote }}
     organizationalUnits:
-      - {{ include "common.names.fullname" . }}
-  dnsNames:
-    - {{ .Values.ingress.hostname | quote }}
-    {{- range .Values.ingress.extraHosts }}
-    - {{ .name | quote }}
-    {{- end }}
----
-{{- if .Values.gateway.enabled }}
-apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
-kind: Certificate
-metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ .Values.gateway.namespace | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-  {{- end }}
-spec:
-  secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
-  issuerRef:
-    group: {{ .Values.ingress.certManager.issuerRef.group }}
-    kind: {{ .Values.ingress.certManager.issuerRef.kind }}
-    name: {{ .Values.ingress.certManager.issuerRef.name }}
-  privateKey:
-    algorithm: ECDSA
-    rotationPolicy: Always
-    size: 256
-  subject:
-    organizations:
-      - {{ .Release.Name | quote }}
-    organizationalUnits:
-      - {{ include "common.names.fullname" . }}
+      - {{ include "st-common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname | quote }}
     {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
 {{- end }}
+{{- if and .Values.gateway.enabled .Values.gateway.tls.enabled .Values.tls.certManager.create }}
+{{- if and .Values.ingress.tls .Values.tls.certManager.create (not .Values.ingress.selfSigned) }}
+---
+{{- end }}
+{{- $primaryHost := default .Values.ingress.hostname (first .Values.gateway.hostnames) }}
+{{- $altNames := default (list $primaryHost) .Values.gateway.hostnames }}
+apiVersion: {{ $apiVersion }}
+kind: Certificate
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.gateway.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ include "adminer.gateway.tlsSecretName" . }}
+  issuerRef:
+    group: {{ .Values.tls.certManager.issuerRef.group }}
+    kind: {{ .Values.tls.certManager.issuerRef.kind }}
+    name: {{ .Values.tls.certManager.issuerRef.name }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ include "st-common.names.fullname" . }}
+  dnsNames:
+    {{- range $altNames }}
+    - {{ . | quote }}
+    {{- end }}
 {{- end }}
 {{- end }}

@@ -1,0 +1,35 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.gateway.referenceGrant.enabled -}}
+{{- if not (eq (include "st-common.capabilities.networkingGatewayReferenceGrant.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayReferenceGrant.apiVersion" . }}
+kind: ReferenceGrant
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  from:
+  {{- if .Values.gateway.referenceGrant.from }}
+  {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.referenceGrant.from "context" $) | nindent 4 }}
+  {{- else }}
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: {{ include "st-common.gateway.namespace" . }}
+  {{- end }}
+  to:
+  {{- if .Values.gateway.referenceGrant.to }}
+  {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.referenceGrant.to "context" $) | nindent 4 }}
+  {{- else }}
+    - group: ""
+      kind: Service
+      name: {{ include "st-common.names.fullname" . }}
+  {{- end }}
+{{- end -}}
+{{- end -}}

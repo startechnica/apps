@@ -1,0 +1,33 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if not .Values.existingConfigmap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "st-common.names.envvars" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+data:
+  # Officially read by the upstream docker.io/adminer image
+  ADMINER_PLUGINS: {{ include "adminer.config.plugins" . | quote }}
+  ADMINER_DESIGN: {{ .Values.config.design | quote }}
+  ADMINER_DEFAULT_SERVER: {{ include "adminer.config.defaultServer" . | quote }}
+
+  # Default-connection env vars — recognised by login-servers /
+  # login-password-less plugins and by common derivative images
+  # (shyim/adminerevo, dockware, …); silently ignored by the stock image
+  ADMINER_DEFAULT_DRIVER: {{ .Values.config.defaultDriver | quote }}
+  ADMINER_DEFAULT_USERNAME: {{ .Values.config.defaultUsername | quote }}
+  ADMINER_DEFAULT_DATABASE: {{ .Values.config.defaultDatabase | quote }}
+
+  # Session / routing tweaks (booleans rendered as strings)
+  ADMINER_AUTO_LOGIN: {{ ternary "true" "false" .Values.config.autoLogin | quote }}
+  ADMINER_PERMANENT_LOGIN: {{ ternary "true" "false" .Values.config.permanentLogin | quote }}
+  ADMINER_BASE_URL: {{ .Values.config.baseUrl | quote }}
+{{- end }}

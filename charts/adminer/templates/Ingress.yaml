@@ -1,27 +1,27 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.ingress.enabled (not .Values.gateway.enabled) }}
-apiVersion: {{ include "common.capabilities.ingress.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
-  {{- if or .Values.ingress.annotations .Values.commonAnnotations .Values.ingress.certManager.create }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if or .Values.ingress.annotations .Values.commonAnnotations .Values.tls.certManager.create }}
   annotations:
-    {{- if .Values.ingress.certManager.tlsAcme }}
+    {{- if and .Values.tls.certManager.create .Values.tls.certManager.tlsAcme }}
     kubernetes.io/tls-acme: "true"
     {{- end }}
-    {{- if .Values.ingress.annotations }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.ingress.annotations "context" $ ) | nindent 4 }}
-    {{- end }}
-    {{- if .Values.commonAnnotations }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+    {{- if or .Values.commonAnnotations .Values.ingress.annotations }}
+    {{- $annotations := merge .Values.ingress.annotations .Values.commonAnnotations }}
+    annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 spec:
-  {{- if and .Values.ingress.ingressClassName (eq "true" (include "common.ingress.supportsIngressClassname" .)) }}
+  {{- if and .Values.ingress.ingressClassName (eq "true" (include "st-common.ingress.supportsIngressClassname" .)) }}
   ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
   {{- end }}
   rules:
@@ -33,33 +33,33 @@ spec:
             {{- toYaml .Values.ingress.extraPaths | nindent 10 }}
           {{- end }}
           - path: {{ .Values.ingress.path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
+            {{- if eq "true" (include "st-common.ingress.supportsPathType" .) }}
             pathType: {{ .Values.ingress.pathType }}
             {{- end }}
-            backend: {{- include "common.ingress.backend" (dict "serviceName" (include "common.names.fullname" .) "servicePort" "http" "context" $)  | nindent 14 }}
+            backend: {{- include "st-common.ingress.backend" (dict "serviceName" (include "st-common.names.fullname" .) "servicePort" "http" "context" $)  | nindent 14 }}
     {{- end }}
     {{- range .Values.ingress.extraHosts }}
     - host: {{ .name | quote }}
       http:
         paths:
           - path: {{ default "/" .path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" $) }}
+            {{- if eq "true" (include "st-common.ingress.supportsPathType" $) }}
             pathType: {{ default "ImplementationSpecific" .pathType }}
             {{- end }}
-            backend: {{- include "common.ingress.backend" (dict "serviceName" (include "common.names.fullname" $) "servicePort" "http" "context" $) | nindent 14 }}
+            backend: {{- include "st-common.ingress.backend" (dict "serviceName" (include "st-common.names.fullname" $) "servicePort" "http" "context" $) | nindent 14 }}
     {{- end }}
     {{- if .Values.ingress.extraRules }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.ingress.extraRules "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.ingress.extraRules "context" $) | nindent 4 }}
     {{- end }}
-  {{- if or (and .Values.ingress.tls (or (include "common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.selfSigned .Values.ingress.secrets )) .Values.ingress.extraTls }}
+  {{- if or (and .Values.ingress.tls (or (include "st-common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.selfSigned .Values.ingress.secrets )) .Values.ingress.extraTls }}
   tls:
-    {{- if and .Values.ingress.tls (or (include "common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.secrets .Values.ingress.selfSigned) }}
+    {{- if and .Values.ingress.tls (or (include "st-common.ingress.certManagerRequest" ( dict "annotations" .Values.ingress.annotations )) .Values.ingress.secrets .Values.ingress.selfSigned) }}
     - hosts:
         - {{ .Values.ingress.hostname | quote }}
       secretName: {{ printf "%s-tls" .Values.ingress.hostname }}
     {{- end }}
     {{- if .Values.ingress.extraTls }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.ingress.extraTls "context" $) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.ingress.extraTls "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 {{- end }}

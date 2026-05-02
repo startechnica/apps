@@ -1,33 +1,96 @@
-{{/* Create the name of the service account to use for the deployment */}}
-{{- define "adminer.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-  {{ default (printf "%s" (include "common.names.fullname" .)) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" }}
-{{- else -}}
-  {{ default "default" .Values.serviceAccount.name }}
-{{- end -}}
-{{- end -}}
+{{/*
+Name of the Kubernetes Secret holding the TLS material referenced by the
+Gateway HTTPS listener — `credentialName` on the istio path,
+`certificateRefs[].name` on the gateway-api path, and the resource name
+produced by `templates/secret/gateway-tls.yaml`. Single source of truth so
+the listener and the secret can never drift apart.
 
-{{/* Return the proper Adminer image name */}}
-{{- define "adminer.image" -}}
-  {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
-{{- end -}}
-
-{{/* Return the proper Docker Image Registry Secret Names */}}
-{{- define "adminer.imagePullSecrets" -}}
-  {{- include "common.images.pullSecrets" (dict "images" (list .Values.image) "global" .Values.global) -}}
+Returns `gateway.tls.existingSecret` when set; otherwise falls back to
+`<ingress.hostname>-tls` to match the secret name `templates/Certificate.yaml`
+and `templates/secret/ingress-tls.yaml` produce.
+*/}}
+{{- define "adminer.gateway.tlsSecretName" -}}
+{{- default (printf "%s-tls" .Values.ingress.hostname) .Values.gateway.tls.existingSecret -}}
 {{- end -}}
 
 {{/*
-Create the name of the SSL certificate to use
+Render `config.plugins` as the space-separated string the Adminer image
+expects in the ADMINER_PLUGINS env var. Accepts either a list (preferred,
+YAML-friendly) or a pre-formatted string (backwards-compatible).
 */}}
-{{- define "istioCertificateSecret2" -}}
-{{- default (printf "%s-tls" (include "common.names.fullname" .)) .Values.istio.certificate.existingSecret }}
-{{- end }}
+{{- define "adminer.config.plugins" -}}
+{{- if kindIs "slice" .Values.config.plugins -}}
+{{- join " " .Values.config.plugins -}}
+{{- else -}}
+{{- .Values.config.plugins -}}
+{{- end -}}
+{{- end -}}
 
-{{ define "istioCertificateSecret" }}
-{{- if .Values.istio.certificate.existingSecret }}
-  {{ .Values.istio.certificate.existingSecret }}
-{{- else }}
-  {{- default (printf "%s-tls" (include "common.names.fullname" .)) }}
-{{- end }}
-{{- end }}
+{{/*
+Default value for the "Server" field on Adminer's login screen
+(ADMINER_DEFAULT_SERVER). Returns `config.defaultServer` if set, otherwise
+falls back to the DEPRECATED `config.externalserver` so existing user
+overrides keep working until the next major bump.
+*/}}
+{{- define "adminer.config.defaultServer" -}}
+{{- default .Values.config.externalserver .Values.config.defaultServer -}}
+{{- end -}}
+
+{{/*
+Name of the ConfigMap whose data: block is loaded into the Adminer container
+via `envFrom`. Returns `existingConfigmap` when the user is bringing their
+own ConfigMap, otherwise the name of the chart-rendered env-vars ConfigMap
+(see `templates/configmap/envvars.yaml`).
+*/}}
+{{- define "adminer.config.envvarsConfigMapName" -}}
+{{- default (include "st-common.names.envvars" .) .Values.existingConfigmap -}}
+{{- end -}}
+
+{{/*
+Name of the chart-internal CA Secret (`<fullname>-tls-ca`) holding the
+self-signed Certificate Authority shared by the ingress and gateway leaf TLS
+Secrets. Single source of truth for the CA Secret name — used by both
+`templates/secret/tls-ca.yaml` and the lookup inside `adminer.tls.ca.init`.
+*/}}
+{{- define "adminer.tls.ca.secretName" -}}
+{{- printf "%s-tls-ca" (include "st-common.names.fullname" .) -}}
+{{- end -}}
+
+{{/*
+Populates `$._adminerTlsCa` (root-context cache) with the chart's self-signed
+TLS Certificate Authority — a dict shaped `{Cert, Key}` compatible with
+sprig's `genSignedCert`. After calling this template-include, callers read the
+CA back via `index $ "_adminerTlsCa"`.
+
+Recovery chain on first invocation per render:
+  1. lookup the persistent CA Secret rendered by `templates/secret/tls-ca.yaml`
+     in the release namespace; recover Cert+Key if present.
+  2. otherwise fall back to `genCA` (first install path).
+
+Why: previously `templates/secret/ingress-tls.yaml` and
+`templates/secret/gateway-tls.yaml` each called `genCA` independently, which
+produced two distinct CAs in the same render. A user migrating from ingress
+to gateway exposure (or running both) would have to re-trust a different CA
+per path, AND each `helm upgrade` would rotate the CA — breaking pinned
+clients on every release. This helper makes a single CA persist across both
+paths and across upgrades.
+
+Caveat: chart upgrades from versions before this helper landed will rotate
+the CA exactly once (no persistent CA Secret existed to recover from), so
+clients that pinned the old CA need to re-trust on that one upgrade.
+*/}}
+{{- define "adminer.tls.ca.init" -}}
+{{- if not (hasKey $ "_adminerTlsCa") -}}
+  {{- $ca := dict -}}
+  {{- $existing := lookup "v1" "Secret" (include "st-common.names.namespace" .) (include "adminer.tls.ca.secretName" .) -}}
+  {{- if and $existing $existing.data (hasKey $existing.data "ca.crt") (hasKey $existing.data "ca.key") -}}
+    {{- $_ := set $ca "Cert" (b64dec (index $existing.data "ca.crt")) -}}
+    {{- $_ := set $ca "Key" (b64dec (index $existing.data "ca.key")) -}}
+  {{- else -}}
+    {{- $fresh := genCA "adminer-ca" 365 -}}
+    {{- $_ := set $ca "Cert" $fresh.Cert -}}
+    {{- $_ := set $ca "Key" $fresh.Key -}}
+  {{- end -}}
+  {{- $_ := set $ "_adminerTlsCa" $ca -}}
+{{- end -}}
+{{- end -}}

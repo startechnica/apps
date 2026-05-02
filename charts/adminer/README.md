@@ -280,9 +280,108 @@ Find more information about how to deal with common errors related to Startechni
 
 ## Upgrading
 
+### To 1.0.0 (breaking)
+
+This is a major release. Most users with existing `values.yaml` overrides will
+need to migrate the keys below. The full change list is in
+[CHANGELOG.md](CHANGELOG.md).
+
+#### 1. cert-manager configuration moved under `tls.certManager.*`
+
+Both `ingress.certManager.*` and the never-released `gateway.tls.certManager.*`
+are gone. Use the single canonical block instead — the same flag now triggers
+both ingress-namespace and gateway-namespace cert issuance, depending on which
+exposures are enabled.
+
+```yaml
+# Before
+ingress:
+  certManager:
+    create: true
+    issuerRef:
+      kind: ClusterIssuer
+      name: letsencrypt-prod
+    tlsAcme: true
+
+# After
+tls:
+  certManager:
+    create: true
+    issuerRef:
+      kind: ClusterIssuer
+      name: letsencrypt-prod
+    tlsAcme: true
+```
+
+#### 2. Gateway "bring your own TLS Secret" knob renamed
+
+```yaml
+# Before
+istio:
+  certificate:
+    existingSecret: my-tls-secret
+
+# After
+gateway:
+  tls:
+    existingSecret: my-tls-secret
+```
+
+The `istio:` top-level block is gone. The new key applies to both
+`gateway.implementation: istio` and `gateway-api`.
+
+#### 3. VirtualService SNI passthrough is now auto-derived
+
+`gateway.virtualService.tls` is removed. If you previously hand-authored SNI
+routes there, drop them and set `tls.enabled: true` instead — the chart
+auto-derives the passthrough rules from `gateway.hostnames` and the backend's
+TLS port. If you need exotic per-host rules, set
+`gateway.virtualService.existingVirtualService` to a manifest you manage.
+
+#### 4. `config.externalserver` deprecated, prefer `config.defaultServer`
+
+Both still work — `defaultServer` wins when set, falling back to
+`externalserver`. The legacy key is slated for removal in 2.0.
+
+#### 5. Gateway-namespace cert-manager Certificate is now opt-in
+
+The previous chart silently rendered a duplicate `Certificate` in the gateway
+namespace whenever `ingress.tls + ingress.certManager.create + gateway.enabled`
+were all set. After 1.0 you have to opt in explicitly via
+`gateway.tls.enabled: true` (with `tls.certManager.create: true`). If you were
+relying on the implicit behaviour, flip those flags.
+
+#### 6. Self-signed CA persists, but rotates exactly once on this upgrade
+
+Users on `ingress.selfSigned: true` (or the new `gateway.tls.selfSigned: true`)
+will see the chart-managed CA rotate on the first upgrade to 1.0.0 — there was
+no persistent CA Secret in 0.x to recover from. From 1.0 on, the CA is stored
+in `<release>-tls-ca` and recovered via `lookup` on every subsequent render,
+so clients trusting the CA stay valid across `helm upgrade` and across
+ingress↔gateway path migrations.
+
+#### 7. `existingConfigmap` is now actively `envFrom`-mounted
+
+In 0.x `existingConfigmap` was an "I'll handle it" escape hatch the
+Deployment didn't actually consume. Now the chart-rendered env-vars ConfigMap
+(`templates/configmap/envvars.yaml`) is wired into the Deployment via
+`envFrom`, and `existingConfigmap` overrides which CM the `envFrom` points at.
+If you set `existingConfigmap: my-cm`, your CM's `data` is loaded into the
+Adminer container as env vars on first upgrade — make sure it contains the
+keys Adminer expects (`ADMINER_PLUGINS`, `ADMINER_DESIGN`,
+`ADMINER_DEFAULT_SERVER`, etc.) or a superset.
+
+#### 8. Inline `ADMINER_*` env vars dropped from the Deployment
+
+For the same reason as #7: those env vars now flow through the env-vars
+ConfigMap, not inline `env:` entries. Behaviour is unchanged unless you were
+relying on the precedence of inline `env:` over `envFrom` to override
+something — in which case set the override via `extraEnvVars` (which still
+renders inline and still wins over `envFrom`).
+
 ## License
 
-Copyright &copy; 2023 Startechnica
+Copyright &copy; 2026 Startechnica
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

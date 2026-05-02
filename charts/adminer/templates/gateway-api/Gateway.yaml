@@ -1,0 +1,82 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.gateway.gateway.create -}}
+{{- if not (eq (include "st-common.capabilities.networkingGatewayGateway.apiVersion" .) "false") -}}
+{{- $primaryHostname := first .Values.gateway.hostnames -}}
+{{- /*
+Auto-derive `allowedRoutes.namespaces.from` for the chart-rendered listeners:
+  - Gateway in the same namespace as this app  → `Same` (no cross-namespace permission needed)
+  - Gateway in a different namespace           → `All`  (so the chart's HTTPRoute / TLSRoute in the app namespace can attach)
+Users overriding `gateway.listeners` control this directly.
+*/ -}}
+{{- $appNs := include "st-common.names.namespace" . -}}
+{{- $gwNs := include "st-common.gateway.namespace" . -}}
+{{- $allowedFrom := ternary "Same" "All" (eq $gwNs $appNs) -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersion" . }}
+kind: Gateway
+metadata:
+  name: {{ include "st-common.gateway.fullname" . }}
+  namespace: {{ $gwNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  {{- if .Values.gateway.listeners }}
+  listeners: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listeners "context" $) | nindent 4 }}
+  {{- else }}
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      {{- if $primaryHostname }}
+      hostname: {{ $primaryHostname | quote }}
+      {{- end }}
+      allowedRoutes:
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- /*
+    HTTPS terminate vs TLS passthrough are mutually exclusive on the same port.
+    Precedence: when both `gateway.tls.enabled` and `tls.enabled` are set, passthrough
+    wins — terminating at the Gateway is wasted work if the pod also serves HTTPS.
+    */ -}}
+    {{- if and .Values.gateway.tls.enabled (not .Values.tls.enabled) }}
+    - name: https
+      port: {{ default 443 .Values.service.ports.https | int }}
+      protocol: HTTPS
+      {{- if $primaryHostname }}
+      hostname: {{ $primaryHostname | quote }}
+      {{- end }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ include "adminer.gateway.tlsSecretName" . }}
+      allowedRoutes:
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- end }}
+    {{- if .Values.tls.enabled }}
+    - name: tls-passthrough
+      port: {{ default 443 .Values.service.ports.https | int }}
+      protocol: TLS
+      {{- if $primaryHostname }}
+      hostname: {{ $primaryHostname | quote }}
+      {{- end }}
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: TLSRoute
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- end }}
+  {{- end }}
+{{- end -}}
+{{- end -}}
