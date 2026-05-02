@@ -92,15 +92,12 @@ clients that pinned the old CA need to re-trust on that one upgrade.
 */}}
 {{- define "adminer.tls.ca.init" -}}
 {{- if not (hasKey $ "_adminerTlsCa") -}}
-  {{- $ca := dict -}}
   {{- $existing := lookup "v1" "Secret" (include "st-common.names.namespace" .) (include "adminer.tls.ca.secretName" .) -}}
+  {{- $ca := "" -}}
   {{- if and $existing $existing.data (hasKey $existing.data "ca.crt") (hasKey $existing.data "ca.key") -}}
-    {{- $_ := set $ca "Cert" (b64dec (index $existing.data "ca.crt")) -}}
-    {{- $_ := set $ca "Key" (b64dec (index $existing.data "ca.key")) -}}
+    {{- $ca = buildCustomCert (index $existing.data "ca.crt") (index $existing.data "ca.key") -}}
   {{- else -}}
-    {{- $fresh := genCA "adminer-ca" 365 -}}
-    {{- $_ := set $ca "Cert" $fresh.Cert -}}
-    {{- $_ := set $ca "Key" $fresh.Key -}}
+    {{- $ca = genCA "adminer-ca" 365 -}}
   {{- end -}}
   {{- $_ := set $ "_adminerTlsCa" $ca -}}
 {{- end -}}
