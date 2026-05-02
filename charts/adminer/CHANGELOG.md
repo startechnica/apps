@@ -24,6 +24,9 @@ in the README for the migration steps your `values.yaml` needs.**
 - Container parameters: `command`, `args`, `lifecycleHooks`, `extraVolumes`, `extraVolumeMounts`, `sidecars`.
 - `config.{defaultServer,defaultDriver,defaultUsername,defaultPassword,defaultDatabase,autoLogin,permanentLogin}` for Adminer login defaults / login-servers plugin compatibility.
 - `config.plugins` now accepts a YAML list (preferred) in addition to the legacy space-separated string. New `adminer.config.plugins` helper joins lists for `ADMINER_PLUGINS`.
+- `gateway.tlsRoute.parentRefs` — explicit `parentRefs` override for `templates/gateway-api/TLSRoute.yaml`, mirroring `gateway.httpRoute.parentRefs`. Same shape, same defaulting rules.
+- `persistence.{enabled,existingClaim,storageClass,accessModes,size,mountPath,subPath,annotations,selector,dataSource}` — values block consumed by `templates/PersistentVolumeClaim.yaml` (the PVC template existed but had no matching values keys, so it silently never rendered). The Deployment now auto-mounts the PVC at `persistence.mountPath` (default `/data`) with optional `subPath`; resolves to `persistence.existingClaim` when set, otherwise `<fullname>`.
+- `adminer.gateway.routeParentRefs` helper — single source of truth for HTTPRoute and TLSRoute `parentRefs` defaulting. Picks the chart-rendered ListenerSet when one is rendered (group/kind track the same v1 / v1alpha1 / `x-k8s.io` (`XListenerSet`) fallback as `templates/gateway-api/ListenerSet.yaml`); falls back to the Gateway otherwise. Prevents the two route templates from drifting on group/kind/name.
 
 ### Changed
 
@@ -36,6 +39,7 @@ in the README for the migration steps your `values.yaml` needs.**
 - **`istio/VirtualService.yaml`**: dropped all `ingress.*` references; routes derived from `gateway.hostnames` / `service.ports.*` / `gateway.clusterDomain` (with root-`clusterDomain` fallback). The `tls:` block is now auto-derived from `tls.enabled` (SNI passthrough to the backend's TLS port) — no longer requires hand-authored SNI rules.
 - **`adminer.gateway.tlsSecretName` helper** consolidates two former duplicates (`istioCertificateSecret`, `istioCertificateSecret2`) and is now used by both Gateway templates and the gateway-tls Secret — single source of truth so listener and Secret can never drift apart.
 - **NOTES.txt** rewritten — namespace placeholders use `st-common.names.namespace`, ClusterIP selector uses `.Chart.Name`, port-forward uses `service.ports.http` / `containerPorts.http`, and a new branch prints the gateway URL when `gateway.enabled`.
+- **HTTPRoute & TLSRoute `parentRefs` default** (BREAKING — see Upgrading): when no explicit per-route `parentRefs` is set AND `gateway.listenerSet.enabled` + `gateway.listenerSet.listeners` are both set AND the cluster supports a ListenerSet API, both routes now attach to the chart-rendered ListenerSet instead of the Gateway. This is the canonical Gateway API attachment pattern (the ListenerSet's listeners only accept routes that target it). Explicit `parentRefs` continue to win, so users with custom values are unaffected.
 
 ### Removed (BREAKING — see Upgrading)
 
@@ -56,6 +60,7 @@ in the README for the migration steps your `values.yaml` needs.**
 - istio/Gateway.yaml + istio/VirtualService.yaml: `gateway.hostnames` was iterated as objects with `.name` (rendered empty entries) — now correctly iterates string entries; `gateway.clusterDomain: ""` no longer produces broken `svc.svc.` FQDNs.
 - Ingress.yaml: the `kubernetes.io/tls-acme: "true"` annotation is now gated on cert-manager actually being active (was previously emitted whenever any ingress annotation was set).
 - Deployment.yaml: removed dead `if not .Values.horizontalPodAutoscaler.enabled` (the values key didn't exist; the gate evaluated to true → `replicas:` always rendered; HPA support was effectively broken).
+- `templates/secret/gateway-tls.yaml` and `templates/secret/ingress-tls.yaml` failed to render with `wrong type for value; expected sprig.certificate; got map[string]interface {}` when `selfSigned: true` was set. The `adminer.tls.ca.init` helper was wrapping the CA in a plain `dict`; sprig's `genSignedCert` only accepts a real `sprig.certificate` struct. The helper now stores the struct shape directly — `genCA` result on first install, `buildCustomCert` (which rebuilds the struct from the base64-encoded PEM in the recovered CA Secret) on subsequent renders.
 
 ### Earlier in this session (before the 1.0.0 version bump)
 
@@ -75,7 +80,7 @@ because they happened before the cert-manager / TLS consolidation work above.
   - Added `gateway.authorizationPolicy` with allow/deny rule scaffolding.
   - **Removed** flat `gateway.{dedicated,gatewayApi,name,namespace}` (consolidated into the nested form above).
 - Added `templates/ServiceMonitor.yaml` for Prometheus Operator scraping.
-- Added `templates/extraDeploy.yaml` for shipping arbitrary extra manifests.
+- Added `templates/extraDeploy.yaml` for shipping arbitrary extra manifests. [#100](https://github.com/startechnica/apps/issues/100)
 - TLS Secret namespace pointer moved to `gateway.gateway.namespace` (was the now-removed flat `gateway.namespace`).
 
 ## 0.1.8

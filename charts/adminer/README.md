@@ -197,6 +197,23 @@ The command removes all the Kubernetes components associated with the chart and 
 | `extraVolumeMounts` | Additional volume mounts attached to the Adminer container | `[]` |
 | `sidecars` | Additional sidecar containers added to the Adminer pod | `[]` |
 
+### Persistence parameters
+
+PVC consumed by `templates/PersistentVolumeClaim.yaml` and auto-mounted into the Adminer container at `persistence.mountPath`. Adminer is stateless, so this is opt-in — typical use cases are persisting plugin/extension files or session storage.
+
+| Name | Description | Value |
+| ---- | ----------- | ----- |
+| `persistence.enabled` | Render a PersistentVolumeClaim AND mount it at `persistence.mountPath`. When false, no PVC is created and the volume/volumeMount are skipped. | `false` |
+| `persistence.existingClaim` | Name of an externally-managed PVC. When set, the chart skips its own PVC but still mounts this claim. | `""` |
+| `persistence.storageClass` | StorageClass for the PVC. Falls back to `global.storageClass`. Set to `-` to disable dynamic provisioning. | `""` |
+| `persistence.accessModes` | List of access modes requested on the PVC | `["ReadWriteOnce"]` |
+| `persistence.size` | Storage capacity requested on the PVC | `8Gi` |
+| `persistence.mountPath` | Path inside the Adminer container where the PVC is mounted | `/data` |
+| `persistence.subPath` | Sub-path within the volume mounted at `mountPath` | `""` |
+| `persistence.annotations` | Extra annotations applied to the PVC (merged with `commonAnnotations`) | `{}` |
+| `persistence.selector` | Label selector for binding to a specific pre-provisioned PV | `{}` |
+| `persistence.dataSource` | Source the PVC clones from (Snapshot or another PVC) | `{}` |
+
 ### Metrics parameters
 
 | Name | Description | Value |
@@ -313,12 +330,13 @@ The command removes all the Kubernetes components associated with the chart and 
 | `gateway.tls.selfSigned` | Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml` | `false` |
 | `gateway.tls.secrets` | Custom TLS certificates rendered as Secrets in the gateway's namespace. Same shape as `ingress.secrets`. | `[]` |
 | `gateway.httpRoute.enabled` | Create an HTTPRoute resource attached to the Gateway | `true` |
-| `gateway.httpRoute.parentRefs` | Override `parentRefs` for the HTTPRoute (default: chart's Gateway) | `[]` |
+| `gateway.httpRoute.parentRefs` | Override `parentRefs` for the HTTPRoute. Default: chart-rendered ListenerSet when `gateway.listenerSet.enabled` + `gateway.listenerSet.listeners` are set (and cluster supports it); otherwise the chart's Gateway. | `[]` |
 | `gateway.httpRoute.rules.filters` | List of filters to apply (auth, rate limiting, retries, etc.) | `[]` |
 | `gateway.httpRoute.rules.matches` | List of HTTP matchers selecting which requests this rule applies to | `[]` |
 | `gateway.httpRoute.rules.extraBackendRefs` | Additional backendRefs to route traffic to | `[]` |
 | `gateway.httpRoute.extraRules` | Additional rule entries appended to the generated HTTPRoute | `[]` |
 | `gateway.httpRoute.existingHTTPRouteName` | Name of an existing HTTPRoute resource to use instead of creating one | `""` |
+| `gateway.tlsRoute.parentRefs` | Override `parentRefs` for the TLSRoute (rendered when `tls.enabled` + `gateway-api`). Same defaulting as `gateway.httpRoute.parentRefs`. | `[]` |
 | `gateway.virtualService.existingVirtualService` | Name of an existing Istio VirtualService to use instead of creating one | `""` |
 | `gateway.virtualService.http` | Istio VirtualService `http` rules (full istio HTTPRoute schema). Default routes prefix `/` to the chart's Service. | `[]` |
 | `gateway.listenerSet.enabled` | Create a ListenerSet attached to the parent Gateway (silently skipped unless `listeners` is also non-empty) | `false` |
@@ -494,6 +512,60 @@ ConfigMap, not inline `env:` entries. Behaviour is unchanged unless you were
 relying on the precedence of inline `env:` over `envFrom` to override
 something — in which case set the override via `extraEnvVars` (which still
 renders inline and still wins over `envFrom`).
+
+#### 9. HTTPRoute / TLSRoute now default-attach to the ListenerSet (when one is rendered)
+
+When `gateway.listenerSet.enabled: true` AND `gateway.listenerSet.listeners`
+is non-empty (and the cluster supports a ListenerSet API), the chart-rendered
+HTTPRoute and TLSRoute now default their `parentRefs` to the chart's
+ListenerSet instead of the Gateway. This is the canonical Gateway API pattern:
+a ListenerSet's listeners only accept routes that target the ListenerSet — a
+route still attached to the Gateway directly will silently match the Gateway's
+own listeners, not the ListenerSet's, which is almost never what you want.
+
+The default falls back to the Gateway when ListenerSet isn't in play, so users
+not using ListenerSet are unaffected. Explicit `parentRefs` continue to win.
+
+If you previously had `gateway.listenerSet.enabled: true` AND were relying on
+the HTTPRoute / TLSRoute attaching to the parent Gateway (not the
+ListenerSet), pin the previous behaviour explicitly:
+
+```yaml
+# Before (implicit Gateway attachment)
+gateway:
+  listenerSet:
+    enabled: true
+    listeners:
+      - name: extra-http
+        port: 8080
+        protocol: HTTP
+  httpRoute:
+    parentRefs: []  # defaulted to Gateway
+
+# After — to keep the old behaviour
+gateway:
+  listenerSet:
+    enabled: true
+    listeners:
+      - name: extra-http
+        port: 8080
+        protocol: HTTP
+  httpRoute:
+    parentRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: my-release-gateway   # whatever st-common.gateway.fullname resolves to
+        namespace: my-gateway-ns
+  tlsRoute:
+    parentRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: my-release-gateway
+        namespace: my-gateway-ns
+```
+
+`gateway.tlsRoute.parentRefs` is new in 1.0.0; same shape and semantics as
+`gateway.httpRoute.parentRefs`.
 
 ## License
 
