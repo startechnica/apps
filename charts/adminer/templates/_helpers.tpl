@@ -5,12 +5,23 @@ Gateway HTTPS listener — `credentialName` on the istio path,
 produced by `templates/secret/gateway-tls.yaml`. Single source of truth so
 the listener and the secret can never drift apart.
 
-Returns `gateway.tls.existingSecret` when set; otherwise falls back to
-`<ingress.hostname>-tls` to match the secret name `templates/Certificate.yaml`
-and `templates/secret/ingress-tls.yaml` produce.
+Resolution order (first match wins):
+  1. `gateway.tls.existingSecret`       — BYO Secret managed outside the chart.
+  2. `gateway.tls.secrets[0].name`      — first user-supplied PEM Secret rendered by `templates/secret/gateway-tls.yaml`.
+                                          For multi-secret SNI setups, override via `gateway.listeners`.
+  3. `<ingress.hostname>-tls`           — chart-managed default that matches the secret name produced by the
+                                          self-signed branch in `templates/secret/gateway-tls.yaml`,
+                                          the `Certificate.spec.secretName` in `templates/Certificate.yaml`,
+                                          and `templates/secret/ingress-tls.yaml`.
 */}}
 {{- define "adminer.gateway.tlsSecretName" -}}
-{{- default (printf "%s-tls" .Values.ingress.hostname) .Values.gateway.tls.existingSecret -}}
+{{- if .Values.gateway.tls.existingSecret -}}
+{{- .Values.gateway.tls.existingSecret -}}
+{{- else if .Values.gateway.tls.secrets -}}
+{{- (first .Values.gateway.tls.secrets).name -}}
+{{- else -}}
+{{- printf "%s-tls" .Values.ingress.hostname -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

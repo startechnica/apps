@@ -1107,7 +1107,7 @@ gateway:
     ## @param gateway.tls.existingSecret Name of an externally-managed Kubernetes Secret holding the TLS material the Gateway HTTPS listener references. When set, the chart skips its own self-signed / certManager / `secrets[]` rendering and the listener's `credentialName`/`certificateRefs[].name` points at this Secret directly. Applies to both `gateway.implementation: istio` and `gateway-api`.
     ##
     existingSecret: ""
-    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret` is set (since the user is bringing their own).
+    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret`, `gateway.tls.secrets`, or `tls.certManager.create` are set (since something else is already managing the Secret).
     ##
     selfSigned: false
     ## @param gateway.tls.secrets Custom TLS certificates rendered as Secrets in the gateway's namespace. Same shape as `ingress.secrets`. 'name' should match what the Gateway listener references (see the `adminer.gateway.tlsSecretName` helper).
