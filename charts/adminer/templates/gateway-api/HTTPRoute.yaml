@@ -15,15 +15,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs:
-  {{- if .Values.gateway.httpRoute.parentRefs }}
-  {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.parentRefs "context" $) | nindent 4 }}
-  {{- else }}
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: {{ include "st-common.gateway.fullname" . }}
-      namespace: {{ include "st-common.gateway.namespace" .}}
-  {{- end }}
+  parentRefs: {{- include "adminer.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.httpRoute.parentRefs "context" $) | nindent 4 }}
   {{- if .Values.gateway.hostnames }}
   hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
   {{- end }}

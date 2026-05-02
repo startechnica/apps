@@ -1134,7 +1134,7 @@ gateway:
     ##
     enabled: true
     ## @param gateway.httpRoute.parentRefs  List of parentRefs to attach the HTTPRoute to. Each parentRef should reference a listener defined in the parent Gateway resource.
-    ## If empty, the chart will attempt to attach the HTTPRoute to the Gateway using default rules (e.g. matching hostnames or using the existingGateway reference).
+    ## If empty, the chart picks a default parent: the chart-rendered ListenerSet when `gateway.listenerSet.enabled` is true and `gateway.listenerSet.listeners` is non-empty (and the cluster supports ListenerSet); otherwise the chart's Gateway. Set this explicitly to override (e.g. to attach to a specific listener via `sectionName`, or to a Gateway in another namespace).
     ##
     parentRefs: []
     ## @param gateway.httpRoute.rules  Rules are a list of HTTP matchers, filters and actions.
@@ -1158,6 +1158,19 @@ gateway:
     ## If empty (~), the chart expects parentRefs to explicitly define the HTTPRoute reference.
     ##
     existingHTTPRouteName: ""
+
+  ## ---- TLSRoute -------------------------------------------------------------
+  ## TLS-passthrough routing rules attached to the Gateway above. Only rendered
+  ## when implementation is "gateway-api" AND `tls.enabled` is true (the chart
+  ## then exposes a TLS passthrough listener on the Gateway pointing at this
+  ## TLSRoute). The Istio path uses the VirtualService below for both HTTP and
+  ## TLS traffic, so this block has no effect there.
+  ##
+  tlsRoute:
+    ## @param gateway.tlsRoute.parentRefs  List of parentRefs to attach the TLSRoute to. Same shape and defaulting as `gateway.httpRoute.parentRefs`.
+    ## If empty, the chart picks a default parent: the chart-rendered ListenerSet when `gateway.listenerSet.enabled` is true and `gateway.listenerSet.listeners` is non-empty (and the cluster supports ListenerSet); otherwise the chart's Gateway. Set this explicitly to override (e.g. to attach to a specific listener via `sectionName`, or to a Gateway in another namespace).
+    ##
+    parentRefs: []
 
   ## ---- VirtualService -------------------------------------------------------
   ## Routing rules attached to the Gateway above. Only used when implementation

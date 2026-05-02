@@ -58,6 +58,55 @@ own ConfigMap, otherwise the name of the chart-rendered env-vars ConfigMap
 {{- end -}}
 
 {{/*
+parentRefs body shared by `templates/gateway-api/HTTPRoute.yaml` and
+`templates/gateway-api/TLSRoute.yaml`. Returns a YAML list (no leading
+`parentRefs:` key); callers are expected to emit the key and pipe through
+`nindent`.
+
+Resolution order (first match wins):
+  1. Explicit per-route `parentRefs` from values (rendered via
+     `st-common.tplvalues.render` so tpl strings inside list entries work,
+     matching st-common conventions).
+  2. The chart-rendered ListenerSet — when `gateway.listenerSet.enabled`
+     is true, `gateway.listenerSet.listeners` is non-empty, AND the cluster
+     exposes a ListenerSet API. The group/kind track the same v1 / v1alpha1 /
+     `gateway.networking.x-k8s.io` (`XListenerSet`) fallback used by
+     `templates/gateway-api/ListenerSet.yaml`, so a parent ListenerSet rendered
+     by this chart is always referenceable on the same cluster.
+  3. The chart's Gateway, resolved via `st-common.gateway.fullname` /
+     `st-common.gateway.namespace` (which honor `gateway.existingGateway`).
+
+Why centralized: HTTPRoute and TLSRoute had identical defaulting blocks. A
+divergence between the two would silently break either route attaching to the
+ListenerSet, since gateway-api parentRef matching is name+kind+group exact.
+
+Args (dict):
+  parentRefs — the route-specific override list (e.g.
+               `.Values.gateway.httpRoute.parentRefs` or
+               `.Values.gateway.tlsRoute.parentRefs`).
+  context    — root `$` context.
+*/}}
+{{- define "adminer.gateway.routeParentRefs" -}}
+{{- $ctx := .context -}}
+{{- if .parentRefs -}}
+{{- include "st-common.tplvalues.render" (dict "value" .parentRefs "context" $ctx) -}}
+{{- else -}}
+{{- $lsApiVersion := include "st-common.capabilities.networkingGatewayListenerSet.apiVersion" $ctx -}}
+{{- if and $ctx.Values.gateway.listenerSet.enabled $ctx.Values.gateway.listenerSet.listeners (ne $lsApiVersion "false") }}
+- group: {{ index (splitList "/" $lsApiVersion) 0 }}
+  kind: {{ ternary "XListenerSet" "ListenerSet" (eq $lsApiVersion "gateway.networking.x-k8s.io/v1alpha1") }}
+  name: {{ include "st-common.names.fullname" $ctx }}
+  namespace: {{ include "st-common.names.namespace" $ctx }}
+{{- else }}
+- group: gateway.networking.k8s.io
+  kind: Gateway
+  name: {{ include "st-common.gateway.fullname" $ctx }}
+  namespace: {{ include "st-common.gateway.namespace" $ctx }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Name of the chart-internal CA Secret (`<fullname>-tls-ca`) holding the
 self-signed Certificate Authority shared by the ingress and gateway leaf TLS
 Secrets. Single source of truth for the CA Secret name — used by both
