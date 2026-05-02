@@ -3,6 +3,54 @@ entries:
   adminer:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: "values.schema.json for runtime validation of values overrides."
+        - kind: added
+          description: "Artifact Hub / Version / Type / AppVersion shields in README."
+        - kind: fixed
+          description: "Duplicate metrics.serviceMonitor.endpoints key in values.yaml (silent last-wins override)."
+      artifacthub.io/images: |
+        - name: adminer
+          image: docker.io/adminer:5.4.2-standalone
+      category: DatabaseManagement
+    apiVersion: v2
+    appVersion: 5.4.2
+    created: "2026-05-02T17:39:57.781009157Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.20
+    description: Adminer is a full-featured database management tool written in PHP.
+      Conversely to phpMyAdmin, it consist of a single file ready to deploy to the
+      target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite,
+      MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
+    digest: 616b0b6d208c74d37649972121d5b3ccec959d76d04a1d20ecde69234bd76ea4
+    home: https://github.com/startechnica/apps/tree/main/charts/adminer
+    icon: https://raw.githubusercontent.com/vrana/adminer/master/adminer/static/logo.png
+    keywords:
+    - adminer
+    - postgres
+    - mysql
+    - sqlite
+    - elasticsearch
+    - mongodb
+    - database
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: adminer
+    sources:
+    - https://www.adminer.org
+    - https://github.com/startechnica/apps.git
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/adminer-1.0.1/adminer-1.0.1.tgz
+    version: 1.0.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: changed
           description: "1.0.0 major release — TLS/cert-manager value keys consolidated; see CHANGELOG.md and README §Upgrading for migration."
       artifacthub.io/images: |
@@ -2909,4 +2957,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-02T13:04:05.161630291Z"
+generated: "2026-05-02T17:39:57.781195013Z"
