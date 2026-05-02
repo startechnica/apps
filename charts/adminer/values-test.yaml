@@ -20,8 +20,9 @@ ipFamilyPolicy: PreferDualStack
 
 gateway:
   enabled: true
-  name: webapps
-  namespace: istio-ingressgateway
+  gateway:
+    name: webapps
+    namespace: istio-ingressgateway
 
 tolerations:
   - effect: NoSchedule
