@@ -43,7 +43,7 @@ own ConfigMap, otherwise the name of the chart-rendered env-vars ConfigMap
 (see `templates/configmap/envvars.yaml`).
 */}}
 {{- define "adminer.config.envvarsConfigMapName" -}}
-{{- default (include "st-common.names.envvars" .) .Values.existingConfigmap -}}
+{{- default (printf "%s-envvars" (include "st-common.names.fullname" .)) .Values.existingConfigmap -}}
 {{- end -}}
 
 {{/*
