@@ -1,35 +1,48 @@
-{{- if and .Values.gateway.enabled .Values.gateway.gatewayApi }}
-{{- if (include "common.capabilities.networkingGateway.apiVersion" .) }}
-apiVersion: gateway.networking.k8s.io/v1beta1
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.gateway.httpRoute.enabled (not .Values.gateway.httpRoute.existingHTTPRouteName) -}}
+{{- if not (eq (include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" . }}
 kind: HTTPRoute
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: adminer
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs:
-  - name: {{ default "ingressgateway" .Values.gateway.name }}
-    namespace: {{ default "istio-ingress" .Values.gateway.namespace }}
-  {{- if .Values.ingress.hosts }}
-  hostnames:
-    {{- range $host := $.Values.ingress.hosts }}
-    - {{ $host | quote }}
-    {{- end }}
+  parentRefs: {{- include "adminer.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.httpRoute.parentRefs "context" $) | nindent 4 }}
+  {{- if .Values.gateway.hostnames }}
+  hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
   {{- end }}
   rules:
-    - matches:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ include "st-common.names.fullname" . }}
+          namespace: {{ include "st-common.names.namespace" . | quote }}
+          port: {{ .Values.service.ports.http }}
+          weight: 1
+        {{- if .Values.gateway.httpRoute.rules.extraBackendRefs }}
+        {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.extraBackendRefs "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.gateway.httpRoute.rules.matches }}
+      matches: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.matches "context" $) | nindent 8 }}
+      {{- else }}
+      matches:
         - path:
             type: PathPrefix
             value: /
-      backendRefs:
-        - name: {{ include "common.names.fullname" . }}
-          port: {{ .Values.service.ports.http | int }}
-{{- end }}
-{{- end }}
+      {{- end }}
+      {{- if .Values.gateway.httpRoute.rules.filters }}
+      filters: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.rules.filters "context" $) | nindent 8 }}
+      {{- end }}
+    {{- if .Values.gateway.httpRoute.extraRules }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.httpRoute.extraRules "context" $) | nindent 4 }}
+    {{- end }}
+{{- end -}}
+{{- end -}}

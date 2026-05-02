@@ -1,44 +1,50 @@
-{{- if and .Values.gateway.enabled (not .Values.gateway.existingGateway) (not .Values.gateway.gatewayApi) }}
-{{- if (include "common.capabilities.istioNetworking.apiVersion" .) }}
-apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "istio") (not .Values.gateway.existingGateway) }}
+{{- if (include "st-common.capabilities.istioGateway.apiVersion" .) }}
+apiVersion: {{ include "st-common.capabilities.istioGateway.apiVersion" . }}
 kind: Gateway
 metadata:
-  name: {{ include "common.names.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  name: {{ include "st-common.gateway.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   selector:
-    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.name }}
+    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.gateway.name }}
   servers:
     - port:
         name: http
         number: 80
         protocol: HTTP
-      {{- if .Values.ingress.hostname }}
       hosts:
-        - {{ .Values.ingress.hostname | quote }}
-        {{- range .Values.ingress.extraHosts }}
-        - {{ .name | quote }}
+        {{- if .Values.gateway.hostnames }}
+        {{- range .Values.gateway.hostnames }}
+        - {{ . | quote }}
         {{- end }}
-      {{- end }}
-    {{- if (or .Values.ingress.tls .Values.ingress.extraTls) }}
+        {{- else }}
+        - "*"
+        {{- end }}
+    {{- if .Values.gateway.tls.enabled }}
     - port:
         name: https
-        number: {{ default 443 .Values.service.ports.https | int }}
+        number: {{ .Values.service.ports.https | int }}
         protocol: HTTPS
       hosts:
-        - {{ .Values.ingress.hostname | quote }}
-        {{- range .Values.ingress.extraHosts }}
-        - {{ .name | quote }}
+        {{- if .Values.gateway.hostnames }}
+        {{- range .Values.gateway.hostnames }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - "*"
         {{- end }}
       tls:
-        credentialName: {{ printf "%s-tls" .Values.ingress.hostname }}
+        credentialName: {{ include "adminer.gateway.tlsSecretName" . }}
         mode: SIMPLE
     {{- end }}
 {{- end }}

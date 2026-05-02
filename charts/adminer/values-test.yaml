@@ -1,3 +1,5 @@
+fullnameOverride: adminer
+
 affinity:
   nodeAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
@@ -7,21 +9,31 @@ affinity:
         - key: node-role.kubernetes.io/worker
           operator: Exists
 
-ingress:
-  enabled: true
-  hostname: adminer.dxm.nainggolan.id
-  extraHosts:
-    - name: macam.macam.com
-    - name: macam.macam.id
-  tls: true
-  selfSigned: false
+config:
+  plugins:
+    - login-ip
 
-ipFamilyPolicy: PreferDualStack
+service:
+  ipFamilyPolicy: PreferDualStack
 
 gateway:
   enabled: true
-  name: webapps
-  namespace: istio-ingressgateway
+  gateway:
+    name: webapps
+    namespace: istio-ingress
+  hostnames:
+    - adminer.dxm.nainggolan.id
+    - macam.macam.com
+    - macam.macam.id
+  tls:
+    enabled: true
+    selfSigned: true
+
+  listenerSet:
+    enabled: true
+
+tls:
+  enabled: true
 
 tolerations:
   - effect: NoSchedule

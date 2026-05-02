@@ -1,0 +1,32 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.tls.enabled -}}
+{{- $apiVersion := include "st-common.capabilities.networkingGatewayTLSRoute.apiVersion" . -}}
+{{- if not (eq $apiVersion "false") -}}
+apiVersion: {{ $apiVersion }}
+kind: TLSRoute
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs: {{- include "adminer.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.tlsRoute.parentRefs "context" $) | nindent 4 }}
+  {{- if .Values.gateway.hostnames }}
+  hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
+  {{- end }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ include "st-common.names.fullname" . }}
+          namespace: {{ include "st-common.names.namespace" . | quote }}
+          port: {{ .Values.service.ports.https }}
+          weight: 1
+{{- end -}}
+{{- end -}}
