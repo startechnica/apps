@@ -15,19 +15,37 @@ metadata:
   {{- end }}
 data:
   # Officially read by the upstream docker.io/adminer image
+  {{- if .Values.config.plugins }}
   ADMINER_PLUGINS: {{ include "adminer.config.plugins" . | quote }}
+  {{- end }}
+  {{- if .Values.config.design }}
   ADMINER_DESIGN: {{ .Values.config.design | quote }}
+  {{- end }}
+  {{- if or .Values.config.defaultServer .Values.config.externalserver }}
   ADMINER_DEFAULT_SERVER: {{ include "adminer.config.defaultServer" . | quote }}
+  {{- end }}
 
   # Default-connection env vars — recognised by login-servers /
   # login-password-less plugins and by common derivative images
   # (shyim/adminerevo, dockware, …); silently ignored by the stock image
+  {{- if .Values.config.defaultDriver }}
   ADMINER_DEFAULT_DRIVER: {{ .Values.config.defaultDriver | quote }}
+  {{- end }}
+  {{- if .Values.config.defaultUsername }}
   ADMINER_DEFAULT_USERNAME: {{ .Values.config.defaultUsername | quote }}
+  {{- end }}
+  {{- if .Values.config.defaultDatabase }}
   ADMINER_DEFAULT_DATABASE: {{ .Values.config.defaultDatabase | quote }}
+  {{- end }}
 
   # Session / routing tweaks (booleans rendered as strings)
+  {{- if .Values.config.autoLogin }}
   ADMINER_AUTO_LOGIN: {{ ternary "true" "false" .Values.config.autoLogin | quote }}
+  {{- end }}
+  {{- if .Values.config.permanentLogin }}
   ADMINER_PERMANENT_LOGIN: {{ ternary "true" "false" .Values.config.permanentLogin | quote }}
+  {{- end }}
+  {{- if .Values.config.baseUrl }}
   ADMINER_BASE_URL: {{ .Values.config.baseUrl | quote }}
+  {{- end }}
 {{- end }}

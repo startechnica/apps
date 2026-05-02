@@ -588,6 +588,52 @@ sidecars: []
 
 
 ## =============================================================================
+## @section Persistence parameters
+## -----------------------------------------------------------------------------
+## PersistentVolumeClaim consumed by the chart-rendered PVC at
+## `templates/PersistentVolumeClaim.yaml` and auto-mounted into the Adminer
+## container at `persistence.mountPath`. Adminer itself is stateless, so this
+## is opt-in — typical use cases are persisting plugin/extension files or
+## session storage.
+## =============================================================================
+
+## @param persistence.enabled Render a PersistentVolumeClaim (`templates/PersistentVolumeClaim.yaml`) AND mount it into the Adminer container at `persistence.mountPath`. When false, no PVC is created and the volume/volumeMount are skipped.
+## @param persistence.existingClaim Name of an externally-managed PVC to reference instead of creating one. When set, the chart skips its own PVC but still mounts this claim into the pod under the same `mountPath`.
+## @param persistence.storageClass StorageClass for the PVC. Defaults to `global.storageClass` when both are empty. Set to `-` to disable dynamic provisioning (binds an explicit PV via `selector`).
+## @param persistence.accessModes List of access modes requested on the PVC. ReadWriteOnce is sufficient for the default single-replica Deployment; switch to ReadWriteMany only when scaling out.
+## @param persistence.size Storage capacity requested on the PVC.
+## @param persistence.mountPath Path inside the Adminer container where the PVC is mounted. The image runs as a non-root user, so make sure the directory is writable by `containerSecurityContext.runAsUser` (or override `podSecurityContext.fsGroup`).
+## @param persistence.subPath Sub-path within the volume mounted at `mountPath`. Empty by default (mounts the volume root).
+## @param persistence.annotations Extra annotations applied to the PVC. Merged with `commonAnnotations`.
+## @param persistence.selector Label selector for binding to a specific pre-provisioned PV. Empty by default.
+## @param persistence.dataSource Source the PVC clones from (Snapshot or another PVC). Empty by default.
+##
+persistence:
+  enabled: false
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 8Gi
+  mountPath: /data
+  subPath: ""
+  annotations: {}
+  ## E.g.
+  ## selector:
+  ##   matchLabels:
+  ##     app: my-app
+  ##
+  selector: {}
+  ## E.g.
+  ## dataSource:
+  ##   name: my-snapshot
+  ##   kind: VolumeSnapshot
+  ##   apiGroup: snapshot.storage.k8s.io
+  ##
+  dataSource: {}
+
+
+## =============================================================================
 ## @section Metrics parameters
 ## -----------------------------------------------------------------------------
 ## Prometheus scraping configuration. Adminer itself doesn't expose metrics —
