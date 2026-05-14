@@ -2140,7 +2140,109 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/netbox-5.0.0/netbox-5.0.0.tgz
     version: 5.0.0
+  open-appsec-crd:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: "Initial release. CRDs sourced from openappsec/openappsec config/crds/open-appsec-crd-latest.yaml, schema-aligned with open-appsec-injector 1.1.0."
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/open-appsec-crd
+        - name: Upstream Project
+          url: https://github.com/openappsec/openappsec
+        - name: Sister Chart (Injector)
+          url: https://artifacthub.io/packages/helm/startechnica/open-appsec-injector
+      category: WAF
+    apiVersion: v2
+    appVersion: 1.1.34
+    created: "2026-05-14T21:50:30.564439983Z"
+    description: CustomResourceDefinitions for open-appsec. Ship the CRDs as their
+      own release so the sister `open-appsec-injector` chart can be installed and
+      upgraded without re-applying CRDs (which Helm intentionally refuses to update
+      inside `templates/`). Includes every `openappsec.io` resource the injector renders.
+    digest: 6deb061a3152e309abd82a10c85d3607ed9a7037f95cfa234ea60c839cc89f77
+    home: https://github.com/startechnica/apps/tree/main/charts/open-appsec-crd
+    icon: https://i2-s3-ui-static-content-prod-10.s3.eu-west-1.amazonaws.com/elpis/tree-no-bg-256.png
+    keywords:
+    - waf
+    - open-appsec
+    - crd
+    - custom-resources
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: open-appsec-crd
+    sources:
+    - https://github.com/openappsec/openappsec
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/open-appsec-crd-1.0.0/open-appsec-crd-1.0.0.tgz
+    version: 1.0.0
   open-appsec-injector:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: "CRDs split into sister chart open-appsec-crd 1.0.0; bundled by default via crds.enabled=true. Set crds.enabled=false to manage CRDs separately. See Upgrading."
+        - kind: added
+          description: "Top-level allowedNamespaces to scope the openappsec.io ClusterRoleBinding subject set AND per-component NetworkPolicy ingress (default release namespace only)."
+        - kind: added
+          description: "tls.certManager scaffolding (Issuer/Certificate + MWC inject-ca-from) — dormant until upstream container exposes a cert-bootstrap toggle."
+        - kind: changed
+          description: "Webhook probe defaults port:http→https, scheme:HTTP→HTTPS to match the only declared containerPort."
+        - kind: removed
+          description: "logDestination.local-tuning from LogTrigger v1beta2 — rename overrides to logDestination.k8s-service before upgrade."
+        - kind: removed
+          description: "Dead webhook.{imagePullPolicy, integrationType, namePretty, namespace, rbac.*} values keys."
+        - kind: fixed
+          description: "policiesns.openappsec.io specificRules.items.required block (had drifted from policies twin); _pvc.tpl prefix bugs; schedulerName gate."
+        - kind: changed
+          description: "appVersion 1.1.32 -> 1.1.34; postgresql subchart 12.2.8 -> 18.6.6 (moved to OCI registry; Bitnami retired the legacy HTTP index); st-common 0.1.16 -> 0.1.20."
+        - kind: added
+          description: "appsec.tuning.externalDatabase.* to point tuning at an external PostgreSQL; postgresql.enabled flag (default false) decouples the subchart from appsec.tuning.enabled — see Upgrading."
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/startechnica/apps/tree/main/charts/open-appsec-injector
+        - name: Upstream Project
+          url: https://github.com/openappsec/openappsec
+      category: WAF
+    apiVersion: v2
+    appVersion: 1.1.34
+    created: "2026-05-14T21:50:30.768968252Z"
+    dependencies:
+    - condition: crds.enabled
+      name: open-appsec-crd
+      repository: file://../open-appsec-crd
+      version: 1.0.0
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 18.6.6
+    - name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.20
+    description: A Helm chart for deploying open-appsec mutating webhook to inject
+      a sidecar container.
+    digest: aac0ade05589ff62573990cd9023c9516ed72e3bcb0960066adaae6b32bb3956
+    icon: https://i2-s3-ui-static-content-prod-10.s3.eu-west-1.amazonaws.com/elpis/tree-no-bg-256.png
+    keywords:
+    - waf
+    - open-apssec
+    - istio
+    - kong
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: open-appsec-injector
+    sources:
+    - https://github.com/openappsec/openappsec
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/open-appsec-injector-1.1.0/open-appsec-injector-1.1.0.tgz
+    version: 1.1.0
   - annotations:
       artifacthub.io/links: |
         - name: Chart Source
@@ -2957,4 +3059,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-02T17:39:57.781195013Z"
+generated: "2026-05-14T21:50:30.769094768Z"
