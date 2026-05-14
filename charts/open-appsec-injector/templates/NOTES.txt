@@ -92,7 +92,7 @@ Verify injection landed by counting containers (expect 2 — gateway + agent):
 - **Tuning Deployment is in `CrashLoopBackOff`**: `appsec.tuning.enabled=true`
   but no database is reachable. Either set `postgresql.enabled=true` for
   the bundled subchart, or configure
-  `appsec.tuning.externalDatabase.host` / `existingSecret`.
+  the top-level `externalDatabase.host` / `existingSecret`.
 
 For chart parameters reference, see:
   https://github.com/startechnica/apps/tree/main/charts/open-appsec-injector

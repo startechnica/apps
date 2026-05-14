@@ -73,6 +73,17 @@ spec:
           ports:
             - containerPort: {{ .Values.appsec.tuning.containerPorts.http }}
               name: http
+          {{- if .Values.appsec.tuning.configs.bootstrap.existingConfigMap }}
+          volumeMounts:
+            - name: bootstrap-configs
+              mountPath: /app/configs/bootstrapConfig.yaml
+              subPath: bootstrapConfig.yaml
+              readOnly: true
+            - name: bootstrap-configs
+              mountPath: /app/configs/tableSchema.json
+              subPath: tableSchema.json
+              readOnly: true
+          {{- end }}
           {{- if .Values.appsec.tuning.resources }}
           resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.resources "context" $) | nindent 12 }}
           {{- else if ne .Values.appsec.tuning.resourcesPreset "none" }}
@@ -100,6 +111,16 @@ spec:
         - name: tls-certs
           secret:
             secretName: {{ .Values.appsec.tuning.tls.certificatesSecretName }}
+        {{- end }}
+        {{- if .Values.appsec.tuning.configs.bootstrap.existingConfigMap }}
+        - name: bootstrap-configs
+          configMap:
+            name: {{ .Values.appsec.tuning.configs.bootstrap.existingConfigMap }}
+            items:
+              - key: bootstrapConfig.yaml
+                path: bootstrapConfig.yaml
+              - key: tableSchema.json
+                path: tableSchema.json
         {{- end }}
         {{- if .Values.appsec.tuning.extraVolumes }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.appsec.tuning.extraVolumes "context" $) | nindent 8 }}

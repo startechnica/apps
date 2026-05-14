@@ -41,47 +41,50 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{- /*
 Resolve the tuning component's PostgreSQL connection details. Precedence:
-  1. appsec.tuning.externalDatabase.<key>     (external instance wins)
+  1. .Values.externalDatabase.<key>           (external instance wins; shared by every component)
   2. .Subcharts.postgresql.*                  (only valid when `postgresql.enabled=true`)
   3. fail with a clear error                  (neither configured; install would silently break)
+The database NAME is intentionally NOT plumbed through — the smartsync-tuning
+binary hardcodes it in the connection-URL format string (datatube.go), so
+no chart-side override works without an upstream patch.
 */ -}}
 {{- define "open-appsec.tuning.dbHost" -}}
-{{- if .Values.appsec.tuning.externalDatabase.host -}}
-{{- .Values.appsec.tuning.externalDatabase.host -}}
+{{- if .Values.externalDatabase.host -}}
+{{- .Values.externalDatabase.host -}}
 {{- else if .Values.postgresql.enabled -}}
 {{- include "postgresql.primary.fullname" .Subcharts.postgresql -}}
 {{- else -}}
-{{- fail "appsec.tuning is enabled but no database is configured: either set appsec.tuning.externalDatabase.host or postgresql.enabled=true" -}}
+{{- fail "appsec.tuning is enabled but no database is configured: either set externalDatabase.host or postgresql.enabled=true" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "open-appsec.tuning.dbPort" -}}
-{{- if .Values.appsec.tuning.externalDatabase.host -}}
-{{- .Values.appsec.tuning.externalDatabase.port -}}
+{{- if .Values.externalDatabase.host -}}
+{{- .Values.externalDatabase.port -}}
 {{- else if .Values.postgresql.enabled -}}
 {{- .Subcharts.postgresql.Values.primary.service.ports.postgresql | default 5432 -}}
 {{- else -}}
-{{- fail "appsec.tuning is enabled but no database is configured: either set appsec.tuning.externalDatabase.host or postgresql.enabled=true" -}}
+{{- fail "appsec.tuning is enabled but no database is configured: either set externalDatabase.host or postgresql.enabled=true" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "open-appsec.tuning.dbSecretName" -}}
-{{- if .Values.appsec.tuning.externalDatabase.existingSecret -}}
-{{- .Values.appsec.tuning.externalDatabase.existingSecret -}}
+{{- if .Values.externalDatabase.existingSecret -}}
+{{- .Values.externalDatabase.existingSecret -}}
 {{- else if .Values.postgresql.enabled -}}
 {{- include "st-common.names.fullname" .Subcharts.postgresql -}}
 {{- else -}}
-{{- fail "appsec.tuning is enabled but no database Secret is reachable: either set appsec.tuning.externalDatabase.existingSecret or postgresql.enabled=true" -}}
+{{- fail "appsec.tuning is enabled but no database Secret is reachable: either set externalDatabase.existingSecret or postgresql.enabled=true" -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "open-appsec.tuning.dbSecretPasswordKey" -}}
-{{- if .Values.appsec.tuning.externalDatabase.existingSecretPasswordKey -}}
-{{- .Values.appsec.tuning.externalDatabase.existingSecretPasswordKey -}}
+{{- if .Values.externalDatabase.existingSecretPasswordKey -}}
+{{- .Values.externalDatabase.existingSecretPasswordKey -}}
 {{- else if .Values.postgresql.enabled -}}
 {{- include "postgresql.adminPasswordKey" .Subcharts.postgresql -}}
 {{- else -}}
-{{- fail "appsec.tuning is enabled but no database Secret is reachable: either set appsec.tuning.externalDatabase.existingSecretPasswordKey or postgresql.enabled=true" -}}
+{{- fail "appsec.tuning is enabled but no database Secret is reachable: either set externalDatabase.existingSecretPasswordKey or postgresql.enabled=true" -}}
 {{- end -}}
 {{- end -}}
 

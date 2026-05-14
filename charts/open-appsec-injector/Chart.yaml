@@ -6,24 +6,12 @@ annotations:
     - name: Upstream Project
       url: https://github.com/openappsec/openappsec
   artifacthub.io/changes: |
-    - kind: changed
-      description: "CRDs split into sister chart open-appsec-crd 1.0.0; bundled by default via crds.enabled=true. Set crds.enabled=false to manage CRDs separately. See Upgrading."
     - kind: added
-      description: "Top-level allowedNamespaces to scope the openappsec.io ClusterRoleBinding subject set AND per-component NetworkPolicy ingress (default release namespace only)."
+      description: "Top-level externalDatabase.{host,port,user,existingSecret,existingSecretPasswordKey} for pointing tuning at a managed PostgreSQL."
     - kind: added
-      description: "tls.certManager scaffolding (Issuer/Certificate + MWC inject-ca-from) — dormant until upstream container exposes a cert-bootstrap toggle."
-    - kind: changed
-      description: "Webhook probe defaults port:http→https, scheme:HTTP→HTTPS to match the only declared containerPort."
-    - kind: removed
-      description: "logDestination.local-tuning from LogTrigger v1beta2 — rename overrides to logDestination.k8s-service before upgrade."
-    - kind: removed
-      description: "Dead webhook.{imagePullPolicy, integrationType, namePretty, namespace, rbac.*} values keys."
-    - kind: fixed
-      description: "policiesns.openappsec.io specificRules.items.required block (had drifted from policies twin); _pvc.tpl prefix bugs; schedulerName gate."
-    - kind: changed
-      description: "appVersion 1.1.32 -> 1.1.34; postgresql subchart 12.2.8 -> 18.6.6 (moved to OCI registry; Bitnami retired the legacy HTTP index); st-common 0.1.16 -> 0.1.20."
+      description: "appsec.tuning.configs.bootstrap.existingConfigMap — optional BYO ConfigMap holding bootstrapConfig.yaml + tableSchema.json, mounted via subPath to override the tuning binary's baked-in config."
     - kind: added
-      description: "appsec.tuning.externalDatabase.* to point tuning at an external PostgreSQL; postgresql.enabled flag (default false) decouples the subchart from appsec.tuning.enabled — see Upgrading."
+      description: "webhook.uninstallCleanup — optional pre-delete hook that deletes runtime-created EnvoyFilters (label owner=waf) so they don't outlive `helm uninstall`."
 apiVersion: v2
 appVersion: 1.1.34
 dependencies:
@@ -54,4 +42,4 @@ name: open-appsec-injector
 sources:
   - https://github.com/openappsec/openappsec
 type: application
-version: 1.1.0
+version: 1.1.1

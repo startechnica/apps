@@ -1,0 +1,60 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.webhook.uninstallCleanup.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-cleanup" (include "open-appsec.webhook.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: webhook-cleanup
+    app.kubernetes.io/part-of: open-appsec
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 8 }}
+        app.kubernetes.io/component: webhook-cleanup
+        app.kubernetes.io/part-of: open-appsec
+    spec:
+      serviceAccountName: {{ include "open-appsec.webhook.serviceAccountName" . }}
+      restartPolicy: Never
+      {{- if .Values.webhook.uninstallCleanup.image.pullSecrets }}
+      imagePullSecrets: {{- toYaml .Values.webhook.uninstallCleanup.image.pullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: cleanup
+          image: {{ printf "%s/%s:%s" .Values.webhook.uninstallCleanup.image.registry .Values.webhook.uninstallCleanup.image.repository .Values.webhook.uninstallCleanup.image.tag }}
+          imagePullPolicy: {{ .Values.webhook.uninstallCleanup.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "[$(date -u +%FT%TZ)] open-appsec uninstall cleanup starting"
+              echo "[$(date -u +%FT%TZ)] selector: '{{ .Values.webhook.uninstallCleanup.selector }}'"
+              kubectl delete envoyfilter \
+                --all-namespaces \
+                --selector='{{ .Values.webhook.uninstallCleanup.selector }}' \
+                --ignore-not-found \
+                --wait=true \
+                --timeout=60s
+              echo "[$(date -u +%FT%TZ)] cleanup complete"
+{{- end }}
