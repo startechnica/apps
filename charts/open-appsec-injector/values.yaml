@@ -150,6 +150,43 @@ removeWaf: false
 ##
 allowedNamespaces: []
 
+
+## @section External database (shared)
+
+## Connection details for an external PostgreSQL instance shared across any
+## component that needs one (currently `appsec.tuning`; future components like
+## learning could reuse the same connection).
+##
+## The logical-database NAME is NOT chart-configurable. Upstream
+## `smartsync-tuning` hardcodes `i2datatubeschemasecurityeventlogsv03` in
+## the connection-URL format string (`datatube.go`); a chart-side override
+## would have no effect without an upstream patch. An external server must
+## either already host that database or allow the binary to create it.
+##
+## Setting `externalDatabase.host` flips every component that supports DB
+## access over to the external endpoint via the `open-appsec.tuning.db*`
+## helpers. The bundled `postgresql` subchart is governed separately by
+## `postgresql.enabled` — use exactly one of (external host set) or
+## (postgresql.enabled=true).
+##
+externalDatabase:
+  ## @param externalDatabase.host Hostname or Service of an external PostgreSQL. Empty falls back to the bundled `postgresql` subchart's primary Service (which requires `postgresql.enabled=true`).
+  ##
+  host: ""
+  ## @param externalDatabase.port TCP port of the external PostgreSQL.
+  ##
+  port: 5432
+  ## @param externalDatabase.user PostgreSQL username (informational; currently consumers read only the password and connect as the admin user).
+  ##
+  user: ""
+  ## @param externalDatabase.existingSecret Name of an existing Secret holding the PostgreSQL password. Empty falls back to the bundled subchart's auto-generated Secret.
+  ##
+  existingSecret: ""
+  ## @param externalDatabase.existingSecretPasswordKey Data key inside `existingSecret` holding the password. Empty falls back to `postgresql.adminPasswordKey` from the subchart (typically `postgres-password`).
+  ##
+  existingSecretPasswordKey: ""
+
+
 ## @param playground.enabled  Enables the AppSec “playground” mode. When set to true, the deployment exposes a sandbox/testing environment intended for demonstrations, rule testing, or 
 ## security feature validation. This mode should not be enabled in production environments.
 ##
@@ -1403,36 +1440,39 @@ appsec:
     ## @param appsec.tuning.enabled Enable tuning
     enabled: false
 
-    ## Connect the tuning component to an external PostgreSQL instead of the
-    ## bundled `postgresql` subchart. Setting `externalDatabase.host` to any
-    ## non-empty value flips the chart-rendered tuning Deployment over to the
-    ## external endpoint via `open-appsec.tuning.db*` helpers; the bundled
-    ## subchart still renders (it's gated by Chart.yaml dependency condition
-    ## `appsec.tuning.enabled`) so you may want to set
-    ## `appsec.tuning.enabled: true` AND additionally arrange for the
-    ## subchart not to be installed (e.g. via a release-time `--set
-    ## postgresql.primary.replicaCount=0` workaround, or a future chart
-    ## bump that decouples the dependency condition).
+    ## Config-file overrides for the tuning binary. The smartsync-tuning
+    ## binary reads its bootstrap config (`bootstrapConfig.yaml`) and schema
+    ## (`tableSchema.json`) from `/app/configs/` inside the container; both
+    ## are baked in at build time. To override either, supply an existing
+    ## ConfigMap (BYO) holding the new content; the chart mounts the two
+    ## keys via `subPath` at the same paths so they shadow the baked-in
+    ## files without disturbing the rest of the directory (e.g.,
+    ## `error-responses.json`).
     ##
-    externalDatabase:
-      ## @param appsec.tuning.externalDatabase.host Hostname or Service of an external PostgreSQL. Empty falls back to the in-chart `postgresql` subchart's primary Service.
-      ##
-      host: ""
-      ## @param appsec.tuning.externalDatabase.port TCP port of the external PostgreSQL.
-      ##
-      port: 5432
-      ## @param appsec.tuning.externalDatabase.user PostgreSQL username (informational; currently the agent reads only the password and connects as the admin user).
-      ##
-      user: ""
-      ## @param appsec.tuning.externalDatabase.database Database name (informational).
-      ##
-      database: ""
-      ## @param appsec.tuning.externalDatabase.existingSecret Name of an existing Secret holding the PostgreSQL password. Empty falls back to the bundled subchart's auto-generated Secret.
-      ##
-      existingSecret: ""
-      ## @param appsec.tuning.externalDatabase.existingSecretPasswordKey Data key inside `existingSecret` holding the password. Empty falls back to `postgresql.adminPasswordKey` from the subchart (typically `postgres-password`).
-      ##
-      existingSecretPasswordKey: ""
+    ## Useful knobs in the bootstrap config that the chart does NOT expose
+    ## as env vars (and therefore are only reachable via this override):
+    ##   - log.level, scheduler.{tuningInterval,taskInterval,tokenizerInterval}
+    ##   - etcd.{hosts,timeout}
+    ##   - rp.{baseUrl,policyUrl}
+    ##   - errors.code, server.timeout, tuning.threshold.*
+    ##
+    ## Database connection details (`query.db.{host,port,user,password,sslmode}`)
+    ## already auto-bind to `QUERY_DB_*` env vars via viper.AutomaticEnv at
+    ## runtime, so they're independent of this override. Database NAME is
+    ## NOT configurable today — it's hardcoded as a literal in the binary's
+    ## connection-string format (see datatube.go) regardless of the
+    ## tableSchema.json `name` field. Pending an upstream patch.
+    ##
+    ## Sources:
+    ##   - https://github.com/openappsec/smartsync-tuning/blob/main/internal/pkg/query/datatube.go
+    ##   - https://github.com/openappsec/smartsync-tuning/blob/main/configs/bootstrapConfig.yaml
+    ##   - https://github.com/openappsec/smartsync-tuning/blob/main/configs/tableSchema.json
+    ##
+    configs:
+      bootstrap:
+        ## @param appsec.tuning.configs.bootstrap.existingConfigMap Name of an existing ConfigMap holding `bootstrapConfig.yaml` and `tableSchema.json` data keys. When set, the chart mounts both keys into the tuning pod at `/app/configs/` via `subPath`, shadowing the baked-in defaults. Empty (default) means the pod uses the container's baked-in config and the chart renders no bootstrap volume.
+        ##
+        existingConfigMap: ""
 
     ## open-appsec Tuning image version
     ## ref: 
@@ -2057,7 +2097,52 @@ webhook:
     ## @param webhook.pdb.maxUnavailable Maximum number/percentage of webhook pods that may be unavailable during a voluntary disruption. Defaults to `1` when both this and `minAvailable` are empty.
     ##
     maxUnavailable: ""
-  ## @param webhook.revisionHistoryLimit  
+
+  ## Pre-delete cleanup for runtime-created EnvoyFilters.
+  ##
+  ## The webhook's mutating logic creates an EnvoyFilter (label `owner: waf`)
+  ## in each Istio gateway namespace it injects the agent into. Those
+  ## resources are NOT owned by any Helm release, so `helm uninstall` leaves
+  ## them orphaned in the cluster — Envoy still loads the (now-missing)
+  ## attachment library and the proxy may crash on next config refresh.
+  ##
+  ## Enable this to render a `pre-delete` Helm hook Job that deletes the
+  ## orphans via `kubectl` before the chart's own resources tear down. The
+  ## Job reuses the webhook ServiceAccount (already bound to a ClusterRole
+  ## that grants `delete` on `networking.istio.io/envoyfilters` cluster-wide)
+  ## so no additional RBAC is needed.
+  ##
+  ## CAVEAT: the default selector `owner=waf` is what the runtime binary
+  ## stamps onto EnvoyFilters; it does NOT carry a release-name suffix.
+  ## If multiple open-appsec-injector releases share a cluster, uninstalling
+  ## any one of them will delete EnvoyFilters belonging to ALL of them.
+  ## Single-release clusters are fine.
+  ##
+  uninstallCleanup:
+    ## @param webhook.uninstallCleanup.enabled Render a pre-delete Helm hook Job that deletes runtime-created EnvoyFilters via kubectl. Default `false` for backwards compatibility — flip on for orphan-free uninstalls.
+    ##
+    enabled: false
+    ## @param webhook.uninstallCleanup.selector Label selector passed to `kubectl delete envoyfilter -A`. Defaults to the label the open-appsec runtime stamps onto EnvoyFilters it creates (`owner=waf`). Override if your runtime version uses a different label scheme.
+    ##
+    selector: "owner=waf"
+    image:
+      ## @param webhook.uninstallCleanup.image.registry kubectl image registry for the cleanup Job container
+      ##
+      registry: docker.io
+      ## @param webhook.uninstallCleanup.image.repository kubectl image repository
+      ##
+      repository: bitnami/kubectl
+      ## @param webhook.uninstallCleanup.image.tag kubectl image tag (recommended: pin a specific version rather than `latest` in production)
+      ##
+      tag: latest
+      ## @param webhook.uninstallCleanup.image.pullPolicy kubectl image pull policy
+      ##
+      pullPolicy: IfNotPresent
+      ## @param webhook.uninstallCleanup.image.pullSecrets [array] kubectl image pull secrets
+      ##
+      pullSecrets: []
+
+  ## @param webhook.revisionHistoryLimit
   ##
   revisionHistoryLimit: 1
   ## @param webhook.updateStrategy.type Set up update strategy for open-appsec webhook installation.
@@ -2718,14 +2803,14 @@ metrics:
 ## When `appsec.tuning.enabled=true`, the tuning component needs a PostgreSQL
 ## backend. Pick exactly one of:
 ##   - bundled subchart: `postgresql.enabled: true` (this block governs config)
-##   - external instance: leave `postgresql.enabled: false` AND set
-##     `appsec.tuning.externalDatabase.host` (plus optional `existingSecret`)
+##   - external instance: leave `postgresql.enabled: false` AND set the
+##     top-level `externalDatabase.host` block (plus optional `existingSecret`)
 ## Default `enabled: false` keeps minimal installs minimal — operators
 ## upgrading from 1.0.x with tuning on must explicitly flip `postgresql.enabled`
 ## to `true` (or migrate to external DB).
 ##
 postgresql:
-  ## @param postgresql.enabled Render the bundled Bitnami PostgreSQL subchart. Required when `appsec.tuning.enabled=true` AND `appsec.tuning.externalDatabase.host` is empty.
+  ## @param postgresql.enabled Render the bundled Bitnami PostgreSQL subchart. Required when `appsec.tuning.enabled=true` AND the top-level `externalDatabase.host` is empty.
   ##
   enabled: false
   # -- docker image for built-in postgresql - overriding to use bitnamilegacy repository

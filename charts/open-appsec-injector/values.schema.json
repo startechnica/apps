@@ -126,6 +126,26 @@
     "allowedNamespaces": {
       "type": "array"
     },
+    "externalDatabase": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "user": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "existingSecretPasswordKey": {
+          "type": "string"
+        }
+      }
+    },
     "playground": {
       "type": "object",
       "properties": {
@@ -1399,26 +1419,16 @@
             "enabled": {
               "type": "boolean"
             },
-            "externalDatabase": {
+            "configs": {
               "type": "object",
               "properties": {
-                "host": {
-                  "type": "string"
-                },
-                "port": {
-                  "type": "integer"
-                },
-                "user": {
-                  "type": "string"
-                },
-                "database": {
-                  "type": "string"
-                },
-                "existingSecret": {
-                  "type": "string"
-                },
-                "existingSecretPasswordKey": {
-                  "type": "string"
+                "bootstrap": {
+                  "type": "object",
+                  "properties": {
+                    "existingConfigMap": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             },
@@ -2042,6 +2052,37 @@
             },
             "maxUnavailable": {
               "type": "string"
+            }
+          }
+        },
+        "uninstallCleanup": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "selector": {
+              "type": "string"
+            },
+            "image": {
+              "type": "object",
+              "properties": {
+                "registry": {
+                  "type": "string"
+                },
+                "repository": {
+                  "type": "string"
+                },
+                "tag": {
+                  "type": "string"
+                },
+                "pullPolicy": {
+                  "type": "string"
+                },
+                "pullSecrets": {
+                  "type": "array"
+                }
+              }
             }
           }
         },
