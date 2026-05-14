@@ -1,0 +1,32 @@
+{{ .Chart.Name }} {{ .Chart.Version }} installed.
+
+The following CustomResourceDefinitions are now registered cluster-wide:
+
+  - accesscontrolpractices.openappsec.io        (+ -ns namespaced variant)
+  - customresponses.openappsec.io               (+ -ns)
+  - exceptions.openappsec.io                    (+ -ns)
+  - logtriggers.openappsec.io                   (+ -ns)
+  - policies.openappsec.io                      (+ -ns)
+  - policyactivations.openappsec.io
+  - practices.openappsec.io
+  - sourcesidentifiers.openappsec.io            (+ -ns)
+  - threatpreventionpractices.openappsec.io     (+ -ns)
+  - trustedsources.openappsec.io                (+ -ns)
+
+Next step — install or upgrade the open-appsec-injector chart in a workload
+namespace; it will discover the CRDs you just registered:
+
+  helm install open-appsec-injector startechnica/open-appsec-injector \
+    --namespace open-appsec --create-namespace
+
+{{ if .Values.crds.keep -}}
+NOTE: `crds.keep=true` is set (the default). These CRDs carry the
+`helm.sh/resource-policy: keep` annotation and will survive `helm uninstall
+{{ .Release.Name }}`. To remove them you must `kubectl delete crd <name>`
+explicitly — be aware this also deletes every CustomResource of those kinds
+cluster-wide.
+{{- else -}}
+WARNING: `crds.keep=false` — uninstalling this release will delete the CRDs
+AND every CustomResource of those kinds in every namespace. Make sure that's
+what you want before running `helm uninstall {{ .Release.Name }}`.
+{{- end }}

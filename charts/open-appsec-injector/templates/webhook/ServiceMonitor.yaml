@@ -1,15 +1,15 @@
 {{- /*
-(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
-SPDX-License-Identifier: LicenseRef-ETB
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if and .Values.webhook.metrics.enabled .Values.webhook.metrics.serviceMonitor.enabled -}}
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
 {{- if not (eq (include "st-common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
 apiVersion: {{ include "st-common.capabilities.coreosMonitoring.apiVersion" . }}
 kind: ServiceMonitor
 metadata:
   name: {{ include "st-common.names.fullname" . }}
-  namespace: {{ default (include "st-common.names.namespace" .) .Values.webhook.metrics.serviceMonitor.namespace | quote }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
   {{- $labels := include "st-common.tplvalues.merge" (dict "values" (list .Values.webhook.metrics.serviceMonitor.labels .Values.commonLabels) "context" .) }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" $labels "context" $) | nindent 4 }}
     app.kubernetes.io/component: webhook
@@ -23,27 +23,32 @@ spec:
   jobLabel: {{ .Values.webhook.metrics.serviceMonitor.jobLabel }}
   {{- end }}
   endpoints:
-    - port: metrics
-      path: "/metrics"
-      {{- if .Values.webhook.metrics.serviceMonitor.tlsConfig }}
+    {{- $defaultEndpoint := pick .Values.webhook.metrics.serviceMonitor "port" "interval" "scrapeTimeout" "relabelings" "metricRelabelings" "honorLabels" "tlsConfig" }}
+    {{- $endpoints := ternary (.Values.webhook.metrics.serviceMonitor.endpoints) (list (dict "path" .Values.webhook.metrics.serviceMonitor.path)) (not (empty .Values.webhook.metrics.serviceMonitor.endpoints)) }}
+    {{- range $endpoints }}
+    {{- $endpoint := merge . $defaultEndpoint }}
+    - port: {{ $endpoint.port | quote }}
+      path: {{ include "st-common.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
+      {{- if $endpoint.tlsConfig }}
       scheme: https
-      tlsConfig: {{- toYaml .Values.webhook.metrics.serviceMonitor.tlsConfig | nindent 8 }}
+      tlsConfig: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.tlsConfig "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .Values.webhook.metrics.serviceMonitor.interval }}
-      interval: {{ .Values.webhook.metrics.serviceMonitor.interval }}
+      {{- if $endpoint.interval }}
+      interval: {{ $endpoint.interval }}
       {{- end }}
-      {{- if .Values.webhook.metrics.serviceMonitor.scrapeTimeout }}
-      scrapeTimeout: {{ .Values.webhook.metrics.serviceMonitor.scrapeTimeout }}
+      {{- if $endpoint.scrapeTimeout }}
+      scrapeTimeout: {{ $endpoint.scrapeTimeout }}
       {{- end }}
-      {{- if .Values.webhook.metrics.serviceMonitor.honorLabels }}
-      honorLabels: {{ .Values.webhook.metrics.serviceMonitor.honorLabels }}
+      {{- if $endpoint.relabelings }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
       {{- end }}
-      {{- if .Values.webhook.metrics.serviceMonitor.relabelings }}
-      relabelings: {{- include "st-common.tplvalues.render" ( dict "value" .Values.webhook.metrics.serviceMonitor.relabelings "context" $) | nindent 8 }}
+      {{- if $endpoint.metricRelabelings }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
       {{- end }}
-      {{- if .Values.webhook.metrics.serviceMonitor.metricRelabelings }}
-      metricRelabelings: {{- include "st-common.tplvalues.render" ( dict "value" .Values.webhook.metrics.serviceMonitor.metricRelabelings "context" $) | nindent 8 }}
+      {{- if $endpoint.honorLabels }}
+      honorLabels: {{ $endpoint.honorLabels }}
       {{- end }}
+    {{- end }}
   namespaceSelector:
     matchNames:
       - {{ include "st-common.names.namespace" . | quote }}

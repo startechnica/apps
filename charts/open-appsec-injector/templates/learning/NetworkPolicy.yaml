@@ -1,0 +1,98 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.appsec.learning.networkPolicy.enabled }}
+apiVersion: {{ template "st-common.capabilities.networkPolicy.apiVersion" . }}
+kind: NetworkPolicy
+metadata:
+  name: {{ include "open-appsec.learning.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: learning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: learning
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if .Values.appsec.learning.networkPolicy.allowExternalEgress }}
+  egress:
+    - {}
+  {{- else }}
+  egress:
+    # Allow DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Allow egress to the storage component (shared filesystem)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: storage
+              app.kubernetes.io/part-of: open-appsec
+    {{- if .Values.appsec.learning.networkPolicy.extraEgress }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.appsec.learning.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  ingress:
+    # Allow inbound connections from injected agent sidecars (any namespace by
+    # default — they live in the user's workload namespaces, not the release ns).
+    - ports:
+        - port: {{ .Values.appsec.learning.containerPorts.http }}
+          protocol: TCP
+      {{- if not .Values.appsec.learning.networkPolicy.allowExternal }}
+      from:
+        - podSelector:
+            matchLabels:
+              {{ include "open-appsec.learning.fullname" . }}-client: "true"
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: webhook
+              app.kubernetes.io/part-of: open-appsec
+        {{- /*
+        Mirror the ClusterRoleBinding subject scope onto the NetworkPolicy ingress:
+        the namespaces listed in .Values.allowedNamespaces are the ones whose pods
+        we expect to call learning (typically injected agent sidecars). Skipped on
+        ["*"] (allowExternal already covers it) or [] (no extra ingress needed).
+        */ -}}
+        {{- $allowed := .Values.allowedNamespaces | default (list) }}
+        {{- if and (not (has "*" $allowed)) (not (empty $allowed)) }}
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  {{- toYaml $allowed | nindent 18 }}
+        {{- end }}
+        {{- if or .Values.appsec.learning.networkPolicy.ingressNSMatchLabels .Values.appsec.learning.networkPolicy.ingressNSPodMatchLabels }}
+        - namespaceSelector:
+            matchLabels:
+              {{- if .Values.appsec.learning.networkPolicy.ingressNSMatchLabels }}
+                {{- range $key, $value := .Values.appsec.learning.networkPolicy.ingressNSMatchLabels }}
+                {{ $key | quote }}: {{ $value | quote }}
+                {{- end }}
+              {{- else }}
+                {}
+              {{- end }}
+          {{- if .Values.appsec.learning.networkPolicy.ingressNSPodMatchLabels }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.appsec.learning.networkPolicy.ingressNSPodMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- if .Values.appsec.learning.networkPolicy.extraIngress }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.appsec.learning.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- end }}

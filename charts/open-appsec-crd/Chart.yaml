@@ -1,0 +1,35 @@
+annotations:
+  category: WAF
+  artifacthub.io/links: |
+    - name: Chart Source
+      url: https://github.com/startechnica/apps/tree/main/charts/open-appsec-crd
+    - name: Upstream Project
+      url: https://github.com/openappsec/openappsec
+    - name: Sister Chart (Injector)
+      url: https://artifacthub.io/packages/helm/startechnica/open-appsec-injector
+  artifacthub.io/changes: |
+    - kind: added
+      description: "Initial release. CRDs sourced from openappsec/openappsec config/crds/open-appsec-crd-latest.yaml, schema-aligned with open-appsec-injector 1.1.0."
+apiVersion: v2
+appVersion: 1.1.34
+description: CustomResourceDefinitions for open-appsec. Ship the CRDs as their own
+  release so the sister `open-appsec-injector` chart can be installed and upgraded
+  without re-applying CRDs (which Helm intentionally refuses to update inside
+  `templates/`). Includes every `openappsec.io` resource the injector renders.
+home: https://github.com/startechnica/apps/tree/main/charts/open-appsec-crd
+icon: https://i2-s3-ui-static-content-prod-10.s3.eu-west-1.amazonaws.com/elpis/tree-no-bg-256.png
+keywords:
+  - waf
+  - open-appsec
+  - crd
+  - custom-resources
+kubeVersion: ">=1.25.0-0"
+maintainers:
+  - name: firmansyahn
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
+name: open-appsec-crd
+sources:
+  - https://github.com/openappsec/openappsec
+type: application
+version: 1.0.0

@@ -1,0 +1,98 @@
+{{ .Chart.Name }} {{ .Chart.Version }} installed in namespace {{ include "st-common.names.namespace" . | quote }}.
+
+The mutating admission webhook is now watching for pods labeled
+`{{- range $key, $value := .Values.agent.objectSelector.matchLabels }} {{ $key }}={{ $value }}{{- end }}`
+in namespaces labeled
+`{{- range $key, $value := .Values.agent.namespaceSelector.matchLabels }} {{ $key }}={{ $value }}{{- end }}`.
+
+## Verify the install
+
+1. Webhook pod is running and ready:
+
+     kubectl get deployment {{ include "open-appsec.webhook.fullname" . }} \
+       --namespace {{ include "st-common.names.namespace" . | quote }}
+
+   Expect READY 1/1 (or N/N if you bumped `webhook.replicaCount`).
+
+2. MutatingWebhookConfiguration is registered with a non-empty CA bundle:
+
+     kubectl get mutatingwebhookconfiguration {{ .Values.webhook.name }} \
+       -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | head -c 32
+
+   The container's secretgen.py patches the caBundle at startup; if this
+   prints an empty string, check the webhook pod logs for cert-generation
+   errors.
+
+{{- if .Values.crds.enabled }}
+
+3. CRDs were bundled with this release (`crds.enabled=true`, the default) and rendered alongside the application:
+
+     kubectl get crd -l 'app.kubernetes.io/part-of=open-appsec' \
+       --no-headers | wc -l
+
+   Expect 18.
+{{- else }}
+
+3. CRDs from a separately-installed `open-appsec-crd` chart are present:
+
+     kubectl get crd -l 'app.kubernetes.io/part-of=open-appsec' \
+       --no-headers | wc -l
+
+   Expect 18. If 0, install the sister chart:
+
+     helm install open-appsec-crd startechnica/open-appsec-crd
+{{- end }}
+
+## Enable injection on an existing deployment
+
+The webhook only mutates pods that match BOTH `namespaceSelector` AND
+`objectSelector`. To opt a workload in:
+
+  # 1. Label the workload's namespace
+  kubectl label namespace <target-ns> \
+{{- range $key, $value := .Values.agent.namespaceSelector.matchLabels }}
+    {{ $key }}={{ $value }} --overwrite{{- end }}
+
+  # 2. Label the Deployment / StatefulSet pods (label goes on .spec.template.metadata.labels)
+  #    For the default selector this is the Istio gateway:
+  kubectl patch deployment <gateway-deployment> --namespace <target-ns> \
+    --type=strategic --patch '{"spec":{"template":{"metadata":{"labels":{
+{{- range $key, $value := .Values.agent.objectSelector.matchLabels }}
+      "{{ $key }}":"{{ $value }}"
+{{- end }} }}}}}'
+
+  # 3. Restart so pods pass through admission and get the sidecar injected
+  kubectl rollout restart deployment <gateway-deployment> \
+    --namespace <target-ns>
+
+Verify injection landed by counting containers (expect 2 — gateway + agent):
+
+  kubectl get pod -l <gateway-label-selector> --namespace <target-ns> \
+    -o jsonpath='{.items[*].spec.containers[*].name}'
+
+## Troubleshooting
+
+- **Pods stuck in `ContainerCreating` with `MountVolume.SetUp failed`**:
+  agent.persistence is enabled but no PV is available. Either set
+  `agent.persistence.config.storageClass` / `agent.persistence.data.storageClass`
+  to a class that has a provisioner, or supply
+  `agent.persistence.{config,data}.existingClaim` pointing at pre-created PVCs.
+
+- **Admission timeouts** (`webhook ... failed: context deadline exceeded`):
+  the webhook pod may be slow to start. Bump `webhook.timeoutSeconds`
+  (currently `{{ .Values.webhook.timeoutSeconds }}`) or
+  `webhook.replicaCount` for redundancy.
+
+- **`x509: certificate signed by unknown authority`**: the webhook's
+  `caBundle` patch hasn't landed yet, or RBAC on the webhook SA is too
+  narrow. Confirm the webhook pod's logs include `==> Key material
+  generated` and the ClusterRoleBinding `{{ include "open-appsec.webhook.fullname" . }}:mutate-injection`
+  grants `mutatingwebhookconfigurations`.
+
+- **Tuning Deployment is in `CrashLoopBackOff`**: `appsec.tuning.enabled=true`
+  but no database is reachable. Either set `postgresql.enabled=true` for
+  the bundled subchart, or configure
+  `appsec.tuning.externalDatabase.host` / `existingSecret`.
+
+For chart parameters reference, see:
+  https://github.com/startechnica/apps/tree/main/charts/open-appsec-injector

@@ -1,5 +1,5 @@
 {{- /*
-(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -62,7 +62,7 @@ spec:
       {{- if .Values.webhook.priorityClassName }}
       priorityClassName: {{ .Values.webhook.priorityClassName | quote }}
       {{- end }}
-      {{- if .Values.schedulerName }}
+      {{- if .Values.webhook.schedulerName }}
       schedulerName: {{ .Values.webhook.schedulerName }}
       {{- end }}
       {{- if .Values.webhook.podSecurityContext.enabled }}
@@ -153,9 +153,9 @@ spec:
             {{- end }}
             - name: LOCAL_TUNING_ENABLED
               value: {{ ternary "true" "false" .Values.appsec.tuning.enabled | quote }}
-            {{- if .Values.appsec.prometheus }}
+            {{- if .Values.metrics.enabled }}
             - name: PROMETHEUS
-              value: {{ ternary "true" "false" .Values.agent.metrics.enabled | quote }}
+              value: {{ ternary "true" "false" .Values.metrics.enabled | quote }}
             {{- end }}
             {{- if .Values.playground.enabled }}
             - name: PLAYGROUND
@@ -259,7 +259,14 @@ spec:
         {{- if .Values.webhook.tls.enabled }}
         - name: tls-certs
           secret:
-            secretName: {{ .Values.webhook.tls.certificatesSecretName }}
+            secretName: {{ include "open-appsec.webhook.tlsSecretName" . }}
+            items:
+              - key: {{ .Values.webhook.tls.certSecretKey }}
+                path: {{ .Values.webhook.tls.certFilename }}
+              - key: {{ .Values.webhook.tls.certKeySecretKey }}
+                path: {{ .Values.webhook.tls.certKeyFilename }}
+              - key: {{ .Values.webhook.tls.caSecretKey }}
+                path: {{ .Values.webhook.tls.certCAFilename }}
         {{- end }}
         {{- if .Values.webhook.extraVolumes }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.webhook.extraVolumes "context" $) | nindent 8 }}

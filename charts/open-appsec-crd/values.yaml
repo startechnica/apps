@@ -1,0 +1,19 @@
+# (c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
+
+## =============================================================================
+## @section CRD lifecycle
+## -----------------------------------------------------------------------------
+## This chart's only job is to ship the open-appsec CRDs. The toggle below
+## controls lifecycle behavior, not whether the CRDs render.
+##
+## CRDs are deliberately label-free — they are cluster-scoped, project-shared
+## infrastructure and don't belong to any single Helm release. If you need to
+## attach labels for tooling (e.g. backup operators, policy engines), apply
+## them out-of-band with `kubectl label crd <name> key=value`.
+## =============================================================================
+
+crds:
+  ## @param crds.keep Add `helm.sh/resource-policy: keep` annotation to every CRD so they survive `helm uninstall`. Strongly recommended in production — uninstalling CRDs destroys every CustomResource of that type cluster-wide.
+  ##
+  keep: true
