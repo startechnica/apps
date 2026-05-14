@@ -8,12 +8,14 @@ kind: ConfigMap
 metadata:
   name: {{ include "freeradius.names.envvars" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
+  labels:
+    {{- include "st-common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
       {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations:
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
   FREERADIUS_ENABLE_TLS: {{ ternary "true" "false" .Values.tls.enabled | quote }}
