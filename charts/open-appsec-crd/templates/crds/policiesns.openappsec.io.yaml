@@ -3,11 +3,10 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.crds.enabled }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
-metadata :
-  name : policies.openappsec.io
+metadata:
+  name: policiesns.openappsec.io
   {{- if .Values.crds.keep }}
   annotations:
     helm.sh/resource-policy: keep
@@ -15,84 +14,8 @@ metadata :
 spec:
   group: openappsec.io
   versions:
-    - name: v1beta1
-      # Each version can be enabled/disabled by Served flag.
-      served: true
-      # One and only one version must be marked as the storage version.
-      storage: false
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            spec:
-              type: object
-              properties:
-                default:
-                  type: object
-                  properties:
-                    mode:
-                      type: string
-                      enum:
-                        - prevent-learn
-                        - detect-learn
-                        - prevent
-                        - detect
-                        - inactive
-                    practices:
-                      type: array
-                      items:
-                        type: string
-                    triggers:
-                      type: array
-                      items:
-                        type: string
-                    custom-response:
-                      type: string
-                    source-identifiers:
-                      type: string
-                    trusted-sources:
-                      type: string
-                    exceptions:
-                      type: array
-                      items:
-                        type: string
-                specific-rules:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      host:
-                        type: string
-                      mode:
-                        type: string
-                        enum:
-                          - prevent-learn
-                          - detect-learn
-                          - prevent
-                          - detect
-                          - inactive
-                      practices:
-                        type: array
-                        items:
-                          type: string
-                      triggers:
-                        type: array
-                        items:
-                          type: string
-                      custom-response:
-                        type: string
-                      source-identifiers:
-                        type: string
-                      trusted-sources:
-                        type: string
-                      exceptions:
-                        type: array
-                        items:
-                          type: string
     - name: v1beta2
-      # Each version can be enabled/disabled by Served flag.
       served: true
-      # One and only one version must be marked as the storage version.
       storage: true
       schema:
         openAPIV3Schema:
@@ -110,7 +33,7 @@ spec:
                     - threatPreventionPractices
                     - accessControlPractices
                   properties:
-                    mode: # Mode of the policy, required
+                    mode:
                       type: string
                       enum:
                         - prevent-learn
@@ -119,18 +42,18 @@ spec:
                         - detect
                         - inactive
                       default: detect-learn
-                    threatPreventionPractices: # Threat prevention practices, required (min 0 items)
+                    threatPreventionPractices:
                       type: array
                       items:
                         type: string
-                    accessControlPractices: # Access control practices, required (min 0 items)
+                    accessControlPractices:
                       type: array
                       items:
                         type: string
-                    customResponse: # Custom response configuration, optional, default 403 (forbidden)
+                    customResponse:
                       type: string
                       default: "403"
-                    triggers: # Optional triggers
+                    triggers:
                       type: array
                       items:
                         type: string
@@ -142,7 +65,7 @@ spec:
                       type: array
                       items:
                         type: string
-                specificRules: # Specific rules, optional
+                specificRules:
                   type: array
                   items:
                     type: object
@@ -187,11 +110,10 @@ spec:
                         items:
                           type: string
 
-  scope: Cluster
+  scope: Namespaced
   names:
-    plural: policies
-    singular: policy
-    kind: Policy
+    plural: policiesns
+    singular: policyns
+    kind: PolicyNS
     shortNames:
-      - policy
-{{- end }}
+      - policyns

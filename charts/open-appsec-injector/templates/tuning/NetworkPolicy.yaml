@@ -1,0 +1,99 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.appsec.tuning.networkPolicy.enabled }}
+apiVersion: {{ template "st-common.capabilities.networkPolicy.apiVersion" . }}
+kind: NetworkPolicy
+metadata:
+  name: {{ include "open-appsec.tuning.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: tuning
+    app.kubernetes.io/part-of: open-appsec
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: tuning
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if .Values.appsec.tuning.networkPolicy.allowExternalEgress }}
+  egress:
+    - {}
+  {{- else }}
+  egress:
+    # Allow DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Allow egress to the postgresql subchart (when tuning is enabled).
+    - ports:
+        - port: 5432
+          protocol: TCP
+      to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+    {{- if .Values.appsec.tuning.networkPolicy.extraEgress }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.appsec.tuning.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  ingress:
+    # Allow inbound from injected agent sidecars and webhook.
+    - ports:
+        - port: {{ .Values.appsec.tuning.containerPorts.http }}
+          protocol: TCP
+      {{- if not .Values.appsec.tuning.networkPolicy.allowExternal }}
+      from:
+        - podSelector:
+            matchLabels:
+              {{ include "open-appsec.tuning.fullname" . }}-client: "true"
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: webhook
+              app.kubernetes.io/part-of: open-appsec
+        {{- /*
+        Mirror the ClusterRoleBinding subject scope onto the NetworkPolicy ingress:
+        the namespaces listed in .Values.allowedNamespaces are the ones whose pods
+        we expect to call tuning (typically injected agent sidecars). Skipped on
+        ["*"] (allowExternal already covers it) or [] (no extra ingress needed).
+        */ -}}
+        {{- $allowed := .Values.allowedNamespaces | default (list) }}
+        {{- if and (not (has "*" $allowed)) (not (empty $allowed)) }}
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  {{- toYaml $allowed | nindent 18 }}
+        {{- end }}
+        {{- if or .Values.appsec.tuning.networkPolicy.ingressNSMatchLabels .Values.appsec.tuning.networkPolicy.ingressNSPodMatchLabels }}
+        - namespaceSelector:
+            matchLabels:
+              {{- if .Values.appsec.tuning.networkPolicy.ingressNSMatchLabels }}
+                {{- range $key, $value := .Values.appsec.tuning.networkPolicy.ingressNSMatchLabels }}
+                {{ $key | quote }}: {{ $value | quote }}
+                {{- end }}
+              {{- else }}
+                {}
+              {{- end }}
+          {{- if .Values.appsec.tuning.networkPolicy.ingressNSPodMatchLabels }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.appsec.tuning.networkPolicy.ingressNSPodMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- if .Values.appsec.tuning.networkPolicy.extraIngress }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.appsec.tuning.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- end }}

@@ -18,7 +18,7 @@ metadata:
   {{- end }}
 spec:
   replicas: {{ .Values.appsec.tuning.replicaCount }}
-  revisionHistoryLimit: 1
+  revisionHistoryLimit: {{ .Values.appsec.tuning.revisionHistoryLimit }}
   {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.appsec.tuning.podLabels .Values.commonLabels ) "context" . ) }}
   selector:
     matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
@@ -62,10 +62,12 @@ spec:
             - name: QUERY_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "st-common.names.fullname" .Subcharts.postgresql }}
-                  key: {{ include "postgresql.adminPasswordKey" .Subcharts.postgresql }}
+                  name: {{ include "open-appsec.tuning.dbSecretName" . }}
+                  key: {{ include "open-appsec.tuning.dbSecretPasswordKey" . }}
             - name: QUERY_DB_HOST
-              value: {{ include "postgresql.primary.fullname" .Subcharts.postgresql }}
+              value: {{ include "open-appsec.tuning.dbHost" . }}
+            - name: QUERY_DB_PORT
+              value: {{ include "open-appsec.tuning.dbPort" . | quote }}
             - name: SHARED_STORAGE_HOST
               value: {{ include "open-appsec.storage.fullname" . }}
           ports:

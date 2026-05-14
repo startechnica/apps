@@ -1,0 +1,91 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.appsec.storage.networkPolicy.enabled }}
+apiVersion: {{ template "st-common.capabilities.networkPolicy.apiVersion" . }}
+kind: NetworkPolicy
+metadata:
+  name: {{ include "open-appsec.storage.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: open-appsec
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: storage
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if .Values.appsec.storage.networkPolicy.allowExternalEgress }}
+  egress:
+    - {}
+  {{- else }}
+  egress:
+    # Allow DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    {{- if .Values.appsec.storage.networkPolicy.extraEgress }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.appsec.storage.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  ingress:
+    # Allow inbound from sibling open-appsec components (webhook, learning,
+    # tuning) plus injected agent sidecars.
+    - ports:
+        - port: {{ .Values.appsec.storage.containerPorts.http }}
+          protocol: TCP
+      {{- if not .Values.appsec.storage.networkPolicy.allowExternal }}
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: open-appsec
+        - podSelector:
+            matchLabels:
+              {{ include "open-appsec.storage.fullname" . }}-client: "true"
+        {{- /*
+        Mirror the ClusterRoleBinding subject scope onto the NetworkPolicy ingress:
+        the namespaces listed in .Values.allowedNamespaces are the ones whose pods
+        we expect to call storage (typically injected agent sidecars). Skipped on
+        ["*"] (allowExternal already covers it) or [] (no extra ingress needed).
+        */ -}}
+        {{- $allowed := .Values.allowedNamespaces | default (list) }}
+        {{- if and (not (has "*" $allowed)) (not (empty $allowed)) }}
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  {{- toYaml $allowed | nindent 18 }}
+        {{- end }}
+        {{- if or .Values.appsec.storage.networkPolicy.ingressNSMatchLabels .Values.appsec.storage.networkPolicy.ingressNSPodMatchLabels }}
+        - namespaceSelector:
+            matchLabels:
+              {{- if .Values.appsec.storage.networkPolicy.ingressNSMatchLabels }}
+                {{- range $key, $value := .Values.appsec.storage.networkPolicy.ingressNSMatchLabels }}
+                {{ $key | quote }}: {{ $value | quote }}
+                {{- end }}
+              {{- else }}
+                {}
+              {{- end }}
+          {{- if .Values.appsec.storage.networkPolicy.ingressNSPodMatchLabels }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.appsec.storage.networkPolicy.ingressNSPodMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- if .Values.appsec.storage.networkPolicy.extraIngress }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.appsec.storage.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- end }}
+{{- end }}

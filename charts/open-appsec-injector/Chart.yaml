@@ -6,18 +6,32 @@ annotations:
     - name: Upstream Project
       url: https://github.com/openappsec/openappsec
   artifacthub.io/changes: |
+    - kind: changed
+      description: "CRDs split into sister chart open-appsec-crd 1.0.0; embed via crds.enabled=true (default false) or install the sister chart separately for decoupled schema lifecycle. See Upgrading."
     - kind: added
-      description: "practices.openappsec.io CRD (legacy v1beta1 Practice resource)."
+      description: "Top-level allowedNamespaces to scope the openappsec.io ClusterRoleBinding subject set AND per-component NetworkPolicy ingress (default release namespace only)."
     - kind: added
-      description: "spec.properties.name field across all openappsec.io CRDs (v1beta2)."
+      description: "tls.certManager scaffolding (Issuer/Certificate + MWC inject-ca-from) — dormant until upstream container exposes a cert-bootstrap toggle."
+    - kind: changed
+      description: "Webhook probe defaults port:http→https, scheme:HTTP→HTTPS to match the only declared containerPort."
     - kind: removed
       description: "logDestination.local-tuning from LogTrigger v1beta2 — rename overrides to logDestination.k8s-service before upgrade."
+    - kind: removed
+      description: "Dead webhook.{imagePullPolicy, integrationType, namePretty, namespace, rbac.*} values keys."
+    - kind: fixed
+      description: "policiesns.openappsec.io specificRules.items.required block (had drifted from policies twin); _pvc.tpl prefix bugs; schedulerName gate."
     - kind: changed
       description: "appVersion 1.1.32 -> 1.1.34; postgresql subchart 12.2.8 -> 17.1.0; st-common 0.1.16 -> 0.1.20."
+    - kind: added
+      description: "appsec.tuning.externalDatabase.* to point tuning at an external PostgreSQL; postgresql.enabled flag (default false) decouples the subchart from appsec.tuning.enabled — see Upgrading."
 apiVersion: v2
 appVersion: 1.1.34
 dependencies:
-  - condition: appsec.tuning.enabled
+  - condition: crds.enabled
+    name: open-appsec-crd
+    repository: https://startechnica.github.io/apps
+    version: 1.0.0
+  - condition: postgresql.enabled
     name: postgresql
     repository: https://charts.bitnami.com/bitnami
     version: 17.1.0

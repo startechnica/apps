@@ -3,13 +3,17 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{- $injectCA := and .Values.webhook.tls.enabled .Values.tls.certManager.create -}}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{ .Values.webhook.name }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
-    app.kubernetes.io/component: storage
     app.kubernetes.io/part-of: open-appsec
+  {{- if $injectCA }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ printf "%s/%s-webhook" (include "st-common.names.namespace" .) (include "st-common.names.fullname" .) | quote }}
+  {{- end }}
 webhooks:
   - name: {{ .Values.webhook.name }}
     clientConfig:
@@ -18,7 +22,9 @@ webhooks:
         namespace: {{ include "st-common.names.namespace" . | quote }}
         path: {{ .Values.webhook.path }}
         port: {{ .Values.webhook.service.ports.https }}
+      {{- if not $injectCA }}
       caBundle: {{ .Values.webhook.caBundle | quote }}
+      {{- end }}
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: [""]

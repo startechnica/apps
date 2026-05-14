@@ -3,7 +3,6 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.crds.enabled }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -141,4 +140,3 @@ spec:
     kind: Practice
     shortNames:
       - practice
-{{- end }}
