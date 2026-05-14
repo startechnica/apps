@@ -13,7 +13,8 @@ The following CustomResourceDefinitions are now registered cluster-wide:
   - threatpreventionpractices.openappsec.io     (+ -ns)
   - trustedsources.openappsec.io                (+ -ns)
 
-Next step — install or upgrade the open-appsec-injector chart in a workload
+Next step:
+Install or upgrade the open-appsec-injector chart in a workload
 namespace; it will discover the CRDs you just registered:
 
   helm install open-appsec-injector startechnica/open-appsec-injector \
