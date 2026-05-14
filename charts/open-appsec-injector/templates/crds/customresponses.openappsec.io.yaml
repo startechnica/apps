@@ -1,5 +1,5 @@
 {{- /*
-(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -53,6 +53,8 @@ spec:
               properties:
                 appsecClassName:
                   type: string
+                name:
+                  type: string
                 mode:
                   type: string
                   enum:
@@ -74,8 +76,6 @@ spec:
                 redirectAddXEventId:
                   type: boolean
                   default: false
-              required:
-                - mode
   scope: Cluster
   names:
     plural: customresponses

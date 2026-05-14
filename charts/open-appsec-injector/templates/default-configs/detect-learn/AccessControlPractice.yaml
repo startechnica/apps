@@ -1,5 +1,5 @@
 {{- /*
-(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -13,7 +13,6 @@ metadata:
 spec:
   practiceMode: inherited
   rateLimit:
-  # specify one or more rules below to use rate limiting
     overrideMode: inherited
     rules: []
 {{- end }}

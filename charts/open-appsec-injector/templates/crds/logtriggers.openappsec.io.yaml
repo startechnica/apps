@@ -1,5 +1,5 @@
 {{- /*
-(c) 2025 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -126,6 +126,8 @@ spec:
               properties:
                 appsecClassName:
                   type: string
+                name:
+                  type: string
                 accessControlLogging:
                   type: object
                   properties:
@@ -207,7 +209,7 @@ spec:
                             - json
                             - json-formatted
                           default: json
-                    local-tuning:
+                    k8s-service:
                       type: boolean
                     cefService:
                       type: array
