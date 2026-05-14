@@ -1,6 +1,6 @@
 {{- /*
 (c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
-SPDX-License-Identifier: LicenseRef-ETB
+SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}

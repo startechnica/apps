@@ -1,0 +1,29 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.webhook.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "open-appsec.webhook.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/part-of: open-appsec
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.webhook.pdb.minAvailable }}
+  minAvailable: {{ .Values.webhook.pdb.minAvailable }}
+  {{- end }}
+  {{- if or .Values.webhook.pdb.maxUnavailable (not .Values.webhook.pdb.minAvailable) }}
+  maxUnavailable: {{ .Values.webhook.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.webhook.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: webhook
+{{- end }}

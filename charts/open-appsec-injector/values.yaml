@@ -30,23 +30,25 @@ global:
 
 ## CRDs live in the sister chart `open-appsec-crd`. Two installation modes:
 ##
-##   1. crds.enabled = true (bundled):
+##   1. crds.enabled = true (default, bundled):
 ##      This chart pulls `open-appsec-crd` in as a subchart and renders the
-##      CRDs alongside the application. Convenient for one-shot installs.
+##      CRDs alongside the application. One-shot install, no separate step.
 ##
-##   2. crds.enabled = false (default, decoupled):
+##   2. crds.enabled = false (decoupled):
 ##      Operator installs `open-appsec-crd` separately, once cluster-wide,
 ##      and upgrades its schema on its own cadence:
 ##         helm install open-appsec-crd startechnica/open-appsec-crd
+##      Recommended when multiple injector releases share one CRD set, or
+##      when CRD lifecycle is managed by a different team than the app.
 ##
 ## See charts/open-appsec-crd/README.md for the full list of registered
 ## CustomResourceDefinitions. `crds.scope` below is a runtime hint passed
 ## to the webhook container — it doesn't gate CRD rendering.
 ##
 crds:
-  ## @param crds.enabled Bundle the `open-appsec-crd` subchart with this release. Disable to manage CRDs via a separately-installed `open-appsec-crd` chart (recommended for production, where the schema lifecycle is typically decoupled from the application lifecycle).
+  ## @param crds.enabled Bundle the `open-appsec-crd` subchart with this release. Disable when CRDs are managed by a separately-installed `open-appsec-crd` chart (multiple injector releases sharing one schema, or CRD lifecycle owned by a different team).
   ##
-  enabled: false
+  enabled: true
   ## @param crds.scope CRD scope the webhook expects to consult at runtime (`cluster` or `namespaced`). Must match what was installed via the `open-appsec-crd` chart (bundled or separate). Plumbed into the webhook container as `CRDS_SCOPE`.
   ##
   scope: cluster
@@ -215,10 +217,14 @@ customFog:
 ## @section Default configurations
 
 defaultConfigurations:
-  ## @param defaultConfigurations.enabled Enable defaultConfigurations
+  ## @param defaultConfigurations.enabled Render a baseline Policy + AccessControlPractice + ThreatPreventionPractice + CustomResponse + LogTrigger set so the agent has something to enforce on first start. Each preset lives in `templates/default-configs/<mode>/`.
+  ##
   enabled: false
-  ## @param defaultConfigurations.mode
-  ## options: "detect-learn", "prevent"
+  ## @param defaultConfigurations.mode Preset to render when `defaultConfigurations.enabled=true`. Picks a directory under `templates/default-configs/`. Options:
+  ##   - "detect-learn" : log violations, do NOT block; engine continues building its model from live samples (safe first-deploy mode).
+  ##   - "prevent-learn": block known-bad traffic AND keep learning from live samples (steady-state production with adaptive tuning).
+  ##   - "prevent"      : block known-bad traffic against a frozen model; learning disabled (locked-down production after `prevent-learn` has stabilized).
+  ## The `kind:` rendered (cluster-scoped `Policy` vs namespaced `PolicyNS`) is governed by `crds.scope`, not by this mode value.
   ##
   mode: detect-learn
 
@@ -2030,6 +2036,27 @@ webhook:
   ## @param webhook.replicaCount Number of open-appsec webhook nodes
   ##
   replicaCount: 1
+
+  ## PodDisruptionBudget for the webhook. The webhook has `failurePolicy: Fail`,
+  ## so losing it during a node drain stops admission cluster-wide until it
+  ## comes back. A PDB blocks voluntary disruptions when fewer than the
+  ## configured number of replicas would remain available.
+  ##
+  ## NOTE: A PDB only protects against VOLUNTARY disruptions (kubectl drain,
+  ## node-pool upgrades, cluster autoscaler). It cannot prevent involuntary
+  ## ones (kernel panic, network partition, OOM). For real availability,
+  ## pair `pdb.enabled: true` with `replicaCount: 2+` and pod anti-affinity.
+  ##
+  pdb:
+    ## @param webhook.pdb.enabled Render a PodDisruptionBudget for the webhook. Recommended in production with `replicaCount >= 2`.
+    ##
+    enabled: false
+    ## @param webhook.pdb.minAvailable Minimum number/percentage of webhook pods that must remain available during a voluntary disruption. Leave empty to use `maxUnavailable` instead. Cannot be set alongside `maxUnavailable`.
+    ##
+    minAvailable: ""
+    ## @param webhook.pdb.maxUnavailable Maximum number/percentage of webhook pods that may be unavailable during a voluntary disruption. Defaults to `1` when both this and `minAvailable` are empty.
+    ##
+    maxUnavailable: ""
   ## @param webhook.revisionHistoryLimit  
   ##
   revisionHistoryLimit: 1

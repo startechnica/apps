@@ -7,7 +7,7 @@ annotations:
       url: https://github.com/openappsec/openappsec
   artifacthub.io/changes: |
     - kind: changed
-      description: "CRDs split into sister chart open-appsec-crd 1.0.0; embed via crds.enabled=true (default false) or install the sister chart separately for decoupled schema lifecycle. See Upgrading."
+      description: "CRDs split into sister chart open-appsec-crd 1.0.0; bundled by default via crds.enabled=true. Set crds.enabled=false to manage CRDs separately. See Upgrading."
     - kind: added
       description: "Top-level allowedNamespaces to scope the openappsec.io ClusterRoleBinding subject set AND per-component NetworkPolicy ingress (default release namespace only)."
     - kind: added
