@@ -312,9 +312,7 @@ agent:
   ## @param agent.objectSelector [object] Selector to match pods for injection. If not set, the agent will be injected in all the pods in the namespaces matching
   ##   the namespaceSelector. If set, only the pods matching this selector will have the agent injected.
   ##
-  objectSelector:
-    matchLabels:
-      gateway.networking.k8s.io/gateway-name: istio-ingress
+  objectSelector: {}
 
   ## @param agent.userEmail Email address registered with the open-appsec backend
   userEmail: ""

@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.2 (2026-05-15)
+
+### Changed
+
+- `agent.objectSelector` default is now `{}` (empty) instead of a hardcoded `matchLabels.gateway.networking.k8s.io/gateway-name: istio-ingress`. The previous default silently constrained injection to Istio gateway pods, even though the chart advertises support for Kong and other ingresses (with the result that Kong / non-Istio gateways labeled `inject-waf-attachment=true` at the namespace level were matched by the MWC's `namespaceSelector` but rejected by the hardcoded `objectSelector` — silently no-op). The empty default lets `agent.namespaceSelector` be the sole gate; operators who want pod-level filtering set it explicitly.
+
+### Upgrading from 1.1.1
+
+- **Istio-gateway users**: the default behavior change widens the MWC's match set. If you relied on the prior default to scope injection to Istio's gateway Deployment (typical Istio-only deployments), restore it explicitly:
+
+  ```yaml
+  agent:
+    objectSelector:
+      matchLabels:
+        gateway.networking.k8s.io/gateway-name: istio-ingress
+  ```
+
+  Otherwise every pod in any namespace labeled `inject-waf-attachment: "true"` becomes an injection candidate. The `inject-waf-attachment: "false"` per-pod opt-out (handled by the chart's MWC config elsewhere) still applies.
+- **Kong / multi-gateway users**: no action — this default change is the fix that unblocks Kong injection.
+
 ## 1.1.1 (2026-05-15)
 
 First successfully-published release in the 1.1.x line. The unreleased
