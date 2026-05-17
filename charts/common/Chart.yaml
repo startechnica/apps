@@ -1,10 +1,20 @@
 annotations:
   category: Infrastructure
   artifacthub.io/changes: |
+    - kind: changed
+      description: "Strimzi capability helpers (Kafka/KafkaBridge/KafkaConnect/KafkaConnector/KafkaMirrorMaker2/KafkaNodePool/KafkaRebalance/KafkaTopic/KafkaUser) now prefer kafka.strimzi.io/v1 (GA in Strimzi 0.46+) and fall back to v1beta2."
     - kind: added
-      description: Create URI helper
+      description: "st-common.capabilities.strimziPodSet.apiVersion — detects core.strimzi.io/v1/PodSet for Strimzi's internal PodSet CR."
+    - kind: added
+      description: "st-common.capabilities.postgresqlCnpgObjectStore.apiVersion — detects barmancloud.cnpg.io/v1/ObjectStore for the CNPG barman-cloud plugin."
+    - kind: added
+      description: "st-common.capabilities.calico* — 20 new per-resource helpers covering the full projectcalico.org/v3 surface (BGPFilter, BGPPeer, BlockAffinity, CalicoNodeStatus, ClusterInformation, FelixConfiguration, GlobalNetworkPolicy/Set, HostEndpoint, IPAM{Block,Config,Handle}, IPPool, IPReservation, KubeControllersConfiguration, NetworkPolicy, NetworkSet, Node, Profile, Tier), each falling back to crd.projectcalico.org/v1."
+    - kind: added
+      description: "st-common.capabilities.envoyproxy* — Envoy Gateway (gateway.envoyproxy.io/v1alpha1) helpers: core API + Backend, BackendTrafficPolicy, ClientTrafficPolicy, EnvoyExtensionPolicy, EnvoyPatchPolicy, EnvoyProxy, HTTPRouteFilter, SecurityPolicy."
+    - kind: changed
+      description: "README parameters section rewritten to enumerate every st-common helper (~190 entries across Names, Labels, Affinities, Gateway, Images, Ingress, Resources/Storage/RBAC, Secrets, tplvalues/Utils, Compatibility/Errors/Warnings/Email, full Capabilities matrix, and Validations)."
 apiVersion: v2
-appVersion: 0.1.20
+appVersion: 0.1.21
 description: A Library Helm Chart for grouping common logic between Startechnica charts.
   This chart is not deployable by itself.
 home: https://github.com/startechnica/apps/tree/main/charts/common
@@ -23,4 +33,4 @@ name: st-common
 sources:
   - https://startechnica.github.io/apps
 type: library
-version: 0.1.20
+version: 0.1.21
