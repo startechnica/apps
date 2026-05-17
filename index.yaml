@@ -2399,6 +2399,46 @@ entries:
   st-common:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: "Strimzi capability helpers (Kafka/KafkaBridge/KafkaConnect/KafkaConnector/KafkaMirrorMaker2/KafkaNodePool/KafkaRebalance/KafkaTopic/KafkaUser) now prefer kafka.strimzi.io/v1 (GA in Strimzi 0.46+) and fall back to v1beta2."
+        - kind: added
+          description: "st-common.capabilities.strimziPodSet.apiVersion — detects core.strimzi.io/v1/PodSet for Strimzi's internal PodSet CR."
+        - kind: added
+          description: "st-common.capabilities.postgresqlCnpgObjectStore.apiVersion — detects barmancloud.cnpg.io/v1/ObjectStore for the CNPG barman-cloud plugin."
+        - kind: added
+          description: "st-common.capabilities.calico* — 20 new per-resource helpers covering the full projectcalico.org/v3 surface (BGPFilter, BGPPeer, BlockAffinity, CalicoNodeStatus, ClusterInformation, FelixConfiguration, GlobalNetworkPolicy/Set, HostEndpoint, IPAM{Block,Config,Handle}, IPPool, IPReservation, KubeControllersConfiguration, NetworkPolicy, NetworkSet, Node, Profile, Tier), each falling back to crd.projectcalico.org/v1."
+        - kind: added
+          description: "st-common.capabilities.envoyproxy* — Envoy Gateway (gateway.envoyproxy.io/v1alpha1) helpers: core API + Backend, BackendTrafficPolicy, ClientTrafficPolicy, EnvoyExtensionPolicy, EnvoyPatchPolicy, EnvoyProxy, HTTPRouteFilter, SecurityPolicy."
+        - kind: changed
+          description: "README parameters section rewritten to enumerate every st-common helper (~190 entries across Names, Labels, Affinities, Gateway, Images, Ingress, Resources/Storage/RBAC, Secrets, tplvalues/Utils, Compatibility/Errors/Warnings/Email, full Capabilities matrix, and Validations)."
+      category: Infrastructure
+    apiVersion: v2
+    appVersion: 0.1.21
+    created: "2026-05-17T09:26:49.314751598Z"
+    description: A Library Helm Chart for grouping common logic between Startechnica
+      charts. This chart is not deployable by itself.
+    digest: 5cfde6b6dfd24000dca723739313828e5b0113bf6814bc11a9d9509decdbb5b7
+    home: https://github.com/startechnica/apps/tree/main/charts/common
+    icon: https://startechnica.github.io/apps/images/star.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: st-common
+    sources:
+    - https://startechnica.github.io/apps
+    type: library
+    urls:
+    - https://github.com/startechnica/apps/releases/download/st-common-0.1.21/st-common-0.1.21.tgz
+    version: 0.1.21
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Create URI helper
       category: Infrastructure
@@ -3155,4 +3195,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-15T01:50:44.600967894Z"
+generated: "2026-05-17T09:26:49.315027974Z"
