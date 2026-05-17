@@ -7,7 +7,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi Kafka */}}
 {{- define "st-common.capabilities.strimziKafka.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/Kafka" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/Kafka" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/Kafka" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -16,7 +18,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaBridge */}}
 {{- define "st-common.capabilities.strimziKafkaBridge.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaBridge" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaBridge" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaBridge" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -25,7 +29,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaConnector */}}
 {{- define "st-common.capabilities.strimziKafkaConnector.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaConnector" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaConnector" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaConnector" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -34,7 +40,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaConnect */}}
 {{- define "st-common.capabilities.strimziKafkaConnect.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaConnect" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaConnect" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaConnect" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -43,7 +51,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaMirrorMaker2 */}}
 {{- define "st-common.capabilities.strimziKafkaMirrorMaker2.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaMirrorMaker2" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaMirrorMaker2" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaMirrorMaker2" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -52,7 +62,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaNodePool */}}
 {{- define "st-common.capabilities.strimziKafkaNodePool.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaNodePool" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaNodePool" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaNodePool" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -61,7 +73,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaRebalance */}}
 {{- define "st-common.capabilities.strimziKafkaRebalance.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaRebalance" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaRebalance" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaRebalance" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -70,7 +84,9 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaTopic */}}
 {{- define "st-common.capabilities.strimziKafkaTopic.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaTopic" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaTopic" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaTopic" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
 {{- else -}}
   {{- false -}}
@@ -79,8 +95,19 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* Return the appropriate apiVersion for Strimzi KafkaUser */}}
 {{- define "st-common.capabilities.strimziKafkaUser.apiVersion" -}}
-{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaUser" -}}
+{{- if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1/KafkaUser" -}}
+  {{- print "kafka.strimzi.io/v1" -}}
+{{- else if .Capabilities.APIVersions.Has "kafka.strimzi.io/v1beta2/KafkaUser" -}}
   {{- print "kafka.strimzi.io/v1beta2" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Return the appropriate apiVersion for Strimzi PodSet */}}
+{{- define "st-common.capabilities.strimziPodSet.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "core.strimzi.io/v1/PodSet" -}}
+  {{- print "core.strimzi.io/v1" -}}
 {{- else -}}
   {{- false -}}
 {{- end -}}

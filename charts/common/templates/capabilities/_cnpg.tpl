@@ -5,6 +5,15 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/* vim: set filetype=mustache: */}}
 
+{{/* Return the appropriate apiVersion for Cloudnative PG ObjectStore. */}}
+{{- define "st-common.capabilities.postgresqlCnpgObjectStore.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "barmancloud.cnpg.io/v1/ObjectStore" -}}
+  {{- print "barmancloud.cnpg.io/v1" -}}
+{{- else -}}
+  {{- false -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Return the appropriate apiVersion for Cloudnative PG */}}
 {{- define "common.capabilities.cnpgPostgresql.apiVersion" -}}
 {{- if .Capabilities.APIVersions.Has "postgresql.cnpg.io/v1" -}}

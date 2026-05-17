@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.21 (2026-05-15)
+
+* change: Strimzi capability helpers prefer `kafka.strimzi.io/v1` (GA in Strimzi 0.46+) and fall back to `v1beta2` — covers Kafka, KafkaBridge, KafkaConnect, KafkaConnector, KafkaMirrorMaker2, KafkaNodePool, KafkaRebalance, KafkaTopic, KafkaUser.
+* add: `st-common.capabilities.strimziPodSet.apiVersion` — detects `core.strimzi.io/v1/PodSet` for the Strimzi Cluster Operator's internal PodSet CR.
+* add: `st-common.capabilities.postgresqlCnpgObjectStore.apiVersion` — detects `barmancloud.cnpg.io/v1/ObjectStore` for the CNPG barman-cloud plugin (S3/GCS backups via the plugin instead of the deprecated in-tree backup config).
+* add: 20 new `st-common.capabilities.calico*` helpers covering the full `projectcalico.org/v3` resource surface — `BGPFilter`, `BGPPeer`, `BlockAffinity`, `CalicoNodeStatus`, `ClusterInformation`, `FelixConfiguration`, `GlobalNetworkPolicy`, `GlobalNetworkSet`, `HostEndpoint`, `IPAMBlock`, `IPAMConfig`, `IPAMHandle`, `IPPool`, `IPReservation`, `KubeControllersConfiguration`, `NetworkPolicy`, `NetworkSet`, `Node`, `Profile`, `Tier`. Each prefers `projectcalico.org/v3` (operator-managed Calico) and falls back to `crd.projectcalico.org/v1` (raw CRDs).
+* add: `st-common.capabilities.envoyproxy*` helpers for Envoy Gateway (`gateway.envoyproxy.io/v1alpha1`): core API plus `Backend`, `BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyExtensionPolicy`, `EnvoyPatchPolicy`, `EnvoyProxy`, `HTTPRouteFilter`, `SecurityPolicy`.
+* change: README `## Parameters` section rewritten to enumerate every `st-common` helper (~190 entries across Names, Labels, Affinities, Gateway, Images, Ingress, Resources/Storage/RBAC, Secrets, tplvalues/Utils, Compatibility/Errors/Warnings/Email, full Capabilities matrix, and Validations).
+
+
 ## 0.1.19 (2025-04-27)
 
 * fix: Adjust stray if on Gateway API helper
