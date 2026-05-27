@@ -1,8 +1,13 @@
-## @section Global parameters
+# (c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+# SPDX-License-Identifier: APACHE-2.0
 
-## Global Docker image parameters
-## Please, note that this will override the image parameters, including dependencies, configured to use the global value
-## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+## =============================================================================
+## @section Global parameters
+## -----------------------------------------------------------------------------
+## Global Docker image parameters shared across this chart and any dependencies.
+## Currently available: imageRegistry, imagePullSecrets, storageClass, and
+## platform compatibility adaptations (OpenShift, SELinux).
+## =============================================================================
 
 ## @param global.imageRegistry Global Docker image registry
 ## @param global.imagePullSecrets Global Docker registry secret names as an array
@@ -16,8 +21,27 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
+  ## Compatibility adaptations for Kubernetes platforms
+  ##
+  compatibility:
+    ## Compatibility adaptations for Openshift
+    ##
+    openshift:
+      ## @param global.compatibility.openshift.adaptSecurityContext Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)
+      ##
+      adaptSecurityContext: auto
+    ## @param global.compatibility.omitEmptySeLinuxOptions If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object
+    ##
+    omitEmptySeLinuxOptions: false
 
+
+## =============================================================================
 ## @section Common parameters
+## -----------------------------------------------------------------------------
+## Generic chart-wide parameters that affect every rendered resource:
+## naming, labels/annotations applied to all objects, cluster domain,
+## arbitrary extra manifests, and diagnostic-mode overrides.
+## =============================================================================
 
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
 ##
@@ -28,7 +52,7 @@ nameOverride: ""
 ## @param namespaceOverride String to partially override freeradius.namespace
 ##
 namespaceOverride: ""
-## @param fullnameOverride String to fully override adminer.fullname
+## @param fullnameOverride String to fully override freeradius.fullname
 ##
 fullnameOverride: ""
 ## @param commonLabels Labels to add to all deployed objects
@@ -43,6 +67,7 @@ clusterDomain: cluster.local
 ## @param extraDeploy Array of extra objects to deploy with the release
 ##
 extraDeploy: []
+
 ## Enable diagnostic mode in the deployment
 ##
 diagnosticMode:
@@ -58,7 +83,13 @@ diagnosticMode:
   args:
     - infinity
 
+
+## =============================================================================
 ## @section FreeRADIUS Image parameters
+## -----------------------------------------------------------------------------
+## The Docker image used to run FreeRADIUS. Override these to pin a specific
+## version, point at a private registry, or change the pull policy.
+## =============================================================================
 
 ## FreeRADIUS image
 ## ref: https://hub.docker.com/r/freeradius/freeradius-server/tags
@@ -86,67 +117,38 @@ image:
   ##
   pullSecrets: []
   ## Set to true if you would like to see extra information on logs
-  ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
+
+
+## =============================================================================
+## @section FreeRADIUS Configuration parameters
+## -----------------------------------------------------------------------------
+## FreeRADIUS application configuration: architecture mode, custom radiusd.conf
+## content, init scripts, mods-enabled and sites-enabled module config, RADIUS
+## clients map, and extra environment variables / startup flags.
+## =============================================================================
 
 ## @param architecture FreeRADIUS architecture (`standalone` or `replication`)
 ##
 architecture: standalone
 
-auth:
-  ## @param auth.createClientUser Create client user on boot
-  ##
-  createClientUser: true
-  ## @param auth.clientUser FreeRADIUS administrator user
-  ##
-  clientUser: user
-  ## @param auth.clientPassword FreeRADIUS administrator password for the new user
-  ##
-  clientUserPassword: ""
-  ## @param auth.existingSecret An already existing secret containing auth info
-  ## e.g:
-  ## existingSecret:
-  ##   name: mySecret
-  ##   keyMapping:
-  ##     client-user-password: myPasswordKey
-  ##
-  existingSecret: ""
-  ## @param auth.existingSecretPerPassword Override `existingSecret` and other secret values
-  ## e.g:
-  ## existingSecretPerPassword:
-  ##   keyMapping:
-  ##     clientUserPassword: FREERADIUS_ADMIN_PASSWORD
-  ##     databasePassword: password
-  ##   databasePassword:
-  ##     name: freeradius.pocwatt-freeradius-cluster.credentials
-  ##
-  existingSecretPerPassword: {}
-
-## @param configuration FreeRADIUS Configuration. Auto-generated based on other parameters when not specified
-## Specify content for keycloak.conf
-## NOTE: This will override configuring FreeRADIUS based on environment variables (including those set by the chart)
-## The radiusd.conf is auto-generated based on other parameters when this parameter is not specified
+## @param configurations Inline FreeRADIUS configuration (rendered into a ConfigMap and mounted as `/etc/freeradius/radiusd.conf`). Leave empty to use the upstream image defaults.
 ##
-## Example:
-## configuration: |-
-##    foo: bar
-##    baz:
+configurations: ""
+## @param configurationsConfigMap Name of an externally-managed ConfigMap supplying FreeRADIUS configuration (Note: Overrides `configurations`). The value is evaluated as a template.
 ##
-configuration: ""
-## @param configurationConfigMap ConfigMap with the FreeRADIUS configuration files (Note: Overrides `radiusdConfiguration`). The value is evaluated as a template.
-##
-configurationConfigMap: ""
-## @param existingConfigmap Name of existing ConfigMap with FreeRADIUS configuration
-## NOTE: When it's set the configuration parameter is ignored
+configurationsConfigMap: ""
+## @param existingConfigmap Name of an existing ConfigMap supplying the chart's standard env-vars (in place of the chart-rendered `<fullname>-envvars`). When set, the chart skips its own envvars ConfigMap and the Deployment's `envFrom` references this resource.
 ##
 existingConfigmap: ""
-## @param extraStartupArgs Extra default startup args
+## @param extraStartupArgs Extra default startup args (prepended to the container args)
 ##
 extraStartupArgs: ""
-## initdb scripts
-## @param initdbScripts Specify dictionary of scripts to be run at first boot
-## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
+## @param extraFlags FreeRADIUS additional command line flags
+##
+extraFlags: ""
+## @param initdbScripts Dictionary of initdb scripts run at first boot. Alternatively, drop files under `files/docker-entrypoint-initdb.d/`.
 ## e.g:
 ## initdbScripts:
 ##   my_init_script.sh: |
@@ -157,108 +159,326 @@ initdbScripts: {}
 ## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
 ##
 initdbScriptsConfigMap: ""
-## @param primary.command Override default container command on FreeRADIUS container(s) (useful when using custom images)
+## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
+## E.g.
+## extraEnvVars:
+##  - name: TZ
+##    value: "Europe/Paris"
 ##
-command: []
-## @param primary.args Override default container args on FreeRADIUS container(s) (useful when using custom images)
+extraEnvVars: []
+## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
 ##
-args: []
-## @param primary.lifecycleHooks for the FreeRADIUS container(s) to automate configuration before or after startup
+extraEnvVarsCM: ""
+## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
 ##
-lifecycleHooks: {}
-## @param primary.hostAliases Add deployment host aliases
-## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
-##
-hostAliases: []
-## @param primary.configuration [string] FreeRADIUS configuration to be injected as ConfigMap
-## ref: https://mysql.com/kb/en/mysql/configuring-mysql-with-mycnf/#example-of-configuration-file
-##
+extraEnvVarsSecret: ""
 
-## @section FreeRADIUS Deployment parameters
+## FreeRADIUS `mods-enabled` configuration. Each sub-block toggles the matching
+## upstream module under `/etc/freeradius/mods-enabled/`. The chart-rendered
+## ConfigMap (`templates/configmap/mods-enabled.yaml`) materialises the module
+## files from `files/mods-available/<name>`.
+##
+modsEnabled:
+  ## SQL backend for clients/users/accounting. When enabled, the chart
+  ## populates `FREERADIUS_MODS_SQL_*` env vars from the database connection
+  ## (`mariadb.*` or `externalDatabase.*`) and mounts the rendered `sql` module
+  ## file into the pod.
+  ##
+  sql:
+    ## @param modsEnabled.sql.enabled Enable the FreeRADIUS SQL module
+    ##
+    enabled: true
+    ## @param modsEnabled.sql.dialect SQL dialect understood by the rlm_sql driver. Allowed: `mysql`, `postgresql`, `sqlite`.
+    ##
+    dialect: mysql
+    ## @param modsEnabled.sql.table.acct1 Table containing accounting items (start records)
+    ## @param modsEnabled.sql.table.acct2 Table containing accounting items (stop records)
+    ## @param modsEnabled.sql.table.authcheck Table containing `check` items
+    ## @param modsEnabled.sql.table.authreply Table containing `reply` items
+    ## @param modsEnabled.sql.table.client Table holding RADIUS client/NAS info
+    ## @param modsEnabled.sql.table.groupcheck Table containing group `check` items
+    ## @param modsEnabled.sql.table.groupreply Table containing group `reply` items
+    ## @param modsEnabled.sql.table.postauth Table for post-auth storage
+    ## @param modsEnabled.sql.table.usergroup Table mapping users to groups
+    ##
+    table:
+      acct1: radacct
+      acct2: radacct
+      authcheck: radcheck
+      authreply: radreply
+      client: nas
+      groupcheck: radgroupcheck
+      groupreply: radgroupreply
+      postauth: radpostauth
+      usergroup: radusergroup
+    ## @param modsEnabled.sql.groupAttribute The group attribute specific to this instance of rlm_sql
+    ##
+    groupAttribute: SQL-Group
+    ## @param modsEnabled.sql.readClients Read RADIUS clients from the database (`nas` table)
+    ##
+    readClients: true
+    ## TLS configuration for the SQL connection itself. Independent of the
+    ## in-pod RADSEC TLS (see top-level `tls:` block) and of cert-manager (see
+    ## `tls.certManager.*`).
+    ##
+    ## @param modsEnabled.sql.tls.enabled Enable TLS for the SQL backend connection
+    ## @param modsEnabled.sql.tls.ciphers TLS cipher list passed to the SQL driver (empty leaves the driver default)
+    ## @param modsEnabled.sql.tls.autoGenerated Generate a self-signed TLS Secret for the SQL connection (`<fullname>-sql-tls`)
+    ## @param modsEnabled.sql.tls.certificatesSecret Name of an existing Secret holding `tls.crt` / `tls.key` / `ca.crt` for the SQL connection. Skips auto-generation when set.
+    ## @param modsEnabled.sql.tls.certFilename Override filename of the leaf certificate inside the mounted Secret
+    ## @param modsEnabled.sql.tls.certKeyFilename Override filename of the leaf key inside the mounted Secret
+    ## @param modsEnabled.sql.tls.certCAFilename Override filename of the CA certificate inside the mounted Secret
+    ## @param modsEnabled.sql.tls.existingTlsSecret [DEPRECATED — use `modsEnabled.sql.tls.certificatesSecret`] Legacy alias retained for backwards compatibility. Slated for removal in the next major bump.
+    ## @param modsEnabled.sql.tls.privateKeyPassword Password for the SQL leaf key when it is password-protected
+    ##
+    tls:
+      enabled: false
+      ciphers: ""
+      autoGenerated: true
+      certificatesSecret: ""
+      certFilename: ""
+      certKeyFilename: ""
+      certCAFilename: ""
+      existingTlsSecret: ""
+      privateKeyPassword: whatever
+    ## SQLite-specific knobs, used when `modsEnabled.sql.dialect: sqlite`.
+    ## @param modsEnabled.sql.sqlite.filename Path inside the container where the SQLite database file lives
+    ## @param modsEnabled.sql.sqlite.busyTimeout SQLite `busy_timeout` (milliseconds)
+    ##
+    sqlite:
+      filename: /startechnica/freeradius/freeradius.db
+      busyTimeout: "200"
 
-## @param replicaCount Desired number of cluster nodes
+## FreeRADIUS `sites-enabled` configuration. Toggles the matching virtual
+## servers under `/etc/freeradius/sites-enabled/`. Each block also wires the
+## corresponding container port / Service port / NetworkPolicy entry.
+##
+sitesEnabled:
+  ## @param sitesEnabled.coa.enabled Enable the `coa` virtual server (Change-of-Authorization, UDP port `containerPorts.coa`).
+  ##
+  coa:
+    enabled: false
+  ## RADIUS `status` virtual server, used by the chart's liveness/readiness
+  ## probes (`radclient status` over loopback) AND by the standalone metrics
+  ## exporter Deployment (`metrics.enabled`) which talks to it over the
+  ## cluster Service. Disabling this also disables the chart-managed probes
+  ## — supply `customLivenessProbe`/`customReadinessProbe` if you need
+  ## different checks.
+  ##
+  ## @param sitesEnabled.status.enabled Enable the `status` virtual server
+  ## @param sitesEnabled.status.listen Listen address for the status server. Default `0.0.0.0` so the standalone metrics exporter pod can reach it via the FreeRADIUS Service. Use `127.0.0.1` to keep it pod-local if you don't enable metrics (the chart's NetworkPolicy locks down the port either way).
+  ## @param sitesEnabled.status.secret Shared secret the status `radclient` uses. When empty, the chart auto-generates and persists one in `auth.existingSecret` under key `sites-status-secret`.
+  ##
+  status:
+    enabled: true
+    listen: 0.0.0.0
+    secret: ""
+  ## In-pod RADSEC server (TLS over TCP RADIUS). When enabled, the chart
+  ## mounts the TLS material referenced by `tls.*` and opens the RADSEC
+  ## container/Service port.
+  ##
+  ## @param sitesEnabled.tls.enabled Enable the RADSEC virtual server
+  ## @param sitesEnabled.tls.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
+  ## @param sitesEnabled.tls.privateKeyPassword Password for the RADSEC private key when it is password-protected
+  ##
+  tls:
+    enabled: false
+    cipher: "DEFAULT"
+    privateKeyPassword: ""
+
+## RADIUS clients map rendered into a ConfigMap and mounted at
+## `/etc/freeradius/clients.conf`. Each top-level entry becomes one `client`
+## block. Set `existingConfigMapName` to bring your own ConfigMap (the entries
+## below are then ignored).
+##
+clients:
+  ## @param clients.localhost.ipv4addr IPv4 address (or CIDR) the loopback client matches
+  ## @param clients.localhost.ipv6addr IPv6 address (or CIDR) the loopback client matches
+  ## @param clients.localhost.proto Transport protocol (`udp` or `tcp`)
+  ## @param clients.localhost.secret Shared secret used to authenticate this client
+  ## @param clients.localhost.nasType NAS-Type string reported by RADIUS attributes
+  ## @param clients.localhost.virtualServer Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
+  ## @param clients.localhost.coaServer Virtual server handling CoA requests for this client
+  ## @param clients.localhost.limit.maxConnections Maximum concurrent connections (TCP only)
+  ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
+  ## @param clients.localhost.limit.idleTimeout Idle timeout in seconds
+  ##
+  localhost:
+    ipv4addr: "127.0.0.1"
+    ipv6addr: ""
+    proto: udp
+    secret: password
+    nasType: other
+    virtualServer: default
+    coaServer: coa
+    limit:
+      maxConnections: 16
+      lifetime: 0
+      idleTimeout: 30
+  ## @param clients.existingConfigMapName Name of an existing ConfigMap supplying `clients.conf`. Overrides the chart-rendered entries above.
+  ##
+  existingConfigMapName: ""
+
+
+## =============================================================================
+## @section FreeRADIUS Authentication parameters
+## -----------------------------------------------------------------------------
+## How FreeRADIUS obtains the various secrets it needs (database password,
+## status-site shared secret, RADSEC key passphrase, SQL TLS key passphrase).
+## Use these to bring your own Secret instead of the chart-managed one.
+## =============================================================================
+
+auth:
+  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `sites-tls-privkey-password`, `mods-sql-tls-privkey-password`). Overrides chart-rendered Secret rendering.
+  ##
+  existingSecret: ""
+  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`).
+  ## e.g:
+  ## existingSecretPerPassword:
+  ##   keyMapping:
+  ##     databasePassword: password
+  ##     sitesStatusSecret: status-secret
+  ##   databasePassword:
+  ##     name: freeradius.pocwatt-freeradius-cluster.credentials
+  ##   sitesStatusSecret:
+  ##     name: freeradius-status
+  ##
+  existingSecretPerPassword: {}
+
+
+## =============================================================================
+## @section Deployment / Workload parameters
+## -----------------------------------------------------------------------------
+## Workload-level concerns: how many replicas, rollout strategy, scheduler,
+## host aliases, deployment-only annotations, and termination behaviour.
+## Pod-level scheduling and security live in the next two sections.
+## =============================================================================
+
+## @param replicaCount Number of FreeRADIUS pods. Ignored when `horizontalPodAutoscaler.enabled` is true.
 ##
 replicaCount: 1
-## @param updateStrategy.type updateStrategy for FreeRADIUS Master StatefulSet
-## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+## Horizontal Pod Autoscaler. When enabled, the chart renders an HPA targeting
+## the FreeRADIUS Deployment and stops setting `spec.replicas` on the
+## Deployment so the two don't fight. See `templates/HorizontalPodAutoscaler.yaml`.
+##
+horizontalPodAutoscaler:
+  ## @param horizontalPodAutoscaler.enabled Render an HPA and skip setting `replicas` on the Deployment.
+  ##
+  enabled: false
+  ## @param horizontalPodAutoscaler.minReplicas Lower bound for HPA-managed replica count.
+  ##
+  minReplicas: 1
+  ## @param horizontalPodAutoscaler.maxReplicas Upper bound for HPA-managed replica count.
+  ##
+  maxReplicas: 5
+  ## @param horizontalPodAutoscaler.targetCPU Target average CPU utilization (percent). Set to "" to disable CPU-based scaling — be sure to set `targetMemory` in that case (an HPA without metrics is rejected).
+  ##
+  targetCPU: 80
+  ## @param horizontalPodAutoscaler.targetMemory Target average memory utilization (percent). Set to "" to disable memory-based scaling.
+  ##
+  targetMemory: 80
+  ## @param horizontalPodAutoscaler.metrics Full HPA `metrics` list passthrough. When non-empty, takes precedence over `targetCPU`/`targetMemory` and is rendered verbatim — use this for custom/external metrics or any HPA shape the simple shorthand can't express.
+  ##
+  metrics: []
+## @param revisionHistoryLimit Number of old ReplicaSets retained for rollback
+##
+revisionHistoryLimit: 3
+## @param updateStrategy.type Set up update strategy for the FreeRADIUS Deployment.
 ##
 updateStrategy:
   type: RollingUpdate
+## @param schedulerName Alternative scheduler
+##
+schedulerName: ""
+## @param terminationGracePeriodSeconds In seconds, time the given to the FreeRADIUS pod needs to terminate gracefully
+##
+terminationGracePeriodSeconds: ""
+## @param priorityClassName Priority class name
+##
+priorityClassName: ""
+## @param podManagementPolicy podManagementPolicy retained for compatibility with replication-mode rollouts (no effect on Deployment workloads).
+##
+podManagementPolicy: ""
+## @param hostAliases Add deployment host aliases
+##
+hostAliases: []
+## @param deploymentAnnotations Annotations to add to the deployment object (not the pod template — use `podAnnotations` for the pod)
+##
+deploymentAnnotations: {}
+
+
+## =============================================================================
+## @section Pod parameters
+## -----------------------------------------------------------------------------
+## Anything that lives on the PodSpec: labels/annotations on the pod itself,
+## affinity/anti-affinity, node selection, tolerations, topology spread, and
+## service-account token mounting.
+## =============================================================================
+
+## @param automountServiceAccountToken Mount Service Account token in pod
+##
+automountServiceAccountToken: false
 ## @param podLabels Extra labels for FreeRADIUS pods
-## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 ##
 podLabels: {}
-## @param podAnnotations Annotations for FreeRADIUS pods
-## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+## @param podAnnotations Extra annotations for FreeRADIUS pods
 ##
 podAnnotations: {}
 ## @param podAffinityPreset Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
-## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
 ##
 podAffinityPreset: ""
 ## @param podAntiAffinityPreset Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
-## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
 ##
 podAntiAffinityPreset: soft
-## Node affinity preset
-## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
+## Node affinity preset for FreeRADIUS pods. Ignored if `affinity` is set.
 ##
 nodeAffinityPreset:
-  ## @param nodeAffinityPreset.type Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`
+  ## @param nodeAffinityPreset.type Node affinity preset type. Allowed values: `soft` or `hard`
   ##
   type: ""
   ## @param nodeAffinityPreset.key Node label key to match. Ignored if `affinity` is set.
-  ## E.g.
-  ## key: "kubernetes.io/e2e-az-name"
   ##
   key: ""
   ## @param nodeAffinityPreset.values Node label values to match. Ignored if `affinity` is set.
-  ## E.g.
-  ## values:
-  ##   - e2e-az1
-  ##   - e2e-az2
   ##
   values: []
-
 ## @param affinity Affinity for FreeRADIUS pods assignment
-## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
 ##
 affinity: {}
 ## @param nodeSelector Node labels for FreeRADIUS pods assignment
-## Ref: https://kubernetes.io/docs/user-guide/node-selection/
 ##
 nodeSelector: {}
 ## @param tolerations Tolerations for FreeRADIUS pods assignment
-## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 ##
 tolerations: []
 ## @param topologySpreadConstraints Topology Spread Constraints for FreeRADIUS pods assignment
-## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
-## E.g.
-## topologySpreadConstraints:
-##   - maxSkew: 1
-##     topologyKey: topology.kubernetes.io/zone
-##     whenUnsatisfiable: DoNotSchedule
 ##
 topologySpreadConstraints: {}
 
-## @param priorityClassName Priority class for FreeRADIUS pods assignment
-## Ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
-##
-priorityClassName: ""
-## @param schedulerName Name of the k8s scheduler (other than default)
-## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
-##
-schedulerName: ""
-## @param podManagementPolicy podManagementPolicy to manage scaling operation of FreeRADIUS pods
-## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
-##
-podManagementPolicy: ""
 
-## @param containerPorts.auth FreeRADIUS Auth container port
-## @param containerPorts.acct FreeRADIUS Accounting container port
-## @param containerPorts.status FreeRADIUS Status HTTP container port
+## =============================================================================
+## @section Container parameters
+## -----------------------------------------------------------------------------
+## Anything that lives on the FreeRADIUS container spec: command/args overrides,
+## ports, security context, resources, probes, lifecycle hooks, extra volumes,
+## and sidecars / init containers.
+## =============================================================================
+
+## @param command Override the default container command (useful when the bundled image's entrypoint isn't what you want). Ignored when `diagnosticMode.enabled` is true.
+##
+command: []
+## @param args Override the default container args. Ignored when `diagnosticMode.enabled` is true.
+##
+args: []
+## @param lifecycleHooks lifecycleHooks for the FreeRADIUS container(s) to automate configuration before or after startup
+##
+lifecycleHooks: {}
+## @param containerPorts.auth FreeRADIUS Auth container port (UDP)
+## @param containerPorts.acct FreeRADIUS Accounting container port (UDP)
+## @param containerPorts.coa FreeRADIUS CoA container port (UDP)
+## @param containerPorts.radsec FreeRADIUS RADSEC container port (TCP, TLS)
+## @param containerPorts.status FreeRADIUS Status container port (UDP). Cluster-reachable when `metrics.enabled` so the standalone exporter Deployment can scrape it. Locked down to RADIUS pods + the metrics exporter via NetworkPolicy.
+## @param containerPorts.metrics Prometheus exporter container port (TCP). Lives on the standalone exporter pod (`templates/metrics/Deployment.yaml`), NOT the FreeRADIUS container.
 ##
 containerPorts:
   auth: 1812
@@ -266,20 +486,36 @@ containerPorts:
   coa: 3799
   radsec: 2083
   status: 18121
-## FreeRADIUS Pod security context
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+  metrics: 9812
+## @param extraPorts Extra ports for container deployment
+##
+extraPorts: []
+## FreeRADIUS Pod security context. Defaults are friendly to the upstream
+## `freeradius/freeradius-server` image which runs as UID/GID 101.
+##
 ## @param podSecurityContext.enabled Enable security context for FreeRADIUS pods
 ## @param podSecurityContext.fsGroup Group ID for the mounted volumes' filesystem
+## @param podSecurityContext.runAsUser User ID for the FreeRADIUS pod
 ##
 podSecurityContext:
-  enabled: false
+  enabled: true
+  fsGroupChangePolicy: Always
+  sysctls: []
+  supplementalGroups: []
   fsGroup: 101
-  runAsUser: 101
-## FreeRADIUS container security context
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+## FreeRADIUS container security context. Defaults follow the Pod Security
+## Standard "restricted" profile (allowPrivilegeEscalation: false, drop ALL
+## capabilities, runAsNonRoot, seccomp RuntimeDefault) — flipping `enabled: true`
+## immediately yields a hardened container. `SYS_PTRACE` is added because the
+## upstream image's `radiusd -fxx` exec mode uses ptrace for debug output.
+##
 ## @param containerSecurityContext.enabled FreeRADIUS container securityContext
+## @param containerSecurityContext.capabilities Linux capabilities to add/drop on the FreeRADIUS container
 ## @param containerSecurityContext.runAsUser User ID for the FreeRADIUS container
-## @param containerSecurityContext.runAsNonRoot Set Controller container's Security Context runAsNonRoot
+## @param containerSecurityContext.runAsNonRoot Set FreeRADIUS container's Security Context runAsNonRoot
+## @param containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only. The chart already provides writable emptyDir mounts at `/startechnica/freeradius/tmp` and `/opt/startechnica/freeradius/shared-certs`, so this is generally safe.
+## @param containerSecurityContext.allowPrivilegeEscalation Block child processes from gaining more privileges than the parent (required by PSS "restricted")
+## @param containerSecurityContext.seccompProfile Seccomp profile applied to the container
 ##
 containerSecurityContext:
   enabled: true
@@ -287,37 +523,30 @@ containerSecurityContext:
   capabilities:
     add:
       - SYS_PTRACE
-    drop:
-      - ALL
+    drop: ["ALL"]
   privileged: false
-  readOnlyRootFilesystem: true
   runAsUser: 101
   runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  seccompProfile:
+    type: RuntimeDefault
+  seLinuxOptions: {}
 
-## Resource requests and limits
+## FreeRADIUS containers' resource requests and limits
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-## We usually recommend not to specify default resources and to leave this as a conscious
-## choice for the user. This also increases chances charts run on environments with little
-## resources, such as Minikube. If you do want to specify resources, uncomment the following
-## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
-## More information: https://github.com/startechnica/apps/blob/main/charts/common/templates/_resources.tpl#L15
+## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). Ignored if `resources` is set.
 ##
 resourcesPreset: "nano"
 ## @param resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
-## Example:
-## resources:
-##   requests:
-##     cpu: 2
-##     memory: 512Mi
-##   limits:
-##     cpu: 3
-##     memory: 1024Mi
 ##
 resources: {}
 
-## Configure extra options for FreeRADIUS containers' liveness, readiness and startup probes
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes)
+## Configure extra options for FreeRADIUS containers' liveness, readiness and
+## startup probes. The chart's probes use `radclient status` against the
+## `status` virtual server (`sitesEnabled.status.enabled`). Disable that block
+## or supply `customLivenessProbe` / `customReadinessProbe` if you need
+## different checks.
+##
 ## @param startupProbe.enabled Enable startupProbe
 ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
 ## @param startupProbe.periodSeconds Period seconds for startupProbe
@@ -332,8 +561,6 @@ startupProbe:
   timeoutSeconds: 5
   failureThreshold: 10
   successThreshold: 1
-## Configure extra options for liveness probe
-## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
 ## @param livenessProbe.enabled Enable livenessProbe
 ## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
 ## @param livenessProbe.periodSeconds Period seconds for livenessProbe
@@ -372,95 +599,71 @@ customLivenessProbe: {}
 ##
 customReadinessProbe: {}
 ## @param startupWaitOptions Override default builtin startup wait check options for FreeRADIUS containers
-## `bitnami/mariadb` Docker image has built-in startup check mechanism,
-## which periodically checks if FreeRADIUS service has started up and stops it
-## if all checks have failed after X tries. Use these to control these checks.
-## ref: https://github.com/bitnami/bitnami-docker-mariadb/pull/240
-## Example (with default options):
-## startupWaitOptions:
-##   retries: 300
-##   waitTime: 2
 ##
 startupWaitOptions: {}
-## @param extraFlags FreeRADIUS additional command line flags
-## Can be used to specify command line flags, for example:
-## E.g.
-## extraFlags: "--max-connect-errors=1000 --max_connections=155"
-##
-extraFlags: ""
-## @param extraEnvVars Extra environment variables to be set on FreeRADIUS containers
-## E.g.
-## extraEnvVars:
-##  - name: TZ
-##    value: "Europe/Paris"
-##
-extraEnvVars: []
-## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for FreeRADIUS containers
-##
-extraEnvVarsCM: ""
-## @param extraEnvVarsSecret Name of existing Secret containing extra env vars for FreeRADIUS containers
-##
-extraEnvVarsSecret: ""
 
-## @section Persistence Parameters
+## @param extraVolumes Additional volumes attached to the FreeRADIUS pod. Pair with `extraVolumeMounts` below.
+##
+extraVolumes: []
+## @param extraVolumeMounts Additional volume mounts attached to the FreeRADIUS container.
+##
+extraVolumeMounts: []
+## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
+##
+initContainers: []
+## @param sidecars Additional sidecar containers added to the FreeRADIUS pod
+##
+sidecars: []
 
-## Persistence Parameters
-## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+
+## =============================================================================
+## @section Persistence parameters
+## -----------------------------------------------------------------------------
+## PersistentVolumeClaim consumed by `templates/PersistentVolumeClaim.yaml` and
+## auto-mounted into the FreeRADIUS container at `persistence.mountPath`.
+## When disabled, the chart falls back to an `emptyDir`. The FreeRADIUS image
+## runs as UID/GID 101 — make sure the volume is writable by that user
+## (or enable `volumePermissions.enabled` to chown it via an init container).
+## =============================================================================
+
+## @param persistence.enabled Render a PersistentVolumeClaim AND mount it into the FreeRADIUS container at `persistence.mountPath`.
+## @param persistence.existingClaim Name of an externally-managed PVC to reference instead of creating one.
+## @param persistence.storageClass StorageClass for the PVC. Defaults to `global.storageClass` when both are empty. Set to `-` to disable dynamic provisioning.
+## @param persistence.accessModes List of access modes requested on the PVC.
+## @param persistence.size Storage capacity requested on the PVC.
+## @param persistence.mountPath Path inside the FreeRADIUS container where the PVC is mounted. Defaults match the upstream image's data path.
+## @param persistence.subPath Sub-path within the volume mounted at `mountPath`.
+## @param persistence.annotations Extra annotations applied to the PVC. Merged with `commonAnnotations`.
+## @param persistence.selector Label selector for binding to a specific pre-provisioned PV.
+## @param persistence.dataSource Source the PVC clones from (Snapshot or another PVC).
 ##
 persistence:
-  ## @param persistence.enabled Enable persistence on FreeRADIUS replicas using a `PersistentVolumeClaim`
-  ##
   enabled: false
-    ## @param persistence.existingClaim Name of an existing `PersistentVolumeClaim` for FreeRADIUS primary replicas
-    ## NOTE: When it's set the rest of persistence parameters are ignored
-    ##
   existingClaim: ""
-  ## @param persistence.subPath Subdirectory of the volume to mount at
-  ##
-  subPath: ""
-  ## @param persistence.mountPath Path to mount the volume at
-  ##
-  mountPath: /startechnica/freeradius
-  ## @param persistence.storageClass FreeRADIUS persistent volume storage Class
-  ## If defined, storageClassName: <storageClass>
-  ## If set to "-", storageClassName: "", which disables dynamic provisioning
-  ## If undefined (the default) or set to null, no storageClassName spec is
-  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
-  ##   GKE, AWS & OpenStack)
-  ##
   storageClass: ""
-  ## @param persistence.annotations FreeRADIUS persistent volume claim annotations
-  ##
-  annotations: {}
-  ## @param persistence.accessModes FreeRADIUS persistent volume access Modes
-  ##
   accessModes:
     - ReadWriteOnce
-  ## @param persistence.size FreeRADIUS persistent volume size
-  ##
   size: 8Gi
-  ## @param persistence.selector Selector to match an existing Persistent Volume
-  ## selector:
-  ##   matchLabels:
-  ##     app: my-app
-  ##
+  mountPath: /startechnica/freeradius
+  subPath: ""
+  annotations: {}
   selector: {}
+  dataSource: {}
 
-## 'volumePermissions' init container parameters
-## Changes the owner and group of the persistent volume mount point to runAsUser:fsGroup values
-##   based on the podSecurityContext/containerSecurityContext parameters
+## `volumePermissions` init container — runs as root to chown the PVC mount
+## point to `containerSecurityContext.runAsUser:podSecurityContext.fsGroup`.
+## Only needed when the storage class doesn't honor `fsGroup` or you're
+## bringing a pre-existing volume.
 ##
 volumePermissions:
-  ## @param volumePermissions.enabled Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
+  ## @param volumePermissions.enabled Enable the init container that chowns the PV mount point
   ##
   enabled: false
-  ## Bitnami Shell image
-  ## ref: https://hub.docker.com/r/bitnami/bitnami-shell/tags/
-  ## @param volumePermissions.image.registry Bitnami Shell image registry
-  ## @param volumePermissions.image.repository Bitnami Shell image repository
-  ## @param volumePermissions.image.tag Bitnami Shell image tag (immutable tags are recommended)
-  ## @param volumePermissions.image.pullPolicy Bitnami Shell image pull policy
-  ## @param volumePermissions.image.pullSecrets Bitnami Shell image pull secrets
+  ## @param volumePermissions.image.registry Image registry for the init container
+  ## @param volumePermissions.image.repository Image repository
+  ## @param volumePermissions.image.tag Image tag
+  ## @param volumePermissions.image.pullPolicy Image pull policy
+  ## @param volumePermissions.image.pullSecrets Image pull secrets
   ##
   image:
     registry: docker.io
@@ -468,46 +671,318 @@ volumePermissions:
     tag: "11"
     digest: ""
     pullPolicy: IfNotPresent
-    ## Optionally specify an array of imagePullSecrets.
-    ## Secrets must be manually created in the namespace.
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-    ## e.g:
-    ## pullSecrets:
-    ##   - myRegistryKeySecretName
-    ##
     pullSecrets: []
-  ## Init container's resource requests and limits
-  ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
-  ## @param volumePermissions.resources.limits The resources limits for the init container
-  ## @param volumePermissions.resources.requests The requested resources for the init container
+  ## @param volumePermissions.resources.limits Resource limits for the init container
+  ## @param volumePermissions.resources.requests Requested resources for the init container
   ##
   resources:
     limits: {}
     requests: {}
-  ## Init container Container Security Context
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-  ## @param volumePermissions.securityContext.runAsUser Set init container's Security Context runAsUser
-  ## NOTE: when runAsUser is set to special value "auto", init container will try to chown the
-  ##   data folder to auto-determined user&group, using commands: `id -u`:`id -G | cut -d" " -f2`
-  ##   "auto" is especially useful for OpenShift which has scc with dynamic user ids (and 0 is not allowed)
+  ## @param volumePermissions.securityContext.runAsUser UID for the init container. Use `0` (root) so chown actually works; or `auto` for OpenShift's dynamic SCC.
   ##
   securityContext:
     runAsUser: 0
 
-## @param extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS pod(s)
-##
-extraVolumes: []
-## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS container(s)
-##
-extraVolumeMounts: []
-## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
-##
-initContainers: []
-## @param sidecars Add additional sidecar containers for the FreeRADIUS pod(s)
-##
-sidecars: []
 
-## @section Traffic Exposure Parameters
+## =============================================================================
+## @section Metrics parameters
+## -----------------------------------------------------------------------------
+## Standalone `bvantagelimited/freeradius_exporter` Deployment. When
+## `metrics.enabled: true` the chart renders the exporter as a **separate
+## Deployment** (`templates/metrics/Deployment.yaml`) — NOT a sidecar on the
+## FreeRADIUS pod. The exporter pod talks to the FreeRADIUS `status` virtual
+## server over the in-cluster Service, then exposes Prometheus metrics on
+## its own Service (`<release>-freeradius-metrics`) at `service.ports.metrics`.
+##
+## **Requires `sitesEnabled.status.enabled: true`** AND `status` reachable on
+## the Service (the chart's defaults handle both: `sitesEnabled.status.listen`
+## defaults to `0.0.0.0` and `service.ports.status` is auto-published).
+##
+## ServiceMonitor / PrometheusRule are only rendered when both `metrics.enabled`
+## and the matching sub-block flag are true (and the Prometheus Operator CRDs
+## are present). Manifests live under `templates/metrics/`.
+## =============================================================================
+
+metrics:
+  ## @param metrics.enabled Render the standalone `bvantagelimited/freeradius_exporter` Deployment and Service. Requires `sitesEnabled.status.enabled: true`.
+  ##
+  enabled: false
+  ## @param metrics.replicaCount Number of exporter pods.
+  ##
+  replicaCount: 1
+  ## FreeRADIUS Prometheus exporter image.
+  ## ref: https://github.com/bvantagelimited/freeradius_exporter
+  ##
+  ## @param metrics.image.registry FreeRADIUS exporter image registry
+  ## @param metrics.image.repository FreeRADIUS exporter image repository
+  ## @param metrics.image.tag FreeRADIUS exporter image tag
+  ## @param metrics.image.digest FreeRADIUS exporter image digest (overrides `tag` when set)
+  ## @param metrics.image.pullPolicy FreeRADIUS exporter image pull policy
+  ## @param metrics.image.pullSecrets FreeRADIUS exporter image pull secrets
+  ##
+  image:
+    registry: ghcr.io
+    repository: bvantagelimited/freeradius_exporter
+    tag: "1.4.4"
+    digest: ""
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  ## @param metrics.extraArgs Extra command-line flags passed to the exporter (e.g. `--freeradius.timeout=5s`, `--log.level=debug`).
+  ##
+  extraArgs: []
+  ## @param metrics.extraEnvVars Extra environment variables for the exporter container. Use this for `RADIUS_*` overrides that aren't covered by the defaults below.
+  ## E.g.
+  ## extraEnvVars:
+  ##   - name: RADIUS_USERNAME
+  ##     value: monitor
+  ##
+  extraEnvVars: []
+  ## @param metrics.resources Set container requests and limits for the exporter container.
+  ##
+  resources:
+    limits: {}
+    requests: {}
+  ## Exporter container security context. Defaults to the PSS "restricted"
+  ## profile — the bvantagelimited image is a static Go binary and works fine
+  ## with `readOnlyRootFilesystem: true` and dropping all capabilities.
+  ##
+  ## @param metrics.containerSecurityContext.enabled Apply the security context to the exporter container.
+  ## @param metrics.containerSecurityContext.runAsUser UID for the exporter container.
+  ## @param metrics.containerSecurityContext.runAsNonRoot Reject containers that try to run as root.
+  ## @param metrics.containerSecurityContext.allowPrivilegeEscalation Block child processes from gaining more privileges than the parent.
+  ## @param metrics.containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only.
+  ## @param metrics.containerSecurityContext.capabilities Linux capabilities to add/drop on the exporter container.
+  ## @param metrics.containerSecurityContext.seccompProfile Seccomp profile applied to the exporter container.
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    privileged: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+    seLinuxOptions: {}
+  ## Exporter probes (HTTP GET against the `/metrics` endpoint).
+  ##
+  ## @param metrics.livenessProbe.enabled Enable livenessProbe on the exporter container.
+  ## @param metrics.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe.
+  ## @param metrics.livenessProbe.periodSeconds Period seconds for livenessProbe.
+  ## @param metrics.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe.
+  ## @param metrics.livenessProbe.failureThreshold Failure threshold for livenessProbe.
+  ## @param metrics.livenessProbe.successThreshold Success threshold for livenessProbe.
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  ## @param metrics.readinessProbe.enabled Enable readinessProbe on the exporter container.
+  ## @param metrics.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe.
+  ## @param metrics.readinessProbe.periodSeconds Period seconds for readinessProbe.
+  ## @param metrics.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe.
+  ## @param metrics.readinessProbe.failureThreshold Failure threshold for readinessProbe.
+  ## @param metrics.readinessProbe.successThreshold Success threshold for readinessProbe.
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  ## @param metrics.customLivenessProbe Verbatim override of the exporter livenessProbe.
+  ##
+  customLivenessProbe: {}
+  ## @param metrics.customReadinessProbe Verbatim override of the exporter readinessProbe.
+  ##
+  customReadinessProbe: {}
+  ## @param metrics.podAnnotations Annotations applied to the exporter pod.
+  ##
+  podAnnotations: {}
+  ## @param metrics.podLabels Extra labels applied to the exporter pod.
+  ##
+  podLabels: {}
+  ## @param metrics.nodeSelector Node labels for exporter pod assignment.
+  ##
+  nodeSelector: {}
+  ## @param metrics.tolerations Tolerations for exporter pod assignment.
+  ##
+  tolerations: []
+  ## @param metrics.affinity Affinity for exporter pod assignment.
+  ##
+  affinity: {}
+  ## @param metrics.priorityClassName Priority class name for the exporter pod.
+  ##
+  priorityClassName: ""
+  ## Exporter Service (chart-rendered as `<fullname>-metrics`, separate from
+  ## the main FreeRADIUS Service). Port number is sourced from the top-level
+  ## `service.ports.metrics` / `service.nodePorts.metrics` so the chart has a
+  ## single ports inventory; this block only carries the Service-type knobs.
+  ##
+  service:
+    ## @param metrics.service.type Kubernetes service type for the exporter.
+    ##
+    type: ClusterIP
+    ## @param metrics.service.clusterIP Explicit clusterIP for the exporter Service.
+    ##
+    clusterIP: ""
+    ## @param metrics.service.loadBalancerIP `loadBalancerIP` when `type` is `LoadBalancer`.
+    ##
+    loadBalancerIP: ""
+    ## @param metrics.service.loadBalancerSourceRanges Allowed CIDRs when `type` is `LoadBalancer`.
+    ##
+    loadBalancerSourceRanges: []
+    ## @param metrics.service.annotations Extra annotations merged into the exporter Service. Use this for Prometheus scrape annotations on clusters not running the Prometheus Operator.
+    ##
+    annotations: {}
+  ## ServiceMonitor (Prometheus Operator) configuration.
+  ##
+  serviceMonitor:
+    ## @param metrics.serviceMonitor.enabled Create a ServiceMonitor resource for the Prometheus Operator
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.namespace Namespace in which to create the ServiceMonitor (defaults to the release namespace)
+    ##
+    namespace: ""
+    ## @param metrics.serviceMonitor.jobLabel The label on the target Service used by Prometheus as the job name
+    ##
+    jobLabel: ""
+    ## @param metrics.serviceMonitor.port Service port the ServiceMonitor scrapes
+    ##
+    port: metrics
+    ## @param metrics.serviceMonitor.endpoints [array] Endpoint configuration of the ServiceMonitor. Path is mandatory.
+    ##
+    endpoints:
+      - path: /metrics
+    ## @param metrics.serviceMonitor.path HTTP path the exporter exposes
+    ##
+    path: /metrics
+    ## @param metrics.serviceMonitor.interval Scrape interval
+    ##
+    interval: ""
+    ## @param metrics.serviceMonitor.scrapeTimeout Per-scrape timeout
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.honorLabels Honor labels coming from the scraped target
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor resource
+    ##
+    labels: {}
+    ## @param metrics.serviceMonitor.annotations Extra annotations for the ServiceMonitor resource
+    ##
+    annotations: {}
+    ## @param metrics.serviceMonitor.selector Selector to filter which Services this ServiceMonitor matches (merged with chart defaults)
+    ##
+    selector: {}
+    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply before scraping
+    ##
+    relabelings: []
+    ## @param metrics.serviceMonitor.metricRelabelings MetricRelabelConfigs to apply on collected samples
+    ##
+    metricRelabelings: []
+    ## @param metrics.serviceMonitor.tlsConfig TLS configuration for the scrape endpoint
+    ##
+    tlsConfig: {}
+  ## Prometheus Operator PrometheusRule configuration. The default rule set
+  ## targets `bvantagelimited/freeradius_exporter` metric names — the most
+  ## common FreeRADIUS exporter (`freeradius_up`, `freeradius_total_*`,
+  ## `freeradius_queue_use_percentage`). Override `rules` (or set it to `[]`)
+  ## when running a different exporter.
+  ##
+  prometheusRule:
+    ## @param metrics.prometheusRule.enabled If `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled`, and makes little sense without `metrics.serviceMonitor.enabled`).
+    ##
+    enabled: false
+    ## @param metrics.prometheusRule.namespace Namespace in which to create the PrometheusRule. Defaults to the release namespace; set this when your Prometheus instance's `ruleNamespaceSelector` only watches a specific namespace.
+    ##
+    namespace: ""
+    ## @param metrics.prometheusRule.additionalLabels Extra labels merged onto the PrometheusRule resource so the Prometheus Operator's `ruleSelector` picks it up. Defaults to the kube-prometheus-stack selector labels (`app: prometheus-operator` / `release: prometheus`) — adjust to match your operator install.
+    ##
+    additionalLabels:
+      app: prometheus-operator
+      release: prometheus
+    ## @param metrics.prometheusRule.groups Verbatim `spec.groups` list passthrough. When non-empty, these groups are rendered alongside the chart's default group built from `rules` (the two are additive, not mutually exclusive). Use this when you need multiple groups with different `interval` / `partial_response_strategy` settings instead of the flat-`rules` shape.
+    ##
+    groups: []
+    ## @param metrics.prometheusRule.rules PrometheusRule alert/recording rules rendered under a single group named after the chart fullname. The list is evaluated as a template, so `{{ include "st-common.names.fullname" . }}` and `{{ `{{` }} $labels.instance {{ `}}` }}`-style placeholders work. The default set targets `bvantagelimited/freeradius_exporter` metric names — override or set to `[]` on other exporters.
+    ##
+    rules:
+      - alert: FreeRADIUSDown
+        expr: up{job=~".*{{ include "st-common.names.fullname" . }}.*"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: FreeRADIUS instance is down
+          description: |
+            The FreeRADIUS metrics endpoint on {{ `{{` }} $labels.instance {{ `}}` }} has been unreachable for the last 5 minutes.
+            AAA traffic is likely affected — verify the pod is running and the exporter sidecar is healthy.
+      - alert: FreeRADIUSAbsent
+        expr: absent(up{job=~".*{{ include "st-common.names.fullname" . }}.*"} == 1)
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: FreeRADIUS scrape target has disappeared
+          description: |
+            Prometheus has not seen any scrape target matching the FreeRADIUS Service for 10 minutes.
+            Check the ServiceMonitor selector, the metrics Service, and that the exporter sidecar is listening on `containerPorts.metrics`.
+      - alert: FreeRADIUSAuthRejectRateHigh
+        ## Metric source: bvantagelimited/freeradius_exporter
+        expr: |
+          sum by (instance) (rate(freeradius_total_responses_access_reject[5m]))
+            /
+          clamp_min(sum by (instance) (rate(freeradius_total_requests[5m])), 1)
+            > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: FreeRADIUS Access-Reject rate above 50%
+          description: |
+            More than half of the authentication requests on {{ `{{` }} $labels.instance {{ `}}` }} have been rejected over the last 5 minutes.
+            Investigate `clients.conf`, user credentials, or backend SQL/LDAP availability.
+      - alert: FreeRADIUSAuthRequestsDropped
+        ## Metric source: bvantagelimited/freeradius_exporter
+        expr: rate(freeradius_total_auth_responses_dropped_requests[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: FreeRADIUS is dropping authentication requests
+          description: |
+            FreeRADIUS on {{ `{{` }} $labels.instance {{ `}}` }} has been dropping auth requests for the last 5 minutes — the server is overloaded or the worker queue is saturated.
+            Consider raising the replica count (or HPA bounds) and tuning thread/worker counts in `radiusd.conf`.
+      - alert: FreeRADIUSQueueSaturated
+        ## Metric source: bvantagelimited/freeradius_exporter
+        expr: freeradius_queue_use_percentage > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: FreeRADIUS internal queue >80% utilised
+          description: |
+            The FreeRADIUS worker queue on {{ `{{` }} $labels.instance {{ `}}` }} has been above 80% utilisation for 5 minutes — requests are queueing up.
+            Capacity is close to exhaustion; scale out or tune the thread pool before drops start.
+
+
+## =============================================================================
+## @section Traffic Exposure parameters
+## -----------------------------------------------------------------------------
+## How traffic reaches FreeRADIUS from outside the pod: the Service (UDP
+## auth/acct/coa/status + TCP RADSEC) and optional Pod Disruption Budget. The
+## Gateway API / Istio integration lives further down. There is intentionally
+## no `ingress:` block — RADIUS is not HTTP and Ingress controllers cannot
+## carry UDP traffic.
+## =============================================================================
 
 ## FreeRADIUS service parameters
 ##
@@ -515,7 +990,12 @@ service:
   ## @param service.type FreeRADIUS Kubernetes service type
   ##
   type: ClusterIP
-  ## @param service.ports.auth FreeRADIUS Kubernetes service port
+  ## @param service.ports.auth FreeRADIUS Authentication service port (UDP)
+  ## @param service.ports.acct FreeRADIUS Accounting service port (UDP)
+  ## @param service.ports.coa FreeRADIUS CoA service port (UDP)
+  ## @param service.ports.radsec FreeRADIUS RADSEC service port (TCP, TLS)
+  ## @param service.ports.status FreeRADIUS Status service port (UDP). Only published when the metrics exporter Deployment needs to reach it (`metrics.enabled: true`); restrict external access via NetworkPolicy.
+  ## @param service.ports.metrics Prometheus exporter service port (TCP). Published on the standalone exporter Service (`<fullname>-metrics`), NOT the main FreeRADIUS Service.
   ##
   ports:
     auth: 1812
@@ -523,8 +1003,13 @@ service:
     coa: 3799
     radsec: 2083
     status: 18121
-  ## @param service.nodePorts.mysql FreeRADIUS Kubernetes service node port
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    metrics: 9812
+  ## @param service.nodePorts.auth NodePort for the Auth port (LoadBalancer / NodePort types only)
+  ## @param service.nodePorts.acct NodePort for the Accounting port
+  ## @param service.nodePorts.coa NodePort for the CoA port
+  ## @param service.nodePorts.radsec NodePort for the RADSEC port
+  ## @param service.nodePorts.status NodePort for the Status port (rarely needed — exporter reaches the status site through the in-cluster Service)
+  ## @param service.nodePorts.metrics NodePort for the exporter Service (when `metrics.service.type` is `NodePort` or `LoadBalancer`)
   ##
   nodePorts:
     auth: ""
@@ -532,234 +1017,40 @@ service:
     coa: ""
     radsec: ""
     status: ""
+    metrics: ""
   ## @param service.clusterIP FreeRADIUS Kubernetes service clusterIP IP
   ##
   clusterIP: ""
   ## @param service.loadBalancerIP FreeRADIUS loadBalancerIP if service type is `LoadBalancer`
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
   ##
   loadBalancerIP: ""
   ## @param service.ipFamilyPolicy FreeRADIUS Kubernetes service ipFamilyPolicy policy
   ##
   ipFamilyPolicy: SingleStack
   ## @param service.externalTrafficPolicy Enable client source IP preservation
-  ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
   ##
   externalTrafficPolicy: Cluster
-  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
-  ## bare metal / on-prem environments that rely on VIP based LB implementations.
-  ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer.
   ##
   allocateLoadBalancerNodePorts: "false"
   ## @param service.loadBalancerClass Enables to use a load balancer implementation other than the cloud provider default.
-  ## https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
   ##
   loadBalancerClass: ""
-  ## @param service.loadBalancerSourceRanges Address that are allowed when FreeRADIUS service is LoadBalancer
-  ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
-  ## E.g.
-  ## loadBalancerSourceRanges:
-  ##   - 10.10.10.0/24
+  ## @param service.loadBalancerSourceRanges Addresses allowed when FreeRADIUS service is `LoadBalancer`
   ##
   loadBalancerSourceRanges: []
-  ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
+  ## @param service.extraPorts Extra ports to expose (normally used with the `sidecars` value)
   ##
   extraPorts: []
-  ## @param service.annotations Provide any additional annotations which may be required
+  ## @param service.annotations Additional Service annotations
   ##
   annotations: {}
   ## @param service.sessionAffinity Session Affinity for Kubernetes service, can be "None" or "ClientIP"
-  ## If "ClientIP", consecutive client requests will be directed to the same Pod
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
   ##
   sessionAffinity: None
   ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
-  ## sessionAffinityConfig:
-  ##   clientIP:
-  ##     timeoutSeconds: 300
+  ##
   sessionAffinityConfig: {}
-## Configure the ingress resource that allows you to access the FreeRADIUS installation
-## ref: https://kubernetes.io/docs/user-guide/ingress/
-##
-ingress:
-  ## @param ingress.enabled Enable ingress record generation for FreeRADIUS
-  ##
-  enabled: false
-  ## @param ingress.pathType Ingress path type
-  ##
-  pathType: ImplementationSpecific
-  ## @param ingress.apiVersion Force Ingress API version (automatically detected if not set)
-  ##
-  apiVersion: ""
-  ## @param ingress.hostname Default host for the ingress record
-  ##
-  hostname: freeradius.local
-  ## @param ingress.path Default path for the ingress record
-  ## NOTE: You may need to set this to '/*' in order to use this with ALB ingress controllers
-  ##
-  path: /
-  ## @param ingress.annotations Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.
-  ## For a full list of possible ingress annotations, please see
-  ## ref: https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md
-  ## Use this parameter to set the required annotations for cert-manager, see
-  ## ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
-  ##
-  ## e.g:
-  ## annotations:
-  ##   kubernetes.io/ingress.class: nginx
-  ##   cert-manager.io/cluster-issuer: cluster-issuer-name
-  ##
-  annotations: {}
-  ## @param ingress.tls Enable TLS configuration for the host defined at `ingress.hostname` parameter
-  ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.ingress.hostname }}`
-  ## You can:
-  ##   - Use the `ingress.secrets` parameter to create this TLS secret
-  ##   - Rely on cert-manager to create it by setting the corresponding annotations
-  ##   - Rely on Helm to create self-signed certificates by setting `ingress.selfSigned=true`
-  ##
-  tls: false
-  ## DEPRECATED: Use ingress.annotations instead of ingress.certManager
-  ## certManager: false
-  ##
-
-  ## @param ingress.selfSigned Create a TLS secret for this ingress record using self-signed certificates generated by Helm
-  ##
-  selfSigned: false
-  ## @param ingress.extraHosts An array with additional hostname(s) to be covered with the ingress record
-  ## e.g:
-  ## extraHosts:
-  ##   - name: freeradius.local
-  ##     path: /
-  ##
-  extraHosts: []
-  ## @param ingress.extraPaths An array with additional arbitrary paths that may need to be added to the ingress under the main host
-  ## e.g:
-  ## extraPaths:
-  ## - path: /*
-  ##   backend:
-  ##     serviceName: ssl-redirect
-  ##     servicePort: use-annotation
-  ##
-  extraPaths: []
-  ## @param ingress.extraTls TLS configuration for additional hostname(s) to be covered with this ingress record
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
-  ## e.g:
-  ## extraTls:
-  ## - hosts:
-  ##     - freeradius.local
-  ##   secretName: freeradius.local-tls
-  ##
-  extraTls: []
-  ## @param ingress.secrets Custom TLS certificates as secrets
-  ## NOTE: 'key' and 'certificate' are expected in PEM format
-  ## NOTE: 'name' should line up with a 'secretName' set further up
-  ## If it is not set and you're using cert-manager, this is unneeded, as it will create a secret for you with valid certificates
-  ## If it is not set and you're NOT using cert-manager either, self-signed certificates will be created valid for 365 days
-  ## It is also possible to create and manage the certificates outside of this helm chart
-  ## Please see README.md for more information
-  ## e.g:
-  ## secrets:
-  ##   - name: freeradius.local-tls
-  ##     key: |-
-  ##       -----BEGIN RSA PRIVATE KEY-----
-  ##       ...
-  ##       -----END RSA PRIVATE KEY-----
-  ##     certificate: |-
-  ##       -----BEGIN CERTIFICATE-----
-  ##       ...
-  ##       -----END CERTIFICATE-----
-  ##
-  secrets: []
-  ## @param ingress.ingressClassName IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)
-  ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
-  ## ref: https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/
-  ##
-  ingressClassName: ""
-  ## @param ingress.extraRules Additional rules to be covered with this ingress record
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-rules
-  ## e.g:
-  ## extraRules:
-  ## - host: example.local
-  ##     http:
-  ##       path: /
-  ##       backend:
-  ##         service:
-  ##           name: example-svc
-  ##           port:
-  ##             name: http
-  ##
-  extraRules: []
-
-## @param revisionHistoryLimit Maximum number of revisions that will be maintained in the Deployment
-##
-revisionHistoryLimit: 3
-
-## @section RBAC parameter
-#
-
-## Specifies whether a ServiceAccount should be created
-##
-serviceAccount:
-  ## @param serviceAccount.create Enable the creation of a ServiceAccount for Adminer pods
-  ##
-  create: true
-  ## @param serviceAccount.name Name of the created ServiceAccount
-  ## If not set and create is true, a name is generated using the fullname template
-  ##
-  name: ""
-  ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
-  ##
-  automountServiceAccountToken: false
-  ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
-  ##
-  annotations: {}
-## Role Based Access
-## Ref: https://kubernetes.io/docs/admin/authorization/rbac/
-##
-rbac:
-  ## @param rbac.create Specify whether RBAC resources should be created and used
-  ##
-  create: false
-  ## @param rbac.rules Custom RBAC rules
-  ## Example:
-  ## rules:
-  ##   - apiGroups:
-  ##       - ""
-  ##     resources:
-  ##       - pods
-  ##     verbs:
-  ##       - get
-  ##       - list
-  ##
-  rules: []
-
-## Network Policy configuration
-## ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
-##
-networkPolicy:
-  ## @param networkPolicy.enabled Enable the default NetworkPolicy policy
-  ##
-  enabled: false
-  ## @param networkPolicy.allowExternal Don't require client label for connections
-  ## The Policy model to apply. When set to false, only pods with the correct
-  ## client label will have network access to the ports Keycloak is listening
-  ## on. When true, Keycloak will accept connections from any source
-  ## (with the correct destination port).
-  ##
-  allowExternal: true
-  ## @param networkPolicy.additionalRules Additional NetworkPolicy rules
-  ## Note that all rules are OR-ed.
-  ## Example:
-  ## additionalRules:
-  ##   - matchLabels:
-  ##       - role: frontend
-  ##   - matchExpressions:
-  ##       - key: role
-  ##         operator: In
-  ##         values:
-  ##           - frontend
-  ##
-  additionalRules: {}
 
 ## Pod disruption budget configuration
 ##
@@ -774,8 +1065,295 @@ podDisruptionBudget:
   ##
   maxUnavailable: ""
 
+
+## =============================================================================
+## @section TLS configuration
+## -----------------------------------------------------------------------------
+## In-pod TLS for the RADSEC server. Independent of `modsEnabled.sql.tls.*`
+## (which is TLS for the SQL backend connection) and of `gateway.tls.*` (which
+## terminates at the Gateway). Setting `tls.enabled: true` here enables the
+## RADSEC port on the container/Service AND mounts the leaf certificate so
+## FreeRADIUS itself serves RADSEC.
+##
+## Cert-manager-driven issuance is configured under `tls.certManager.*` — a
+## single canonical location consumed by both the in-pod RADSEC `Certificate`
+## and the gateway-namespace `Certificate` (when `gateway.tls.enabled`).
+## =============================================================================
+
+tls:
+  ## @param tls.enabled Enable RADSEC (TLS over TCP RADIUS). Opens `containerPorts.radsec` / `service.ports.radsec` on the pod and the Service, mounts the leaf cert via `templates/secret/tls.yaml`, and (when `gateway.enabled`) wires the istio/gateway-api TLS-passthrough listener.
+  ##
+  enabled: false
+  ## @param tls.autoGenerated Render `templates/secret/tls.yaml` with a chart-generated self-signed leaf certificate. Skipped when `certificatesSecret`, `existingSecretName`, or `tls.certManager.create` are set.
+  ##
+  autoGenerated: false
+  ## @param tls.certificatesMountPath Path inside the container where the RADSEC TLS material is mounted
+  ##
+  certificatesMountPath: /opt/startechnica/freeradius/certs
+  ## @param tls.certificatesSecret Name of an existing Secret holding `tls.crt`/`tls.key`/`ca.crt` for RADSEC. Overrides chart-managed Secret rendering.
+  ##
+  certificatesSecret: ""
+  ## @param tls.certFilename Filename of the leaf certificate inside the mounted Secret (defaults to `tls.crt`)
+  ##
+  certFilename: ""
+  ## @param tls.certKeyFilename Filename of the leaf key inside the mounted Secret (defaults to `tls.key`)
+  ##
+  certKeyFilename: ""
+  ## @param tls.certCAFilename Filename of the CA certificate inside the mounted Secret (defaults to `ca.crt`)
+  ##
+  certCAFilename: ""
+  ## @param tls.existingSecretName [DEPRECATED — use `tls.certificatesSecret`] Legacy alias retained for backwards compatibility. Slated for removal in the next major bump.
+  ##
+  existingSecretName: ""
+  ## Cert-manager driven TLS certificate issuance. Single canonical location
+  ## consumed by `templates/Certificate.yaml` for both the in-pod RADSEC
+  ## certificate (release-namespace block) and the gateway-namespace cert
+  ## (when `gateway.enabled && gateway.tls.enabled`).
+  ##
+  certManager:
+    ## @param tls.certManager.create Render cert-manager `Certificate` resources for any TLS-enabled exposure (RADSEC and/or gateway).
+    ##
+    create: false
+    ## @param tls.certManager.issuerRef Reference to the cert-manager Issuer / ClusterIssuer that signs the certificate(s).
+    ##
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: selfsigned-issuer
+
+
+## =============================================================================
+## @section RBAC parameters
+## -----------------------------------------------------------------------------
+## ServiceAccount and Role/RoleBinding generation for the FreeRADIUS pod, plus
+## the NetworkPolicy controlling who can reach the auth/acct/coa/radsec ports.
+## =============================================================================
+
+## ServiceAccount used by the FreeRADIUS pod
+##
+serviceAccount:
+  ## @param serviceAccount.create Enable the creation of a ServiceAccount for FreeRADIUS pods
+  ##
+  create: true
+  ## @param serviceAccount.name Name of the created ServiceAccount
+  ##
+  name: ""
+  ## @param serviceAccount.automountServiceAccountToken Auto-mount the service account token in the pod
+  ##
+  automountServiceAccountToken: false
+  ## @param serviceAccount.annotations Additional custom annotations for the ServiceAccount
+  ##
+  annotations: {}
+
+## Role / RoleBinding for the FreeRADIUS ServiceAccount. Off by default — the
+## upstream image doesn't need to read cluster state, but some sidecars do.
+##
+rbac:
+  ## @param rbac.create Specify whether Role / RoleBinding resources should be created and used
+  ##
+  create: false
+  ## @param rbac.rules Custom RBAC rules (when empty the chart uses a minimal `get/list/watch` on secrets+configmaps)
+  ##
+  rules: []
+
+## Network Policy. RADIUS is UDP-heavy, so a strict policy is recommended in
+## multi-tenant clusters. The chart auto-opens UDP auth/acct (always) and
+## conditionally opens UDP coa, UDP status, TCP RADSEC, and TCP metrics based
+## on the matching feature flags.
+##
+networkPolicy:
+  ## @param networkPolicy.enabled Render a NetworkPolicy
+  ##
+  enabled: false
+  ## @param networkPolicy.allowExternal When true, allow connections from any source. When false, restrict ingress to pods with the chart's `<fullname>-client: "true"` label and to other FreeRADIUS replicas.
+  ##
+  allowExternal: true
+  ## @param networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
+  ##
+  allowExternalEgress: true
+  ## @param networkPolicy.extraIngress Add extra ingress rules to the NetworkPolicy
+  ##
+  extraIngress: []
+  ## @param networkPolicy.extraEgress Add extra egress rules to the NetworkPolicy
+  ##
+  extraEgress: []
+  ## @param networkPolicy.ingressNSMatchLabels Labels to match to allow traffic from other namespaces
+  ## @param networkPolicy.ingressNSPodMatchLabels Pod labels to match to allow traffic from other namespaces
+  ##
+  ingressNSMatchLabels: {}
+  ingressNSPodMatchLabels: {}
+  ## @param networkPolicy.additionalRules Additional NetworkPolicy rules (note: all rules are OR-ed)
+  ##
+  additionalRules: {}
+
+
+## =============================================================================
+## @section Gateway API parameters
+## -----------------------------------------------------------------------------
+## Optional Gateway integration. When `gateway.enabled` is true the chart
+## renders one of two stacks based on `gateway.implementation`:
+##   - "gateway-api" → Kubernetes Gateway API (Gateway + UDPRoute + TLSRoute + ReferenceGrant)
+##   - "istio"       → Istio CRDs (networking.istio.io Gateway + VirtualService)
+##
+## RADIUS traffic shapes that map onto Gateway listeners:
+##   - UDP auth (1812) / acct (1813) / coa (3799) → UDPRoute (gateway-api),
+##     UDP listener (istio Gateway). UDPRoute support varies by implementation
+##     (Cilium / Envoy Gateway support it; Istio currently does not — use the
+##     istio path for RADIUS UDP if you're running Istio).
+##   - TCP RADSEC (2083, TLS) → TLSRoute passthrough (gateway-api) or
+##     `protocol: TLS, mode: PASSTHROUGH` listener (istio Gateway).
+## =============================================================================
+
+gateway:
+  ## @param gateway.enabled Enable the creation of Gateway resources to manage incoming traffic to FreeRADIUS.
+  ##
+  enabled: false
+  ## @param gateway.implementation Gateway implementation to render. Allowed values: `gateway-api` or `istio`.
+  ##
+  implementation: gateway-api
+
+  ## ---- Gateway resource -----------------------------------------------------
+  ## Configuration for the Gateway resource itself (created here, or referenced
+  ## externally via `existingGateway`).
+  ##
+  gateway:
+    ## @param gateway.gateway.create Create a Gateway API Gateway resource. When false the chart expects an existing Gateway to be referenced via `existingGateway` or per-route `parentRefs`.
+    ##
+    create: false
+    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to the chart fullname.
+    ##
+    name: ""
+    ## @param gateway.gateway.namespace Namespace for the Gateway resource. Defaults to the release namespace.
+    ##
+    namespace: ""
+  ## @param gateway.clusterDomain Cluster domain used by the VirtualService backend FQDN. Falls back to the top-level `clusterDomain` when empty.
+  ##
+  clusterDomain: ""
+  ## @param gateway.serviceAccountName Service Account name attached to the Gateway data-plane workload (Istio Ambient / gateway-api implementations that respect it)
+  ##
+  serviceAccountName: ""
+  ## @param gateway.selector Gateway instance selector labels (Istio)
+  ##
+  selector: {}
+  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations)
+  ##
+  gatewayClassName: istio
+  ## @param gateway.listeners Verbatim `listeners:` list rendered on the chart's Gateway. When non-empty, the chart skips its default UDP auth/acct/coa + TLS-passthrough listener generation.
+  ##
+  listeners: []
+  ## @param gateway.existingGateway Name of an existing Gateway resource to attach the chart's routes to (skips Gateway rendering).
+  ##
+  existingGateway: ~
+  ## @param gateway.hostnames Hostnames (or SNI names for RADSEC) the chart's routes / listeners should match. The first entry seeds the cert-manager `Certificate` for the gateway-namespace cert. Empty means "match all" where the API allows it.
+  ##
+  hostnames: []
+
+  ## ---- TLS ------------------------------------------------------------------
+  ## TLS configuration applied to the default Gateway listener generation and
+  ## to the chart-managed TLS Secret rendered by `templates/secret/gateway-tls.yaml`.
+  ## The certificate Secret name is computed by the `freeradius.gateway.tlsSecretName`
+  ## helper — single source of truth shared by both Gateway templates and the
+  ## gateway-tls Secret, so listener and secret can never drift apart.
+  ##
+  tls:
+    ## @param gateway.tls.enabled Render a TLS listener on the default Gateway (Istio: `protocol: TLS, mode: PASSTHROUGH`; gateway-api: TLS passthrough via TLSRoute). Has no effect when `gateway.listeners` is set. The chart auto-derives whether to terminate vs passthrough based on `tls.enabled` (in-pod RADSEC) — when `tls.enabled` is true the listener is passthrough.
+    ##
+    enabled: false
+    ## @param gateway.tls.existingSecret Name of an externally-managed Kubernetes Secret holding the TLS material the Gateway TLS listener references (only relevant when the listener uses `mode: SIMPLE` / Terminate).
+    ##
+    existingSecret: ""
+    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret`, `gateway.tls.secrets`, or `tls.certManager.create` are set.
+    ##
+    selfSigned: false
+    ## @param gateway.tls.secrets Custom TLS certificates rendered as Secrets in the gateway's namespace. 'name' should match what the Gateway listener references.
+    ##
+    secrets: []
+
+  ## ---- TLSRoute (RADSEC) ----------------------------------------------------
+  ## Routing rules for the RADSEC TLS passthrough listener. Only used when
+  ## `implementation: gateway-api` AND `tls.enabled` is true.
+  ##
+  tlsRoute:
+    ## @param gateway.tlsRoute.parentRefs Explicit `parentRefs` override for the TLSRoute. When empty, defaults to the chart-rendered ListenerSet (if any) or the chart's Gateway.
+    ##
+    parentRefs: []
+
+  ## ---- UDPRoute (auth/acct/coa) --------------------------------------------
+  ## Routing rules for the UDP RADIUS listeners. Only used when
+  ## `implementation: gateway-api` AND the cluster's GatewayClass supports
+  ## UDPRoute (Envoy Gateway / Cilium do; Istio does not — fall back to the
+  ## istio path on those clusters).
+  ##
+  udpRoute:
+    ## @param gateway.udpRoute.enabled Render UDPRoute resources for auth/acct (and coa when `sitesEnabled.coa.enabled`).
+    ##
+    enabled: true
+    ## @param gateway.udpRoute.parentRefs Explicit `parentRefs` override for the UDPRoutes. When empty, defaults to the chart-rendered ListenerSet (if any) or the chart's Gateway.
+    ##
+    parentRefs: []
+
+  ## ---- VirtualService (istio) ----------------------------------------------
+  ## Istio VirtualService passthrough overrides. Only used when
+  ## `implementation: istio`. The default VirtualService renders a TLS
+  ## passthrough rule for RADSEC when `tls.enabled` is true; this block lets
+  ## the user override raw TLS/TCP route lists or bring an existing one.
+  ##
+  virtualService:
+    ## @param gateway.virtualService.existingVirtualService Name of an existing VirtualService to use (skips VirtualService rendering)
+    ##
+    existingVirtualService: ~
+    ## @param gateway.virtualService.tls Verbatim `spec.tls` list passthrough. When non-empty, overrides the chart's auto-derived TLS-passthrough rule.
+    ##
+    tls: []
+    ## @param gateway.virtualService.tcp Verbatim `spec.tcp` list passthrough. Useful for non-TLS TCP routes the chart doesn't render by default.
+    ##
+    tcp: []
+
+  ## ---- ReferenceGrant ------------------------------------------------------
+  ## Cross-namespace permission for the gateway-api routes to point at the
+  ## FreeRADIUS Service when the Gateway is in a different namespace.
+  ##
+  referenceGrant:
+    ## @param gateway.referenceGrant.enabled Render a ReferenceGrant allowing routes in `gateway.gateway.namespace` to target the chart's Service.
+    ##
+    enabled: false
+    ## @param gateway.referenceGrant.from Verbatim `spec.from` override
+    ##
+    from: []
+    ## @param gateway.referenceGrant.to Verbatim `spec.to` override
+    ##
+    to: []
+
+  ## ---- ListenerSet ---------------------------------------------------------
+  ## Attach extra listeners to the parent Gateway via a ListenerSet
+  ## (`gateway.networking.k8s.io` v1 / x-k8s.io v1alpha1 XListenerSet). When
+  ## enabled with non-empty `listeners`, the chart's UDPRoute / TLSRoute
+  ## default `parentRefs` switch to this ListenerSet automatically.
+  ##
+  listenerSet:
+    ## @param gateway.listenerSet.enabled Render a ListenerSet
+    ##
+    enabled: false
+    ## @param gateway.listenerSet.parentRef Verbatim `spec.parentRef` override
+    ##
+    parentRef: {}
+    ## @param gateway.listenerSet.listeners `listeners:` list rendered on the ListenerSet
+    ##
+    listeners: []
+
+
+## =============================================================================
+## @section Database parameters
+## -----------------------------------------------------------------------------
+## Backend storage for the FreeRADIUS SQL module. Either toggle the bundled
+## MariaDB sub-chart (`mariadb.enabled: true`) or point at an external database
+## via `externalDatabase.*`. Connection details flow into the SQL module via
+## the chart-managed envvars ConfigMap.
+## =============================================================================
+
 ## MariaDB chart configuration
 ## ref: https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
+##
 ## @param mariadb.enabled Switch to enable or disable the MariaDB helm chart
 ## @param mariadb.auth.username Name for a custom user to create
 ## @param mariadb.auth.password Password for the custom user to create
@@ -792,15 +1370,16 @@ mariadb:
     existingSecret: ""
   architecture: standalone
 
-## External Database configuration
-## All of these values are only used when mariadb.enabled is set to false
+## External Database configuration. All of these values are only used when
+## `mariadb.enabled: false`.
+##
 ## @param externalDatabase.host Database host
 ## @param externalDatabase.port Database port number
 ## @param externalDatabase.user Non-root username for FreeRADIUS
 ## @param externalDatabase.password Password for the non-root username for FreeRADIUS
 ## @param externalDatabase.database FreeRADIUS database name
 ## @param externalDatabase.existingSecret Name of an existing secret resource containing the database credentials
-## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
+## @param externalDatabase.existingSecretPasswordKey Key inside `externalDatabase.existingSecret` that holds the password
 ##
 externalDatabase:
   host: ""
@@ -811,175 +1390,51 @@ externalDatabase:
   existingSecret: ""
   existingSecretPasswordKey: ""
 
-modsEnabled:
-  sql:
-    enabled: true
-    dialect: mysql
-    table:
-      acct1: radacct
-      acct2: radacct
-      authcheck: radcheck
-      authreply: radreply
-      client: nas
-      groupcheck: radgroupcheck
-      groupreply: radgroupreply
-      postauth: radpostauth
-      usergroup: radusergroup
-    ## @param modsEnabled.sql.groupAttribute  The group attribute specific to this instance of rlm_sql
-    ##
-    groupAttribute: SQL-Group
-    ## @param modsEnabled.sql.readClients  Set to 'true' to read radius clients from the database ('nas' table)
-    ##
-    readClients: true
-    ## @param modsEnabled.sql.tls.enabled
-    ## @param modsEnabled.sql.tls.autoGenerated Generate automatically self-signed SQL TLS certificates
-    ## @param modsEnabled.sql.tls.certificatesSecret
-    ## @param modsEnabled.sql.tls.certFilename
-    ## @param modsEnabled.sql.tls.certKeyFilename
-    ## @param modsEnabled.sql.tls.certCAFilename
-    ## @param modsEnabled.sql.tls.existingTlsSecret
-    ## @param modsEnabled.sql.tls.privateKeyPassword
-    ##
-    tls:
-      enabled: false
-      ciphers: ""
-      autoGenerated: true
-      certificatesSecret: ""
-      certFilename: ""
-      certKeyFilename: ""
-      certCAFilename: ""
-      existingTlsSecret: ""
-      privateKeyPassword: whatever
-  
-    ## @param modsEnabled.sql.sqllite.filename
-    ## @param modsEnabled.sql.sqllite.busyTimeout
-    ##
-    sqlite:
-      filename: /startechnica/freeradius/freeradius.db
-      busyTimeout: "200"
-
-sitesEnabled:
-  coa:
-    enabled: false
-  status:
-    enabled: true
-    listen: 127.0.0.1
-    secret: adminsecret
-  tls:
-    ## @param sitesEnabled.tls.enabled Enable TLS support for radsec traffic
-    ##
-    enabled: false
-    privateKeyPassword: ""
-    cipher: "DEFAULT"
-
-clients:
-  localhost:
-    ipv4addr: "127.0.0.1"
-    ipv6addr: ""
-    proto: udp
-    secret: password
-    nasType: other
-    virtualServer: default
-    coaServer: coa
-    limit:
-      maxConnections: 16
-      lifetime: 0
-      idleTimeout: 30
-  existingConfigMapName: ""
-
-tls:
-  ## @param tls.enabled Enable TLS support for FreeRADIUS
-  ##
-  enabled: false
-  ## @param tls.autoGenerated Generate automatically self-signed TLS certificates
-  ##
-  autoGenerated: true
-  autoGenerator:
-    certmanager:
-      enabled: false
-      issuerKind: ClusterIssuer
-      issuerName: selfsigned-issuer
-  ## @param tls.certificatesSecret Name of the secret that contains the certificates
-  ##
-  certificatesSecret: ""
-  ## @param tls.certFilename Certificate filename
-  ##
-  certFilename: ""
-  ## @param tls.certKeyFilename Certificate key filename
-  ##
-  certKeyFilename: ""
-  ## @param tls.certCAFilename CA Certificate filename
-  ##
-  certCAFilename: ""
-
-  secretName: ~
-  existingSecret: ""
-
-gateway:
-  enabled: false
-  dedicated: false
-  gatewayApi: false
-  name: ""
-  namespace: ""
-  gatewayClassName: istio
-  ## @param gateway.listeners
-  ##
-  listeners: []
-  existingGateway: ~
-  existingVirtualService: ~
-  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
-  ##
-  extraRoute: []
-
-## Prometheus exporter configuration
+## Database bootstrap. Loads the rlm_sql schema (`files/schema/<dialect>.sql`)
+## into the configured database via an init container on the FreeRADIUS pod
+## before the main container starts. Idempotent — every shipped schema uses
+## `CREATE TABLE IF NOT EXISTS`, so re-runs on restart are no-ops.
 ##
-metrics:
-  ## @param metrics.enabled Start a side-car prometheus exporter
-  ##
-  enabled: false
-  ## Bitnami FreeRADIUS Prometheus exporter image
-  ## ref: 
-  ## @param metrics.image.registry FreeRADIUS Prometheus exporter image registry
-  ## @param metrics.image.repository FreeRADIUS Prometheus exporter image repository
-  ## @param metrics.image.tag FreeRADIUS Prometheus exporter image tag (immutable tags are recommended)
-  ## @param metrics.image.pullPolicy FreeRADIUS Prometheus exporter image pull policy
-  ## @param metrics.image.pullSecrets FreeRADIUS Prometheus exporter image pull secrets
-  ##
-  image:
-    registry: docker.io
-    repository: 
-    tag: 
-    pullPolicy: IfNotPresent
-    ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-    ## Example:
-    ## pullSecrets:
-    ##   - myRegistryKeySecretName
+## Works with both `mariadb.enabled: true` (waits for the subchart's Service
+## to come up) and `externalDatabase.*` (assumes the external DB is reachable).
+## Skipped when `modsEnabled.sql.dialect` is sqlite (the SQLite driver creates
+## the schema at first write).
+##
+database:
+  bootstrap:
+    ## @param database.bootstrap.enabled Run the schema bootstrap init container before the FreeRADIUS container starts. Disable if your database is managed/bootstrapped out-of-band.
     ##
-    pullSecrets: []
-
-  ## Prometheus Operator PrometheusRule configuration
-  ##
-  prometheusRules:
-    ## @param metrics.prometheusRules.enabled if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)
+    enabled: true
+    ## @param database.bootstrap.schemaConfigMap Name of an existing ConfigMap (must contain `schema.sql`) used in place of the chart-rendered `<fullname>-db-schema`. Use this to ship a customised schema without forking the chart.
     ##
-    enabled: false
-    ## @param metrics.prometheusRules.additionalLabels [object] Additional labels to add to the PrometheusRule so it is picked up by the operator
-    ## If using the [Helm Chart](https://github.com/helm/charts/tree/master/stable/prometheus-operator) this is the name of the Helm release and 'app: prometheus-operator'
+    schemaConfigMap: ""
+    ## Init container image used to apply the bundled `files/schema/<dialect>.sql`
+    ## into the configured database. Defaults to `bitnami/mariadb:11` so the
+    ## MySQL/MariaDB dialect Just Works; the chart auto-swaps this to
+    ## `bitnami/postgresql:17` when `modsEnabled.sql.dialect: postgresql` AND
+    ## the repo is still on the chart default (so postgresql users don't have
+    ## to flip two unrelated keys). Any explicit `repository` override always
+    ## wins — set it to a slimmer image (`postgres:17-alpine`, `mariadb:11-noble`)
+    ## if you want a smaller bootstrap footprint.
     ##
-    additionalLabels:
-      app: prometheus-operator
-      release: prometheus
-    ## @param metrics.prometheusRules.rules PrometheusRule rules to configure
-    ## e.g:
-    ##  - alert: FreeRADIUS-Down
-    ##    annotations:
-    ##      message: 'FreeRADIUS instance {{ $labels.instance }} is down'
-    ##      summary: FreeRADIUS instance is down
-    ##    expr: absent(up{job="freeradius"} == 1)
-    ##    labels:
-    ##      severity: warning
-    ##      service: freeradius
-    ##    for: 5m
+    ## @param database.bootstrap.image.registry Image registry
+    ## @param database.bootstrap.image.repository Image repository (auto-swapped to `bitnami/postgresql` when dialect is `postgresql` and the repo is unchanged)
+    ## @param database.bootstrap.image.tag Image tag (auto-swapped to `17` when the dialect-driven swap fires)
+    ## @param database.bootstrap.image.pullPolicy Image pull policy
+    ## @param database.bootstrap.image.pullSecrets Image pull secrets
     ##
-    rules: {}
+    image:
+      registry: docker.io
+      repository: bitnami/mariadb
+      tag: "11"
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    ## @param database.bootstrap.resources Resources requested by the bootstrap init container
+    ##
+    resources:
+      limits: {}
+      requests: {}
+    ## @param database.bootstrap.waitTimeout Seconds to wait for the database to accept connections before failing. The init container retries every 2s.
+    ##
+    waitTimeout: 120

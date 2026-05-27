@@ -1,0 +1,102 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "istio") (not .Values.gateway.existingGateway) }}
+{{- if (include "st-common.capabilities.istioGateway.apiVersion" .) }}
+{{- $hosts := .Values.gateway.hostnames }}
+apiVersion: {{ include "st-common.capabilities.istioGateway.apiVersion" . }}
+kind: Gateway
+metadata:
+  name: {{ include "st-common.gateway.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- if .Values.gateway.selector }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.selector "context" $) | nindent 4 }}
+    {{- else }}
+    istio.io/gateway-name: {{ default "ingressgateway" .Values.gateway.gateway.name }}
+    {{- end }}
+  servers:
+    - port:
+        name: auth
+        number: {{ .Values.service.ports.auth | int }}
+        protocol: UDP
+      hosts:
+        {{- if $hosts }}
+        {{- range $hosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - "*"
+        {{- end }}
+    - port:
+        name: acct
+        number: {{ .Values.service.ports.acct | int }}
+        protocol: UDP
+      hosts:
+        {{- if $hosts }}
+        {{- range $hosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - "*"
+        {{- end }}
+    {{- if .Values.sitesEnabled.coa.enabled }}
+    - port:
+        name: coa
+        number: {{ .Values.service.ports.coa | int }}
+        protocol: UDP
+      hosts:
+        {{- if $hosts }}
+        {{- range $hosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - "*"
+        {{- end }}
+    {{- end }}
+    {{- /*
+    RADSEC TLS listener. PASSTHROUGH when the pod terminates TLS (`tls.enabled`),
+    SIMPLE (Gateway-side terminate) when `gateway.tls.enabled` only.
+    */ -}}
+    {{- if .Values.tls.enabled }}
+    - port:
+        name: radsec
+        number: {{ .Values.service.ports.radsec | int }}
+        protocol: TLS
+      hosts:
+        {{- if $hosts }}
+        {{- range $hosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - "*"
+        {{- end }}
+      tls:
+        mode: PASSTHROUGH
+    {{- else if .Values.gateway.tls.enabled }}
+    - port:
+        name: radsec
+        number: {{ .Values.service.ports.radsec | int }}
+        protocol: TLS
+      hosts:
+        {{- if $hosts }}
+        {{- range $hosts }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - "*"
+        {{- end }}
+      tls:
+        mode: SIMPLE
+        credentialName: {{ include "freeradius.gateway.tlsSecretName" . }}
+    {{- end }}
+{{- end }}
+{{- end }}

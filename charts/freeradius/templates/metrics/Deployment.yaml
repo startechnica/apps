@@ -1,0 +1,110 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.metrics.enabled }}
+{{- $svc := include "st-common.names.fullname" . -}}
+{{- $svcNs := include "st-common.names.namespace" . -}}
+{{- $clusterDomain := .Values.clusterDomain -}}
+{{- $radiusHost := printf "%s.%s.svc.%s" $svc $svcNs $clusterDomain -}}
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "freeradius.metrics.fullname" . }}
+  namespace: {{ $svcNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.metrics.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
+      app.kubernetes.io/component: metrics
+  template:
+    metadata:
+      {{- if or .Values.metrics.podAnnotations .Values.commonAnnotations }}
+      annotations:
+        {{- if .Values.commonAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.metrics.podAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 8 }}
+        app.kubernetes.io/component: metrics
+        {{- if .Values.metrics.podLabels }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "freeradius.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.metrics.affinity }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.nodeSelector }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.tolerations }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.priorityClassName }}
+      priorityClassName: {{ .Values.metrics.priorityClassName | quote }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - name: exporter
+          image: {{ include "freeradius.metrics.image" . }}
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
+          {{- if .Values.metrics.extraArgs }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraArgs "context" $) | nindent 12 }}
+          {{- end }}
+          env:
+            - name: RADIUS_HOSTNAME
+              value: {{ $radiusHost | quote }}
+            - name: RADIUS_PORT
+              value: {{ .Values.service.ports.status | quote }}
+            - name: RADIUS_USERNAME
+              value: "monitor"
+            - name: RADIUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $) }}
+                  key: sites-status-secret
+            - name: WEB_LISTEN_ADDRESS
+              value: ":{{ .Values.containerPorts.metrics }}"
+            - name: WEB_TELEMETRY_PATH
+              value: "/metrics"
+            {{- if .Values.metrics.extraEnvVars }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.containerPorts.metrics }}
+              protocol: TCP
+          {{- if .Values.metrics.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.metrics.livenessProbe.enabled }}
+          livenessProbe: {{- omit .Values.metrics.livenessProbe "enabled" | toYaml | nindent 12 }}
+            httpGet:
+              path: /metrics
+              port: metrics
+          {{- end }}
+          {{- if .Values.metrics.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.metrics.readinessProbe.enabled }}
+          readinessProbe: {{- omit .Values.metrics.readinessProbe "enabled" | toYaml | nindent 12 }}
+            httpGet:
+              path: /metrics
+              port: metrics
+          {{- end }}
+          {{- if .Values.metrics.resources }}
+          resources: {{- toYaml .Values.metrics.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.metrics.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.metrics.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+{{- end }}

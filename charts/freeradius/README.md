@@ -2,6 +2,11 @@
 
 # Helm chart for FreeRADIUS
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/startechnica)](https://artifacthub.io/packages/search?repo=startechnica)
+![Version](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square)
+![Type](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![AppVersion](https://img.shields.io/badge/AppVersion-3.2.7-informational?style=flat-square)
+
 FreeRADIUS is a modular, high performance free RADIUS suite developed and distributed under the GNU General Public License, version 2, and is free for download and use.
 
 [Overview of FreeRADIUS](https://freeradius.org/)
@@ -132,7 +137,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
 | `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
 | `configuration`                               | Configuration for the FreeRADIUS server (`radiusd.conf`)                                                                 | `""`                           |
-| `configurationConfigMap`                      | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configuration`). The value is evaluated as a template. | `""`                         |
+| `configurationsConfigMap`                     | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configurations`). The value is evaluated as a template. | `""`                        |
 | `initdbScripts`                               | Specify dictionary of scripts to be run at first boot                                                                    | `{}`                           |
 | `initdbScriptsConfigMap`                      | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                      | `""`                           |
 | `extraFlags`                                  | FreeRADIUS additional command line flags                                                                                 | `""`                           |
@@ -205,7 +210,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.resources.limits`                    | The resources limits for the container                                                                                   | `{}`                           |
 | `metrics.resources.requests`                  | The requested resources for the container                                                                                | `{}`                           |
 | `metrics.service.type`                        | Prometheus exporter service type                                                                                         | `ClusterIP`                    |
-| `metrics.service.port`                        | Prometheus exporter service port                                                                                         | `9104`                         |
+| `service.ports.metrics`                       | Prometheus exporter service port (top-level ports inventory)                                                             | `9812`                         |
 | `metrics.service.annotations`                 | Prometheus exporter service annotations                                                                                  | `{}`                           |
 | `metrics.service.loadBalancerIP`              | Load Balancer IP if the Prometheus metrics server type is `LoadBalancer`                                                 | `""`                           |
 | `metrics.service.clusterIP`                   | Prometheus metrics service Cluster IP                                                                                    | `""`                           |
@@ -221,9 +226,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.serviceMonitor.metricRelabelings`    | MetricRelabelConfigs to apply to samples before ingestion                                                                | `[]`                           |
 | `metrics.serviceMonitor.honorLabels`          | honorLabels chooses the metric's labels on collisions with target labels                                                 | `false`                        |
 | `metrics.serviceMonitor.labels`               | ServiceMonitor extra labels                                                                                              | `{}`                           |
-| `metrics.prometheusRules.enabled`             | if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)  | `false`                   |
-| `metrics.prometheusRules.additionalLabels`    | Additional labels to add to the PrometheusRule so it is picked up by the operator                                        | `{}`                           |
-| `metrics.prometheusRules.rules`               | PrometheusRule rules to configure                                                                                                                                                             | `{}`                      |
+| `metrics.prometheusRule.enabled`              | If `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled`, and makes little sense without `metrics.serviceMonitor.enabled`)                                     | `false`                        |
+| `metrics.prometheusRule.namespace`            | Namespace in which to create the PrometheusRule (defaults to the release namespace)                                                                                                           | `""`                           |
+| `metrics.prometheusRule.additionalLabels`     | Extra labels merged onto the PrometheusRule so the Prometheus Operator's `ruleSelector` picks it up                                                                                           | `{app: prometheus-operator, release: prometheus}` |
+| `metrics.prometheusRule.groups`               | Verbatim `spec.groups` list passthrough (additive with `rules`)                                                                                                                               | `[]`                           |
+| `metrics.prometheusRule.rules`                | PrometheusRule rules rendered under a single group named after the chart fullname (default set targets `bvantagelimited/freeradius_exporter` metric names)                                    | See `values.yaml`              |
 
 
 ### Custom FreeRADIUS enabled mods parameters
@@ -307,6 +314,153 @@ There are cases where you may want to deploy extra objects, such a ConfigMap con
 Find more information about how to deal with common errors related to Startechnica's Helm charts in [this troubleshooting guide](https://startechnica.github.io/doc/troubleshoot-helm-chart-issues).
 
 ## Upgrading
+
+### To 1.0.0 (breaking)
+
+This is a major release. Most users with existing `values.yaml` overrides
+will need to migrate the keys below. The full change list is in
+[CHANGELOG.md](CHANGELOG.md).
+
+#### 1. Cert-manager keys consolidated under `tls.certManager.*`
+
+Cert-manager-driven TLS issuance is now configured in one canonical
+location and covers both the in-pod RADSEC certificate and the
+gateway-namespace certificate.
+
+```yaml
+# Before (0.x)
+tls:
+  autoGenerator:
+    certmanager:
+      enabled: true
+      issuerKind: ClusterIssuer
+      issuerName: letsencrypt
+
+# After (1.0.0)
+tls:
+  certManager:
+    create: true
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt
+```
+
+#### 2. The `ingress:` block is gone — use `gateway.hostnames`
+
+FreeRADIUS doesn't speak HTTP, so the chart no longer renders an Ingress.
+Hostnames previously set under `ingress.hostname` / `ingress.extraHosts`
+(which the Certificate, istio Gateway, and VirtualService templates read
+from) now live under `gateway.hostnames`.
+
+```yaml
+# Before (0.x)
+ingress:
+  hostname: radius.example.com
+  extraHosts:
+    - name: radius2.example.com
+
+# After (1.0.0)
+gateway:
+  enabled: true
+  hostnames:
+    - radius.example.com
+    - radius2.example.com
+```
+
+#### 3. Gateway shape: flat → nested
+
+The flat gateway knobs have been replaced with the nested form used by the
+adminer chart. The new `gateway.implementation` flag picks between the two
+resource sets.
+
+```yaml
+# Before (0.x)
+gateway:
+  enabled: true
+  gatewayApi: false        # if true → gateway-api; else → istio
+  name: ""
+  namespace: ""
+
+# After (1.0.0)
+gateway:
+  enabled: true
+  implementation: gateway-api   # or "istio"
+  gateway:
+    create: true
+    name: ""
+    namespace: ""
+```
+
+#### 4. Gateway TLS knobs moved to `gateway.tls.*`
+
+The istio Gateway's TLS material is now configured under `gateway.tls`
+rather than via `tls.secretName` / `sitesEnabled.tls.enabled`.
+
+```yaml
+# Before (0.x)
+sitesEnabled:
+  tls:
+    enabled: true
+tls:
+  secretName: my-existing-tls
+
+# After (1.0.0)
+tls:
+  enabled: true                       # enables RADSEC on the pod
+gateway:
+  enabled: true
+  tls:
+    enabled: true                     # renders the Gateway's TLS listener
+    existingSecret: my-existing-tls   # BYO Secret (gateway-side)
+    selfSigned: false
+```
+
+`sitesEnabled.tls.{cipher,privateKeyPassword}` remain — only the
+`enabled` flag moved.
+
+#### 5. SQL TLS / RADSEC TLS Secret keys renamed
+
+The two `existingTlsSecret` / `existingSecretName` keys have been renamed
+to `certificatesSecret` for consistency. The old keys still work via a
+fallback in the helpers and are slated for removal in the next major bump.
+
+```yaml
+# Before (0.x)
+tls:
+  existingSecretName: my-radsec-tls
+modsEnabled:
+  sql:
+    tls:
+      existingTlsSecret: my-sql-tls
+
+# After (1.0.0)
+tls:
+  certificatesSecret: my-radsec-tls
+modsEnabled:
+  sql:
+    tls:
+      certificatesSecret: my-sql-tls
+```
+
+#### 6. UDPRoute + TLSRoute replace HTTPRoute-style attachment
+
+When using the Gateway API path, the chart now renders dedicated
+`UDPRoute` resources for the auth/acct/coa ports and a `TLSRoute` for
+RADSEC. UDPRoute support is uneven across GatewayClasses — Cilium and
+Envoy Gateway support it, Istio currently does not. On clusters without
+UDPRoute, fall back to `gateway.implementation: istio` (which uses
+plain UDP listeners) or disable `gateway.udpRoute.enabled`.
+
+#### 7. Removed unused keys
+
+The following were removed without deprecation since they were never
+consumed by any template:
+
+- `gateway.dedicated`
+- `gateway.extraRoute`
+- `tls.secretName`
+- `auth.{createClientUser,clientUser,clientUserPassword}`
 
 ## License
 

@@ -1,5 +1,5 @@
 {{- /*
-Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -8,12 +8,9 @@ kind: Service
 metadata:
   name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
-  {{- if .Values.commonLabels }}
-    {{- include "st-common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-  {{- end }}
-  {{- if or .Values.service.annotations .Values.commonAnnotations .Values.metrics.annotations }}
+  {{- if or .Values.service.annotations .Values.commonAnnotations (and .Values.metrics.enabled .Values.metrics.service.annotations) }}
   annotations:
     {{- if .Values.commonAnnotations }}
       {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
@@ -21,8 +18,8 @@ metadata:
     {{- if .Values.service.annotations }}
       {{- include "st-common.tplvalues.render" (dict "value" .Values.service.annotations "context" $) | nindent 4 }}
     {{- end }}
-    {{- if and .Values.metrics.enabled .Values.metrics.annotations }}
-      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.annotations "context" $) | nindent 4 }}
+    {{- if and .Values.metrics.enabled .Values.metrics.service.annotations }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.service.annotations "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 spec:
@@ -40,11 +37,11 @@ spec:
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerClass)) }}
   loadBalancerClass: {{ .Values.service.loadBalancerClass }}
   {{- end }}
-  {{- if (and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP))) }}
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerSourceRanges)) }}
-  loadBalancerSourceRanges: {{ .Values.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{- toYaml .Values.service.loadBalancerSourceRanges | nindent 4 }}
   {{- end }}
   {{- if .Values.service.sessionAffinity }}
   sessionAffinity: {{ .Values.service.sessionAffinity }}
@@ -58,7 +55,7 @@ spec:
       protocol: UDP
       targetPort: {{ .Values.containerPorts.auth }}
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.auth) }}
-      nodePort: {{ coalesce .Values.service.nodePorts.auth .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePorts.auth }}
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
@@ -83,7 +80,7 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Values.tls.enabled }}
-    - name: tcp-radsec
+    - name: tls-radsec
       port: {{ .Values.service.ports.radsec }}
       protocol: TCP
       targetPort: {{ .Values.containerPorts.radsec }}
@@ -93,6 +90,24 @@ spec:
       nodePort: null
       {{- end }}
     {{- end }}
-  selector: {{ include "st-common.labels.matchLabels" . | nindent 4 }}
+    {{- /*
+    Status port is published whenever `sitesEnabled.status.enabled` is true
+    so the standalone metrics exporter Deployment can reach it through the
+    cluster Service. The NetworkPolicy locks down who can hit it.
+    */ -}}
+    {{- if .Values.sitesEnabled.status.enabled }}
+    - name: udp-status
+      port: {{ .Values.service.ports.status }}
+      protocol: UDP
+      targetPort: {{ .Values.containerPorts.status }}
+      {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) .Values.service.nodePorts.status) }}
+      nodePort: {{ .Values.service.nodePorts.status }}
+      {{- else if eq .Values.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- end }}
+    {{- if .Values.service.extraPorts }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.service.extraPorts "context" $) | nindent 4 }}
+    {{- end }}
+  selector: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
----

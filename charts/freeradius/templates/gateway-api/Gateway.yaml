@@ -1,0 +1,102 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.gateway.gateway.create -}}
+{{- if not (eq (include "st-common.capabilities.networkingGatewayGateway.apiVersion" .) "false") -}}
+{{- $primaryHostname := first .Values.gateway.hostnames -}}
+{{- /*
+Auto-derive `allowedRoutes.namespaces.from` for the chart-rendered listeners:
+  - Gateway in the same namespace as this app  → `Same` (no cross-namespace permission needed)
+  - Gateway in a different namespace           → `All`  (so the chart's routes in the app namespace can attach)
+*/ -}}
+{{- $appNs := include "st-common.names.namespace" . -}}
+{{- $gwNs := include "st-common.gateway.namespace" . -}}
+{{- $allowedFrom := ternary "Same" "All" (eq $gwNs $appNs) -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersion" . }}
+kind: Gateway
+metadata:
+  name: {{ include "st-common.gateway.fullname" . }}
+  namespace: {{ $gwNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  {{- if .Values.gateway.listeners }}
+  listeners: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listeners "context" $) | nindent 4 }}
+  {{- else }}
+  listeners:
+    - name: auth
+      port: {{ .Values.service.ports.auth | int }}
+      protocol: UDP
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: UDPRoute
+        namespaces:
+          from: {{ $allowedFrom }}
+    - name: acct
+      port: {{ .Values.service.ports.acct | int }}
+      protocol: UDP
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: UDPRoute
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- if .Values.sitesEnabled.coa.enabled }}
+    - name: coa
+      port: {{ .Values.service.ports.coa | int }}
+      protocol: UDP
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: UDPRoute
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- end }}
+    {{- /*
+    RADSEC TLS listener. When in-pod RADSEC is enabled (`tls.enabled`), the
+    listener does passthrough so the pod's leaf certificate terminates the
+    connection. Otherwise (gateway-side TLS termination via `gateway.tls.enabled`
+    with no in-pod TLS), terminate at the Gateway and forward plaintext RADIUS
+    to the pod — uncommon for RADIUS but supported for completeness.
+    */ -}}
+    {{- if .Values.tls.enabled }}
+    - name: radsec
+      port: {{ .Values.service.ports.radsec | int }}
+      protocol: TLS
+      {{- if $primaryHostname }}
+      hostname: {{ $primaryHostname | quote }}
+      {{- end }}
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: TLSRoute
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- else if .Values.gateway.tls.enabled }}
+    - name: radsec
+      port: {{ .Values.service.ports.radsec | int }}
+      protocol: TLS
+      {{- if $primaryHostname }}
+      hostname: {{ $primaryHostname | quote }}
+      {{- end }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: {{ include "freeradius.gateway.tlsSecretName" . }}
+      allowedRoutes:
+        namespaces:
+          from: {{ $allowedFrom }}
+    {{- end }}
+  {{- end }}
+{{- end -}}
+{{- end -}}
