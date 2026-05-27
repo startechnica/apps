@@ -2,12 +2,12 @@ annotations:
   category: AccessManagement
   artifacthub.io/images: |
     - name: freeradius
-      image: docker.io/freeradius/freeradius-server:3.2.7
+      image: docker.io/freeradius/freeradius-server:3.2.8
   artifacthub.io/changes: |
     - kind: changed
-      description: "1.0.0 major release — values.yaml restructured, TLS/cert-manager keys consolidated, gateway-api stack adapted for RADIUS (UDPRoute/TLSRoute); see CHANGELOG.md and README §Upgrading for migration."
+      description: "1.0.0 major release — values.yaml restructured, TLS/cert-manager keys consolidated, gateway-api stack adapted for RADIUS (UDPRoute/TLSRoute), bundled PostgreSQL subchart added alongside MariaDB; see CHANGELOG.md and README §Upgrading for migration."
 apiVersion: v2
-appVersion: 3.2.7
+appVersion: 3.2.8
 dependencies:
   - name: st-common
     repository: https://startechnica.github.io/apps
@@ -17,6 +17,10 @@ dependencies:
     condition: mariadb.enabled
     repository: oci://registry-1.docker.io/bitnamicharts
     version: 20.x.x
+  - name: postgresql
+    condition: postgresql.enabled
+    repository: oci://registry-1.docker.io/bitnamicharts
+    version: 16.x.x
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and
   distributed under the GNU General Public License, version 2, and is free for download and use.
 home: https://github.com/startechnica/apps/tree/main/charts/freeradius

@@ -7,7 +7,7 @@ service:
   externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
 
-modsEnabled:
+modules:
   sql:
     enabled: true
     dialect: mysql
@@ -20,7 +20,7 @@ externalDatabase:
   database: radiusdb
   password: "radius"
 
-sitesEnabled:
+sites:
   coa:
     enabled: true
   tls:

@@ -48,7 +48,7 @@ spec:
           namespace: {{ $svcNs | quote }}
           port: {{ .Values.service.ports.acct | int }}
           weight: 1
-{{- if .Values.sitesEnabled.coa.enabled }}
+{{- if .Values.sites.coa.enabled }}
 ---
 apiVersion: {{ $apiVersion }}
 kind: UDPRoute

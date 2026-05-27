@@ -47,7 +47,7 @@ spec:
             kind: UDPRoute
         namespaces:
           from: {{ $allowedFrom }}
-    {{- if .Values.sitesEnabled.coa.enabled }}
+    {{- if .Values.sites.coa.enabled }}
     - name: coa
       port: {{ .Values.service.ports.coa | int }}
       protocol: UDP

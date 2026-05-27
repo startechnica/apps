@@ -1,0 +1,10 @@
+# -*- text -*-
+##
+## modules/json -- JSON xlat module (rlm_json)
+##
+## Provides %{json_encode:...} / %{json_decode:...} / %{jpath_quote:...}
+## xlat expansions for working with JSON in policies and rlm_rest payloads.
+## No configurable knobs — loading the module is sufficient.
+##
+json {
+}

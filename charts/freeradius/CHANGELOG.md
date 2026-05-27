@@ -90,6 +90,7 @@ HPA template, and a long list of common template fixes.
   - `templates/metrics/Service.yaml` — exporter Service (`<fullname>-metrics`)
   - `templates/metrics/ServiceMonitor.yaml` — moved from top-level; selector now targets the exporter Service
   - `templates/metrics/PrometheusRule.yaml` — moved from top-level
+  - `templates/metrics/NetworkPolicy.yaml` — exporter-pod NetworkPolicy (Prometheus → 9812, exporter → FreeRADIUS status). The complementary ingress rule on the FreeRADIUS pods (allow `component: metrics` → status port) stays in the main `templates/NetworkPolicy.yaml`.
   New values: `metrics.{replicaCount,extraArgs,extraEnvVars,resources,
   containerSecurityContext,livenessProbe,readinessProbe,
   customLivenessProbe,customReadinessProbe,podAnnotations,podLabels,
@@ -97,19 +98,19 @@ HPA template, and a long list of common template fixes.
   service.{type,port,nodePort,clusterIP,loadBalancerIP,
   loadBalancerSourceRanges,annotations}}`. The exporter's
   `RADIUS_PASSWORD` is wired from the chart-managed `sites-status-secret`
-  automatically. Requires `sitesEnabled.status.enabled: true` — enforced by
+  automatically. Requires `sites.status.enabled: true` — enforced by
   a new `freeradius.validateValues` aggregator that calls `fail` during
   `helm install` / `helm upgrade` / `helm template` when the two flags are
   mismatched (the chart refuses to render rather than producing a
   non-functional exporter). The same aggregator also rejects
   `tls.enabled: true` without a configured cert source.
-- `sitesEnabled.status.listen` default changed from `127.0.0.1` to `0.0.0.0`
+- `sites.status.listen` default changed from `127.0.0.1` to `0.0.0.0`
   so the standalone metrics exporter pod can reach the status virtual
   server through the cluster Service. NetworkPolicy locks down who can
   hit the port either way — only RADIUS clients and the metrics exporter
   pod are allowed.
 - `service.ports.status` is now published on the main FreeRADIUS Service
-  whenever `sitesEnabled.status.enabled` is true (was previously only
+  whenever `sites.status.enabled` is true (was previously only
   bound on the pod's loopback interface, unreachable from other pods).
   `service.nodePorts.status` added for completeness.
 - A second `<fullname>-metrics` NetworkPolicy resource is rendered
@@ -128,6 +129,53 @@ HPA template, and a long list of common template fixes.
   `freeradius.tls.ca.{secretName,init}` helpers (single source of truth so
   the gateway listener and the gateway-tls Secret can never drift apart;
   UDPRoute and TLSRoute share parentRef defaulting).
+- **Bundled PostgreSQL subchart support.** New `postgresql:` block in
+  `values.yaml` mirroring the existing `mariadb:` block (same `auth.*` and
+  `architecture` shape), gated on `postgresql.enabled` via a new Chart.yaml
+  dependency on Bitnami `postgresql 16.x.x`. Enabling it requires
+  `modules.sql.dialect: postgresql`; the new
+  `freeradius.sql.backend.validate` aggregator rejects any other combination
+  (two subcharts at once, dialect/subchart mismatch, sqlite + subchart, no
+  backend at all). The PostgreSQL subchart's auth secret is wired in
+  automatically via the `freeradius.sql.secretName` / `secretKey` helpers
+  (key `password` for postgresql, `mariadb-password` for mariadb).
+- `freeradius.postgresql.fullname` helper, mirroring
+  `freeradius.mariadb.fullname` for the new subchart.
+- `modules.sql.{readGroups,readProfiles}` values, mirroring the existing
+  `readClients` knob. Both default to `true` (upstream rlm_sql default);
+  wired via `FREERADIUS_MODS_SQL_READ_GROUPS` / `FREERADIUS_MODS_SQL_READ_PROFILES`
+  into the previously-commented-out `read_groups` / `read_profiles`
+  directives in `files/modules/sql`.
+- **JSON xlat module support (rlm_json).** New `modules.json:` values
+  block (just `enabled: false`) and stub `files/modules/json`. When
+  enabled, the module exposes `%{json_encode:...}`, `%{json_decode:...}`,
+  and `%{jpath_quote:...}` xlat expansions for use in policies and
+  rlm_rest payloads. No other knobs — the module has no configurable state.
+- **PAM authentication module support (rlm_pam).** New `modules.pam:`
+  values block (`enabled`, `pamAuth`, default `radiusd`) and
+  `files/modules/pam` templated with `$ENV{FREERADIUS_MODS_PAM_AUTH}`.
+  The upstream image ships `/etc/pam.d/radiusd`; to use a custom PAM
+  service, override `pamAuth` AND mount the matching config via
+  `extraVolumes` / `extraVolumeMounts`. Virtual-server wiring
+  (`Auth-Type := PAM` in `authorize`, `pam` in `authenticate {}`) is the
+  user's responsibility.
+- **REST module support (rlm_rest).** New `modules.rest:` values block
+  and `files/modules/rest`, wired into the modules ConfigMap
+  when `modules.rest.enabled: true`. The chart pipes
+  `FREERADIUS_MODS_REST_*` env vars into the upstream module file via
+  `$ENV{}` placeholders covering the base URI, connect timeout, per-section
+  URI/method/body (authorize / authenticate / accounting / post-auth), HTTP
+  auth (none/basic/digest/bearer), and TLS verification toggles. A separate
+  TLS context (`modules.rest.tls.*`) signs an optional client-cert leaf
+  off the chart's shared CA — third TLS namespace alongside RADSEC and SQL,
+  mounted at `/opt/startechnica/freeradius/certs-rest/`. `auth != none`
+  pulls the password from `mods-rest-password` in the chart-managed
+  credentials Secret (length 32, auto-generated) unless
+  `modules.rest.existingSecret` is set. New
+  `freeradius.rest.{tls.{secretName,createSecret,certPath,certKeyPath,caCertPath},secretName,secretKey,validate}`
+  helpers. The validator rejects `enabled: true` without `connectUri`,
+  `auth != none` without a password source, `tls.enabled` without a cert
+  source, and unrecognised `auth` values.
 
 ### Changed
 
@@ -181,9 +229,43 @@ HPA template, and a long list of common template fixes.
 - **Bumped st-common dependency** to `0.1.21` (was `0.1.10`). Picks up the
   `networkingGatewayUDPRoute` and `networkingGatewayListenerSet` capability
   helpers, plus the `gateway.{fullname,namespace}` resource-name helpers.
+- **SQL connection helpers renamed**: `freeradius.mariadb.{host,port,name,user,secretName,secretKey}`
+  → `freeradius.sql.{host,port,name,user,secretName,secretKey}`. The new
+  helpers branch three ways on `mariadb.enabled` → `postgresql.enabled` →
+  `externalDatabase.*` (first match wins) and are wired into both the
+  envvars ConfigMap (`FREERADIUS_MODS_SQL_*`) and the `db-bootstrap` init
+  container. `freeradius.mariadb.fullname` is kept (still used internally to
+  resolve the MariaDB subchart's Service name and Secret name).
+- **`externalDatabase.port` default changed** from `3306` to `""`. The
+  `freeradius.sql.port` helper now picks a dialect-appropriate default
+  (`3306` for mysql, `5432` for postgresql) when the value is empty, so
+  postgresql users on external databases no longer have to flip an unrelated
+  knob. Any explicit `externalDatabase.port` value still wins.
 
 ### Removed (BREAKING — see Upgrading)
 
+- **`modsEnabled:` → `modules:`** (top-level Helm key). Every sub-key keeps
+  its existing shape — `sql`, `rest`, `json`, `pam` are unchanged. Related
+  chart-internal renames:
+  - Source directory `files/mods-available/` → `files/modules/`
+  - Template file `templates/configmap/mods-enabled.yaml` → `templates/configmap/modules.yaml`
+  - ConfigMap resource name `<release>-mods` → `<release>-modules`
+  - Pod volume name `freeradius-mods` → `freeradius-modules`
+  - Checksum annotation key `checksum/configmap-mods` → `checksum/configmap-modules`
+  - In-container mount path `/etc/freeradius/mods-enabled/<name>` is
+    unchanged (FreeRADIUS daemon convention); env var names like
+    `FREERADIUS_MODS_SQL_*` are unchanged (container-internal, would
+    double the rename surface for no gain).
+- **`sitesEnabled:` → `sites:`** (top-level Helm key). Every sub-key keeps
+  its existing shape — `coa`, `status`, `tls` are unchanged. Related
+  chart-internal renames:
+  - Source directory `files/sites-available/` → `files/sites/`
+  - Template file `templates/configmap/sites-enabled.yaml` → `templates/configmap/sites.yaml`
+  - K8s resource names (`<release>-sites` ConfigMap, `freeradius-sites`
+    volume, `checksum/configmap-sites` annotation) were already in the
+    short form and are unchanged.
+  - In-container mount path `/etc/freeradius/sites-enabled/<name>` is
+    unchanged (FreeRADIUS daemon convention).
 - `ingress.*` block (entire block) — FreeRADIUS doesn't speak HTTP. The
   `Certificate.yaml` template now derives `dnsNames` from `gateway.hostnames`
   and the Service FQDN; istio Gateway and VirtualService likewise consume
@@ -198,8 +280,8 @@ HPA template, and a long list of common template fixes.
   `gateway.gateway.{create,name,namespace}` (nested) and
   `gateway.implementation`.
 - `gateway.extraRoute` (unused).
-- `sitesEnabled.tls.enabled` (moved) — RADSEC enablement is now driven by
-  the top-level `tls.enabled` flag. `sitesEnabled.tls.{cipher,privateKeyPassword}`
+- `sites.tls.enabled` (moved) — RADSEC enablement is now driven by
+  the top-level `tls.enabled` flag. `sites.tls.{cipher,privateKeyPassword}`
   remain.
 - `metrics.prometheusRules` (renamed, plural) — renamed to
   `metrics.prometheusRule.*` (singular) to match the upstream
@@ -215,8 +297,8 @@ HPA template, and a long list of common template fixes.
 - `tls.existingSecretName` — use `tls.certificatesSecret`. The
   `freeradius.tls.secretName` helper falls back to `existingSecretName` so
   existing overrides keep working until the next major bump.
-- `modsEnabled.sql.tls.existingTlsSecret` — use
-  `modsEnabled.sql.tls.certificatesSecret`. Same fallback pattern as above.
+- `modules.sql.tls.existingTlsSecret` — use
+  `modules.sql.tls.certificatesSecret`. Same fallback pattern as above.
 
 ### Fixed
 
@@ -253,20 +335,20 @@ HPA template, and a long list of common template fixes.
 - configmap/clients.yaml: previously emitted the literal string `client`
   with no body. Now renders proper `client <name> { ... }` blocks from
   `.Values.clients`.
-- configmap/sites-enabled.yaml: gated the `tls` site on
-  `sitesEnabled.tls.enabled` even though the rest of the chart drives RADSEC
+- configmap/sites.yaml: gated the `tls` site on
+  `sites.tls.enabled` even though the rest of the chart drives RADSEC
   off `tls.enabled` (the in-pod TLS flag). Now correctly gated on
   `tls.enabled`.
 - **rlm_sql schema not loaded into the database**
   ([#67](https://github.com/startechnica/apps/issues/67)). `files/schema/mysql.sql`
   shipped with the chart but no template wired it into MariaDB or any other
   database. Now loaded by a new `db-bootstrap` init container on the
-  FreeRADIUS pod (gated on `modsEnabled.sql.enabled` and
-  `database.bootstrap.enabled`, default true). The schema is rendered into
+  FreeRADIUS pod (gated on `modules.sql.enabled` and
+  `bootstrap.database.enabled`, default true). The schema is rendered into
   a chart-managed `<fullname>-db-schema` ConfigMap by
   `templates/configmap/db-schema.yaml`, then mounted at `/schema/schema.sql`
   in the init container which waits for the DB to accept TCP connections
-  (`database.bootstrap.waitTimeout`, default 120s) before applying the
+  (`bootstrap.database.waitTimeout`, default 120s) before applying the
   schema via the dialect-appropriate CLI (`mysql` or `psql`). Idempotent —
   every shipped schema uses `CREATE TABLE IF NOT EXISTS`, so restarts are
   no-ops. Works with both `mariadb.enabled: true` and
@@ -275,7 +357,7 @@ HPA template, and a long list of common template fixes.
   the schema at first connect — the upstream image already ships that
   file). The chart now ships dialect-specific schema files at
   `files/schema/{mysql,postgresql,sqlite}.sql` covering every dialect
-  `modsEnabled.sql.dialect` accepts. PostgreSQL uses native `inet` / `cidr`
+  `modules.sql.dialect` accepts. PostgreSQL uses native `inet` / `cidr`
   types and partial indexes; SQLite uses `INTEGER PRIMARY KEY AUTOINCREMENT`
   and plain `TEXT` / `DATETIME` columns. The bootstrap-image helper
   auto-swaps `bitnami/mariadb:11` → `bitnami/postgresql:17` when
@@ -296,16 +378,15 @@ HPA template, and a long list of common template fixes.
 
 ### Added (companion changes for the two fixes above)
 
-- `database.bootstrap.{enabled,schemaConfigMap,image,resources,waitTimeout}`
+- `bootstrap.database.{enabled,schemaConfigMap,image,resources,waitTimeout}`
   values block. The default image is `docker.io/bitnami/mariadb:11`; the
-  `freeradius.database.bootstrap.image` helper auto-swaps to
-  `bitnami/postgresql:17` when `modsEnabled.sql.dialect: postgresql` AND
+  `freeradius.bootstrap.database.image` helper auto-swaps to
+  `bitnami/postgresql:17` when `modules.sql.dialect: postgresql` AND
   the repo is still on the chart default. Explicit user overrides always win.
-- `freeradius.database.schemaConfigMapName`, `freeradius.database.bootstrap.image`,
-  `freeradius.database.bootstrap.cmd` helpers. The `cmd` helper returns the
-  dialect-appropriate `mysql`/`psql` invocation, or an empty string for
-  sqlite (which is the sentinel that tells the Deployment to skip the init
-  container and ConfigMap altogether).
+- `freeradius.bootstrap.database.{schemaConfigMapName,image,cmd}` helpers.
+  The `cmd` helper returns the dialect-appropriate `mysql`/`psql`
+  invocation, or an empty string for sqlite (which is the sentinel that
+  tells the Deployment to skip the init container and ConfigMap altogether).
 - `templates/configmap/configuration.yaml` and
   `templates/configmap/db-schema.yaml`.
 - `files/schema/postgresql.sql` — PostgreSQL-dialect rlm_sql schema mirroring
@@ -314,13 +395,13 @@ HPA template, and a long list of common template fixes.
   indexes on optional accounting columns. Loaded by the `db-bootstrap` init
   container described above.
 - `files/schema/sqlite.sql` — SQLite-dialect rlm_sql schema covering the
-  third dialect listed in `modsEnabled.sql.dialect`. Not loaded by the
+  third dialect listed in `modules.sql.dialect`. Not loaded by the
   `db-bootstrap` init container (SQLite is a local file, not a network
   service) — instead, rlm_sql's own `bootstrap` directive at
-  `files/mods-available/sql` line 81 loads the schema on first open of an
+  `files/modules/sql` line 81 loads the schema on first open of an
   empty database file. Shipped for users who want to override the upstream
   image's bundled SQLite schema; wire it in via
-  `database.bootstrap.schemaConfigMap` + `extraVolumes` / `extraVolumeMounts`
+  `bootstrap.database.schemaConfigMap` + `extraVolumes` / `extraVolumeMounts`
   mounting over `/etc/freeradius/mods-config/sql/main/sqlite/schema.sql`.
 
 ## 1.0.3 (2026-05-02)

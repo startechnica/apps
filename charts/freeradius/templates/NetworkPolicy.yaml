@@ -43,7 +43,7 @@ spec:
           protocol: UDP
         - port: {{ .Values.containerPorts.acct }}
           protocol: UDP
-        {{- if .Values.sitesEnabled.coa.enabled }}
+        {{- if .Values.sites.coa.enabled }}
         - port: {{ .Values.containerPorts.coa }}
           protocol: UDP
         {{- end }}
@@ -81,7 +81,7 @@ spec:
           {{- include "st-common.tplvalues.render" (dict "value" .Values.networkPolicy.additionalRules "context" $) | nindent 8 }}
         {{- end }}
       {{- end }}
-    {{- if and .Values.metrics.enabled .Values.sitesEnabled.status.enabled }}
+    {{- if and .Values.metrics.enabled .Values.sites.status.enabled }}
     # Allow the metrics exporter Deployment to reach the RADIUS status port
     - ports:
         - port: {{ .Values.containerPorts.status }}
@@ -94,46 +94,4 @@ spec:
     {{- if .Values.networkPolicy.extraIngress }}
     {{- include "st-common.tplvalues.render" (dict "value" .Values.networkPolicy.extraIngress "context" $) | nindent 4 }}
     {{- end }}
-{{- end }}
-{{- if and .Values.networkPolicy.enabled .Values.metrics.enabled }}
----
-{{/* NetworkPolicy for the standalone exporter Deployment: allow Prometheus
-     to scrape the exporter's /metrics endpoint AND let the exporter egress
-     to the FreeRADIUS Service. */}}
-apiVersion: {{ include "st-common.capabilities.networkPolicy.apiVersion" . }}
-kind: NetworkPolicy
-metadata:
-  name: {{ include "freeradius.metrics.fullname" . }}
-  namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
-    app.kubernetes.io/component: metrics
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-  {{- end }}
-spec:
-  podSelector:
-    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
-      app.kubernetes.io/component: metrics
-  policyTypes:
-    - Ingress
-    - Egress
-  egress:
-    # DNS
-    - ports:
-        - port: 53
-          protocol: UDP
-        - port: 53
-          protocol: TCP
-    # Reach the FreeRADIUS status port over the cluster Service
-    - ports:
-        - port: {{ .Values.containerPorts.status }}
-          protocol: UDP
-      to:
-        - podSelector:
-            matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 14 }}
-              app.kubernetes.io/component: freeradius
-  ingress:
-    - ports:
-        - port: {{ .Values.containerPorts.metrics }}
-          protocol: TCP
 {{- end }}

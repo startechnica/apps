@@ -14,14 +14,14 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-{{ (.Files.Glob "files/sites-available/default").AsConfig | indent 2 }}
-{{ (.Files.Glob "files/sites-available/inner-tunnel").AsConfig | indent 2 }}
-{{- if .Values.sitesEnabled.coa.enabled }}
-{{ (.Files.Glob "files/sites-available/coa").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/sites/default").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/sites/inner-tunnel").AsConfig | indent 2 }}
+{{- if .Values.sites.coa.enabled }}
+{{ (.Files.Glob "files/sites/coa").AsConfig | indent 2 }}
 {{- end }}
-{{- if .Values.sitesEnabled.status.enabled }}
-{{ (.Files.Glob "files/sites-available/status").AsConfig | indent 2 }}
+{{- if .Values.sites.status.enabled }}
+{{ (.Files.Glob "files/sites/status").AsConfig | indent 2 }}
 {{- end }}
 {{- if .Values.tls.enabled }}
-{{ (.Files.Glob "files/sites-available/tls").AsConfig | indent 2 }}
+{{ (.Files.Glob "files/sites/tls").AsConfig | indent 2 }}
 {{- end }}

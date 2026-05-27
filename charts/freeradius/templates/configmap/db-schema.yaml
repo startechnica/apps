@@ -10,20 +10,20 @@ on the FreeRADIUS pod (see Deployment.yaml). The upstream schema files are
 shipped with the chart at `files/schema/{mysql,postgresql,sqlite}.sql`.
 
 Skipped when:
-  - SQL backend is disabled (`modsEnabled.sql.enabled: false`)
-  - the bootstrap mechanism is turned off (`database.bootstrap.enabled: false`)
-  - the user is bringing their own schema ConfigMap (`database.bootstrap.schemaConfigMap`)
+  - SQL backend is disabled (`modules.sql.enabled: false`)
+  - the bootstrap mechanism is turned off (`bootstrap.database.enabled: false`)
+  - the user is bringing their own schema ConfigMap (`bootstrap.database.schemaConfigMap`)
   - the dialect's schema file doesn't ship with the chart (e.g. sqlite is
     bootstrapped by the SQLite driver itself at first write, so no separate
     schema load is needed)
 */}}
-{{- $dialect := .Values.modsEnabled.sql.dialect -}}
+{{- $dialect := .Values.modules.sql.dialect -}}
 {{- $schemaPath := printf "files/schema/%s.sql" $dialect -}}
-{{- if and .Values.modsEnabled.sql.enabled .Values.database.bootstrap.enabled (not .Values.database.bootstrap.schemaConfigMap) (.Files.Glob $schemaPath) }}
+{{- if and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (not .Values.bootstrap.database.schemaConfigMap) (.Files.Glob $schemaPath) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "freeradius.database.schemaConfigMapName" . }}
+  name: {{ include "freeradius.bootstrap.database.schemaConfigMapName" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius

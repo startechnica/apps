@@ -68,7 +68,7 @@ spec:
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- if .Values.sitesEnabled.coa.enabled }}
+    {{- if .Values.sites.coa.enabled }}
     - name: udp-coa
       port: {{ .Values.service.ports.coa }}
       protocol: UDP
@@ -91,11 +91,11 @@ spec:
       {{- end }}
     {{- end }}
     {{- /*
-    Status port is published whenever `sitesEnabled.status.enabled` is true
+    Status port is published whenever `sites.status.enabled` is true
     so the standalone metrics exporter Deployment can reach it through the
     cluster Service. The NetworkPolicy locks down who can hit it.
     */ -}}
-    {{- if .Values.sitesEnabled.status.enabled }}
+    {{- if .Values.sites.status.enabled }}
     - name: udp-status
       port: {{ .Values.service.ports.status }}
       protocol: UDP

@@ -22,53 +22,93 @@ data:
   FREERADIUS_CLIENTS_IPV6ADDR: ""
   FREERADIUS_CLIENTS_SECRET: ""
 
-  {{- if .Values.modsEnabled.sql.enabled }}
-  FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modsEnabled.sql.dialect }}
-  FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.mariadb.host" . | quote }}
-  FREERADIUS_MODS_SQL_PORT: {{ include "freeradius.mariadb.port" . }}
-  FREERADIUS_MODS_SQL_LOGIN: {{ include "freeradius.mariadb.user" . | quote }}
-  FREERADIUS_MODS_SQL_DB: {{ include "freeradius.mariadb.name" . | quote }}
-  FREERADIUS_MODS_SQL_TABLE_ACCT1: {{ .Values.modsEnabled.sql.table.acct1 }}
-  FREERADIUS_MODS_SQL_TABLE_ACCT2: {{ .Values.modsEnabled.sql.table.acct2 }}
-  FREERADIUS_MODS_SQL_TABLE_AUTHCHECK: {{ .Values.modsEnabled.sql.table.authcheck }}
-  FREERADIUS_MODS_SQL_TABLE_AUTHREPLY: {{ .Values.modsEnabled.sql.table.authreply }}
-  FREERADIUS_MODS_SQL_TABLE_CLIENT: {{ .Values.modsEnabled.sql.table.client }}
-  FREERADIUS_MODS_SQL_TABLE_GROUPCHECK: {{ .Values.modsEnabled.sql.table.groupcheck }}
-  FREERADIUS_MODS_SQL_TABLE_GROUPREPLY: {{ .Values.modsEnabled.sql.table.groupreply }}
-  FREERADIUS_MODS_SQL_TABLE_POSTAUTH: {{ .Values.modsEnabled.sql.table.postauth }}
-  FREERADIUS_MODS_SQL_TABLE_USERGROUP: {{ .Values.modsEnabled.sql.table.usergroup }}
-  FREERADIUS_MODS_SQL_TLS_ENABLE: {{ ternary "yes" "no" .Values.modsEnabled.sql.tls.enabled | quote }}
+  {{- if .Values.modules.sql.enabled }}
+  FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modules.sql.dialect }}
+  FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.sql.host" . | quote }}
+  FREERADIUS_MODS_SQL_PORT: {{ include "freeradius.sql.port" . }}
+  FREERADIUS_MODS_SQL_LOGIN: {{ include "freeradius.sql.user" . | quote }}
+  FREERADIUS_MODS_SQL_DB: {{ include "freeradius.sql.name" . | quote }}
+  FREERADIUS_MODS_SQL_TABLE_ACCT1: {{ .Values.modules.sql.table.acct1 }}
+  FREERADIUS_MODS_SQL_TABLE_ACCT2: {{ .Values.modules.sql.table.acct2 }}
+  FREERADIUS_MODS_SQL_TABLE_AUTHCHECK: {{ .Values.modules.sql.table.authcheck }}
+  FREERADIUS_MODS_SQL_TABLE_AUTHREPLY: {{ .Values.modules.sql.table.authreply }}
+  FREERADIUS_MODS_SQL_TABLE_CLIENT: {{ .Values.modules.sql.table.client }}
+  FREERADIUS_MODS_SQL_TABLE_GROUPCHECK: {{ .Values.modules.sql.table.groupcheck }}
+  FREERADIUS_MODS_SQL_TABLE_GROUPREPLY: {{ .Values.modules.sql.table.groupreply }}
+  FREERADIUS_MODS_SQL_TABLE_POSTAUTH: {{ .Values.modules.sql.table.postauth }}
+  FREERADIUS_MODS_SQL_TABLE_USERGROUP: {{ .Values.modules.sql.table.usergroup }}
+  FREERADIUS_MODS_SQL_TLS_ENABLE: {{ ternary "yes" "no" .Values.modules.sql.tls.enabled | quote }}
 
-  FREERADIUS_MODS_SQL_READ_CLIENTS: {{ ternary "yes" "no" .Values.modsEnabled.sql.readClients | quote }}
-  FREERADIUS_MODS_SQL_GROUP_ATTRIBUTE: {{ .Values.modsEnabled.sql.groupAttribute | quote }}
+  FREERADIUS_MODS_SQL_READ_CLIENTS: {{ ternary "yes" "no" .Values.modules.sql.readClients | quote }}
+  FREERADIUS_MODS_SQL_READ_GROUPS: {{ ternary "yes" "no" .Values.modules.sql.readGroups | quote }}
+  FREERADIUS_MODS_SQL_READ_PROFILES: {{ ternary "yes" "no" .Values.modules.sql.readProfiles | quote }}
+  FREERADIUS_MODS_SQL_GROUP_ATTRIBUTE: {{ .Values.modules.sql.groupAttribute | quote }}
 
-  FREERADIUS_MODS_SQL_SQLITE_FILENAME: {{ .Values.modsEnabled.sql.sqlite.filename | quote }}
-  FREERADIUS_MODS_SQL_SQLITE_BUSY_TIMEOUT: {{ .Values.modsEnabled.sql.sqlite.busyTimeout | quote }}
+  FREERADIUS_MODS_SQL_SQLITE_FILENAME: {{ .Values.modules.sql.sqlite.filename | quote }}
+  FREERADIUS_MODS_SQL_SQLITE_BUSY_TIMEOUT: {{ .Values.modules.sql.sqlite.busyTimeout | quote }}
 
-  {{- if .Values.modsEnabled.sql.tls.enabled }}
+  {{- if .Values.modules.sql.tls.enabled }}
   FREERADIUS_MODS_SQL_TLS_CACERT: {{ include "freeradius.sql.tls.caCertPath" . | quote }}
-  FREERADIUS_MODS_SQL_TLS_CIPHER: {{ .Values.modsEnabled.sql.tls.ciphers | quote }}
+  FREERADIUS_MODS_SQL_TLS_CIPHER: {{ .Values.modules.sql.tls.ciphers | quote }}
   FREERADIUS_MODS_SQL_TLS_CERTIFICATE: {{ include "freeradius.sql.tls.certPath" . | quote }}
   FREERADIUS_MODS_SQL_TLS_PRIVATEKEY: {{ include "freeradius.sql.tls.certKeyPath" . | quote }}
   {{- end }}
+  {{- end }}
+
+  {{- if .Values.modules.rest.enabled }}
+  FREERADIUS_MODS_REST_CONNECT_URI: {{ .Values.modules.rest.connectUri | quote }}
+  FREERADIUS_MODS_REST_CONNECT_TIMEOUT: {{ .Values.modules.rest.connectTimeout | quote }}
+  FREERADIUS_MODS_REST_AUTH: {{ .Values.modules.rest.auth | quote }}
+  FREERADIUS_MODS_REST_USERNAME: {{ .Values.modules.rest.username | quote }}
+  ## Empty-string fallback so the rlm_rest `$ENV{FREERADIUS_MODS_REST_PASSWORD}`
+  ## substitution always resolves. When `rest.auth != none`, the Deployment
+  ## overrides this with a `secretKeyRef` (explicit `env:` entries take
+  ## precedence over `envFrom`), pulling the real credential from the Secret.
+  FREERADIUS_MODS_REST_PASSWORD: ""
+
+  FREERADIUS_MODS_REST_AUTHORIZE_URI: {{ .Values.modules.rest.authorize.uri | quote }}
+  FREERADIUS_MODS_REST_AUTHORIZE_METHOD: {{ .Values.modules.rest.authorize.method | quote }}
+  FREERADIUS_MODS_REST_AUTHORIZE_BODY: {{ .Values.modules.rest.authorize.body | quote }}
+
+  FREERADIUS_MODS_REST_AUTHENTICATE_URI: {{ .Values.modules.rest.authenticate.uri | quote }}
+  FREERADIUS_MODS_REST_AUTHENTICATE_METHOD: {{ .Values.modules.rest.authenticate.method | quote }}
+  FREERADIUS_MODS_REST_AUTHENTICATE_BODY: {{ .Values.modules.rest.authenticate.body | quote }}
+
+  FREERADIUS_MODS_REST_ACCOUNTING_URI: {{ .Values.modules.rest.accounting.uri | quote }}
+  FREERADIUS_MODS_REST_ACCOUNTING_METHOD: {{ .Values.modules.rest.accounting.method | quote }}
+  FREERADIUS_MODS_REST_ACCOUNTING_BODY: {{ .Values.modules.rest.accounting.body | quote }}
+
+  FREERADIUS_MODS_REST_POSTAUTH_URI: {{ .Values.modules.rest.postAuth.uri | quote }}
+  FREERADIUS_MODS_REST_POSTAUTH_METHOD: {{ .Values.modules.rest.postAuth.method | quote }}
+  FREERADIUS_MODS_REST_POSTAUTH_BODY: {{ .Values.modules.rest.postAuth.body | quote }}
+
+  FREERADIUS_MODS_REST_TLS_CA_FILE: {{ include "freeradius.rest.tls.caCertPath" . | quote }}
+  FREERADIUS_MODS_REST_TLS_CERTIFICATE_FILE: {{ include "freeradius.rest.tls.certPath" . | quote }}
+  FREERADIUS_MODS_REST_TLS_PRIVATEKEY_FILE: {{ include "freeradius.rest.tls.certKeyPath" . | quote }}
+  FREERADIUS_MODS_REST_TLS_CHECK_CERT: {{ ternary "yes" "no" .Values.modules.rest.tls.checkCert | quote }}
+  FREERADIUS_MODS_REST_TLS_CHECK_CERT_CN: {{ ternary "yes" "no" .Values.modules.rest.tls.checkCertCN | quote }}
+  {{- end }}
+
+  {{- if .Values.modules.pam.enabled }}
+  FREERADIUS_MODS_PAM_AUTH: {{ .Values.modules.pam.pamAuth | quote }}
   {{- end }}
 
   FREERADIUS_SITES_NAMESPACE: radius
 
   FREERADIUS_SITES_DEFAULT_AUTH_PORT: {{ .Values.containerPorts.auth | quote }}
   FREERADIUS_SITES_DEFAULT_ACCT_PORT: {{ .Values.containerPorts.acct | quote }}
-  {{- if .Values.sitesEnabled.coa.enabled }}
+  {{- if .Values.sites.coa.enabled }}
   FREERADIUS_SITES_COA_PORT: {{ .Values.containerPorts.coa | quote }}
   {{- end }}
-  {{- if .Values.sitesEnabled.status.enabled }}
-  FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sitesEnabled.status.listen | quote }}
+  {{- if .Values.sites.status.enabled }}
+  FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sites.status.listen | quote }}
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
   {{- end }}
   {{- if .Values.tls.enabled }}
   FREERADIUS_SITES_TLS_PORT: {{ .Values.containerPorts.radsec | quote }}
   FREERADIUS_SITES_TLS_CA_FILE: {{ include "freeradius.tls.caCertPath" . | quote }}
   FREERADIUS_SITES_TLS_CERTIFICATE_FILE: {{ include "freeradius.tls.certPath" . | quote }}
-  FREERADIUS_SITES_TLS_CIPHER: {{ default "DEFAULT" .Values.sitesEnabled.tls.cipher | quote }}
+  FREERADIUS_SITES_TLS_CIPHER: {{ default "DEFAULT" .Values.sites.tls.cipher | quote }}
   FREERADIUS_SITES_TLS_PRIVKEY_FILE: {{ include "freeradius.tls.certKeyPath" . | quote }}
   {{- end }}
 {{- end }}

@@ -15,7 +15,7 @@
 --
 --   Instead, FreeRADIUS's rlm_sql driver loads it natively via the
 --   `bootstrap` directive on first open of an empty database file. See
---   `files/mods-available/sql` line 81:
+--   `files/modules/sql` line 81:
 --       bootstrap = "${modconfdir}/${..:name}/main/sqlite/schema.sql"
 --   `${modconfdir}` resolves to `/etc/freeradius/mods-config`, so the
 --   upstream image's bundled schema at
@@ -24,7 +24,7 @@
 --
 --   This file is shipped for users who want to override that upstream
 --   schema (e.g. extra columns / indexes) — set
---   `database.bootstrap.schemaConfigMap` to a ConfigMap whose `schema.sql`
+--   `bootstrap.database.schemaConfigMap` to a ConfigMap whose `schema.sql`
 --   key holds this content, then mount it over the upstream path via
 --   `extraVolumes` / `extraVolumeMounts`.
 -- ---------------------------------------------------------------------------

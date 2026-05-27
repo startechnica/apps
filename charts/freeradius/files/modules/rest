@@ -1,0 +1,110 @@
+# -*- text -*-
+##
+## modules/rest -- REST API module (rlm_rest)
+##
+## Talks HTTP/HTTPS to a remote REST endpoint during the matching
+## virtual-server section. Per-section blocks (authorize, authenticate,
+## accounting, post-auth) only actually fire when the corresponding
+## sites-enabled/* config calls `rest`.
+##
+
+rest {
+	#
+	#  Base URI for all per-section requests. Per-section `uri` directives are
+	#  concatenated to this value (e.g. ${..connect_uri}/authorize).
+	#
+	connect_uri = "$ENV{FREERADIUS_MODS_REST_CONNECT_URI}"
+
+	#
+	#  TCP connect timeout (seconds; floats accepted).
+	#
+	connect_timeout = $ENV{FREERADIUS_MODS_REST_CONNECT_TIMEOUT}
+
+	#
+	#  TLS for HTTPS `connect_uri`. Empty `ca_file` / `certificate_file` /
+	#  `private_key_file` leave the corresponding curl/openssl default in place
+	#  (system CA bundle; no client certificate). `check_cert` / `check_cert_cn`
+	#  toggle server certificate verification — keep them at `yes` in production.
+	#
+	tls {
+		ca_file = "$ENV{FREERADIUS_MODS_REST_TLS_CA_FILE}"
+		certificate_file = "$ENV{FREERADIUS_MODS_REST_TLS_CERTIFICATE_FILE}"
+		private_key_file = "$ENV{FREERADIUS_MODS_REST_TLS_PRIVATEKEY_FILE}"
+		check_cert = $ENV{FREERADIUS_MODS_REST_TLS_CHECK_CERT}
+		check_cert_cn = $ENV{FREERADIUS_MODS_REST_TLS_CHECK_CERT_CN}
+	}
+
+	#
+	#  authorize {} — invoked by sites-enabled/* `authorize { rest }`.
+	#  Typical pattern: GET /authorize?username=...; the API returns RADIUS
+	#  control/reply attributes (FreeRADIUS-style JSON dict) that get merged
+	#  into the request.
+	#
+	authorize {
+		uri = "${..connect_uri}$ENV{FREERADIUS_MODS_REST_AUTHORIZE_URI}"
+		method = "$ENV{FREERADIUS_MODS_REST_AUTHORIZE_METHOD}"
+		body = "$ENV{FREERADIUS_MODS_REST_AUTHORIZE_BODY}"
+		auth = "$ENV{FREERADIUS_MODS_REST_AUTH}"
+		username = "$ENV{FREERADIUS_MODS_REST_USERNAME}"
+		password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+		tls = ${..tls}
+	}
+
+	#
+	#  authenticate {} — invoked by sites-enabled/* `authenticate { rest }`.
+	#  Use `Auth-Type := REST` in the authorize block to route auth here.
+	#
+	authenticate {
+		uri = "${..connect_uri}$ENV{FREERADIUS_MODS_REST_AUTHENTICATE_URI}"
+		method = "$ENV{FREERADIUS_MODS_REST_AUTHENTICATE_METHOD}"
+		body = "$ENV{FREERADIUS_MODS_REST_AUTHENTICATE_BODY}"
+		auth = "$ENV{FREERADIUS_MODS_REST_AUTH}"
+		username = "$ENV{FREERADIUS_MODS_REST_USERNAME}"
+		password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+		tls = ${..tls}
+	}
+
+	#
+	#  accounting {} — invoked by sites-enabled/* `accounting { rest }`.
+	#  Typical pattern: POST /accounting with the full request attribute set.
+	#
+	accounting {
+		uri = "${..connect_uri}$ENV{FREERADIUS_MODS_REST_ACCOUNTING_URI}"
+		method = "$ENV{FREERADIUS_MODS_REST_ACCOUNTING_METHOD}"
+		body = "$ENV{FREERADIUS_MODS_REST_ACCOUNTING_BODY}"
+		auth = "$ENV{FREERADIUS_MODS_REST_AUTH}"
+		username = "$ENV{FREERADIUS_MODS_REST_USERNAME}"
+		password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+		tls = ${..tls}
+	}
+
+	#
+	#  post-auth {} — invoked by sites-enabled/* `post-auth { rest }`.
+	#  Fires after authorization succeeds; useful for audit-trail webhooks.
+	#
+	post-auth {
+		uri = "${..connect_uri}$ENV{FREERADIUS_MODS_REST_POSTAUTH_URI}"
+		method = "$ENV{FREERADIUS_MODS_REST_POSTAUTH_METHOD}"
+		body = "$ENV{FREERADIUS_MODS_REST_POSTAUTH_BODY}"
+		auth = "$ENV{FREERADIUS_MODS_REST_AUTH}"
+		username = "$ENV{FREERADIUS_MODS_REST_USERNAME}"
+		password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+		tls = ${..tls}
+	}
+
+	#
+	#  Connection pool (HTTP keepalive). Sized off the FreeRADIUS thread pool
+	#  to match the worker model; for low-traffic deployments these can be
+	#  reduced via a custom modules file.
+	#
+	pool {
+		start = ${thread[pool].start_servers}
+		min = ${thread[pool].min_spare_servers}
+		max = ${thread[pool].max_servers}
+		spare = ${thread[pool].max_spare_servers}
+		uses = 0
+		retry_delay = 30
+		lifetime = 0
+		idle_timeout = 60
+	}
+}

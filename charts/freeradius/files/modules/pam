@@ -1,0 +1,20 @@
+# -*- text -*-
+##
+## modules/pam -- PAM authentication module (rlm_pam)
+##
+## Hands authentication off to Linux PAM. Requires:
+##   - rlm_pam.so present in the FreeRADIUS image (upstream
+##     `freeradius/freeradius-server` ships it on the standard variant).
+##   - A PAM service config at `/etc/pam.d/${pam_auth}` inside the container
+##     (the upstream image ships `/etc/pam.d/radiusd` by default). To use a
+##     custom service name, override `modules.pam.pamAuth` AND mount
+##     a PAM config file via `extraVolumes` / `extraVolumeMounts`.
+##   - Virtual server wiring: set `Auth-Type := PAM` in the `authorize`
+##     section, and add `pam` to the `authenticate {}` block.
+##
+pam {
+	#  The name to use for PAM authentication.
+	#  PAM looks in /etc/pam.d/${pam_auth} for its configuration.
+	#  A Pam-Auth attribute set in the `authorize` section overrides this.
+	pam_auth = "$ENV{FREERADIUS_MODS_PAM_AUTH}"
+}

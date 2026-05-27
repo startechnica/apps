@@ -1,0 +1,56 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+NetworkPolicy for the standalone exporter Deployment:
+  - Ingress: allow Prometheus (or anything) to scrape the exporter's
+    /metrics endpoint on `containerPorts.metrics`.
+  - Egress:  DNS, plus the FreeRADIUS `status` UDP port on the
+    FreeRADIUS pods so the exporter can pull counters from the
+    cluster Service.
+
+The complementary ingress rule on the FreeRADIUS pods themselves (which
+opens the status port to pods labelled `component: metrics`) lives in
+`templates/NetworkPolicy.yaml` — that's a rule about the FreeRADIUS pod,
+not the exporter pod, so it belongs on the FreeRADIUS-pod policy.
+*/}}
+{{- if and .Values.networkPolicy.enabled .Values.metrics.enabled }}
+apiVersion: {{ include "st-common.capabilities.networkPolicy.apiVersion" . }}
+kind: NetworkPolicy
+metadata:
+  name: {{ include "freeradius.metrics.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
+      app.kubernetes.io/component: metrics
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # DNS
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Reach the FreeRADIUS status port over the cluster Service
+    - ports:
+        - port: {{ .Values.containerPorts.status }}
+          protocol: UDP
+      to:
+        - podSelector:
+            matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 14 }}
+              app.kubernetes.io/component: freeradius
+  ingress:
+    - ports:
+        - port: {{ .Values.containerPorts.metrics }}
+          protocol: TCP
+{{- end }}

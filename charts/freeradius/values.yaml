@@ -103,7 +103,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: freeradius/freeradius-server
-  tag: "3.2.7"
+  tag: "3.2.8"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -173,33 +173,35 @@ extraEnvVarsCM: ""
 ##
 extraEnvVarsSecret: ""
 
-## FreeRADIUS `mods-enabled` configuration. Each sub-block toggles the matching
-## upstream module under `/etc/freeradius/mods-enabled/`. The chart-rendered
-## ConfigMap (`templates/configmap/mods-enabled.yaml`) materialises the module
-## files from `files/mods-available/<name>`.
+## Module enablement. Each sub-block toggles a matching FreeRADIUS module.
+## The chart-rendered ConfigMap (`templates/configmap/modules.yaml`)
+## materialises per-module config files from `files/modules/<name>` and
+## mounts them at `/etc/freeradius/mods-enabled/<name>` inside the container
+## so the upstream daemon picks them up.
 ##
-modsEnabled:
+modules:
   ## SQL backend for clients/users/accounting. When enabled, the chart
   ## populates `FREERADIUS_MODS_SQL_*` env vars from the database connection
-  ## (`mariadb.*` or `externalDatabase.*`) and mounts the rendered `sql` module
-  ## file into the pod.
+  ## (the matching bundled subchart — `mariadb.*` for mysql, `postgresql.*` for
+  ## postgresql — or `externalDatabase.*` when no subchart is enabled) and
+  ## mounts the rendered `sql` module file into the pod.
   ##
   sql:
-    ## @param modsEnabled.sql.enabled Enable the FreeRADIUS SQL module
+    ## @param modules.sql.enabled Enable the FreeRADIUS SQL module
     ##
     enabled: true
-    ## @param modsEnabled.sql.dialect SQL dialect understood by the rlm_sql driver. Allowed: `mysql`, `postgresql`, `sqlite`.
+    ## @param modules.sql.dialect SQL dialect understood by the rlm_sql driver. Allowed: `mysql`, `postgresql`, `sqlite`. Must match whichever bundled subchart is enabled (`mariadb.enabled` ↔ `mysql`, `postgresql.enabled` ↔ `postgresql`); the chart's hard validator rejects mismatches.
     ##
     dialect: mysql
-    ## @param modsEnabled.sql.table.acct1 Table containing accounting items (start records)
-    ## @param modsEnabled.sql.table.acct2 Table containing accounting items (stop records)
-    ## @param modsEnabled.sql.table.authcheck Table containing `check` items
-    ## @param modsEnabled.sql.table.authreply Table containing `reply` items
-    ## @param modsEnabled.sql.table.client Table holding RADIUS client/NAS info
-    ## @param modsEnabled.sql.table.groupcheck Table containing group `check` items
-    ## @param modsEnabled.sql.table.groupreply Table containing group `reply` items
-    ## @param modsEnabled.sql.table.postauth Table for post-auth storage
-    ## @param modsEnabled.sql.table.usergroup Table mapping users to groups
+    ## @param modules.sql.table.acct1 Table containing accounting items (start records)
+    ## @param modules.sql.table.acct2 Table containing accounting items (stop records)
+    ## @param modules.sql.table.authcheck Table containing `check` items
+    ## @param modules.sql.table.authreply Table containing `reply` items
+    ## @param modules.sql.table.client Table holding RADIUS client/NAS info
+    ## @param modules.sql.table.groupcheck Table containing group `check` items
+    ## @param modules.sql.table.groupreply Table containing group `reply` items
+    ## @param modules.sql.table.postauth Table for post-auth storage
+    ## @param modules.sql.table.usergroup Table mapping users to groups
     ##
     table:
       acct1: radacct
@@ -211,25 +213,31 @@ modsEnabled:
       groupreply: radgroupreply
       postauth: radpostauth
       usergroup: radusergroup
-    ## @param modsEnabled.sql.groupAttribute The group attribute specific to this instance of rlm_sql
+    ## @param modules.sql.groupAttribute The group attribute specific to this instance of rlm_sql
     ##
     groupAttribute: SQL-Group
-    ## @param modsEnabled.sql.readClients Read RADIUS clients from the database (`nas` table)
+    ## @param modules.sql.readClients Read RADIUS clients from the database (`nas` table). Clients are only read on server startup.
     ##
     readClients: true
+    ## @param modules.sql.readGroups Read the group tables (`groupcheck`/`groupreply`) during authorization. When `true`, group tables are read unless `Fall-Through = no` is set in the reply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
+    ##
+    readGroups: true
+    ## @param modules.sql.readProfiles Read user profiles during authorization. When `true`, profiles are read unless `Fall-Through = no` is set in the groupreply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
+    ##
+    readProfiles: true
     ## TLS configuration for the SQL connection itself. Independent of the
     ## in-pod RADSEC TLS (see top-level `tls:` block) and of cert-manager (see
     ## `tls.certManager.*`).
     ##
-    ## @param modsEnabled.sql.tls.enabled Enable TLS for the SQL backend connection
-    ## @param modsEnabled.sql.tls.ciphers TLS cipher list passed to the SQL driver (empty leaves the driver default)
-    ## @param modsEnabled.sql.tls.autoGenerated Generate a self-signed TLS Secret for the SQL connection (`<fullname>-sql-tls`)
-    ## @param modsEnabled.sql.tls.certificatesSecret Name of an existing Secret holding `tls.crt` / `tls.key` / `ca.crt` for the SQL connection. Skips auto-generation when set.
-    ## @param modsEnabled.sql.tls.certFilename Override filename of the leaf certificate inside the mounted Secret
-    ## @param modsEnabled.sql.tls.certKeyFilename Override filename of the leaf key inside the mounted Secret
-    ## @param modsEnabled.sql.tls.certCAFilename Override filename of the CA certificate inside the mounted Secret
-    ## @param modsEnabled.sql.tls.existingTlsSecret [DEPRECATED — use `modsEnabled.sql.tls.certificatesSecret`] Legacy alias retained for backwards compatibility. Slated for removal in the next major bump.
-    ## @param modsEnabled.sql.tls.privateKeyPassword Password for the SQL leaf key when it is password-protected
+    ## @param modules.sql.tls.enabled Enable TLS for the SQL backend connection
+    ## @param modules.sql.tls.ciphers TLS cipher list passed to the SQL driver (empty leaves the driver default)
+    ## @param modules.sql.tls.autoGenerated Generate a self-signed TLS Secret for the SQL connection (`<fullname>-sql-tls`)
+    ## @param modules.sql.tls.certificatesSecret Name of an existing Secret holding `tls.crt` / `tls.key` / `ca.crt` for the SQL connection. Skips auto-generation when set.
+    ## @param modules.sql.tls.certFilename Override filename of the leaf certificate inside the mounted Secret
+    ## @param modules.sql.tls.certKeyFilename Override filename of the leaf key inside the mounted Secret
+    ## @param modules.sql.tls.certCAFilename Override filename of the CA certificate inside the mounted Secret
+    ## @param modules.sql.tls.existingTlsSecret [DEPRECATED — use `modules.sql.tls.certificatesSecret`] Legacy alias retained for backwards compatibility. Slated for removal in the next major bump.
+    ## @param modules.sql.tls.privateKeyPassword Password for the SQL leaf key when it is password-protected
     ##
     tls:
       enabled: false
@@ -241,20 +249,152 @@ modsEnabled:
       certCAFilename: ""
       existingTlsSecret: ""
       privateKeyPassword: whatever
-    ## SQLite-specific knobs, used when `modsEnabled.sql.dialect: sqlite`.
-    ## @param modsEnabled.sql.sqlite.filename Path inside the container where the SQLite database file lives
-    ## @param modsEnabled.sql.sqlite.busyTimeout SQLite `busy_timeout` (milliseconds)
+    ## SQLite-specific knobs, used when `modules.sql.dialect: sqlite`.
+    ## @param modules.sql.sqlite.filename Path inside the container where the SQLite database file lives
+    ## @param modules.sql.sqlite.busyTimeout SQLite `busy_timeout` (milliseconds)
     ##
     sqlite:
       filename: /startechnica/freeradius/freeradius.db
       busyTimeout: "200"
 
-## FreeRADIUS `sites-enabled` configuration. Toggles the matching virtual
-## servers under `/etc/freeradius/sites-enabled/`. Each block also wires the
-## corresponding container port / Service port / NetworkPolicy entry.
+  ## REST backend (rlm_rest). When enabled, the chart drops
+  ## `files/modules/rest` into the modules ConfigMap and wires the
+  ## values below into the upstream module file via `$ENV{}` placeholders.
+  ## Use the module to consult an HTTP/HTTPS API during the authorize /
+  ## authenticate / accounting / post-auth virtual-server sections — each
+  ## section only actually fires when the matching `sites-enabled/*` config
+  ## lists `rest` in its block.
+  ##
+  ## Egress NetworkPolicy: when `networkPolicy.enabled: true` AND
+  ## `networkPolicy.allowExternalEgress: false`, add an explicit rule under
+  ## `networkPolicy.extraEgress` so the pod can reach `connectUri`.
+  ##
+  rest:
+    ## @param modules.rest.enabled Enable the FreeRADIUS REST module.
+    ##
+    enabled: false
+    ## @param modules.rest.connectUri Base URI all per-section URIs are joined against (e.g. `https://api.example.com/radius`). Required when `enabled: true`.
+    ##
+    connectUri: ""
+    ## @param modules.rest.connectTimeout TCP connect timeout in seconds (floats accepted).
+    ##
+    connectTimeout: "4.0"
+    ## HTTP authentication applied to ALL per-section blocks (the same
+    ## credentials are sent on every request). For per-section credentials,
+    ## supply a custom `modules/rest` via `extraVolumes` /
+    ## `extraVolumeMounts`.
+    ##
+    ## @param modules.rest.auth HTTP auth method. Allowed: `none`, `basic`, `digest`, `bearer`. When set to anything 
+    ##   other than `none`, the chart wires `FREERADIUS_MODS_REST_PASSWORD` from a Secret.
+    ## @param modules.rest.username Username for `basic`/`digest` auth. For `bearer`, leave empty (the token is the password).
+    ## @param modules.rest.password Password (or bearer token) sent on every request. Auto-generated to a chart-managed value when empty AND `auth != none` AND no `existingSecret` is set.
+    ## @param modules.rest.existingSecret Name of an existing Secret holding the REST password. Overrides chart-managed Secret rendering.
+    ## @param modules.rest.existingSecretPasswordKey Key inside `existingSecret` that holds the password (defaults to `mods-rest-password`).
+    ##
+    auth: none
+    username: ""
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: ""
+    ## Per-section behavior. URI suffixes are appended to `connectUri`; the
+    ## method drives whether the request carries a body. Sections only fire
+    ## when the matching virtual server (`sites-enabled/*`) calls `rest`.
+    ##
+    ## @param modules.rest.authorize.uri URI suffix appended to `connectUri` for the authorize section. Empty means "use connectUri as-is".
+    ## @param modules.rest.authorize.method HTTP method. Allowed: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`.
+    ## @param modules.rest.authorize.body Body encoding. Allowed: `none`, `post` (form-urlencoded), `json`.
+    ##
+    authorize:
+      uri: /authorize
+      method: GET
+      body: json
+    ## @param modules.rest.authenticate.uri URI suffix for the authenticate section.
+    ## @param modules.rest.authenticate.method HTTP method.
+    ## @param modules.rest.authenticate.body Body encoding.
+    ##
+    authenticate:
+      uri: /authenticate
+      method: POST
+      body: json
+    ## @param modules.rest.accounting.uri URI suffix for the accounting section.
+    ## @param modules.rest.accounting.method HTTP method.
+    ## @param modules.rest.accounting.body Body encoding.
+    ##
+    accounting:
+      uri: /accounting
+      method: POST
+      body: json
+    ## @param modules.rest.postAuth.uri URI suffix for the post-auth section.
+    ## @param modules.rest.postAuth.method HTTP method.
+    ## @param modules.rest.postAuth.body Body encoding.
+    ##
+    postAuth:
+      uri: /post-auth
+      method: POST
+      body: json
+    ## TLS material for HTTPS `connectUri`. Independent of in-pod RADSEC TLS
+    ## (top-level `tls.*`) and SQL backend TLS (`modules.sql.tls.*`).
+    ## Mounted into the pod at `/opt/startechnica/freeradius/certs-rest/`.
+    ##
+    ## Most REST endpoints only need server certificate verification — leave
+    ## `enabled: false`, `checkCert: true`, `checkCertCN: true` and the
+    ## upstream image's system CA bundle verifies the server. Enable this
+    ## block only when the endpoint signs with a private CA or requires
+    ## mutual TLS (client cert).
+    ##
+    ## @param modules.rest.tls.enabled Mount client TLS material (CA / cert / key) into the pod and wire it into the rlm_rest `tls{}` block. Independent of `checkCert*` below.
+    ## @param modules.rest.tls.autoGenerated Render a chart-managed self-signed leaf via `templates/secret/rest-tls.yaml` (signed by the chart's shared CA). Skipped when `certificatesSecret` is set.
+    ## @param modules.rest.tls.certificatesSecret Name of an existing Secret holding `tls.crt`/`tls.key`/`ca.crt`. Overrides chart-managed rendering.
+    ## @param modules.rest.tls.certFilename Override filename of the leaf certificate inside the mounted Secret.
+    ## @param modules.rest.tls.certKeyFilename Override filename of the leaf key inside the mounted Secret.
+    ## @param modules.rest.tls.certCAFilename Override filename of the CA certificate inside the mounted Secret.
+    ## @param modules.rest.tls.checkCert Verify the server's certificate chain. Disable only for self-signed endpoints in dev.
+    ## @param modules.rest.tls.checkCertCN Verify the server certificate's CN matches the URI host.
+    ##
+    tls:
+      enabled: false
+      autoGenerated: false
+      certificatesSecret: ""
+      certFilename: ""
+      certKeyFilename: ""
+      certCAFilename: ""
+      checkCert: true
+      checkCertCN: true
+
+  ## JSON xlat module (rlm_json). Exposes `%{json_encode:...}`,
+  ## `%{json_decode:...}`, and `%{jpath_quote:...}` for working with JSON in
+  ## policies and rlm_rest payloads. No knobs — loading the module is
+  ## sufficient.
+  ##
+  json:
+    ## @param modules.json.enabled Enable the FreeRADIUS JSON xlat module.
+    ##
+    enabled: false
+
+  ## PAM authentication module (rlm_pam). Hands authentication off to Linux
+  ## PAM (`/etc/pam.d/${pamAuth}` inside the container). The upstream
+  ## `freeradius/freeradius-server` image ships `/etc/pam.d/radiusd` by
+  ## default — to use a custom PAM service, override `pamAuth` AND mount the
+  ## matching config via `extraVolumes` / `extraVolumeMounts`. Don't forget
+  ## to wire `Auth-Type := PAM` in `authorize` and add `pam` to the
+  ## `authenticate {}` block of your virtual server.
+  ##
+  pam:
+    ## @param modules.pam.enabled Enable the FreeRADIUS PAM module.
+    ##
+    enabled: false
+    ## @param modules.pam.pamAuth PAM service name. Maps to `/etc/pam.d/<name>` inside the container. The `Pam-Auth` attribute set in `authorize` overrides this at request time.
+    ##
+    pamAuth: radiusd
+
+## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
+## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
+## the corresponding container port / Service port / NetworkPolicy entry.
+## Per-site config files are sourced from `files/sites/<name>` and rendered
+## into the `<release>-sites` ConfigMap by `templates/configmap/sites.yaml`.
 ##
-sitesEnabled:
-  ## @param sitesEnabled.coa.enabled Enable the `coa` virtual server (Change-of-Authorization, UDP port `containerPorts.coa`).
+sites:
+  ## @param sites.coa.enabled Enable the `coa` virtual server (Change-of-Authorization, UDP port `containerPorts.coa`).
   ##
   coa:
     enabled: false
@@ -265,9 +405,9 @@ sitesEnabled:
   ## — supply `customLivenessProbe`/`customReadinessProbe` if you need
   ## different checks.
   ##
-  ## @param sitesEnabled.status.enabled Enable the `status` virtual server
-  ## @param sitesEnabled.status.listen Listen address for the status server. Default `0.0.0.0` so the standalone metrics exporter pod can reach it via the FreeRADIUS Service. Use `127.0.0.1` to keep it pod-local if you don't enable metrics (the chart's NetworkPolicy locks down the port either way).
-  ## @param sitesEnabled.status.secret Shared secret the status `radclient` uses. When empty, the chart auto-generates and persists one in `auth.existingSecret` under key `sites-status-secret`.
+  ## @param sites.status.enabled Enable the `status` virtual server
+  ## @param sites.status.listen Listen address for the status server. Default `0.0.0.0` so the standalone metrics exporter pod can reach it via the FreeRADIUS Service. Use `127.0.0.1` to keep it pod-local if you don't enable metrics (the chart's NetworkPolicy locks down the port either way).
+  ## @param sites.status.secret Shared secret the status `radclient` uses. When empty, the chart auto-generates and persists one in `auth.existingSecret` under key `sites-status-secret`.
   ##
   status:
     enabled: true
@@ -277,9 +417,9 @@ sitesEnabled:
   ## mounts the TLS material referenced by `tls.*` and opens the RADSEC
   ## container/Service port.
   ##
-  ## @param sitesEnabled.tls.enabled Enable the RADSEC virtual server
-  ## @param sitesEnabled.tls.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
-  ## @param sitesEnabled.tls.privateKeyPassword Password for the RADSEC private key when it is password-protected
+  ## @param sites.tls.enabled Enable the RADSEC virtual server
+  ## @param sites.tls.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
+  ## @param sites.tls.privateKeyPassword Password for the RADSEC private key when it is password-protected
   ##
   tls:
     enabled: false
@@ -543,7 +683,7 @@ resources: {}
 
 ## Configure extra options for FreeRADIUS containers' liveness, readiness and
 ## startup probes. The chart's probes use `radclient status` against the
-## `status` virtual server (`sitesEnabled.status.enabled`). Disable that block
+## `status` virtual server (`sites.status.enabled`). Disable that block
 ## or supply `customLivenessProbe` / `customReadinessProbe` if you need
 ## different checks.
 ##
@@ -694,8 +834,8 @@ volumePermissions:
 ## server over the in-cluster Service, then exposes Prometheus metrics on
 ## its own Service (`<release>-freeradius-metrics`) at `service.ports.metrics`.
 ##
-## **Requires `sitesEnabled.status.enabled: true`** AND `status` reachable on
-## the Service (the chart's defaults handle both: `sitesEnabled.status.listen`
+## **Requires `sites.status.enabled: true`** AND `status` reachable on
+## the Service (the chart's defaults handle both: `sites.status.listen`
 ## defaults to `0.0.0.0` and `service.ports.status` is auto-published).
 ##
 ## ServiceMonitor / PrometheusRule are only rendered when both `metrics.enabled`
@@ -704,7 +844,7 @@ volumePermissions:
 ## =============================================================================
 
 metrics:
-  ## @param metrics.enabled Render the standalone `bvantagelimited/freeradius_exporter` Deployment and Service. Requires `sitesEnabled.status.enabled: true`.
+  ## @param metrics.enabled Render the standalone `bvantagelimited/freeradius_exporter` Deployment and Service. Requires `sites.status.enabled: true`.
   ##
   enabled: false
   ## @param metrics.replicaCount Number of exporter pods.
@@ -1069,7 +1209,7 @@ podDisruptionBudget:
 ## =============================================================================
 ## @section TLS configuration
 ## -----------------------------------------------------------------------------
-## In-pod TLS for the RADSEC server. Independent of `modsEnabled.sql.tls.*`
+## In-pod TLS for the RADSEC server. Independent of `modules.sql.tls.*`
 ## (which is TLS for the SQL backend connection) and of `gateway.tls.*` (which
 ## terminates at the Gateway). Setting `tls.enabled: true` here enables the
 ## RADSEC port on the container/Service AND mounts the leaf certificate so
@@ -1285,7 +1425,7 @@ gateway:
   ## istio path on those clusters).
   ##
   udpRoute:
-    ## @param gateway.udpRoute.enabled Render UDPRoute resources for auth/acct (and coa when `sitesEnabled.coa.enabled`).
+    ## @param gateway.udpRoute.enabled Render UDPRoute resources for auth/acct (and coa when `sites.coa.enabled`).
     ##
     enabled: true
     ## @param gateway.udpRoute.parentRefs Explicit `parentRefs` override for the UDPRoutes. When empty, defaults to the chart-rendered ListenerSet (if any) or the chart's Gateway.
@@ -1345,16 +1485,30 @@ gateway:
 ## =============================================================================
 ## @section Database parameters
 ## -----------------------------------------------------------------------------
-## Backend storage for the FreeRADIUS SQL module. Either toggle the bundled
-## MariaDB sub-chart (`mariadb.enabled: true`) or point at an external database
-## via `externalDatabase.*`. Connection details flow into the SQL module via
-## the chart-managed envvars ConfigMap.
+## Backend storage for the FreeRADIUS SQL module. Pick exactly one of:
+##   - `mariadb.enabled: true`     → bundled Bitnami MariaDB subchart (mysql dialect)
+##   - `postgresql.enabled: true`  → bundled Bitnami PostgreSQL subchart (postgresql dialect)
+##   - `externalDatabase.host: …`  → external database; dialect is whichever
+##                                   `modules.sql.dialect` you set
+##   - none of the above + `modules.sql.dialect: sqlite` → file-based, no
+##                                   network backend (see `modules.sql.sqlite.*`)
+##
+## The chart's hard validator (`freeradius.sql.backend.validate`) rejects:
+##   - both subcharts enabled at once,
+##   - a subchart whose wire protocol doesn't match `modules.sql.dialect`,
+##   - `dialect: sqlite` with any subchart enabled,
+##   - `dialect: mysql|postgresql` with no subchart AND empty `externalDatabase.host`.
+##
+## Connection details flow into the SQL module via the chart-managed envvars
+## ConfigMap, sourced through the `freeradius.sql.{host,port,name,user,
+## secretName,secretKey}` helpers — single source of truth for both the SQL
+## module env-vars and the `db-bootstrap` init container.
 ## =============================================================================
 
-## MariaDB chart configuration
+## MariaDB chart configuration. Enable for the mysql dialect.
 ## ref: https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
 ##
-## @param mariadb.enabled Switch to enable or disable the MariaDB helm chart
+## @param mariadb.enabled Switch to enable or disable the bundled MariaDB subchart. Requires `modules.sql.dialect: mysql`.
 ## @param mariadb.auth.username Name for a custom user to create
 ## @param mariadb.auth.password Password for the custom user to create
 ## @param mariadb.auth.database Name for a custom database to create
@@ -1370,11 +1524,32 @@ mariadb:
     existingSecret: ""
   architecture: standalone
 
-## External Database configuration. All of these values are only used when
-## `mariadb.enabled: false`.
+## PostgreSQL chart configuration. Enable for the postgresql dialect.
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/postgresql/values.yaml
 ##
-## @param externalDatabase.host Database host
-## @param externalDatabase.port Database port number
+## @param postgresql.enabled Switch to enable or disable the bundled PostgreSQL subchart. Requires `modules.sql.dialect: postgresql`.
+## @param postgresql.auth.username Name for a custom user to create
+## @param postgresql.auth.password Password for the custom user to create
+## @param postgresql.auth.database Name for a custom database to create
+## @param postgresql.auth.existingSecret Name of existing secret to use for PostgreSQL credentials. Must contain the key referenced by `postgresql.auth.secretKeys.userPasswordKey` (default `password`).
+## @param postgresql.architecture PostgreSQL architecture (`standalone` or `replication`)
+##
+postgresql:
+  enabled: false
+  auth:
+    username: freeradius_user
+    password: ""
+    database: freeradius_db
+    existingSecret: ""
+  architecture: standalone
+
+## External Database configuration. Used when neither `mariadb.enabled` nor
+## `postgresql.enabled` is true. Dialect-agnostic — the same fields cover both
+## mysql and postgresql backends; the wire protocol is selected by
+## `modules.sql.dialect`.
+##
+## @param externalDatabase.host Database host. Empty means "no external database" (combine with one of the bundled subcharts or with `modules.sql.dialect: sqlite`).
+## @param externalDatabase.port Database port number. Leave empty to let the chart pick a dialect-appropriate default (`3306` for mysql, `5432` for postgresql).
 ## @param externalDatabase.user Non-root username for FreeRADIUS
 ## @param externalDatabase.password Password for the non-root username for FreeRADIUS
 ## @param externalDatabase.database FreeRADIUS database name
@@ -1383,7 +1558,7 @@ mariadb:
 ##
 externalDatabase:
   host: ""
-  port: 3306
+  port: ""
   user: freeradius_user
   database: freeradius_db
   password: ""
@@ -1395,33 +1570,34 @@ externalDatabase:
 ## before the main container starts. Idempotent — every shipped schema uses
 ## `CREATE TABLE IF NOT EXISTS`, so re-runs on restart are no-ops.
 ##
-## Works with both `mariadb.enabled: true` (waits for the subchart's Service
-## to come up) and `externalDatabase.*` (assumes the external DB is reachable).
-## Skipped when `modsEnabled.sql.dialect` is sqlite (the SQLite driver creates
-## the schema at first write).
+## Works with any backend selection: bundled `mariadb.enabled: true` /
+## `postgresql.enabled: true` (waits for the subchart's Service to come up) or
+## `externalDatabase.*` (assumes the external DB is reachable). Skipped when
+## `modules.sql.dialect: sqlite` (the SQLite driver creates the schema at
+## first write).
 ##
-database:
-  bootstrap:
-    ## @param database.bootstrap.enabled Run the schema bootstrap init container before the FreeRADIUS container starts. Disable if your database is managed/bootstrapped out-of-band.
+bootstrap:
+  database:
+    ## @param bootstrap.database.enabled Run the schema bootstrap init container before the FreeRADIUS container starts. Disable if your database is managed/bootstrapped out-of-band.
     ##
     enabled: true
-    ## @param database.bootstrap.schemaConfigMap Name of an existing ConfigMap (must contain `schema.sql`) used in place of the chart-rendered `<fullname>-db-schema`. Use this to ship a customised schema without forking the chart.
+    ## @param bootstrap.database.schemaConfigMap Name of an existing ConfigMap (must contain `schema.sql`) used in place of the chart-rendered `<fullname>-db-schema`. Use this to ship a customised schema without forking the chart.
     ##
     schemaConfigMap: ""
     ## Init container image used to apply the bundled `files/schema/<dialect>.sql`
     ## into the configured database. Defaults to `bitnami/mariadb:11` so the
     ## MySQL/MariaDB dialect Just Works; the chart auto-swaps this to
-    ## `bitnami/postgresql:17` when `modsEnabled.sql.dialect: postgresql` AND
+    ## `bitnami/postgresql:17` when `modules.sql.dialect: postgresql` AND
     ## the repo is still on the chart default (so postgresql users don't have
     ## to flip two unrelated keys). Any explicit `repository` override always
     ## wins — set it to a slimmer image (`postgres:17-alpine`, `mariadb:11-noble`)
     ## if you want a smaller bootstrap footprint.
     ##
-    ## @param database.bootstrap.image.registry Image registry
-    ## @param database.bootstrap.image.repository Image repository (auto-swapped to `bitnami/postgresql` when dialect is `postgresql` and the repo is unchanged)
-    ## @param database.bootstrap.image.tag Image tag (auto-swapped to `17` when the dialect-driven swap fires)
-    ## @param database.bootstrap.image.pullPolicy Image pull policy
-    ## @param database.bootstrap.image.pullSecrets Image pull secrets
+    ## @param bootstrap.database.image.registry Image registry
+    ## @param bootstrap.database.image.repository Image repository (auto-swapped to `bitnami/postgresql` when dialect is `postgresql` and the repo is unchanged)
+    ## @param bootstrap.database.image.tag Image tag (auto-swapped to `17` when the dialect-driven swap fires)
+    ## @param bootstrap.database.image.pullPolicy Image pull policy
+    ## @param bootstrap.database.image.pullSecrets Image pull secrets
     ##
     image:
       registry: docker.io
@@ -1430,11 +1606,11 @@ database:
       digest: ""
       pullPolicy: IfNotPresent
       pullSecrets: []
-    ## @param database.bootstrap.resources Resources requested by the bootstrap init container
+    ## @param bootstrap.database.resources Resources requested by the bootstrap init container
     ##
     resources:
       limits: {}
       requests: {}
-    ## @param database.bootstrap.waitTimeout Seconds to wait for the database to accept connections before failing. The init container retries every 2s.
+    ## @param bootstrap.database.waitTimeout Seconds to wait for the database to accept connections before failing. The init container retries every 2s.
     ##
     waitTimeout: 120

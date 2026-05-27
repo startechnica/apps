@@ -48,7 +48,7 @@ spec:
         {{- else }}
         - "*"
         {{- end }}
-    {{- if .Values.sitesEnabled.coa.enabled }}
+    {{- if .Values.sites.coa.enabled }}
     - port:
         name: coa
         number: {{ .Values.service.ports.coa | int }}

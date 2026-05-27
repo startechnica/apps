@@ -17,14 +17,14 @@ Image rendering.
 {{/*
 Image used by the `db-bootstrap` init container. Auto-swaps to a
 dialect-appropriate default when the user is still on the chart's default
-`bitnami/mariadb` repository and `modsEnabled.sql.dialect: postgresql` —
+`bitnami/mariadb` repository and `modules.sql.dialect: postgresql` —
 the default image only ships the `mysql` client, so a postgresql user
 would otherwise have to override two unrelated keys to make bootstrap work.
 Explicit user overrides (any non-default repository) always win.
 */}}
-{{- define "freeradius.database.bootstrap.image" -}}
-{{- $img := .Values.database.bootstrap.image -}}
-{{- if and (eq $img.repository "bitnami/mariadb") (eq .Values.modsEnabled.sql.dialect "postgresql") -}}
+{{- define "freeradius.bootstrap.database.image" -}}
+{{- $img := .Values.bootstrap.database.image -}}
+{{- if and (eq $img.repository "bitnami/mariadb") (eq .Values.modules.sql.dialect "postgresql") -}}
   {{- $img = dict "registry" $img.registry "repository" "bitnami/postgresql" "tag" "17" "digest" "" "pullPolicy" $img.pullPolicy "pullSecrets" $img.pullSecrets -}}
 {{- end -}}
 {{ include "st-common.images.image" (dict "imageRoot" $img "global" .Values.global) }}
@@ -42,26 +42,26 @@ Name of the chart-rendered metrics exporter Deployment / Service / ServiceAccoun
 {{- end -}}
 
 {{- define "freeradius.imagePullSecrets" -}}
-  {{- include "st-common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.metrics.image .Values.database.bootstrap.image) "global" .Values.global) -}}
+  {{- include "st-common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.metrics.image .Values.bootstrap.database.image) "global" .Values.global) -}}
 {{- end -}}
 
 {{/*
 Name of the ConfigMap holding the rlm_sql schema loaded by the `db-bootstrap`
 init container. Resolution order:
-  1. `database.bootstrap.schemaConfigMap` — BYO ConfigMap.
+  1. `bootstrap.database.schemaConfigMap` — BYO ConfigMap.
   2. Chart-rendered `<fullname>-db-schema` from `templates/configmap/db-schema.yaml`.
 */}}
-{{- define "freeradius.database.schemaConfigMapName" -}}
-{{- default (printf "%s-db-schema" (include "st-common.names.fullname" .)) .Values.database.bootstrap.schemaConfigMap -}}
+{{- define "freeradius.bootstrap.database.schemaConfigMapName" -}}
+{{- default (printf "%s-db-schema" (include "st-common.names.fullname" .)) .Values.bootstrap.database.schemaConfigMap -}}
 {{- end -}}
 
 {{/*
 CLI command the `db-bootstrap` init container uses to apply the schema, derived
-from `modsEnabled.sql.dialect`. Returns an empty string for dialects that don't
+from `modules.sql.dialect`. Returns an empty string for dialects that don't
 need a separate schema load (sqlite).
 */}}
-{{- define "freeradius.database.bootstrap.cmd" -}}
-{{- $dialect := .Values.modsEnabled.sql.dialect -}}
+{{- define "freeradius.bootstrap.database.cmd" -}}
+{{- $dialect := .Values.modules.sql.dialect -}}
 {{- if eq $dialect "mysql" -}}
 mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < /schema/schema.sql
 {{- else if eq $dialect "postgresql" -}}
@@ -157,6 +157,8 @@ so a `fail` here aborts the operation).
 {{- $messages := list -}}
 {{- $messages = append $messages (include "freeradius.tls.validate" .) -}}
 {{- $messages = append $messages (include "freeradius.metrics.validate" .) -}}
+{{- $messages = append $messages (include "freeradius.sql.backend.validate" .) -}}
+{{- $messages = append $messages (include "freeradius.rest.validate" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -183,13 +185,102 @@ Validation message: metrics enabled but the RADIUS `status` virtual server is
 disabled — the standalone exporter Deployment would have nothing to scrape.
 */}}
 {{- define "freeradius.metrics.validate" -}}
-{{- if and .Values.metrics.enabled (not .Values.sitesEnabled.status.enabled) -}}
+{{- if and .Values.metrics.enabled (not .Values.sites.status.enabled) -}}
 freeradius: metrics.enabled
-    `metrics.enabled: true` requires `sitesEnabled.status.enabled: true`.
+    `metrics.enabled: true` requires `sites.status.enabled: true`.
     The bvantagelimited/freeradius_exporter Deployment reaches the RADIUS
     `status` virtual server through the cluster Service to scrape its
     counters — disabling the status site leaves the exporter with nothing
     to read, so the chart refuses to render this combination.
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation message: SQL backend selection must be coherent.
+
+Rejects:
+  - both bundled subcharts enabled at once,
+  - a bundled subchart whose wire protocol doesn't match `modules.sql.dialect`,
+  - `dialect: sqlite` with any bundled subchart enabled (sqlite is file-based),
+  - `dialect: mysql|postgresql` with no subchart AND empty `externalDatabase.host`
+    (no backend at all).
+*/}}
+{{- define "freeradius.sql.backend.validate" -}}
+{{- if .Values.modules.sql.enabled -}}
+{{- $dialect    := .Values.modules.sql.dialect -}}
+{{- $mariadb    := .Values.mariadb.enabled -}}
+{{- $postgresql := .Values.postgresql.enabled -}}
+{{- if and $mariadb $postgresql -}}
+freeradius: mariadb.enabled / postgresql.enabled
+    Only one bundled database subchart may be enabled at a time. Set either
+    `mariadb.enabled: true` (mysql dialect) or `postgresql.enabled: true`
+    (postgresql dialect), not both.
+{{- else if and (eq $dialect "sqlite") (or $mariadb $postgresql) -}}
+freeradius: modules.sql.dialect=sqlite
+    SQLite is a file-based engine — disable both bundled subcharts
+    (`mariadb.enabled: false`, `postgresql.enabled: false`) and configure
+    the SQLite file via `modules.sql.sqlite.*`.
+{{- else if and $mariadb (ne $dialect "mysql") -}}
+freeradius: mariadb.enabled
+    `mariadb.enabled: true` requires `modules.sql.dialect: mysql`
+    (currently `{{ $dialect }}`). The bundled MariaDB subchart only speaks
+    the MySQL wire protocol.
+{{- else if and $postgresql (ne $dialect "postgresql") -}}
+freeradius: postgresql.enabled
+    `postgresql.enabled: true` requires `modules.sql.dialect: postgresql`
+    (currently `{{ $dialect }}`). The bundled PostgreSQL subchart only speaks
+    the PostgreSQL wire protocol.
+{{- else if and (ne $dialect "sqlite") (not $mariadb) (not $postgresql) (not .Values.externalDatabase.host) -}}
+freeradius: modules.sql.dialect={{ $dialect }}
+    No database backend is configured. Either enable a bundled subchart
+    matching the dialect (`mariadb.enabled: true` for mysql,
+    `postgresql.enabled: true` for postgresql) or point at an external
+    database via `externalDatabase.host`. For a file-based backend, set
+    `modules.sql.dialect: sqlite`.
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation message: REST module configuration coherence.
+
+Rejects:
+  - `rest.enabled: true` with empty `rest.connectUri`,
+  - `rest.auth != none` with no password source (no `password`, no
+    `existingSecret`),
+  - `rest.tls.enabled: true` with no cert source (no `autoGenerated`, no
+    `certificatesSecret`),
+  - `rest.auth` set to something other than the four known values.
+
+Server-cert verification (`tls.checkCert*`) is independent of client-cert
+material so it's not validated here — those flags work against the system
+CA bundle when no `tls.*` material is mounted.
+*/}}
+{{- define "freeradius.rest.validate" -}}
+{{- if .Values.modules.rest.enabled -}}
+{{- $auth := .Values.modules.rest.auth -}}
+{{- $allowedAuth := list "none" "basic" "digest" "bearer" -}}
+{{- if not .Values.modules.rest.connectUri -}}
+freeradius: modules.rest.enabled
+    `modules.rest.enabled: true` requires a non-empty
+    `modules.rest.connectUri` — rlm_rest has nothing to call without it.
+{{- else if not (has $auth $allowedAuth) -}}
+freeradius: modules.rest.auth
+    `modules.rest.auth: {{ $auth }}` is not a recognised value. Allowed:
+    `none`, `basic`, `digest`, `bearer`.
+{{- else if and (ne $auth "none") (not .Values.modules.rest.password) (not .Values.modules.rest.existingSecret) -}}
+freeradius: modules.rest.auth={{ $auth }}
+    `modules.rest.auth: {{ $auth }}` requires a password source. Set
+    one of:
+      - modules.rest.password: <value>          (chart-managed Secret)
+      - modules.rest.existingSecret: <name>     (BYO Secret already in the namespace)
+{{- else if and .Values.modules.rest.tls.enabled (not .Values.modules.rest.tls.autoGenerated) (not .Values.modules.rest.tls.certificatesSecret) -}}
+freeradius: modules.rest.tls.enabled
+    `modules.rest.tls.enabled: true` requires a TLS material source.
+    Set one of:
+      - modules.rest.tls.autoGenerated: true        (chart generates a self-signed leaf)
+      - modules.rest.tls.certificatesSecret: <name> (BYO Secret already in the namespace)
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
@@ -228,123 +319,261 @@ Material paths assume the SQL TLS Secret is mounted at
 volumeMount).
 */}}
 {{- define "freeradius.sql.tls.certPath" -}}
-{{- if .Values.modsEnabled.sql.tls.enabled -}}
-  {{- if .Values.modsEnabled.sql.tls.autoGenerated -}}
+{{- if .Values.modules.sql.tls.enabled -}}
+  {{- if .Values.modules.sql.tls.autoGenerated -}}
     {{- printf "/opt/startechnica/freeradius/certs/sql-tls.crt" -}}
-  {{- else if .Values.modsEnabled.sql.tls.certFilename -}}
-    {{- printf "/opt/startechnica/freeradius/certs/%s" .Values.modsEnabled.sql.tls.certFilename -}}
+  {{- else if .Values.modules.sql.tls.certFilename -}}
+    {{- printf "/opt/startechnica/freeradius/certs/%s" .Values.modules.sql.tls.certFilename -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.sql.tls.certKeyPath" -}}
-{{- if .Values.modsEnabled.sql.tls.enabled -}}
-  {{- if .Values.modsEnabled.sql.tls.autoGenerated -}}
+{{- if .Values.modules.sql.tls.enabled -}}
+  {{- if .Values.modules.sql.tls.autoGenerated -}}
     {{- printf "/opt/startechnica/freeradius/certs/sql-tls.key" -}}
-  {{- else if .Values.modsEnabled.sql.tls.certKeyFilename -}}
-    {{- printf "/opt/startechnica/freeradius/certs/%s" .Values.modsEnabled.sql.tls.certKeyFilename -}}
+  {{- else if .Values.modules.sql.tls.certKeyFilename -}}
+    {{- printf "/opt/startechnica/freeradius/certs/%s" .Values.modules.sql.tls.certKeyFilename -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.sql.tls.caCertPath" -}}
-{{- if .Values.modsEnabled.sql.tls.enabled -}}
-  {{- if .Values.modsEnabled.sql.tls.autoGenerated -}}
+{{- if .Values.modules.sql.tls.enabled -}}
+  {{- if .Values.modules.sql.tls.autoGenerated -}}
     {{- printf "/opt/startechnica/freeradius/certs/sql-ca.crt" -}}
-  {{- else if .Values.modsEnabled.sql.tls.certCAFilename -}}
-    {{- printf "/opt/startechnica/freeradius/certs/%s" .Values.modsEnabled.sql.tls.certCAFilename -}}
+  {{- else if .Values.modules.sql.tls.certCAFilename -}}
+    {{- printf "/opt/startechnica/freeradius/certs/%s" .Values.modules.sql.tls.certCAFilename -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.sql.tls.secretName" -}}
-{{- if .Values.modsEnabled.sql.tls.certificatesSecret -}}
-{{- .Values.modsEnabled.sql.tls.certificatesSecret -}}
-{{- else if .Values.modsEnabled.sql.tls.existingTlsSecret -}}
-{{- .Values.modsEnabled.sql.tls.existingTlsSecret -}}
+{{- if .Values.modules.sql.tls.certificatesSecret -}}
+{{- .Values.modules.sql.tls.certificatesSecret -}}
+{{- else if .Values.modules.sql.tls.existingTlsSecret -}}
+{{- .Values.modules.sql.tls.existingTlsSecret -}}
 {{- else -}}
 {{- printf "%s-sql-tls" (include "st-common.names.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.sql.tls.createSecret" -}}
-{{- if and .Values.modsEnabled.sql.tls.enabled .Values.modsEnabled.sql.tls.autoGenerated (not .Values.modsEnabled.sql.tls.certificatesSecret) (not .Values.modsEnabled.sql.tls.existingTlsSecret) -}}
+{{- if and .Values.modules.sql.tls.enabled .Values.modules.sql.tls.autoGenerated (not .Values.modules.sql.tls.certificatesSecret) (not .Values.modules.sql.tls.existingTlsSecret) -}}
 true
 {{- end -}}
 {{- end -}}
 
 {{/*
-Database (MariaDB sub-chart) fullname.
+REST module TLS — third TLS namespace (after RADSEC and SQL).
+Material paths assume the REST TLS Secret is mounted at
+`/opt/startechnica/freeradius/certs-rest` (see Deployment.yaml
+`freeradius-rest-tls` volumeMount). Each *Path helper returns the empty string
+when its source material isn't configured, so rlm_rest's `tls{}` block falls
+back to the system CA bundle / no client cert.
+*/}}
+{{- define "freeradius.rest.tls.certPath" -}}
+{{- if .Values.modules.rest.tls.enabled -}}
+  {{- if .Values.modules.rest.tls.certFilename -}}
+    {{- printf "/opt/startechnica/freeradius/certs-rest/%s" .Values.modules.rest.tls.certFilename -}}
+  {{- else if or .Values.modules.rest.tls.autoGenerated .Values.modules.rest.tls.certificatesSecret -}}
+    {{- printf "/opt/startechnica/freeradius/certs-rest/tls.crt" -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.rest.tls.certKeyPath" -}}
+{{- if .Values.modules.rest.tls.enabled -}}
+  {{- if .Values.modules.rest.tls.certKeyFilename -}}
+    {{- printf "/opt/startechnica/freeradius/certs-rest/%s" .Values.modules.rest.tls.certKeyFilename -}}
+  {{- else if or .Values.modules.rest.tls.autoGenerated .Values.modules.rest.tls.certificatesSecret -}}
+    {{- printf "/opt/startechnica/freeradius/certs-rest/tls.key" -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.rest.tls.caCertPath" -}}
+{{- if .Values.modules.rest.tls.enabled -}}
+  {{- if .Values.modules.rest.tls.certCAFilename -}}
+    {{- printf "/opt/startechnica/freeradius/certs-rest/%s" .Values.modules.rest.tls.certCAFilename -}}
+  {{- else if or .Values.modules.rest.tls.autoGenerated .Values.modules.rest.tls.certificatesSecret -}}
+    {{- printf "/opt/startechnica/freeradius/certs-rest/ca.crt" -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.rest.tls.secretName" -}}
+{{- if .Values.modules.rest.tls.certificatesSecret -}}
+{{- .Values.modules.rest.tls.certificatesSecret -}}
+{{- else -}}
+{{- printf "%s-rest-tls" (include "st-common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.rest.tls.createSecret" -}}
+{{- if and .Values.modules.rest.enabled .Values.modules.rest.tls.enabled .Values.modules.rest.tls.autoGenerated (not .Values.modules.rest.tls.certificatesSecret) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+REST password Secret resolution. Bring-your-own via `existingSecret`;
+otherwise the chart-managed credentials Secret (`auth.existingSecret`) holds
+the password under `mods-rest-password`. Mirrors `freeradius.sql.secretName`
+and `freeradius.sql.secretKey` for the in-chart-managed branch.
+*/}}
+{{- define "freeradius.rest.secretName" -}}
+{{- if .Values.modules.rest.existingSecret -}}
+{{- tpl .Values.modules.rest.existingSecret $ -}}
+{{- else -}}
+{{- include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.rest.secretKey" -}}
+{{- if and .Values.modules.rest.existingSecret .Values.modules.rest.existingSecretPasswordKey -}}
+{{- .Values.modules.rest.existingSecretPasswordKey -}}
+{{- else -}}
+{{- print "mods-rest-password" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Bundled-subchart fullnames. Resolved via `st-common.names.dependency.fullname`
+so they honour `fullnameOverride` and the subchart's own naming knobs.
 */}}
 {{- define "freeradius.mariadb.fullname" -}}
   {{- include "st-common.names.dependency.fullname" (dict "chartName" "mariadb" "chartValues" .Values.mariadb "context" $) -}}
 {{- end -}}
 
-{{- define "freeradius.mariadb.host" -}}
-{{- if eq .Values.mariadb.architecture "replication" -}}
-  {{- ternary (printf "%s-primary" (include "freeradius.mariadb.fullname" .)) .Values.externalDatabase.host .Values.mariadb.enabled -}}
-{{- else -}}
-  {{- ternary (include "freeradius.mariadb.fullname" .) .Values.externalDatabase.host .Values.mariadb.enabled -}}
-{{- end -}}
+{{- define "freeradius.postgresql.fullname" -}}
+  {{- include "st-common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) -}}
 {{- end -}}
 
-{{- define "freeradius.mariadb.port" -}}
-{{- ternary "3306" (.Values.externalDatabase.port | toString) .Values.mariadb.enabled | quote -}}
-{{- end -}}
+{{/*
+SQL backend connection helpers — single source of truth for both the env-vars
+ConfigMap (`FREERADIUS_MODS_SQL_*`) and the `db-bootstrap` init container.
 
-{{- define "freeradius.mariadb.name" -}}
+Resolution order (first match wins):
+  1. `mariadb.enabled`     → bundled MariaDB subchart (mysql wire protocol).
+  2. `postgresql.enabled`  → bundled PostgreSQL subchart (postgresql wire protocol).
+  3. `externalDatabase.*`  → user-supplied external database (any dialect).
+
+The chart's `freeradius.sql.backend.validate` aggregator rejects misconfigurations
+(two subcharts at once, dialect/subchart mismatch, sqlite + subchart, etc.)
+before any resource is applied.
+*/}}
+{{- define "freeradius.sql.host" -}}
 {{- if .Values.mariadb.enabled -}}
-    {{- if .Values.global.mariadb -}}
-        {{- if .Values.global.mariadb.auth -}}
-            {{- coalesce .Values.global.mariadb.auth.database .Values.mariadb.auth.database -}}
-        {{- else -}}
-            {{- .Values.mariadb.auth.database -}}
-        {{- end -}}
-    {{- else -}}
-        {{- .Values.mariadb.auth.database -}}
-    {{- end -}}
+  {{- if eq .Values.mariadb.architecture "replication" -}}
+    {{- printf "%s-primary" (include "freeradius.mariadb.fullname" .) -}}
+  {{- else -}}
+    {{- include "freeradius.mariadb.fullname" . -}}
+  {{- end -}}
+{{- else if .Values.postgresql.enabled -}}
+  {{- if eq .Values.postgresql.architecture "replication" -}}
+    {{- printf "%s-primary" (include "freeradius.postgresql.fullname" .) -}}
+  {{- else -}}
+    {{- include "freeradius.postgresql.fullname" . -}}
+  {{- end -}}
+{{- else -}}
+  {{- .Values.externalDatabase.host -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+SQL backend port. Bundled subcharts use their well-known defaults; for the
+external case, `externalDatabase.port` wins when set, otherwise the chart
+defaults from `modules.sql.dialect` (3306 mysql, 5432 postgresql).
+*/}}
+{{- define "freeradius.sql.port" -}}
+{{- if .Values.mariadb.enabled -}}
+  {{- print "3306" | quote -}}
+{{- else if .Values.postgresql.enabled -}}
+  {{- print "5432" | quote -}}
+{{- else if .Values.externalDatabase.port -}}
+  {{- .Values.externalDatabase.port | toString | quote -}}
+{{- else if eq .Values.modules.sql.dialect "postgresql" -}}
+  {{- print "5432" | quote -}}
+{{- else -}}
+  {{- print "3306" | quote -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.sql.name" -}}
+{{- if .Values.mariadb.enabled -}}
+  {{- if and .Values.global.mariadb .Values.global.mariadb.auth -}}
+    {{- coalesce .Values.global.mariadb.auth.database .Values.mariadb.auth.database -}}
+  {{- else -}}
+    {{- .Values.mariadb.auth.database -}}
+  {{- end -}}
+{{- else if .Values.postgresql.enabled -}}
+  {{- if and .Values.global.postgresql .Values.global.postgresql.auth -}}
+    {{- coalesce .Values.global.postgresql.auth.database .Values.postgresql.auth.database -}}
+  {{- else -}}
+    {{- .Values.postgresql.auth.database -}}
+  {{- end -}}
 {{- else -}}
   {{- .Values.externalDatabase.database -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "freeradius.mariadb.user" -}}
+{{- define "freeradius.sql.user" -}}
 {{- if .Values.mariadb.enabled -}}
-  {{- if .Values.global.mariadb -}}
-    {{- if .Values.global.mariadb.auth -}}
-      {{- coalesce .Values.global.mariadb.auth.username .Values.mariadb.auth.username -}}
-    {{- else -}}
-      {{- .Values.mariadb.auth.username -}}
-    {{- end -}}
+  {{- if and .Values.global.mariadb .Values.global.mariadb.auth -}}
+    {{- coalesce .Values.global.mariadb.auth.username .Values.mariadb.auth.username -}}
   {{- else -}}
     {{- .Values.mariadb.auth.username -}}
+  {{- end -}}
+{{- else if .Values.postgresql.enabled -}}
+  {{- if and .Values.global.postgresql .Values.global.postgresql.auth -}}
+    {{- coalesce .Values.global.postgresql.auth.username .Values.postgresql.auth.username -}}
+  {{- else -}}
+    {{- .Values.postgresql.auth.username -}}
   {{- end -}}
 {{- else -}}
   {{- .Values.externalDatabase.user -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "freeradius.mariadb.secretName" -}}
+{{/*
+Name of the Secret holding the SQL backend password. For bundled subcharts the
+chart points at the subchart's own auth secret (so credentials stay in lockstep
+with what the subchart provisions). For external databases, the user's existing
+Secret wins, otherwise the chart-managed credentials Secret.
+*/}}
+{{- define "freeradius.sql.secretName" -}}
 {{- if .Values.mariadb.enabled -}}
-    {{- if and .Values.global.mariadb .Values.global.mariadb.auth .Values.global.mariadb.auth.existingSecret -}}
-        {{- tpl .Values.global.mariadb.auth.existingSecret $ -}}
-    {{- else -}}
-        {{- default (include "freeradius.mariadb.fullname" .) (tpl .Values.mariadb.auth.existingSecret $) -}}
-    {{- end -}}
+  {{- if and .Values.global.mariadb .Values.global.mariadb.auth .Values.global.mariadb.auth.existingSecret -}}
+    {{- tpl .Values.global.mariadb.auth.existingSecret $ -}}
+  {{- else -}}
+    {{- default (include "freeradius.mariadb.fullname" .) (tpl .Values.mariadb.auth.existingSecret $) -}}
+  {{- end -}}
+{{- else if .Values.postgresql.enabled -}}
+  {{- if and .Values.global.postgresql .Values.global.postgresql.auth .Values.global.postgresql.auth.existingSecret -}}
+    {{- tpl .Values.global.postgresql.auth.existingSecret $ -}}
+  {{- else -}}
+    {{- default (include "freeradius.postgresql.fullname" .) (tpl .Values.postgresql.auth.existingSecret $) -}}
+  {{- end -}}
 {{- else -}}
-    {{- default (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) (tpl .Values.externalDatabase.existingSecret $) -}}
+  {{- default (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) (tpl .Values.externalDatabase.existingSecret $) -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "freeradius.mariadb.secretKey" -}}
+{{/*
+Key inside `freeradius.sql.secretName` that holds the SQL backend password.
+The Bitnami subcharts use different key names: mariadb stores it under
+`mariadb-password`, postgresql under `password`.
+*/}}
+{{- define "freeradius.sql.secretKey" -}}
 {{- if .Values.mariadb.enabled -}}
   {{- print "mariadb-password" -}}
+{{- else if .Values.postgresql.enabled -}}
+  {{- print "password" -}}
+{{- else if and .Values.externalDatabase.existingSecret .Values.externalDatabase.existingSecretPasswordKey -}}
+  {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
 {{- else -}}
-  {{- if and .Values.externalDatabase.existingSecret .Values.externalDatabase.existingSecretPasswordKey -}}
-    {{- printf "%s" .Values.externalDatabase.existingSecretPasswordKey -}}
-  {{- else -}}
-    {{- print "database-password" -}}
-  {{- end -}}
+  {{- print "database-password" -}}
 {{- end -}}
 {{- end -}}
 
