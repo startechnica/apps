@@ -43,4 +43,4 @@ sources:
   - https://github.com/FreeRADIUS/freeradius-server
   - https://github.com/startechnica/apps.git
 type: application
-version: 1.0.0
+version: 1.1.0
