@@ -99,7 +99,7 @@ HPA template, and a long list of common template fixes.
   loadBalancerSourceRanges,annotations}}`. The exporter's
   `RADIUS_PASSWORD` is wired from the chart-managed `sites-status-secret`
   automatically. Requires `sites.status.enabled: true` — enforced by
-  a new `freeradius.validateValues` aggregator that calls `fail` during
+  a new `freeradius.validate` aggregator that calls `fail` during
   `helm install` / `helm upgrade` / `helm template` when the two flags are
   mismatched (the chart refuses to render rather than producing a
   non-functional exporter). The same aggregator also rejects
@@ -134,7 +134,7 @@ HPA template, and a long list of common template fixes.
   `architecture` shape), gated on `postgresql.enabled` via a new Chart.yaml
   dependency on Bitnami `postgresql 16.x.x`. Enabling it requires
   `modules.sql.dialect: postgresql`; the new
-  `freeradius.sql.backend.validate` aggregator rejects any other combination
+  `freeradius.validate.sql.backend` aggregator rejects any other combination
   (two subcharts at once, dialect/subchart mismatch, sqlite + subchart, no
   backend at all). The PostgreSQL subchart's auth secret is wired in
   automatically via the `freeradius.sql.secretName` / `secretKey` helpers
@@ -359,10 +359,11 @@ HPA template, and a long list of common template fixes.
   `files/schema/{mysql,postgresql,sqlite}.sql` covering every dialect
   `modules.sql.dialect` accepts. PostgreSQL uses native `inet` / `cidr`
   types and partial indexes; SQLite uses `INTEGER PRIMARY KEY AUTOINCREMENT`
-  and plain `TEXT` / `DATETIME` columns. The bootstrap-image helper
-  auto-swaps `bitnami/mariadb:11` → `bitnami/postgresql:17` when
-  `dialect: postgresql` so postgresql users don't need to flip two unrelated
-  keys.
+  and plain `TEXT` / `DATETIME` columns. The bootstrap-image helper carries
+  per-dialect canonical defaults internally (`bitnami/mariadb:11` for
+  mysql, `bitnami/postgresql:17` for postgresql — each ships the matching
+  CLI), so postgresql users don't need to flip two unrelated keys to make
+  bootstrap work.
 - **`.Values.configurations` produced a dangling ConfigMap reference**
   ([#97](https://github.com/startechnica/apps/issues/97)). The Deployment
   mounted `freeradius.configurationCM` whenever `configurations` was set,
@@ -379,10 +380,17 @@ HPA template, and a long list of common template fixes.
 ### Added (companion changes for the two fixes above)
 
 - `bootstrap.database.{enabled,schemaConfigMap,image,resources,waitTimeout}`
-  values block. The default image is `docker.io/bitnami/mariadb:11`; the
-  `freeradius.bootstrap.database.image` helper auto-swaps to
-  `bitnami/postgresql:17` when `modules.sql.dialect: postgresql` AND
-  the repo is still on the chart default. Explicit user overrides always win.
+  values block. The per-dialect canonical image defaults
+  (`bitnami/mariadb:11` for mysql, `bitnami/postgresql:17` for postgresql)
+  live inside the `freeradius.bootstrap.database.image` helper, NOT in
+  values.yaml — `bootstrap.database.image.*` ships with empty defaults
+  (`registry: ""`, `repository: ""`, `tag: ""`) so each empty field falls
+  through to the dialect default at render time. Any non-empty user value
+  here wins, field-by-field, so you can swap registry/tag without losing
+  the dialect-driven repository default. (Earlier cuts of this release
+  shipped a single hardcoded `bitnami/mariadb:11` default plus a
+  repo-string-match auto-swap to `bitnami/postgresql:17`; the helper-based
+  defaults replace that opaque magic.)
 - `freeradius.bootstrap.database.{schemaConfigMapName,image,cmd}` helpers.
   The `cmd` helper returns the dialect-appropriate `mysql`/`psql`
   invocation, or an empty string for sqlite (which is the sentinel that

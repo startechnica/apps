@@ -806,9 +806,9 @@ volumePermissions:
   ## @param volumePermissions.image.pullSecrets Image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/os-shell
-    tag: "11"
+    tag: "12"
     digest: ""
     pullPolicy: IfNotPresent
     pullSecrets: []
@@ -1493,7 +1493,7 @@ gateway:
 ##   - none of the above + `modules.sql.dialect: sqlite` → file-based, no
 ##                                   network backend (see `modules.sql.sqlite.*`)
 ##
-## The chart's hard validator (`freeradius.sql.backend.validate`) rejects:
+## The chart's hard validator (`freeradius.validate.sql.backend`) rejects:
 ##   - both subcharts enabled at once,
 ##   - a subchart whose wire protocol doesn't match `modules.sql.dialect`,
 ##   - `dialect: sqlite` with any subchart enabled,
@@ -1585,24 +1585,27 @@ bootstrap:
     ##
     schemaConfigMap: ""
     ## Init container image used to apply the bundled `files/schema/<dialect>.sql`
-    ## into the configured database. Defaults to `bitnami/mariadb:11` so the
-    ## MySQL/MariaDB dialect Just Works; the chart auto-swaps this to
-    ## `bitnami/postgresql:17` when `modules.sql.dialect: postgresql` AND
-    ## the repo is still on the chart default (so postgresql users don't have
-    ## to flip two unrelated keys). Any explicit `repository` override always
-    ## wins — set it to a slimmer image (`postgres:17-alpine`, `mariadb:11-noble`)
-    ## if you want a smaller bootstrap footprint.
+    ## into the configured database. Per-dialect canonical defaults live in
+    ## the `freeradius.bootstrap.database.image` helper (currently
+    ## `bitnami/mariadb:11` for mysql and `bitnami/postgresql:17` for
+    ## postgresql — each ships the matching CLI). Override field-by-field
+    ## below: any non-empty value here wins, empty values fall through to
+    ## the dialect default. Use this to switch registries (Bitnami mirror,
+    ## ECR, etc.), pin a specific tag, or point at a slimmer image
+    ## (`postgres:17-alpine`, `mariadb:11-noble`). Sqlite skips bootstrap
+    ## entirely so this image is unused in that case.
     ##
-    ## @param bootstrap.database.image.registry Image registry
-    ## @param bootstrap.database.image.repository Image repository (auto-swapped to `bitnami/postgresql` when dialect is `postgresql` and the repo is unchanged)
-    ## @param bootstrap.database.image.tag Image tag (auto-swapped to `17` when the dialect-driven swap fires)
+    ## @param bootstrap.database.image.registry Image registry (empty = dialect default — `docker.io`)
+    ## @param bootstrap.database.image.repository Image repository (empty = dialect default — `bitnami/mariadb` or `bitnami/postgresql`)
+    ## @param bootstrap.database.image.tag Image tag (empty = dialect default — `11` or `17`)
+    ## @param bootstrap.database.image.digest Image digest, takes precedence over `tag` when set
     ## @param bootstrap.database.image.pullPolicy Image pull policy
     ## @param bootstrap.database.image.pullSecrets Image pull secrets
     ##
     image:
-      registry: docker.io
-      repository: bitnami/mariadb
-      tag: "11"
+      registry: ""
+      repository: ""
+      tag: ""
       digest: ""
       pullPolicy: IfNotPresent
       pullSecrets: []

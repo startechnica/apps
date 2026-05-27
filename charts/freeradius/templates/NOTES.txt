@@ -36,4 +36,4 @@ FreeRADIUS has been installed.
    and persists across helm upgrades.
 {{- end }}
 
-{{- include "freeradius.validateValues" . }}
+{{- include "freeradius.validate" . }}

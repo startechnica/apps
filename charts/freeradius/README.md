@@ -547,7 +547,7 @@ The in-container mount path `/etc/freeradius/sites-enabled/<name>` is
 
 The chart now ships a `postgresql:` subchart block alongside the existing
 `mariadb:` block. Pick exactly one backend; the chart's hard validator
-(`freeradius.sql.backend.validate`) rejects two-subchart setups, mismatched
+(`freeradius.validate.sql.backend`) rejects two-subchart setups, mismatched
 dialect/subchart pairs, `sqlite + subchart`, and "no backend at all".
 
 ```yaml
