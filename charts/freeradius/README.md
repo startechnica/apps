@@ -315,7 +315,7 @@ Find more information about how to deal with common errors related to Startechni
 
 ## Upgrading
 
-### To 1.0.0 (breaking)
+### To 1.1.0 (breaking)
 
 This is a major release. Most users with existing `values.yaml` overrides
 will need to migrate the keys below. The full change list is in
@@ -336,7 +336,7 @@ tls:
       issuerKind: ClusterIssuer
       issuerName: letsencrypt
 
-# After (1.0.0)
+# After (1.1.0)
 tls:
   certManager:
     create: true
@@ -360,7 +360,7 @@ ingress:
   extraHosts:
     - name: radius2.example.com
 
-# After (1.0.0)
+# After (1.1.0)
 gateway:
   enabled: true
   hostnames:
@@ -370,9 +370,8 @@ gateway:
 
 #### 3. Gateway shape: flat → nested
 
-The flat gateway knobs have been replaced with the nested form used by the
-adminer chart. The new `gateway.implementation` flag picks between the two
-resource sets.
+The flat gateway knobs have been replaced with a nested form. The new
+`gateway.implementation` flag picks between the two resource sets.
 
 ```yaml
 # Before (0.x)
@@ -382,7 +381,7 @@ gateway:
   name: ""
   namespace: ""
 
-# After (1.0.0)
+# After (1.1.0)
 gateway:
   enabled: true
   implementation: gateway-api   # or "istio"
@@ -407,7 +406,7 @@ sitesEnabled:
 tls:
   secretName: my-existing-tls
 
-# After (1.0.0)
+# After (1.1.0)
 tls:
   enabled: true                       # enables RADSEC on the pod
 gateway:
@@ -436,7 +435,7 @@ modsEnabled:
     tls:
       existingTlsSecret: my-sql-tls
 
-# After (1.0.0)
+# After (1.1.0)
 tls:
   certificatesSecret: my-radsec-tls
 modules:
@@ -481,7 +480,7 @@ modsEnabled:
     enabled: true
     connectUri: https://api.example.com/radius
 
-# After (1.0.0)
+# After (1.1.0)
 modules:
   sql:
     enabled: true
@@ -523,7 +522,7 @@ sitesEnabled:
     enabled: true
     listen: 0.0.0.0
 
-# After (1.0.0)
+# After (1.1.0)
 sites:
   coa:
     enabled: true
@@ -564,7 +563,7 @@ externalDatabase:
   database: freeradius_db
   existingSecret: pg-credentials
 
-# After (1.0.0 — bundled PostgreSQL subchart)
+# After (1.1.0 — bundled PostgreSQL subchart)
 modules:
   sql:
     dialect: postgresql

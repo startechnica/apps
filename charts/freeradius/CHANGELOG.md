@@ -1,12 +1,15 @@
 # Changelog
 
-## 1.0.0 (2026-05-27)
+## 1.1.0 (2026-05-27)
 
-Major release. End-to-end modernization matching the playbook applied to the
-adminer chart in 1.0.0: values.yaml restructured with section banners, TLS /
-cert-manager keys consolidated, a chart-internal shared CA helper, full
-Gateway API resource set adapted for RADIUS traffic (UDPRoute / TLSRoute),
-HPA template, and a long list of common template fixes.
+Major release. End-to-end modernization: values.yaml restructured with
+section banners, TLS / cert-manager keys consolidated, a chart-internal
+shared CA helper, full Gateway API resource set adapted for RADIUS traffic
+(UDPRoute / TLSRoute), HPA template, bundled PostgreSQL subchart alongside
+MariaDB, REST/JSON/PAM modules, top-level Helm keys cleaned up
+(`modsEnabled:` → `modules:`, `sitesEnabled:` → `sites:`,
+`database.bootstrap.*` → `bootstrap.database.*`), and a long list of
+common template fixes.
 **See "Upgrading from 0.x" in the README for the migration steps your
 `values.yaml` needs.**
 
@@ -39,9 +42,8 @@ HPA template, and a long list of common template fixes.
   recovered via Helm `lookup` on subsequent renders so it persists across
   upgrades AND across in-pod → gateway path migrations (clients keep
   trusting).
-- `templates/ServiceMonitor.yaml` for Prometheus Operator scraping (matches
-  the adminer template shape — synthetic single-endpoint fallback plus
-  full `endpoints[]` passthrough).
+- `templates/ServiceMonitor.yaml` for Prometheus Operator scraping —
+  synthetic single-endpoint fallback plus full `endpoints[]` passthrough.
 - `templates/PrometheusRule.yaml` reworked: gated on
   `st-common.capabilities.coreosMonitoringPrometheusRule.apiVersion`, honors
   a per-resource `namespace` override, renders rules via
@@ -67,8 +69,8 @@ HPA template, and a long list of common template fixes.
   TLS knobs replacing the old istio-specific `credentialName` rendering.
 - `gateway.implementation` — explicit selector between `gateway-api` and
   `istio` resource sets.
-- `gateway.gateway.{create,name,namespace}` nested form (matches adminer
-  shape; replaces flat `gateway.name`/`gateway.namespace`).
+- `gateway.gateway.{create,name,namespace}` nested form (replaces flat
+  `gateway.name` / `gateway.namespace`).
 - `gateway.tlsRoute.parentRefs` and `gateway.udpRoute.parentRefs` —
   explicit `parentRefs` overrides for the two route templates, defaulting
   to the chart-rendered ListenerSet (when present) or the chart's Gateway.
@@ -183,7 +185,7 @@ HPA template, and a long list of common template fixes.
   banners. Order: Global → Common → Image → Configuration → Authentication →
   Deployment → Pod → Container → Persistence → Metrics → Traffic Exposure →
   TLS → RBAC → Gateway → Database.
-- **Template subdirectory layout** lowercased to match the adminer chart:
+- **Template subdirectory layout** lowercased for consistency:
   `templates/Istio/` → `templates/istio/`, `templates/ConfigMap/` →
   `templates/configmap/`, `templates/Secret/` → `templates/secret/`. The
   `_helpers/` subdirectory was consolidated into a single
@@ -414,9 +416,9 @@ HPA template, and a long list of common template fixes.
 
 ## 1.0.3 (2026-05-02)
 
-- Pre-1.0.0 incremental release. Superseded by 1.0.0 above. (Yes, the
+- Pre-1.1.0 incremental release. Superseded by 1.1.0 above. (Yes, the
   version number was bumped past 1.0.0 during pre-modernization work —
-  apologies for the confusion. The current 1.0.0 release notes above are
+  apologies for the confusion. The current 1.1.0 release notes above are
   authoritative.)
 
 ## 0.x
