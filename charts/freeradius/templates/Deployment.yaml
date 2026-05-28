@@ -46,6 +46,12 @@ spec:
         {{- if .Values.extraSites }}
         checksum/configmap-extra-sites: {{ include (print $.Template.BasePath "/configmap/extra-sites.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.modules.eap.enabled }}
+        checksum/configmap-mods-eap: {{ include (print $.Template.BasePath "/modules/eap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.modules.pam.enabled }}
+        checksum/configmap-mods-pam: {{ include (print $.Template.BasePath "/modules/pam.yaml") . | sha256sum }}
+        {{- end }}
         {{- if not .Values.auth.existingSecret }}
         checksum/secret-credentials: {{ include (print $.Template.BasePath "/secret/credentials.yaml") . | sha256sum }}
         {{- end }}
@@ -376,6 +382,16 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/sql
               subPath: sql
             {{- end }}
+            {{- if .Values.modules.eap.enabled }}
+            - name: freeradius-mods-eap
+              mountPath: /etc/freeradius/mods-enabled/eap
+              subPath: eap
+            {{- end }}
+            {{- if .Values.modules.pam.enabled }}
+            - name: freeradius-mods-pam
+              mountPath: /etc/freeradius/mods-enabled/pam
+              subPath: pam
+            {{- end }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/default
               subPath: default
@@ -438,6 +454,16 @@ spec:
         - name: freeradius-modules
           configMap:
             name: {{ printf "%s-modules" (include "st-common.names.fullname" .) }}
+        {{- if .Values.modules.eap.enabled }}
+        - name: freeradius-mods-eap
+          configMap:
+            name: {{ printf "%s-mods-eap" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- if .Values.modules.pam.enabled }}
+        - name: freeradius-mods-pam
+          configMap:
+            name: {{ printf "%s-mods-pam" (include "st-common.names.fullname" .) }}
+        {{- end }}
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "st-common.names.fullname" .) }}

@@ -3,10 +3,11 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{- if .Values.modules.pam.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-modules" (include "st-common.names.fullname" .) }}
+  name: {{ printf "%s-mods-pam" (include "st-common.names.fullname" .) }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
@@ -14,15 +15,6 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-{{- if .Values.modules.sql.enabled }}
-{{ (.Files.Glob "files/modules/sql").AsConfig | indent 2 }}
-{{- end }}
-{{- if .Values.modules.rest.enabled }}
-{{ (.Files.Glob "files/modules/rest").AsConfig | indent 2 }}
-{{- end }}
-{{- if .Values.modules.json.enabled }}
-  {{- /* json is rendered through `tpl`: the encode{} block structure is fixed
-         and its leaf directives are bound to `modules.json.encode.*`. */}}
-  json: |
-{{ tpl (.Files.Get "files/modules/json") $ | indent 4 }}
+  pam: |
+{{ tpl (.Files.Get "files/modules/pam") $ | indent 4 }}
 {{- end }}

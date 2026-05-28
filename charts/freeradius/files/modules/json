@@ -8,7 +8,8 @@
 ## that xlat — exposed here as `modules.json.encode.*` in values.yaml.
 ##
 ## NOTE: rendered through Helm `tpl` (see templates/configmap/modules.yaml), so
-## `{{ ... }}` is evaluated at template time against the release context. The
+## its Go-template directives are evaluated at template time against the
+## release context. The
 ## block structure below is spelled out explicitly (rather than rendered from
 ## values via `freeradius.tplvalues.renderConfig`) so each directive can carry
 ## an inline comment and booleans render as FreeRADIUS `yes`/`no`. Only the leaf

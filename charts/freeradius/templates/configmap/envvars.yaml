@@ -87,9 +87,9 @@ data:
   {{- /* PAM config (`pam_auth`) is rendered directly into files/modules/pam
          via Helm `tpl`, so no FREERADIUS_MODS_PAM_AUTH env var is needed. */}}
 
-  {{- /* EAP structural config (default type, inner tunnel, cert paths) is
-         rendered directly into files/modules/eap via Helm `tpl`, so no
-         FREERADIUS_MODS_EAP_* env vars are needed here. The private-key
+  {{- /* EAP structural config (default type, methods, cert paths) is rendered
+         directly into the eap module ConfigMap (templates/modules/eap.yaml),
+         so no FREERADIUS_MODS_EAP_* env vars are needed here. The private-key
          password is the one secret value — injected by the Deployment via
          secretKeyRef as FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD. */}}
 
