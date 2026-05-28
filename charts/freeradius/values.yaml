@@ -190,7 +190,9 @@ modules:
     ## @param modules.sql.enabled Enable the FreeRADIUS SQL module
     ##
     enabled: true
-    ## @param modules.sql.dialect SQL dialect understood by the rlm_sql driver. Allowed: `mysql`, `postgresql`, `sqlite`. Must match whichever bundled subchart is enabled (`mariadb.enabled` ↔ `mysql`, `postgresql.enabled` ↔ `postgresql`); the chart's hard validator rejects mismatches.
+    ## @param modules.sql.dialect SQL dialect understood by the rlm_sql driver. Allowed: `mysql`, `postgresql`,
+    ##  `sqlite`. Must match whichever bundled subchart is enabled (`mariadb.enabled` ↔ `mysql`, `postgresql.enabled` ↔ `postgresql`);
+    ##  the chart's hard validator rejects mismatches.
     ##
     dialect: mysql
     ## @param modules.sql.table.acct1 Table containing accounting items (start records)
@@ -676,7 +678,7 @@ containerSecurityContext:
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
 ## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). Ignored if `resources` is set.
 ##
-resourcesPreset: "nano"
+resourcesPreset: "g-2xsmall"
 ## @param resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
 ##
 resources: {}
@@ -1304,7 +1306,7 @@ rbac:
 networkPolicy:
   ## @param networkPolicy.enabled Render a NetworkPolicy
   ##
-  enabled: false
+  enabled: true
   ## @param networkPolicy.allowExternal When true, allow connections from any source. When false, restrict ingress to pods with the chart's `<fullname>-client: "true"` label and to other FreeRADIUS replicas.
   ##
   allowExternal: true

@@ -525,7 +525,7 @@ home_server tls {
 				#
 				#       openssl dhparam -out certs/dh 1024
 				#
-				dh_file = ${certdir}/dh
+		#		dh_file = ${certdir}/dh
 				random_file = /dev/urandom
 
 				#
