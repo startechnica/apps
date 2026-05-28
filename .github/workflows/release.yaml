@@ -19,8 +19,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
-          check-latest: true
+          # chart-testing 3.12.0 bundles a yamale that references ast.Num, which
+          # was removed in Python 3.12 — pin to 3.11 so the Chart.yaml schema
+          # validation step doesn't crash.
+          python-version: "3.11"
 
       - name: Install Helm
         uses: azure/setup-helm@v5.0.0
