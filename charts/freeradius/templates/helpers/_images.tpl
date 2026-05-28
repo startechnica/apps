@@ -9,9 +9,9 @@ live HERE (not in values.yaml) — each dialect maps to a canonical client
 image that actually ships the matching CLI (`mysql` for mariadb,
 `psql` for postgresql). User overrides via `bootstrap.database.image.*`
 fill in field-by-field: any non-empty user value wins, anything empty
-falls back to the dialect default. Sqlite never reaches this helper —
-`freeradius.bootstrap.database.cmd` returns empty for sqlite, which the
-Deployment treats as a skip-the-init-container sentinel.
+falls back to the dialect default. Sqlite never reaches this helper — the
+Deployment only renders the `db-bootstrap` init container when the dialect is
+`mysql` or `postgresql`.
 
 To add a new dialect, extend `$defaults` below AND the SQL backend
 validator's allowed-dialect list.

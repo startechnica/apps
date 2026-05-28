@@ -137,7 +137,7 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" $) | nindent 8 }}
       {{- end }}
-      {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (include "freeradius.bootstrap.database.cmd" .) -}}
+      {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) -}}
       {{- if or (and .Values.volumePermissions.enabled .Values.persistence.enabled) $needsDbBootstrap .Values.initContainers }}
       initContainers:
         {{- if .Values.initContainers }}
@@ -190,9 +190,21 @@ spec:
                 sleep 2
               done
               echo "[db-bootstrap] loading schema into $DB_NAME" >&2
-              {{ include "freeradius.bootstrap.database.cmd" . }}
+              case "$DB_DIALECT" in
+                mysql)
+                  mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < /schema/schema.sql
+                  ;;
+                postgresql)
+                  PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f /schema/schema.sql
+                  ;;
+                *)
+                  echo "[db-bootstrap] no schema load for dialect '$DB_DIALECT'; skipping" >&2
+                  ;;
+              esac
               echo "[db-bootstrap] schema applied" >&2
           env:
+            - name: DB_DIALECT
+              value: {{ .Values.modules.sql.dialect | quote }}
             - name: DB_HOST
               value: {{ include "freeradius.sql.host" . | quote }}
             - name: DB_PORT
@@ -408,7 +420,7 @@ spec:
             {{- /* All virtual servers are projected into one volume (chart sites +
                    extraSites) and mounted as the whole sites-enabled directory. */}}
             - name: freeradius-sites
-              mountPath: /etc/freeradius/sites-enabled
+              mountPath: /opt/startechnica/freeradius/sites-enabled
               readOnly: true
             {{- if include "freeradius.healthcheck.create" . }}
             - name: scripts
@@ -585,7 +597,7 @@ spec:
           configMap:
             name: {{ include "freeradius.initdbScriptsCM" . }}
         {{- end }}
-        {{- if and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (include "freeradius.bootstrap.database.cmd" .) }}
+        {{- if and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) }}
         - name: db-schema
           configMap:
             name: {{ include "freeradius.bootstrap.database.schemaConfigMapName" . }}

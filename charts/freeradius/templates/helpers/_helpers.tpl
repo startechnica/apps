@@ -20,19 +20,6 @@ init container. Resolution order:
 {{- default (printf "%s-db-schema" (include "st-common.names.fullname" .)) .Values.bootstrap.database.schemaConfigMap -}}
 {{- end -}}
 
-{{/*
-CLI command the `db-bootstrap` init container uses to apply the schema, derived
-from `modules.sql.dialect`. Returns an empty string for dialects that don't
-need a separate schema load (sqlite).
-*/}}
-{{- define "freeradius.bootstrap.database.cmd" -}}
-{{- $dialect := .Values.modules.sql.dialect -}}
-{{- if eq $dialect "mysql" -}}
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < /schema/schema.sql
-{{- else if eq $dialect "postgresql" -}}
-PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f /schema/schema.sql
-{{- end -}}
-{{- end -}}
 
 {{/*
 ServiceAccount name resolution.

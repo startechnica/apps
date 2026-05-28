@@ -673,6 +673,90 @@ sites:
     existingConfigMap: ""
     cipher: "DEFAULT"
     privateKeyPassword: ""
+  ## @param sites.configurations Inline `radiusd.conf` (the main server config) rendered into the configurations ConfigMap and mounted at `/etc/freeradius/radiusd.conf`. Loads modules via `$INCLUDE mods-enabled/` and virtual servers via `$INCLUDE sites-enabled/`. Mirrors the bundled `files/radiusd.conf`.
+  ##
+  configurations: |
+    prefix = /usr
+    exec_prefix = /usr
+    sysconfdir = /etc
+    localstatedir = /var
+    sbindir = ${exec_prefix}/sbin
+    logdir = /var/log/freeradius
+    raddbdir = /etc/freeradius
+    radacctdir = ${logdir}/radacct
+
+    name = radiusd
+
+    confdir = ${raddbdir}
+    modconfdir = ${confdir}/mods-config
+    certdir = ${confdir}/certs
+    cadir   = ${confdir}/certs
+    run_dir = ${localstatedir}/run/${name}
+
+    db_dir = ${raddbdir}
+    libdir = /usr/lib/freeradius
+    pidfile = ${run_dir}/${name}.pid
+    max_request_time = 30
+    cleanup_delay = 5
+    max_requests = 16384
+    hostname_lookups = no
+
+    unlang {
+    }
+
+    log {
+    	destination = files
+    	colourise = yes
+    	file = ${logdir}/radius.log
+    	syslog_facility = daemon
+    	stripped_names = no
+    	auth = no
+    	auth_badpass = no
+    	auth_goodpass = no
+
+    	msg_denied = "You are already logged in - access denied"
+    }
+
+    checkrad = ${sbindir}/checkrad
+
+    ENV {
+    }
+
+    security {
+    	allow_core_dumps = no
+    	max_attributes = 200
+    	reject_delay = 1
+    	status_server = yes
+    	require_message_authenticator = auto
+    	limit_proxy_state = auto
+    	allow_vulnerable_openssl = no
+    }
+
+    proxy_requests  = yes
+    $INCLUDE proxy.conf
+    $INCLUDE clients.conf
+
+    thread pool {
+    	start_servers = 5
+    	max_servers = 32
+    	min_spare_servers = 3
+    	max_spare_servers = 10
+    	max_requests_per_server = 0
+    	auto_limit_acct = no
+    }
+
+    modules {
+    	$INCLUDE mods-enabled/
+    }
+
+    instantiate {
+    }
+
+    policy {
+    	$INCLUDE policy.d/
+    }
+
+    $INCLUDE /opt/startechnica/freeradius/sites-enabled/
 
 ## RADIUS clients map rendered into a ConfigMap and mounted at
 ## `/etc/freeradius/clients.conf`. Each top-level entry becomes one `client`
