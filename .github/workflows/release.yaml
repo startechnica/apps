@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           # chart-testing 3.12.0 bundles a yamale that references ast.Num, which
           # was removed in Python 3.12 — pin to 3.11 so the Chart.yaml schema
