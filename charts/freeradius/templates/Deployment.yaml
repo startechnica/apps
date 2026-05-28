@@ -138,12 +138,39 @@ spec:
       topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" $) | nindent 8 }}
       {{- end }}
       {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) -}}
-      {{- if or (and .Values.bootstrap.volumePermissions.enabled .Values.persistence.enabled) $needsDbBootstrap .Values.initContainers }}
       initContainers:
         {{- if .Values.initContainers }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
         {{- end }}
-        {{- if .Values.bootstrap.volumePermissions.enabled }}
+        {{- /* Stage the projected virtual servers into a writable emptyDir. The
+               sites source is a projected/configMap volume, which is mounted
+               read-only and cannot be chmod'd; copying the files out lets us set
+               the sites-enabled directory to 0711 owned by the runtime user. */}}
+        - name: prepare-sites
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |
+              printf '%s\n' "[prepare-sites] staging virtual servers into {{ .Values.sites.includeDir }}" >&2
+              for f in /tmp/freeradius-sites/*; do
+                [ -e "$f" ] || continue
+                cp -L "$f" {{ .Values.sites.includeDir }}/
+              done
+              chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.sites.includeDir }}
+              chmod 0711 {{ .Values.sites.includeDir }}
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+          volumeMounts:
+            - name: freeradius-sites-tmp
+              mountPath: /tmp/freeradius-sites
+              readOnly: true
+            - name: freeradius-sites
+              mountPath: {{ .Values.sites.includeDir }}
+        {{- if and .Values.bootstrap.volumePermissions.enabled .Values.persistence.enabled }}
         - name: volume-permissions
           image: {{ include "st-common.images.image" (dict "imageRoot" .Values.bootstrap.volumePermissions.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.bootstrap.volumePermissions.image.pullPolicy | quote }}
@@ -154,7 +181,7 @@ spec:
             - |
               printf '%s\n' "[system] Change permission" >&2
               chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.persistence.mountPath }}
-              chmod 0711 {{ .Values.persistence.mountPath }} {{ .Values.sites.includeDir }}
+              chmod 0711 {{ .Values.persistence.mountPath }}
           {{- if eq ( toString ( .Values.bootstrap.volumePermissions.securityContext.runAsUser )) "auto" }}
           securityContext: {{- omit .Values.bootstrap.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
           {{- else }}
@@ -210,7 +237,6 @@ spec:
               subPath: db-bootstrap.sh
               readOnly: true
         {{- end }}
-      {{- end }}
       containers:
         - name: freeradius
           image: {{ include "st-common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
@@ -398,8 +424,9 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/pap
               subPath: pap
             {{- end }}
-            {{- /* All virtual servers are projected into one volume (chart sites +
-                   extraSites) and mounted as the whole sites-enabled directory. */}}
+            {{- /* All virtual servers (chart sites + extraSites) staged by the
+                   prepare-sites init container into a 0711 emptyDir, mounted as
+                   the whole sites-enabled directory. */}}
             - name: freeradius-sites
               mountPath: {{ .Values.sites.includeDir }}
               readOnly: true
@@ -477,12 +504,14 @@ spec:
             name: {{ include "freeradius.module.configMapName" (dict "module" "pap" "context" $) }}
         {{- end }}
         {{- /* One projected volume aggregates every enabled virtual server
-               (chart sites + extraSites) into sites-enabled/. Each chart site
-               ConfigMap holds a single key named after the site, so it is
-               projected whole (the key becomes the filename); BYO and enable
-               gating are resolved per source via freeradius.site.configMapName.
-               extraSites use `items` since their key may differ from the path. */}}
-        - name: freeradius-sites
+               (chart sites + extraSites). Each chart site ConfigMap holds a
+               single key named after the site, so it is projected whole (the
+               key becomes the filename); BYO and enable gating are resolved per
+               source via freeradius.site.configMapName. extraSites use `items`
+               since their key may differ from the path. This is read-only, so
+               the `prepare-sites` init container copies it into the writable
+               `freeradius-sites` emptyDir to set 0711 on sites-enabled/. */}}
+        - name: freeradius-sites-tmp
           projected:
             sources:
               {{- if .Values.sites.default.enabled }}
@@ -516,6 +545,8 @@ spec:
                     - key: {{ .key | default .name }}
                       path: {{ .name }}
               {{- end }}
+        - name: freeradius-sites
+          emptyDir: {}
         {{- range .Values.extraModules }}
         - name: {{ .name }}
           configMap:
