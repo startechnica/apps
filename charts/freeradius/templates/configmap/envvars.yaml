@@ -51,41 +51,19 @@ data:
   {{- end }}
 
   {{- if .Values.modules.rest.enabled }}
-  FREERADIUS_MODS_REST_CONNECT_URI: {{ .Values.modules.rest.connectUri | quote }}
-  FREERADIUS_MODS_REST_CONNECT_TIMEOUT: {{ .Values.modules.rest.connectTimeout | quote }}
-  FREERADIUS_MODS_REST_AUTH: {{ .Values.modules.rest.auth | quote }}
-  FREERADIUS_MODS_REST_USERNAME: {{ .Values.modules.rest.username | quote }}
-  ## Empty-string fallback so the rlm_rest `$ENV{FREERADIUS_MODS_REST_PASSWORD}`
-  ## substitution always resolves. When `rest.auth != none`, the Deployment
-  ## overrides this with a `secretKeyRef` (explicit `env:` entries take
-  ## precedence over `envFrom`), pulling the real credential from the Secret.
+  ## rlm_rest structural config is rendered directly from `.Values.modules.rest.*`
+  ## into the rest module ConfigMap (templates/modules/rest.yaml). Only the
+  ## password stays here: an empty-string fallback so the rlm_rest
+  ## `$ENV{FREERADIUS_MODS_REST_PASSWORD}` substitution always resolves. When
+  ## `rest.auth != none`, the Deployment overrides it with a `secretKeyRef`
+  ## (explicit `env:` entries take precedence over `envFrom`), pulling the real
+  ## credential from the Secret.
   FREERADIUS_MODS_REST_PASSWORD: ""
-
-  FREERADIUS_MODS_REST_AUTHORIZE_URI: {{ .Values.modules.rest.authorize.uri | quote }}
-  FREERADIUS_MODS_REST_AUTHORIZE_METHOD: {{ .Values.modules.rest.authorize.method | quote }}
-  FREERADIUS_MODS_REST_AUTHORIZE_BODY: {{ .Values.modules.rest.authorize.body | quote }}
-
-  FREERADIUS_MODS_REST_AUTHENTICATE_URI: {{ .Values.modules.rest.authenticate.uri | quote }}
-  FREERADIUS_MODS_REST_AUTHENTICATE_METHOD: {{ .Values.modules.rest.authenticate.method | quote }}
-  FREERADIUS_MODS_REST_AUTHENTICATE_BODY: {{ .Values.modules.rest.authenticate.body | quote }}
-
-  FREERADIUS_MODS_REST_ACCOUNTING_URI: {{ .Values.modules.rest.accounting.uri | quote }}
-  FREERADIUS_MODS_REST_ACCOUNTING_METHOD: {{ .Values.modules.rest.accounting.method | quote }}
-  FREERADIUS_MODS_REST_ACCOUNTING_BODY: {{ .Values.modules.rest.accounting.body | quote }}
-
-  FREERADIUS_MODS_REST_POSTAUTH_URI: {{ .Values.modules.rest.postAuth.uri | quote }}
-  FREERADIUS_MODS_REST_POSTAUTH_METHOD: {{ .Values.modules.rest.postAuth.method | quote }}
-  FREERADIUS_MODS_REST_POSTAUTH_BODY: {{ .Values.modules.rest.postAuth.body | quote }}
-
-  FREERADIUS_MODS_REST_TLS_CA_FILE: {{ include "freeradius.rest.tls.caCertPath" . | quote }}
-  FREERADIUS_MODS_REST_TLS_CERTIFICATE_FILE: {{ include "freeradius.rest.tls.certPath" . | quote }}
-  FREERADIUS_MODS_REST_TLS_PRIVATEKEY_FILE: {{ include "freeradius.rest.tls.certKeyPath" . | quote }}
-  FREERADIUS_MODS_REST_TLS_CHECK_CERT: {{ ternary "yes" "no" .Values.modules.rest.tls.checkCert | quote }}
-  FREERADIUS_MODS_REST_TLS_CHECK_CERT_CN: {{ ternary "yes" "no" .Values.modules.rest.tls.checkCertCN | quote }}
   {{- end }}
 
-  {{- /* PAM config (`pam_auth`) is rendered directly into files/modules/pam
-         via Helm `tpl`, so no FREERADIUS_MODS_PAM_AUTH env var is needed. */}}
+  {{- /* PAM config (`pam_auth`) is rendered directly into the pam module
+         ConfigMap (templates/modules/pam.yaml), so no FREERADIUS_MODS_PAM_AUTH
+         env var is needed. */}}
 
   {{- /* EAP structural config (default type, methods, cert paths) is rendered
          directly into the eap module ConfigMap (templates/modules/eap.yaml),

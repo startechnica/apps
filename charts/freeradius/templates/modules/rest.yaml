@@ -1,0 +1,84 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.modules.rest.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-mods-rest" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* Structural config is rendered directly from `.Values.modules.rest.*`.
+         Only the password stays as `$ENV{}` — it is a secret, injected by the
+         Deployment via secretKeyRef and never baked into this ConfigMap.
+         Mounted directly at mods-enabled/rest by the Deployment (subPath rest). */}}
+  rest: |-
+    ## modules/rest -- REST API module (rlm_rest)
+    rest {
+        #  Base URI; per-section `uri` values are appended to ${..connect_uri}.
+        connect_uri = "{{ .Values.modules.rest.connect_uri }}"
+        connect_timeout = {{ .Values.modules.rest.connect_timeout }}
+
+        #  TLS for HTTPS connect_uri. Empty file paths fall back to the system
+        #  CA bundle / no client cert. check_cert* toggle server verification.
+        tls {
+            ca_file = "{{ include "freeradius.rest.tls.caCertPath" . }}"
+            certificate_file = "{{ include "freeradius.rest.tls.certPath" . }}"
+            private_key_file = "{{ include "freeradius.rest.tls.certKeyPath" . }}"
+            check_cert = {{ ternary "yes" "no" .Values.modules.rest.tls.check_cert }}
+            check_cert_cn = {{ ternary "yes" "no" .Values.modules.rest.tls.check_cert_cn }}
+        }
+
+        authorize {
+            uri = "${..connect_uri}{{ .Values.modules.rest.authorize.uri }}"
+            method = "{{ .Values.modules.rest.authorize.method }}"
+            body = "{{ .Values.modules.rest.authorize.body }}"
+            auth = "{{ .Values.modules.rest.auth }}"
+            username = "{{ .Values.modules.rest.username }}"
+            password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+            tls = ${..tls}
+        }
+
+        authenticate {
+            uri = "${..connect_uri}{{ .Values.modules.rest.authenticate.uri }}"
+            method = "{{ .Values.modules.rest.authenticate.method }}"
+            body = "{{ .Values.modules.rest.authenticate.body }}"
+            auth = "{{ .Values.modules.rest.auth }}"
+            username = "{{ .Values.modules.rest.username }}"
+            password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+            tls = ${..tls}
+        }
+
+        accounting {
+            uri = "${..connect_uri}{{ .Values.modules.rest.accounting.uri }}"
+            method = "{{ .Values.modules.rest.accounting.method }}"
+            body = "{{ .Values.modules.rest.accounting.body }}"
+            auth = "{{ .Values.modules.rest.auth }}"
+            username = "{{ .Values.modules.rest.username }}"
+            password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+            tls = ${..tls}
+        }
+
+        post-auth {
+            uri = "${..connect_uri}{{ .Values.modules.rest.post_auth.uri }}"
+            method = "{{ .Values.modules.rest.post_auth.method }}"
+            body = "{{ .Values.modules.rest.post_auth.body }}"
+            auth = "{{ .Values.modules.rest.auth }}"
+            username = "{{ .Values.modules.rest.username }}"
+            password = "$ENV{FREERADIUS_MODS_REST_PASSWORD}"
+            tls = ${..tls}
+        }
+
+        #  Connection pool (HTTP keepalive), sized off the FreeRADIUS thread pool.
+        pool {
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.rest.pool "context" $) | nindent 12 }}
+        }
+    }
+{{- end }}

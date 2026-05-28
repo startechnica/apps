@@ -369,7 +369,7 @@ modules:
       certificatesSecret: my-sql-tls
   rest:
     tls:
-      certificatesSecret: my-rest-tls
+      certificates_secret: my-rest-tls
 ```
 
 ## Troubleshooting
@@ -526,7 +526,7 @@ consumed by any template:
 - `tls.secretName`
 - `auth.{createClientUser,clientUser,clientUserPassword}`
 
-#### 8. `modsEnabled:` renamed to `modules:` (and `files/mods-available/` → `files/modules/`)
+#### 8. `modsEnabled:` renamed to `modules:`
 
 The top-level Helm key for module enablement was renamed to drop the upstream
 FreeRADIUS terminology drift (`mods-enabled` is the daemon's runtime path,
@@ -541,7 +541,7 @@ modsEnabled:
     dialect: mysql
   rest:
     enabled: true
-    connectUri: https://api.example.com/radius
+    connect_uri: https://api.example.com/radius
 
 # After (1.1.0)
 modules:
@@ -550,19 +550,17 @@ modules:
     dialect: mysql
   rest:
     enabled: true
-    connectUri: https://api.example.com/radius
+    connect_uri: https://api.example.com/radius
 ```
 
-Related chart-internal renames (only matter if you override templates):
+Related chart-internal changes (only matter if you override templates):
 
-- Source directory `files/mods-available/` → `files/modules/`.
-- Template file `templates/configmap/mods-enabled.yaml` → `templates/configmap/modules.yaml`.
-- ConfigMap resource name `<release>-mods` → `<release>-modules`. Helm
-  upgrade will create the new ConfigMap and delete the old one — the pod
-  spec already points at the new name, so this is transparent.
-- Pod volume name `freeradius-mods` → `freeradius-modules` (internal to
-  the Deployment).
-- Checksum annotation key `checksum/configmap-mods` → `checksum/configmap-modules`.
+- Each enabled module renders into its OWN ConfigMap
+  (`templates/modules/<name>.yaml`, named `<release>-mods-<name>`) and is
+  mounted at `mods-enabled/<name>` via its own pod volume
+  `freeradius-mods-<name>`, with a per-module `checksum/configmap-mods-<name>`
+  pod annotation. There is no aggregated `<release>-modules` ConfigMap — Helm
+  upgrade creates the per-module ConfigMaps and removes any old aggregated one.
 
 The in-container mount path `/etc/freeradius/mods-enabled/<name>` is
 **unchanged** — that's the FreeRADIUS daemon's runtime path and isn't ours

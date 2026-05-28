@@ -24,10 +24,10 @@ data:
     eap {
         default_eap_type = {{ .Values.modules.eap.defaultType }}
 
-        timer_expire = 60
-        ignore_unknown_eap_types = no
-        cisco_accounting_username_bug = no
-        max_sessions = ${max_requests}
+        timer_expire = {{ .Values.modules.eap.timerExpire }}
+        ignore_unknown_eap_types = {{ ternary "yes" "no" .Values.modules.eap.ignoreUnknownEapTypes }}
+        cisco_accounting_username_bug = {{ ternary "yes" "no" .Values.modules.eap.ciscoAccountingUsernameBug }}
+        max_sessions = {{ .Values.modules.eap.maxSessions }}
 
         tls-config {{ .Values.modules.eap.tlsConfig.name }} {
             certificate_file = {{ include "freeradius.eap.tlsConfig.certPath" . }}

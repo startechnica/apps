@@ -14,8 +14,8 @@
 --   so a "wait for TCP / run client" model doesn't apply).
 --
 --   Instead, FreeRADIUS's rlm_sql driver loads it natively via the
---   `bootstrap` directive on first open of an empty database file. See
---   `files/modules/sql` line 81:
+--   `bootstrap` directive on first open of an empty database file. See the
+--   sqlite{} block in `templates/modules/sql.yaml`:
 --       bootstrap = "${modconfdir}/${..:name}/main/sqlite/schema.sql"
 --   `${modconfdir}` resolves to `/etc/freeradius/mods-config`, so the
 --   upstream image's bundled schema at

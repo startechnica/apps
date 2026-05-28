@@ -147,7 +147,7 @@ common template fixes.
   `readClients` knob. Both default to `true` (upstream rlm_sql default);
   wired via `FREERADIUS_MODS_SQL_READ_GROUPS` / `FREERADIUS_MODS_SQL_READ_PROFILES`
   into the previously-commented-out `read_groups` / `read_profiles`
-  directives in `files/modules/sql`.
+  directives in the sql module config (`templates/modules/sql.yaml`).
 - **EAP module support (rlm_eap) — EAP-TLS + EAP-TTLS.** New `modules.eap:`
   values block rendered into its own ConfigMap (`<release>-mods-eap`,
   `templates/modules/eap.yaml`) and mounted directly at `mods-enabled/eap`
@@ -184,20 +184,22 @@ common template fixes.
   (FreeRADIUS 3.2 negotiates ephemeral DH/ECDHE; the chart ships no DH params
   file).
 - **JSON xlat module support (rlm_json).** New `modules.json:` values
-  block and `files/modules/json`. When enabled, the module exposes the
+  block, rendered into its own `<release>-mods-json` ConfigMap
+  (`templates/modules/json.yaml`). When enabled, the module exposes the
   `%{json_encode:...}` xlat for serialising attributes into JSON in policies
-  and rlm_rest payloads. The file is rendered through Helm `tpl`, but unlike
+  and rlm_rest payloads. The template is rendered through Helm `tpl`, but unlike
   the flat modules the rlm_json config is a nested `encode { attribute {}
   value {} }` stanza (which `freeradius.tplvalues.renderConfig`'s
   `key = value` flattening cannot express), so the block structure is fixed
-  in the file and only the leaf directives are templated from
+  in the template and only the leaf directives are templated from
   `modules.json.encode.*`: `outputMode` (object / object_simple / array /
   array_of_names / array_of_values), `attribute.prefix`, and the
   `value.{singleValueAsArray,enumAsInteger,datesAsInteger,alwaysString}`
   value-formatting flags.
 - **PAM authentication module support (rlm_pam).** New `modules.pam:`
-  values block (`enabled`, `pam_auth`, default `radiusd`). `files/modules/pam`
-  is rendered through Helm `tpl`: every key under `modules.pam` except
+  values block (`enabled`, `pam_auth`, default `radiusd`). The pam module
+  ConfigMap (`templates/modules/pam.yaml`) is rendered through Helm `tpl`:
+  every key under `modules.pam` except
   `enabled` is emitted into the `pam {}` block as a `key = value` directive
   (via `freeradius.tplvalues.renderConfig`), so values use FreeRADIUS
   directive names directly and no `FREERADIUS_MODS_PAM_AUTH` env var is
@@ -206,21 +208,22 @@ common template fixes.
   `extraVolumes` / `extraVolumeMounts`. Virtual-server wiring
   (`Auth-Type := PAM` in `authorize`, `pam` in `authenticate {}`) is the
   user's responsibility.
-- **REST module support (rlm_rest).** New `modules.rest:` values block
-  and `files/modules/rest`, wired into the modules ConfigMap
-  when `modules.rest.enabled: true`. The chart pipes
-  `FREERADIUS_MODS_REST_*` env vars into the upstream module file via
-  `$ENV{}` placeholders covering the base URI, connect timeout, per-section
-  URI/method/body (authorize / authenticate / accounting / post-auth), HTTP
-  auth (none/basic/digest/bearer), and TLS verification toggles. A separate
-  TLS context (`modules.rest.tls.*`) signs an optional client-cert leaf
-  off the chart's shared CA — third TLS namespace alongside RADSEC and SQL,
-  mounted at `/opt/startechnica/freeradius/certs-rest/`. `auth != none`
-  pulls the password from `mods-rest-password` in the chart-managed
-  credentials Secret (length 32, auto-generated) unless
-  `modules.rest.existingSecret` is set. New
+- **REST module support (rlm_rest).** New `modules.rest:` values block,
+  rendered into its own `<release>-mods-rest` ConfigMap
+  (`templates/modules/rest.yaml`) when `modules.rest.enabled: true`. Structural
+  config is rendered directly from `.Values.modules.rest.*` into the module
+  file — the base URI, connect timeout, per-section URI/method/body (authorize
+  / authenticate / accounting / post-auth), HTTP auth (none/basic/digest/bearer),
+  and TLS verification toggles. Only the password stays as
+  `$ENV{FREERADIUS_MODS_REST_PASSWORD}` (a secret, injected by the Deployment
+  via secretKeyRef, never baked into the ConfigMap). A separate TLS context
+  (`modules.rest.tls.*`) signs an optional client-cert leaf off the chart's
+  shared CA — third TLS namespace alongside RADSEC and SQL, mounted at
+  `/opt/startechnica/freeradius/certs-rest/`. `auth != none` pulls the password
+  from `mods-rest-password` in the chart-managed credentials Secret (length 32,
+  auto-generated) unless `modules.rest.existingSecret` is set. New
   `freeradius.rest.{tls.{secretName,createSecret,certPath,certKeyPath,caCertPath},secretName,secretKey,validate}`
-  helpers. The validator rejects `enabled: true` without `connectUri`,
+  helpers. The validator rejects `enabled: true` without `connect_uri`,
   `auth != none` without a password source, `tls.enabled` without a cert
   source, and unrecognised `auth` values.
 
@@ -293,12 +296,12 @@ common template fixes.
 
 - **`modsEnabled:` → `modules:`** (top-level Helm key). Every sub-key keeps
   its existing shape — `sql`, `rest`, `json`, `pam` are unchanged. Related
-  chart-internal renames:
-  - Source directory `files/mods-available/` → `files/modules/`
-  - Template file `templates/configmap/mods-enabled.yaml` → `templates/configmap/modules.yaml`
-  - ConfigMap resource name `<release>-mods` → `<release>-modules`
-  - Pod volume name `freeradius-mods` → `freeradius-modules`
-  - Checksum annotation key `checksum/configmap-mods` → `checksum/configmap-modules`
+  chart-internal changes:
+  - Each enabled module renders into its OWN ConfigMap
+    (`templates/modules/<name>.yaml`, named `<release>-mods-<name>`), mounted
+    at `mods-enabled/<name>` via its own pod volume `freeradius-mods-<name>`,
+    with a per-module `checksum/configmap-mods-<name>` pod annotation. There
+    is no single aggregated `<release>-modules` ConfigMap.
   - In-container mount path `/etc/freeradius/mods-enabled/<name>` is
     unchanged (FreeRADIUS daemon convention); env var names like
     `FREERADIUS_MODS_SQL_*` are unchanged (container-internal, would
@@ -452,8 +455,8 @@ common template fixes.
 - `files/schema/sqlite.sql` — SQLite-dialect rlm_sql schema covering the
   third dialect listed in `modules.sql.dialect`. Not loaded by the
   `db-bootstrap` init container (SQLite is a local file, not a network
-  service) — instead, rlm_sql's own `bootstrap` directive at
-  `files/modules/sql` line 81 loads the schema on first open of an
+  service) — instead, rlm_sql's own `bootstrap` directive (the sqlite{} block
+  in `templates/modules/sql.yaml`) loads the schema on first open of an
   empty database file. Shipped for users who want to override the upstream
   image's bundled SQLite schema; wire it in via
   `bootstrap.database.schemaConfigMap` + `extraVolumes` / `extraVolumeMounts`
