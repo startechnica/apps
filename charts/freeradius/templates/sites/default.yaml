@@ -31,7 +31,7 @@ data:
     #	the "inner-tunnel" virtual server.  You will likely have to edit
     #	that, too, for authentication to work.
     #
-    #	$Id: 1926b7cd6e381cebfb809c7e89f8db0808124625 $
+    #	$Id$
     #
     ######################################################################
     #
@@ -210,11 +210,29 @@ data:
     	      #  If no packets have been received over the connection for
     	      #  this time, the connection will be closed.
     	      #
+    	      #  In general, the client should close connections when
+    	      #  they are idle.  This setting is here just to make
+    	      #  sure that bad clients do not leave connections open
+    	      #  for days.
+    	      #
+    	      #  If an idle timeout is set for only a "client" or a
+    	      #  "listen" section, that timeout is used.
+    	      #
+    	      #  If an idle timeout is set for both a "client" and a
+    	      #  "listen" section, then the smaller timeout is used.
+    	      #
     	      #  Setting this to 0 means "no timeout".
     	      #
     	      #  We STRONGLY RECOMMEND that you set an idle timeout.
     	      #
-    	      idle_timeout = 30
+    	      #  Systems with many incoming connections (500+) should
+    	      #  set this value to a lower number.  There are only a
+    	      #  limited number of usable file descriptors (usually
+    	      #  1024) due to Posix API issues.  If many sockets are
+    	      #  idle, it can prevent the server from opening new
+    	      #  connections.
+    	      #
+    	      idle_timeout = 900
     	}
     }
 
@@ -270,9 +288,9 @@ data:
     #	interface = eth0
     #	clients = per_socket_clients
     	limit {
-    		max_connections = 16
-    		lifetime = 0
-    		idle_timeout = 30
+    	      max_connections = 16
+    	      lifetime = 0
+    	      idle_timeout = 30
     	}
     }
 
@@ -282,11 +300,12 @@ data:
     	type = acct
     #	interface = eth0
     #	clients = per_socket_clients
+
     	limit {
-    		max_pps = 0
-    		idle_timeout = 0
-    		lifetime = 0
-    		max_connections = 0
+    #		max_pps = 0
+    #		idle_timeout = 0
+    #		lifetime = 0
+    #		max_connections = 0
     	}
     }
 
@@ -367,6 +386,20 @@ data:
     	digest
 
     	#
+    	#  The dpsk module implements dynamic PSK.
+    	#
+    	#  If the request contains FreeRADIUS-802.1X-Anonce
+    	#  and FreeRADIUS-802.1X-EAPoL-Key-Msg, then it will set
+    	#  	&control:Auth-Type := dpsk
+    	#
+    	#  The "rewrite_called_station_id" policy creates the
+    	#  Called-Station-MAC attribute, which is needed by
+    	#  the dpsk module.
+    	#
+    #	rewrite_called_station_id
+    #	dpsk
+
+    	#
     	#  The WiMAX specification says that the Calling-Station-Id
     	#  is 6 octets of the MAC.  This definition conflicts with
     	#  RFC 3580, and all common RADIUS practices.  If you are using
@@ -421,31 +454,58 @@ data:
     	#  uncomment it as well; this will further reduce the number of
     	#  LDAP and/or SQL queries for TTLS or PEAP.
     	#
+    	{{- if .Values.modules.eap.enabled }}
     	eap {
     		ok = return
     #		updated = return
     	}
+    	{{- end }}
 
-    	#  Pull crypt'd passwords from /etc/passwd or /etc/shadow, using the system API's to get the password.  If you want
-    	#  to read /etc/passwd or /etc/shadow directly, see the mods-available/passwd module.
+    	#
+    	#  Pull crypt'd passwords from /etc/passwd or /etc/shadow,
+    	#  using the system API's to get the password.  If you want
+    	#  to read /etc/passwd or /etc/shadow directly, see the
+    	#  mods-available/passwd module.
+    	#
     #	unix
 
-    	#  Read the 'users' file.  In v3, this is located in raddb/mods-config/files/authorize
+    	#
+    	#  Read the 'users' file.  In v3, this is located in
+    	#  raddb/mods-config/files/authorize
     	files
 
-    	#  Look in an SQL database.  The schema of the database is meant to mirror the "users" file.
+    	#
+    	#  Look in an SQL database.  The schema of the database
+    	#  is meant to mirror the "users" file.
     	#
     	#  See "Authorization Queries" in mods-available/sql
     	{{- if .Values.modules.sql.enabled }}
     	-sql
     	{{- end }}
 
-    	#  If you are using /etc/smbpasswd, and are also doing mschap authentication, the un-comment this line, and configure the 'smbpasswd' module.
+    	#
+    	#  If you are using /etc/smbpasswd, and are also doing
+    	#  mschap authentication, the un-comment this line, and
+    	#  configure the 'smbpasswd' module.
     #	smbpasswd
 
+    	#
     	#  The ldap module reads passwords from the LDAP database.
     	-ldap
 
+    	#
+    	#  If you're using Active Directory and PAP, then uncomment
+    	#  the following lines, and the "Auth-Type LDAP" section below.
+    	#
+    	#  This will let you do PAP authentication to AD.
+    	#
+    #	if ((ok || updated) && User-Password && !control:Auth-Type) {
+    #		update control {
+    #			&Auth-Type := ldap
+    #		}
+    #	}
+
+    	#
     	#  Enforce daily limits on time spent logged in.
     #	daily
 
@@ -466,8 +526,12 @@ data:
     	#
     	pap
 
-    	#  If "status_server = yes", then Status-Server messages are passed through the following section, and ONLY the following section.
-    	#  This permits you to do DB queries, for example.  If the modules listed here return "fail", then NO response is sent.
+    	#
+    	#  If "status_server = yes", then Status-Server messages are passed
+    	#  through the following section, and ONLY the following section.
+    	#  This permits you to do DB queries, for example.  If the modules
+    	#  listed here return "fail", then NO response is sent.
+    	#
     #	Autz-Type Status-Server {
     #
     #	}
@@ -518,30 +582,46 @@ data:
     #  the post-auth section is for.
     #
     authenticate {
-    	#  PAP authentication, when a back-end database listed in the 'authorize' section supplies a password.  The password can be clear-text, or encrypted.
+    	#
+    	#  PAP authentication, when a back-end database listed
+    	#  in the 'authorize' section supplies a password.  The
+    	#  password can be clear-text, or encrypted.
     	Auth-Type PAP {
     		pap
     	}
 
+    #	dpsk
+
+    	#
     	#  Most people want CHAP authentication
-    	#  A back-end database listed in the 'authorize' section MUST supply a CLEAR TEXT password. Encrypted passwords won't work.
+    	#  A back-end database listed in the 'authorize' section
+    	#  MUST supply a CLEAR TEXT password.  Encrypted passwords
+    	#  won't work.
     	Auth-Type CHAP {
     		chap
     	}
 
+    	#
     	#  MSCHAP authentication.
     	Auth-Type MS-CHAP {
     		mschap
     	}
 
+    	#
     	#  For old names, too.
+    	#
     	mschap
 
-    	#  If you have a Cisco SIP server authenticating against FreeRADIUS, uncomment the following line, and the 'digest' line in the 'authorize' section.
+    	#
+    	#  If you have a Cisco SIP server authenticating against
+    	#  FreeRADIUS, uncomment the following line, and the 'digest'
+    	#  line in the 'authorize' section.
     	digest
 
+    	{{- if .Values.modules.eap.enabled }}
     	#  Pluggable Authentication Modules.
-    #	pam
+    	pam
+    	{{- end }}
 
     	#  Uncomment it if you want to use ldap for authentication
     	#
@@ -554,13 +634,17 @@ data:
     	#  authentication server, and knows what to do with authentication.
     	#  LDAP servers do not.
     	#
+    	#  However, it is necessary for Active Directory, because
+    	#  Active Directory won't give the passwords to FreeRADIUS.
+    	#
     #	Auth-Type LDAP {
     #		ldap
     #	}
 
-    	#
+    	{{- if .Values.modules.eap.enabled }}
     	#  Allow EAP authentication.
     	eap
+    	{{- end }}
 
     	#
     	#  The older configurations sent a number of attributes in
@@ -580,31 +664,47 @@ data:
     }
 
 
+    #
     #  Pre-accounting.  Decide which accounting type to use.
     #
     preacct {
     	preprocess
 
-    	#  Merge Acct-[Input|Output]-Gigawords and Acct-[Input-Output]-Octets into a single 64bit counter Acct-[Input|Output]-Octets64.
+    	#
+    	#  Merge Acct-[Input|Output]-Gigawords and Acct-[Input-Output]-Octets
+    	#  into a single 64bit counter Acct-[Input|Output]-Octets64.
+    	#
     #	acct_counters64
 
-    	#  Session start times are *implied* in RADIUS.
-    	#  The NAS never sends a "start time".  Instead, it sends a start packet, *possibly* with an Acct-Delay-Time.
-    	#  The server is supposed to conclude that the start time was "Acct-Delay-Time" seconds in the past.
     	#
-    	#  The code below creates an explicit start time, which can then be used in other modules.  It will be *mostly* correct.
-    	#  Any errors are due to the 1-second resolution of RADIUS, and the possibility that the time on the NAS may be off.
+    	#  Session start times are *implied* in RADIUS.
+    	#  The NAS never sends a "start time".  Instead, it sends
+    	#  a start packet, *possibly* with an Acct-Delay-Time.
+    	#  The server is supposed to conclude that the start time
+    	#  was "Acct-Delay-Time" seconds in the past.
+    	#
+    	#  The code below creates an explicit start time, which can
+    	#  then be used in other modules.  It will be *mostly* correct.
+    	#  Any errors are due to the 1-second resolution of RADIUS,
+    	#  and the possibility that the time on the NAS may be off.
     	#
     	#  The start time is: NOW - delay - session_length
+    	#
 
     #	update request {
     #	  	&FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
     #	}
 
-    	#  Ensure that we have a semi-unique identifier for every request, and many NAS boxes are broken.
+
+    	#
+    	#  Ensure that we have a semi-unique identifier for every
+    	#  request, and many NAS boxes are broken.
     	acct_unique
 
-    	#  Look for IPASS-style 'realm/', and if not found, look for '@realm', and decide whether or not to proxy, based on that.
+    	#
+    	#  Look for IPASS-style 'realm/', and if not found, look for
+    	#  '@realm', and decide whether or not to proxy, based on
+    	#  that.
     	#
     	#  Accounting requests are generally proxied to the same
     	#  home server as authentication requests.
@@ -612,6 +712,7 @@ data:
     	suffix
     #	ntdomain
 
+    	#
     	#  Read the 'acct_users' file
     	files
     }
@@ -620,31 +721,42 @@ data:
     #  Accounting.  Log the accounting data.
     #
     accounting {
-    	#  Update accounting packet by adding the CUI attribute recorded from the corresponding Access-Accept use it only if your NAS boxes do not support CUI themselves
+    	#  Update accounting packet by adding the CUI attribute
+    	#  recorded from the corresponding Access-Accept
+    	#  use it only if your NAS boxes do not support CUI themselves
     #	cui
+
     	#
     	#  Create a 'detail'ed log of the packets.
-    	#  Note that accounting requests which are proxied are also logged in the detail file.
+    	#  Note that accounting requests which are proxied
+    	#  are also logged in the detail file.
     	detail
     #	daily
 
     	#  Update the wtmp file
     	#
-    	#  If you don't use "radlast", you can delete this line.
-    	unix
+    	#  If you don't use "radlast" (becoming obsolete and no longer
+    	#  available on all systems), you can delete this line.
+    #	unix
 
+    	#
     	#  For Simultaneous-Use tracking.
-    	#  Due to packet losses in the network, the data here may be incorrect.  There is little we can do about it.
+    	#
+    	#  Due to packet losses in the network, the data here
+    	#  may be incorrect.  There is little we can do about it.
     #	radutmp
     #	sradutmp
 
+    	#
     	#  Return an address to the IP Pool when we see a stop record.
-    	#  Ensure that &control:Pool-Name is set to determine which pool of IPs are used.
+    	#
+    	#  Ensure that &control:Pool-Name is set to determine which
+    	#  pool of IPs are used.
     #	sqlippool
 
+    	{{- if .Values.modules.sql.enabled }}
     	#  Log traffic to an SQL database.
     	#  See "Accounting queries" in mods-available/sql
-    	{{- if .Values.modules.sql.enabled }}
     	-sql
     	{{- end }}
 
@@ -680,13 +792,14 @@ data:
     }
 
 
-    #  Session database, used for checking Simultaneous-Use. Either the radutmp rlm_sql module can handle this.
+    #  Session database, used for checking Simultaneous-Use. Either the radutmp
+    #  or rlm_sql module can handle this.
     #  The rlm_sql module is *much* faster
     session {
     #	radutmp
 
-    	#  See "Simultaneous Use Checking Queries" in mods-available/sql
     	{{- if .Values.modules.sql.enabled }}
+    	#  See "Simultaneous Use Checking Queries" in mods-available/sql
     	sql
     	{{- end }}
     }
@@ -784,10 +897,12 @@ data:
     	#  Uncomment the line below if *returning* the CUI.
     #	cui
 
-    	#  Create empty accounting session to make simultaneous check more robust. See the accounting queries configuration in
+    	#  Create empty accounting session to make simultaneous check
+    	#  more robust. See the accounting queries configuration in
     	#  raddb/mods-config/sql/main/*/queries.conf for details.
     	#
-    	#  The "sql_session_start" policy is defined in raddb/policy.d/accounting.  See that file for more details.
+    	#  The "sql_session_start" policy is defined in
+    	#  raddb/policy.d/accounting.  See that file for more details.
     #	sql_session_start
 
     	#
@@ -796,14 +911,17 @@ data:
     	#  'detail reply_log' module.
     #	reply_log
 
-    	#  After authenticating the user, do another SQL query.
-    	#  See "Authentication Logging Queries" in mods-available/sql
     	{{- if .Values.modules.sql.enabled }}
+    	#  After authenticating the user, do another SQL query.
+    	#
+    	#  See "Authentication Logging Queries" in mods-available/sql
     	-sql
     	{{- end }}
 
+    	#
     	#  Un-comment the following if you want to modify the user's object
     	#  in LDAP after a successful login.
+    	#
     #	ldap
 
     	# For Exec-Program and Exec-Program-Wait
@@ -908,13 +1026,19 @@ data:
     		{{- end }}
     		attr_filter.access_reject
 
-    		# Insert EAP-Failure message if the request was rejected by policy instead of because of an authentication failure
+			{{- if .Values.modules.eap.enabled }}
+    		# Insert EAP-Failure message if the request was
+    		# rejected by policy instead of because of an
+    		# authentication failure
+    		
     		eap
+    		{{- end }}
 
     		#  Remove reply message if the response contains an EAP-Message
     		remove_reply_message_if_eap
     	}
 
+    	#
     	#  Filter access challenges.
     	#
     	Post-Auth-Type Challenge {
@@ -1009,9 +1133,31 @@ data:
     #  stage.  This stage can re-write the request, or decide to
     #  cancel the proxy.
     #
+    #  Before this section is run, the request list is copied to the
+    #  proxy list.  The proxied packet can be edited by examining
+    #  or changing attributes in the proxy list.
+    #
     #  Only a few modules currently have this method.
     #
     pre-proxy {
+    	#  Some supplicants will aggressively retry after an Access-Reject,
+    	#  contrary to standards. You can avoid sending excessive load to home
+    	#  servers that based on recent history is likely to only result in
+    	#  further authentication failures by calling the proxy_rate_limit
+    	#  module here and in the post-proxy section.
+    	#
+    	#  If a request is send too soon after a home server returned an
+    	#  Access-Reject, then instead of proxying a request a Access-Reject
+    	#  will be returned.
+    	#
+    	#  The principle is to expend a small amount of resources at the edge
+    	#  (an in-memory cache of recent rejects for calling stations) to
+    	#  defend the limited processing and network resources at the core.
+    	#
+    	#  The strategy can be tuned in the module configuration.
+    	#
+    #	proxy_rate_limit
+
     	# Before proxing the request add an Operator-Name attribute identifying
     	# if the operator-name is found for this client.
     	# No need to uncomment this if you have already enabled this in
@@ -1043,6 +1189,11 @@ data:
     #  to a home server, the request may be massaged here, in the
     #  post-proxy stage.
     #
+    #  Before this section is run, all attributes in the reply list
+    #  are deleted.  This section can then examine or edit the
+    #  proxy_reply list.  Once this section is finished, the attributes
+    #  in the proxy_reply list are copied to the reply list.
+    #
     post-proxy {
 
     	#  If you want to have a log of replies from a home server,
@@ -1055,17 +1206,21 @@ data:
     #	attr_filter.post-proxy
 
     	#
-    	#  If you are proxying LEAP, you MUST configure the EAP
-    	#  module, and you MUST list it here, in the post-proxy
-    	#  stage.
+    	#  The EAP module will perform some validation of proxied EAP
+    	#  packets.  Malformed EAP packets will be rejected, and will
+    	#  not be proxied.
     	#
-    	#  You MUST also use the 'nostrip' option in the 'realm'
-    	#  configuration.  Otherwise, the User-Name attribute
-    	#  in the proxied request will not match the user name
-    	#  hidden inside of the EAP packet, and the end server will
-    	#  reject the EAP request.
+    	#  This configuration is most useful to prevent bad
+    	#  supplicants or APs from attacking the proxies and home
+    	#  servers.
     	#
-    	eap
+    #	eap
+
+    	#  If proxied requests are to be rate limited, then the
+    	#  proxy_rate_limit module must be called here to maintain a
+    	#  record of proxy responses.
+    	#
+    #	proxy_rate_limit
 
     	#
     	#  If the server tries to proxy a request and fails, then the
@@ -1092,7 +1247,13 @@ data:
     	#  accounting packets to disk if the home server is down.
     	#
     #	Post-Proxy-Type Fail-Accounting {
-    #			detail.example.com
+    #		detail.example.com
+
+    		#
+    		#  Ensure a response is sent to the NAS now that the
+    		#  packet has been written to a detail file.
+    		#
+    #		acct_response
     #	}
     }
     }

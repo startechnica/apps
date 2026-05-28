@@ -642,9 +642,9 @@ sites:
   ##
   status:
     enabled: true
+    existingConfigMap: ""
     listen: 0.0.0.0
     secret: ""
-    existingConfigMap: ""
   ## DHCP virtual server (rlm_dhcp / sqlippool). Disabled by default. Enabling
   ## mounts the `dhcp` virtual server but does not open a DHCP listener port —
   ## wire that up via `containerPorts` / `service` / `extraPorts` as needed.
@@ -666,9 +666,9 @@ sites:
   ##
   tls:
     enabled: false
+    existingConfigMap: ""
     cipher: "DEFAULT"
     privateKeyPassword: ""
-    existingConfigMap: ""
 
 ## RADIUS clients map rendered into a ConfigMap and mounted at
 ## `/etc/freeradius/clients.conf`. Each top-level entry becomes one `client`
