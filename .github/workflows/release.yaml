@@ -6,6 +6,7 @@ on:
       - "**"
     paths:
       - "charts/**"
+      - ".github/workflows/**"
 
 jobs:
   lint:
