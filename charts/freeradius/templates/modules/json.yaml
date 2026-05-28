@@ -1,0 +1,43 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.modules.json.enabled (not .Values.modules.json.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-mods-json" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* rlm_json: the encode{} block is fixed (booleans render as FreeRADIUS
+         yes/no via ternary); leaf directives bind to modules.json.encode.*.
+         Mounted directly at mods-enabled/json by the Deployment (subPath json). */}}
+  json: |-
+    ## modules/json -- JSON xlat module (rlm_json)
+    json {
+        encode {
+            #  Document layout: object, object_simple, array, array_of_names, array_of_values.
+            output_mode = {{ .Values.modules.json.encode.output_mode }}
+
+            attribute {
+                {{- with .Values.modules.json.encode.attribute.prefix }}
+                #  Colon-delimited prefix added to every attribute name (foo -> foo:User-Name).
+                prefix = "{{ . }}"
+                {{- end }}
+            }
+
+            value {
+                single_value_as_array = {{ ternary "yes" "no" .Values.modules.json.encode.value.singleValueAsArray }}
+                enum_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.enumAsInteger }}
+                dates_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.datesAsInteger }}
+                always_string = {{ ternary "yes" "no" .Values.modules.json.encode.value.alwaysString }}
+            }
+        }
+    }
+{{- end }}

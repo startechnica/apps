@@ -1,0 +1,74 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.gateway.udpRoute.enabled -}}
+{{- $apiVersion := include "st-common.capabilities.networkingGatewayUDPRoute.apiVersion" . -}}
+{{- if not (eq $apiVersion "false") -}}
+{{- $svcName := include "st-common.names.fullname" . -}}
+{{- $svcNs := include "st-common.names.namespace" . -}}
+{{- $parentRefs := include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.udpRoute.parentRefs "context" $) -}}
+apiVersion: {{ $apiVersion }}
+kind: UDPRoute
+metadata:
+  name: {{ printf "%s-auth" (include "st-common.names.fullname" .) }}
+  namespace: {{ $svcNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs: {{- $parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ $svcName }}
+          namespace: {{ $svcNs | quote }}
+          port: {{ .Values.service.ports.auth | int }}
+          weight: 1
+---
+apiVersion: {{ $apiVersion }}
+kind: UDPRoute
+metadata:
+  name: {{ printf "%s-acct" (include "st-common.names.fullname" .) }}
+  namespace: {{ $svcNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs: {{- $parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ $svcName }}
+          namespace: {{ $svcNs | quote }}
+          port: {{ .Values.service.ports.acct | int }}
+          weight: 1
+{{- if .Values.sites.coa.enabled }}
+---
+apiVersion: {{ $apiVersion }}
+kind: UDPRoute
+metadata:
+  name: {{ printf "%s-coa" (include "st-common.names.fullname" .) }}
+  namespace: {{ $svcNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs: {{- $parentRefs | nindent 4 }}
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: {{ $svcName }}
+          namespace: {{ $svcNs | quote }}
+          port: {{ .Values.service.ports.coa | int }}
+          weight: 1
+{{- end }}
+{{- end -}}
+{{- end -}}

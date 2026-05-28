@@ -2,6 +2,11 @@
 
 # Helm chart for FreeRADIUS
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/startechnica)](https://artifacthub.io/packages/search?repo=startechnica)
+![Version](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square)
+![Type](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![AppVersion](https://img.shields.io/badge/AppVersion-3.2.8-informational?style=flat-square)
+
 FreeRADIUS is a modular, high performance free RADIUS suite developed and distributed under the GNU General Public License, version 2, and is free for download and use.
 
 [Overview of FreeRADIUS](https://freeradius.org/)
@@ -132,7 +137,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
 | `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
 | `configuration`                               | Configuration for the FreeRADIUS server (`radiusd.conf`)                                                                 | `""`                           |
-| `configurationConfigMap`                      | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configuration`). The value is evaluated as a template. | `""`                         |
+| `configurationsConfigMap`                     | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configurations`). The value is evaluated as a template. | `""`                        |
 | `initdbScripts`                               | Specify dictionary of scripts to be run at first boot                                                                    | `{}`                           |
 | `initdbScriptsConfigMap`                      | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                      | `""`                           |
 | `extraFlags`                                  | FreeRADIUS additional command line flags                                                                                 | `""`                           |
@@ -205,7 +210,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.resources.limits`                    | The resources limits for the container                                                                                   | `{}`                           |
 | `metrics.resources.requests`                  | The requested resources for the container                                                                                | `{}`                           |
 | `metrics.service.type`                        | Prometheus exporter service type                                                                                         | `ClusterIP`                    |
-| `metrics.service.port`                        | Prometheus exporter service port                                                                                         | `9104`                         |
+| `service.ports.metrics`                       | Prometheus exporter service port (top-level ports inventory)                                                             | `9812`                         |
 | `metrics.service.annotations`                 | Prometheus exporter service annotations                                                                                  | `{}`                           |
 | `metrics.service.loadBalancerIP`              | Load Balancer IP if the Prometheus metrics server type is `LoadBalancer`                                                 | `""`                           |
 | `metrics.service.clusterIP`                   | Prometheus metrics service Cluster IP                                                                                    | `""`                           |
@@ -221,45 +226,76 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.serviceMonitor.metricRelabelings`    | MetricRelabelConfigs to apply to samples before ingestion                                                                | `[]`                           |
 | `metrics.serviceMonitor.honorLabels`          | honorLabels chooses the metric's labels on collisions with target labels                                                 | `false`                        |
 | `metrics.serviceMonitor.labels`               | ServiceMonitor extra labels                                                                                              | `{}`                           |
-| `metrics.prometheusRules.enabled`             | if `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`, and makes little sense without ServiceMonitor)  | `false`                   |
-| `metrics.prometheusRules.additionalLabels`    | Additional labels to add to the PrometheusRule so it is picked up by the operator                                        | `{}`                           |
-| `metrics.prometheusRules.rules`               | PrometheusRule rules to configure                                                                                                                                                             | `{}`                      |
+| `metrics.prometheusRule.enabled`              | If `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled`, and makes little sense without `metrics.serviceMonitor.enabled`)                                     | `false`                        |
+| `metrics.prometheusRule.namespace`            | Namespace in which to create the PrometheusRule (defaults to the release namespace)                                                                                                           | `""`                           |
+| `metrics.prometheusRule.additionalLabels`     | Extra labels merged onto the PrometheusRule so the Prometheus Operator's `ruleSelector` picks it up                                                                                           | `{app: prometheus-operator, release: prometheus}` |
+| `metrics.prometheusRule.groups`               | Verbatim `spec.groups` list passthrough (additive with `rules`)                                                                                                                               | `[]`                           |
+| `metrics.prometheusRule.rules`                | PrometheusRule rules rendered under a single group named after the chart fullname (default set targets `bvantagelimited/freeradius_exporter` metric names)                                    | See `values.yaml`              |
 
 
-### Custom FreeRADIUS enabled mods parameters
+### Modules parameters
 
 | Name                                       | Description                                         | Value             |
 | ------------------------------------------ | --------------------------------------------------- | ----------------- |
-| `modsEnabled.sql.enabled`                  | Enable FreeRADIUS SQL module                        | `false`           |
-| `modsEnabled.sql.dialect`                  | The driver module used to execute the queries.      | `mysql`           |
-| `modsEnabled.sql.table.acct1`              | Tables containing 'accounting' items                | `radacct`         |
-| `modsEnabled.sql.table.acct2`              | Tables containing 'accounting' items                | `radacct`         |
-| `modsEnabled.sql.table.authcheck`          | Tables containing 'check' items                     | `radcheck`        |
-| `modsEnabled.sql.table.authreply`          | Tables containing 'reply' items                     | `radreply`        |
-| `modsEnabled.sql.table.client`             | Table to keep radius client info                    | `nas`             |
-| `modsEnabled.sql.table.groupcheck`         | Tables containing 'check' items                     | `radgroupcheck`   |
-| `modsEnabled.sql.table.groupreply`         | Tables containing 'reply' items                     | `radgroupreply`   |
-| `modsEnabled.sql.table.postauth`           | Allow for storing data after authentication         | `radpostauth`     |
-| `modsEnabled.sql.table.usergroup`          | Table to keep group info                            | `radusergroup`    |
-| `modsEnabled.sql.tls.enabled`              | Enable FreeRADIUS SQL TLS module                    | `false`           |
-| `modsEnabled.sql.tls.autoGenerated`        |                                                     | `false`           |
-| `modsEnabled.sql.tls.certificatesSecret`   |                                                     | `""`              |
-| `modsEnabled.sql.tls.certFilename`         |                                                     | `""`              |
-| `modsEnabled.sql.tls.certKeyFilename`      |                                                     | `""`              |
-| `modsEnabled.sql.tls.certCAFilename`       |                                                     | `""`              |
-| `modsEnabled.sql.tls.existingTlsSecret`    |                                                     | `""`              |
-| `modsEnabled.sql.tls.privateKeyPassword`   |                                                     | `""`              |
+| `modules.sql.enabled`                  | Enable FreeRADIUS SQL module                        | `false`           |
+| `modules.sql.dialect`                  | The driver module used to execute the queries.      | `mysql`           |
+| `modules.sql.table.acct1`              | Tables containing 'accounting' items                | `radacct`         |
+| `modules.sql.table.acct2`              | Tables containing 'accounting' items                | `radacct`         |
+| `modules.sql.table.authcheck`          | Tables containing 'check' items                     | `radcheck`        |
+| `modules.sql.table.authreply`          | Tables containing 'reply' items                     | `radreply`        |
+| `modules.sql.table.client`             | Table to keep radius client info                    | `nas`             |
+| `modules.sql.table.groupcheck`         | Tables containing 'check' items                     | `radgroupcheck`   |
+| `modules.sql.table.groupreply`         | Tables containing 'reply' items                     | `radgroupreply`   |
+| `modules.sql.table.postauth`           | Allow for storing data after authentication         | `radpostauth`     |
+| `modules.sql.table.usergroup`          | Table to keep group info                            | `radusergroup`    |
+| `modules.sql.tls.enabled`              | Enable FreeRADIUS SQL TLS module                    | `false`           |
+| `modules.sql.tls.autoGenerated`        |                                                     | `false`           |
+| `modules.sql.tls.certificatesSecret`   |                                                     | `""`              |
+| `modules.sql.tls.certFilename`         |                                                     | `""`              |
+| `modules.sql.tls.certKeyFilename`      |                                                     | `""`              |
+| `modules.sql.tls.certCAFilename`       |                                                     | `""`              |
+| `modules.sql.tls.existingTlsSecret`    |                                                     | `""`              |
+| `modules.sql.tls.privateKeyPassword`   |                                                     | `""`              |
 
 
 ### Custom FreeRADIUS enabled sites parameters
 
 | Name                                       | Description                                                                     | Value             |
 | ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
-| `sitesEnabled.coa.enabled`                 | Enable FreeRADIUS coa service                                                   | `false`           |
-| `sitesEnabled.status.enabled`              | Enable FreeRADIUS status service                                                | `true`            |
-| `sitesEnabled.tls.enabled`                 | Enable FreeRADIUS radsec service                                                | `false`           |
-| `sitesEnabled.tls.cipher`                  |                                                                                 | `false`           |
-| `sitesEnabled.tls.privateKeyPassword`      |                                                                                 | `false`           |
+| `sites.default.enabled`               | Enable the `default` virtual server (the main auth/acct server)                                    | `true`    |
+| `sites.default.existingConfigMap`     | BYO ConfigMap (key `default`) mounted at `sites-enabled/default`; skips chart rendering            | `""`      |
+| `sites.innerTunnel.enabled`           | Enable the `inner-tunnel` virtual server (EAP-TTLS/PEAP inner identity)                            | `true`    |
+| `sites.innerTunnel.existingConfigMap` | BYO ConfigMap (key `inner-tunnel`) mounted at `sites-enabled/inner-tunnel`; skips chart rendering  | `""`      |
+| `sites.coa.enabled`                   | Enable the `coa` virtual server (Change-of-Authorization)                                          | `false`   |
+| `sites.coa.existingConfigMap`         | BYO ConfigMap (key `coa`) mounted at `sites-enabled/coa`; skips chart rendering                    | `""`      |
+| `sites.status.enabled`                | Enable the `status` virtual server                                                                 | `true`    |
+| `sites.status.listen`                 | Listen address for the status server                                                               | `0.0.0.0` |
+| `sites.status.secret`                 | Shared secret for the status `radclient` (auto-generated when empty)                               | `""`      |
+| `sites.status.existingConfigMap`      | BYO ConfigMap (key `status`) mounted at `sites-enabled/status`; skips chart rendering              | `""`      |
+| `sites.dhcp.enabled`                  | Enable the `dhcp` virtual server                                                                   | `false`   |
+| `sites.dhcp.existingConfigMap`        | BYO ConfigMap (key `dhcp`) mounted at `sites-enabled/dhcp`; skips chart rendering                  | `""`      |
+| `sites.tls.enabled`                   | Enable the RADSEC virtual server                                                                   | `false`   |
+| `sites.tls.cipher`                    | TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the image default)                   | `DEFAULT` |
+| `sites.tls.privateKeyPassword`        | Password for the RADSEC private key when it is password-protected                                  | `""`      |
+| `sites.tls.existingConfigMap`         | BYO ConfigMap (key `tls`) mounted at `sites-enabled/tls`; skips chart rendering                    | `""`      |
+
+
+### Keycloak integration parameters
+
+| Name                       | Description                                                                                                            | Value                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `keycloak.enabled`         | Render the Keycloak auth configs + Secret and mount them into the pod                                                 | `false`                    |
+| `keycloak.mode`            | Auth backend: `lua` (ROPC + introspection + role mapping via rlm_lua) or `rest` (ROPC-only via rlm_rest, no roles)    | `lua`                      |
+| `keycloak.url`             | Base URL of the Keycloak server                                                                                       | `https://auth.example.com` |
+| `keycloak.realm`           | Keycloak realm holding the users (required when enabled)                                                              | `""`                       |
+| `keycloak.clientId`        | OIDC client_id with Direct Access Grants enabled                                                                      | `freeradius`               |
+| `keycloak.clientSecret`    | Secret for a confidential client. Stored in a Secret and injected via `$ENV{KC_CLIENT_SECRET}`; empty = public client | `""`                       |
+| `keycloak.scope`           | Optional OAuth scope appended to the token request                                                                    | `""`                       |
+| `keycloak.connectTimeout`  | Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)                     | `4.0`                      |
+| `keycloak.wireDefaultSite` | Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module                           | `true`                     |
+| `keycloak.roleAttribute`   | (lua mode) Control attribute the Lua mapper populates with role names (one value per role)                            | `Class`                    |
+| `keycloak.denyWithoutRole` | (lua mode) Reject the request when no `roleMappings` entry matches                                                    | `false`                    |
+| `keycloak.roleMappings`    | (lua mode) Ordered role→reply map (first match wins): `role` + `reply` (list of unlang `Attr := value` lines)         | `[]`                       |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
@@ -302,15 +338,418 @@ This chart allows you to set your custom affinity using the `affinity` parameter
 
 There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
 
+### Keycloak (OIDC) authentication
+
+FreeRADIUS can authenticate users against a Keycloak realm using the OAuth2
+Resource Owner Password Credentials (ROPC) grant. Because ROPC needs the
+cleartext password, this only works for password-based flows — **PAP**, or
+**EAP-TTLS/PAP** as the inner method. MSCHAPv2/PEAP cannot authenticate against
+Keycloak. Enable **Direct Access Grants** on the Keycloak client.
+
+Two backends are available via `keycloak.mode`:
+
+| Mode            | Roles                         | Module              | Image needs                                  |
+| --------------- | ----------------------------- | ------------------- | -------------------------------------------- |
+| `lua` (default) | Yes — via token introspection | `rlm_lua` script    | `rlm_lua`, `lua-cjson`, `luasec`/`luasocket` |
+| `rest`          | No (auth-only)                | `rlm_rest` instance | `rlm_rest` with raw-body (`data`) support    |
+
+#### lua mode (default — full role mapping)
+
+```yaml
+keycloak:
+  enabled: true
+  url: https://auth.example.com
+  realm: corp
+  clientId: freeradius
+  clientSecret: "<confidential-client-secret>"   # omit for a public client
+  roleMappings:
+    - role: network-admin        # a *client* role on `clientId`
+      reply:
+        - 'Service-Type := Administrative-User'
+        - 'Cisco-AVPair := "shell:priv-lvl=15"'
+    - role: wifi-user
+      reply:
+        - 'Tunnel-Type:0 := VLAN'
+        - 'Tunnel-Medium-Type:0 := IEEE-802'
+        - 'Tunnel-Private-Group-Id:0 := "10"'
+  denyWithoutRole: true          # reject users with no matching role
+```
+
+The Lua script validates the password (ROPC), then reads the user's client
+roles via RFC 7662 token introspection and exposes them to the
+`keycloak_authorize` unlang policy, which maps the first matching role to the
+reply attributes above. `roleAttribute` (default `Class`) is the control
+attribute the script populates with role names.
+
+#### rest mode (auth-only, no roles)
+
+```yaml
+keycloak:
+  enabled: true
+  mode: rest
+  url: https://auth.example.com
+  realm: corp
+  clientId: freeradius
+  clientSecret: "<confidential-client-secret>"
+```
+
+A pure `rlm_rest` instance performs the ROPC POST; HTTP 200 accepts, 401
+rejects. `roleMappings` is ignored. The image's `rlm_rest` must support a raw
+request body (`data`) and the `%{urlquote:...}` xlat. The JSON token response
+is not consumed, so `radiusd -X` will print harmless "skipping unknown
+attribute" lines for `access_token` etc.
+
+By default (`wireDefaultSite: true`) the `default` virtual server's authorize
+section is wired automatically. Set it to `false` to call `keycloak_authorize`
+(lua) or `keycloak_rest` (rest) from your own site config.
+
+### Auto-generated credentials
+
+When you don't supply them, the chart auto-generates several credentials into the chart-managed Secret (`<release>-freeradius`):
+
+- `sites-status-secret` — shared secret for the RADIUS `status` virtual server (probes + metrics exporter).
+- `sites-tls-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled`).
+- `mods-sql-tls-privkey-password`, `mods-rest-password`, `database-password` — when the matching feature is enabled.
+
+These use the `lookup`-based "manage" pattern: on a normal `helm install` / `helm upgrade` **against a live cluster**, the existing value is read back and preserved, so it stays stable across releases.
+
+> **⚠️ They are regenerated on every apply in `helm template`-based workflows.** Helm's `lookup` returns nothing when there is no live API connection — i.e. during `helm template`, `helm install --dry-run` (client), `helm diff`, and GitOps tools that render with `helm template` (Argo CD, Flux in template mode). In those workflows a **fresh random value is produced on every render/sync**, which rotates the status secret and the RADSEC key passphrase out from under running pods and can break probes, the metrics exporter, and RADSEC until the pods restart with the new values.
+
+To make these deterministic, pin them explicitly instead of relying on auto-generation:
+
+```yaml
+# Option A — set the values directly
+sites:
+  status:
+    secret: "<your-status-secret>"
+  tls:
+    privateKeyPassword: "<your-radsec-key-password>"
+
+# Option B — bring your own Secret for everything
+auth:
+  existingSecret: my-freeradius-credentials
+
+# Option C — per-credential Secrets (e.g. managed by an external operator)
+auth:
+  existingSecretPerPassword:
+    keyMapping:
+      sitesStatusSecret: status-secret
+    sitesStatusSecret:
+      name: freeradius-status
+```
+
+#### Auto-generated TLS certificates behave the same way
+
+The same limitation applies to the chart's **self-signed TLS material** — the shared internal CA (`<release>-freeradius-tls-ca`) and every leaf it signs (in-pod RADSEC `tls.yaml`, SQL `sql-tls.yaml`, REST `rest-tls.yaml`, gateway `gateway-tls.yaml`). The CA is recovered via `lookup` (`freeradius.tls.ca.init`) and falls back to `genCA` when there is no live cluster, so in `helm template`-based workflows a **fresh CA + fresh leaf certificates are minted on every render/sync**. That rotates the CA out from under anything that already trusts it — RADSEC clients, SQL/REST peers — until they re-fetch.
+
+The deterministic escape hatches mirror the password ones:
+
+```yaml
+# Option A — let cert-manager own issuance (recommended; cert-manager,
+# not Helm, manages the Certificate, so no churn on re-render)
+tls:
+  certManager:
+    create: true
+    issuerRef:
+      kind: ClusterIssuer
+      name: my-issuer
+
+# Option B — bring your own certificate Secret (per TLS context)
+tls:
+  certificatesSecret: my-radsec-tls
+modules:
+  sql:
+    tls:
+      certificatesSecret: my-sql-tls
+  rest:
+    tls:
+      certificates_secret: my-rest-tls
+```
+
 ## Troubleshooting
 
 Find more information about how to deal with common errors related to Startechnica's Helm charts in [this troubleshooting guide](https://startechnica.github.io/doc/troubleshoot-helm-chart-issues).
 
 ## Upgrading
 
+### To 1.1.0 (breaking)
+
+This is a major release. Most users with existing `values.yaml` overrides
+will need to migrate the keys below. The full change list is in
+[CHANGELOG.md](CHANGELOG.md).
+
+These notes apply to upgrades from **any pre-1.1.0 release**. The most recent
+prior release, **1.0.3**, still used the old `modsEnabled` / `sitesEnabled` /
+`ingress` / `configuration` / `tls.autoGenerator` keys, so the migrations below
+are required coming from 1.0.x just as much as from 0.x. The `# Before` blocks
+are labelled `≤ 1.0.3` accordingly.
+
+#### 1. Cert-manager keys consolidated under `tls.certManager.*`
+
+Cert-manager-driven TLS issuance is now configured in one canonical
+location and covers both the in-pod RADSEC certificate and the
+gateway-namespace certificate.
+
+```yaml
+# Before (≤ 1.0.3)
+tls:
+  autoGenerator:
+    certmanager:
+      enabled: true
+      issuerKind: ClusterIssuer
+      issuerName: letsencrypt
+
+# After (1.1.0)
+tls:
+  certManager:
+    create: true
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt
+```
+
+#### 2. The `ingress:` block is gone — use `gateway.hostnames`
+
+FreeRADIUS doesn't speak HTTP, so the chart no longer renders an Ingress.
+Hostnames previously set under `ingress.hostname` / `ingress.extraHosts`
+(which the Certificate, istio Gateway, and VirtualService templates read
+from) now live under `gateway.hostnames`.
+
+```yaml
+# Before (≤ 1.0.3)
+ingress:
+  hostname: radius.example.com
+  extraHosts:
+    - name: radius2.example.com
+
+# After (1.1.0)
+gateway:
+  enabled: true
+  hostnames:
+    - radius.example.com
+    - radius2.example.com
+```
+
+#### 3. Gateway shape: flat → nested
+
+The flat gateway knobs have been replaced with a nested form. The new
+`gateway.implementation` flag picks between the two resource sets.
+
+```yaml
+# Before (≤ 1.0.3)
+gateway:
+  enabled: true
+  gatewayApi: false        # if true → gateway-api; else → istio
+  name: ""
+  namespace: ""
+
+# After (1.1.0)
+gateway:
+  enabled: true
+  implementation: gateway-api   # or "istio"
+  gateway:
+    create: true
+    name: ""
+    namespace: ""
+```
+
+#### 4. Gateway TLS knobs moved to `gateway.tls.*`
+
+The istio Gateway's TLS material is now configured under `gateway.tls`
+rather than via `tls.secretName` / `sitesEnabled.tls.enabled`. In 1.1.0 the
+`sitesEnabled:` block became `sites:` (see Upgrading #10) and RADSEC
+enablement moved from the per-site `enabled` flag to the top-level
+`tls.enabled`.
+
+```yaml
+# Before (≤ 1.0.3)
+sitesEnabled:
+  tls:
+    enabled: true
+tls:
+  secretName: my-existing-tls
+
+# After (1.1.0)
+tls:
+  enabled: true                       # enables RADSEC on the pod
+gateway:
+  enabled: true
+  tls:
+    enabled: true                     # renders the Gateway's TLS listener
+    existingSecret: my-existing-tls   # BYO Secret (gateway-side)
+    selfSigned: false
+```
+
+`sites.tls.{cipher,privateKeyPassword}` remain — only the
+`enabled` flag moved.
+
+#### 5. SQL TLS / RADSEC TLS Secret keys renamed
+
+The two `existingTlsSecret` / `existingSecretName` keys have been renamed
+to `certificatesSecret` for consistency. The old keys still work via a
+fallback in the helpers and are slated for removal in the next major bump.
+
+```yaml
+# Before (≤ 1.0.3)
+tls:
+  existingSecretName: my-radsec-tls
+modsEnabled:
+  sql:
+    tls:
+      existingTlsSecret: my-sql-tls
+
+# After (1.1.0)
+tls:
+  certificatesSecret: my-radsec-tls
+modules:
+  sql:
+    tls:
+      certificatesSecret: my-sql-tls
+```
+
+#### 6. UDPRoute + TLSRoute replace HTTPRoute-style attachment
+
+When using the Gateway API path, the chart now renders dedicated
+`UDPRoute` resources for the auth/acct/coa ports and a `TLSRoute` for
+RADSEC. UDPRoute support is uneven across GatewayClasses — Cilium and
+Envoy Gateway support it, Istio currently does not. On clusters without
+UDPRoute, fall back to `gateway.implementation: istio` (which uses
+plain UDP listeners) or disable `gateway.udpRoute.enabled`.
+
+#### 7. Removed unused keys
+
+The following were removed without deprecation since they were never
+consumed by any template:
+
+- `gateway.dedicated`
+- `gateway.extraRoute`
+- `tls.secretName`
+- `auth.{createClientUser,clientUser,clientUserPassword}`
+
+#### 8. `modsEnabled:` renamed to `modules:`
+
+The top-level Helm key for module enablement was renamed to drop the upstream
+FreeRADIUS terminology drift (`mods-enabled` is the daemon's runtime path,
+not a useful key name in values). Rename your overrides verbatim — every
+sub-key under it (`sql`, `rest`, `json`, `pam`) keeps its shape.
+
+```yaml
+# Before (≤ 1.0.3)
+modsEnabled:
+  sql:
+    enabled: true
+    dialect: mysql
+  rest:
+    enabled: true
+    connect_uri: https://api.example.com/radius
+
+# After (1.1.0)
+modules:
+  sql:
+    enabled: true
+    dialect: mysql
+  rest:
+    enabled: true
+    connect_uri: https://api.example.com/radius
+```
+
+Related chart-internal changes (only matter if you override templates):
+
+- Each enabled module renders into its OWN ConfigMap
+  (`templates/modules/<name>.yaml`, named `<release>-mods-<name>`) and is
+  mounted at `mods-enabled/<name>` via its own pod volume
+  `freeradius-mods-<name>`, with a per-module `checksum/configmap-mods-<name>`
+  pod annotation. There is no aggregated `<release>-modules` ConfigMap — Helm
+  upgrade creates the per-module ConfigMaps and removes any old aggregated one.
+
+The in-container mount path `/etc/freeradius/mods-enabled/<name>` is
+**unchanged** — that's the FreeRADIUS daemon's runtime path and isn't ours
+to rename. Module config is now rendered directly from `.Values` into each
+module ConfigMap (no `FREERADIUS_MODS_*` env-var indirection); only secrets
+(DB/REST passwords, the EAP private-key passphrase) are injected as `$ENV{}`
+by the Deployment.
+
+#### 9. `sitesEnabled:` renamed to `sites:` (and `files/sites-available/` → `files/sites/`)
+
+Same shape as the `modsEnabled:` → `modules:` rename in #8 — dropping the
+upstream daemon-path terminology (`sites-enabled` is the runtime path, not
+a useful key name in values). Sub-keys (`coa`, `status`, `tls`) keep their
+shape.
+
+```yaml
+# Before (≤ 1.0.3)
+sitesEnabled:
+  coa:
+    enabled: true
+  status:
+    enabled: true
+    listen: 0.0.0.0
+
+# After (1.1.0)
+sites:
+  coa:
+    enabled: true
+  status:
+    enabled: true
+    listen: 0.0.0.0
+```
+
+Chart-internal renames (only matter if you override templates):
+
+- Source directory `files/sites-available/` → `files/sites/`.
+- Template file `templates/configmap/sites-enabled.yaml` → `templates/configmap/sites.yaml`.
+- K8s resource names (`<release>-sites` ConfigMap, `freeradius-sites`
+  volume, `checksum/configmap-sites` annotation) were already in the short
+  form and are unchanged.
+
+The in-container mount path `/etc/freeradius/sites-enabled/<name>` is
+**unchanged** — FreeRADIUS daemon convention.
+
+#### 10. Bundled PostgreSQL subchart + dialect-aware backend selection
+
+The chart now ships a `postgresql:` subchart block alongside the existing
+`mariadb:` block. Pick exactly one backend; the chart's hard validator
+(`freeradius.validate.sql.backend`) rejects two-subchart setups, mismatched
+dialect/subchart pairs, `sqlite + subchart`, and "no backend at all".
+
+```yaml
+# Before (≤ 1.0.3 — postgresql users were forced to use externalDatabase)
+modsEnabled:
+  sql:
+    dialect: postgresql
+mariadb:
+  enabled: false
+externalDatabase:
+  host: my-pg.example.com
+  port: 5432
+  user: freeradius_user
+  database: freeradius_db
+  existingSecret: pg-credentials
+
+# After (1.1.0 — bundled PostgreSQL subchart)
+modules:
+  sql:
+    dialect: postgresql
+postgresql:
+  enabled: true
+  auth:
+    username: freeradius_user
+    database: freeradius_db
+    # password auto-generated and stored in the postgresql subchart's Secret
+  architecture: standalone
+```
+
+`externalDatabase.port` now defaults to `""` (empty); when left empty, the
+chart picks `3306` for mysql and `5432` for postgresql automatically. Any
+explicit value still wins. The connection helpers were renamed from
+`freeradius.mariadb.{host,port,name,user,secretName,secretKey}` to
+`freeradius.sql.{...}` — this only affects users who override templates,
+not values.
+
 ## License
 
-Copyright &copy; 2023 Startechnica
+Copyright &copy; 2026 Startechnica
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

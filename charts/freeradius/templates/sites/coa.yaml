@@ -1,0 +1,51 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.sites.coa.enabled (not .Values.sites.coa.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-sites-coa" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* Virtual-server config mounted at sites-enabled/coa via subPath by the
+         Deployment. The listen port is rendered directly from .Values.containerPorts. */}}
+  coa: |-
+    listen {
+    	type = coa
+    	# ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
+    	ipaddr = *
+    	port = {{ .Values.containerPorts.coa }}
+    	virtual_server = coa
+    }
+
+    server coa {
+    	#  When a packet is received, it is processed through the recv-coa section.  This applies to *both* CoA-Request and Disconnect-Request packets.
+    	recv-coa {
+    		#  CoA && Disconnect packets can be proxied in the same way as authentication or accounting packets.
+    		#  Just set Proxy-To-Realm, or Home-Server-Pool, and the packets will be proxied.
+
+    		#  Do proxying based on realms here. You don't need "IPASS" or "ntdomain", as the proxying is based on the Operator-Name attribute.  It contains the realm,
+    		#  and ONLY the realm (prefixed by a '1')
+    		suffix
+
+    		#  Insert your own policies here.
+    		ok
+    	}
+
+    	#  When a packet is sent, it is processed through the send-coa section.  This applies to *both* CoA-Request and Disconnect-Request packets.
+    	send-coa {
+    		#  Sample module.
+    		ok
+    	}
+
+    	#  You can use pre-proxy and post-proxy sections here, too. They will be processed for sending && receiving proxy packets.
+    }
+{{- end }}

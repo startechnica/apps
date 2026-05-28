@@ -1,5 +1,5 @@
 {{- /*
-Copyright (c) 2025 Firmansyah Nainggolan. All Rights Reserved.
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -9,12 +9,10 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-      {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   {{- if .Values.podDisruptionBudget.minAvailable }}
@@ -24,5 +22,6 @@ spec:
   maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
   {{- end }}
   selector:
-    matchLabels: {{ include "st-common.labels.matchLabels" . | nindent 6 }}
+    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
+      app.kubernetes.io/component: freeradius
 {{- end }}

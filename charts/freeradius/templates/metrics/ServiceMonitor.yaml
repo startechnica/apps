@@ -1,0 +1,85 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+{{- if (include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" .) }}
+apiVersion: {{ include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . }}
+kind: ServiceMonitor
+metadata:
+  name: {{ include "freeradius.metrics.fullname" . }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  {{- if .Values.metrics.serviceMonitor.labels }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.labels "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if or .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.annotations }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.annotations "context" $) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.metrics.serviceMonitor.jobLabel }}
+  jobLabel: {{ .Values.metrics.serviceMonitor.jobLabel | quote }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
+      app.kubernetes.io/component: metrics
+    {{- if .Values.metrics.serviceMonitor.selector }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
+    {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "st-common.names.namespace" . }}
+  endpoints:
+    {{- if .Values.metrics.serviceMonitor.endpoints }}
+    {{- range .Values.metrics.serviceMonitor.endpoints }}
+    - port: {{ default "http-metrics" .port }}
+      path: {{ default $.Values.metrics.serviceMonitor.path .path }}
+      {{- if or .interval $.Values.metrics.serviceMonitor.interval }}
+      interval: {{ default $.Values.metrics.serviceMonitor.interval .interval }}
+      {{- end }}
+      {{- if or .scrapeTimeout $.Values.metrics.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ default $.Values.metrics.serviceMonitor.scrapeTimeout .scrapeTimeout }}
+      {{- end }}
+      honorLabels: {{ default $.Values.metrics.serviceMonitor.honorLabels .honorLabels }}
+      {{- if $.Values.metrics.serviceMonitor.relabelings }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" $.Values.metrics.serviceMonitor.relabelings "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $.Values.metrics.serviceMonitor.metricRelabelings }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" $.Values.metrics.serviceMonitor.metricRelabelings "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if $.Values.metrics.serviceMonitor.tlsConfig }}
+      scheme: https
+      tlsConfig: {{- include "st-common.tplvalues.render" (dict "value" $.Values.metrics.serviceMonitor.tlsConfig "context" $) | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- else }}
+    - port: http-metrics
+      path: {{ .Values.metrics.serviceMonitor.path }}
+      {{- if .Values.metrics.serviceMonitor.interval }}
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- end }}
+      {{- if .Values.metrics.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- end }}
+      honorLabels: {{ .Values.metrics.serviceMonitor.honorLabels }}
+      {{- if .Values.metrics.serviceMonitor.relabelings }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.relabelings "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.serviceMonitor.metricRelabelings }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.metricRelabelings "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.metrics.serviceMonitor.tlsConfig }}
+      scheme: https
+      tlsConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.tlsConfig "context" $) | nindent 8 }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

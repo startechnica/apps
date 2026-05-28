@@ -1,0 +1,58 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "istio") (not .Values.gateway.virtualService.existingVirtualService) }}
+{{- if (include "st-common.capabilities.istioVirtualService.apiVersion" .) }}
+{{- $clusterDomain := default .Values.clusterDomain .Values.gateway.clusterDomain -}}
+{{- $hosts := .Values.gateway.hostnames -}}
+{{- $svcHost := printf "%s.%s.svc.%s" (include "st-common.names.fullname" .) (include "st-common.names.namespace" .) $clusterDomain -}}
+apiVersion: {{ include "st-common.capabilities.istioVirtualService.apiVersion" . }}
+kind: VirtualService
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  gateways:
+    - {{ include "st-common.gateway.fullname" . }}
+  hosts:
+    {{- if $hosts }}
+    {{- range $hosts }}
+    - {{ . | quote }}
+    {{- end }}
+    {{- else }}
+    - "*"
+    {{- end }}
+  {{- if or .Values.tls.enabled .Values.gateway.virtualService.tls }}
+  tls:
+    {{- if .Values.gateway.virtualService.tls }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.virtualService.tls "context" $) | nindent 4 }}
+    {{- else }}
+    - match:
+        - port: {{ .Values.service.ports.radsec | int }}
+          sniHosts:
+            {{- if $hosts }}
+            {{- range $hosts }}
+            - {{ . | quote }}
+            {{- end }}
+            {{- else }}
+            - "*"
+            {{- end }}
+      route:
+        - destination:
+            host: {{ $svcHost }}
+            port:
+              number: {{ .Values.service.ports.radsec | int }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.gateway.virtualService.tcp }}
+  tcp: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.virtualService.tcp "context" $) | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

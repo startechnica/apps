@@ -1,0 +1,52 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.horizontalPodAutoscaler.enabled }}
+apiVersion: {{ include "st-common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
+    kind: Deployment
+    name: {{ include "st-common.names.fullname" . }}
+  minReplicas: {{ .Values.horizontalPodAutoscaler.minReplicas }}
+  maxReplicas: {{ .Values.horizontalPodAutoscaler.maxReplicas }}
+  {{- if .Values.horizontalPodAutoscaler.metrics }}
+  metrics: {{- include "st-common.tplvalues.render" (dict "value" .Values.horizontalPodAutoscaler.metrics "context" $) | nindent 4 }}
+  {{- else if or .Values.horizontalPodAutoscaler.targetCPU .Values.horizontalPodAutoscaler.targetMemory }}
+  metrics:
+    {{- if .Values.horizontalPodAutoscaler.targetCPU }}
+    - type: Resource
+      resource:
+        name: cpu
+        {{- if semverCompare "<1.23-0" (include "st-common.capabilities.kubeVersion" .) }}
+        targetAverageUtilization: {{ .Values.horizontalPodAutoscaler.targetCPU }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.horizontalPodAutoscaler.targetCPU }}
+        {{- end }}
+    {{- end }}
+    {{- if .Values.horizontalPodAutoscaler.targetMemory }}
+    - type: Resource
+      resource:
+        name: memory
+        {{- if semverCompare "<1.23-0" (include "st-common.capabilities.kubeVersion" .) }}
+        targetAverageUtilization: {{ .Values.horizontalPodAutoscaler.targetMemory }}
+        {{- else }}
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.horizontalPodAutoscaler.targetMemory }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

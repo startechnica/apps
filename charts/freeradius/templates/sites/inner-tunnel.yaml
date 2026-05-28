@@ -1,0 +1,148 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.sites.innerTunnel.enabled (not .Values.sites.innerTunnel.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-sites-inner-tunnel" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* Verbatim virtual-server config, mounted at sites-enabled/inner-tunnel via subPath
+         by the Deployment. $ENV{} placeholders are resolved by FreeRADIUS at
+         runtime (see configmap/envvars.yaml + Deployment env). */}}
+  inner-tunnel: |-
+    ######################################################################
+    #
+    #	This is a virtual server that handles *only* inner tunnel
+    #	requests for EAP-TTLS and PEAP types.
+    #
+    ######################################################################
+
+    server inner-tunnel {
+
+        listen {
+            ipaddr = 127.0.0.1
+            port = 18120
+            type = auth
+        }
+
+        authorize {
+            filter_username
+        #	filter_inner_identity
+            chap
+            mschap
+        #	unix
+        #	IPASS
+            suffix
+        #	ntdomain
+
+            update control {
+                &Proxy-To-Realm := LOCAL
+            }
+
+            eap {
+                ok = return
+            }
+
+            files
+            -sql
+        #	smbpasswd
+            -ldap
+        #	daily
+            expiration
+            logintime
+            pap
+        }
+
+        authenticate {
+            Auth-Type PAP {
+                pap
+            }
+
+            Auth-Type CHAP {
+                chap
+            }
+
+            Auth-Type MS-CHAP {
+                mschap
+            }
+
+            mschap
+        #	pam
+
+            #	Auth-Type LDAP {
+            #		ldap
+            #	}
+
+            eap
+        }
+
+        session {
+            radutmp
+        #	sql
+        }
+
+        #  Post-Authentication
+        post-auth {
+        #   cui-inner
+
+        #	update outer.session-state {
+        #	       User-Name := &User-Name
+        #	}
+
+        #	reply_log
+            -sql
+        #	ldap
+        #	moonshot_host_tid
+        #	moonshot_realm_tid
+        #	moonshot_coi_tid
+
+            if (0) {
+                update reply {
+                    User-Name !* ANY
+                    Message-Authenticator !* ANY
+                    EAP-Message !* ANY
+                    Proxy-State !* ANY
+                    MS-MPPE-Encryption-Types !* ANY
+                    MS-MPPE-Encryption-Policy !* ANY
+                    MS-MPPE-Send-Key !* ANY
+                    MS-MPPE-Recv-Key !* ANY
+                }
+
+                update {
+                    &outer.session-state: += &reply:
+                }
+            }
+
+            Post-Auth-Type REJECT {
+                -sql
+                attr_filter.access_reject
+
+                update outer.session-state {
+                    &Module-Failure-Message := &request:Module-Failure-Message
+                }
+            }
+        }
+
+        pre-proxy {
+        #	files
+        #	attr_filter.pre-proxy
+        #	pre_proxy_log
+        }
+
+        post-proxy {
+        #	post_proxy_log
+        #	attr_filter.post-proxy
+            eap
+        }
+
+    } # inner-tunnel server block
+{{- end }}

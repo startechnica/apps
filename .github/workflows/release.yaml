@@ -1,14 +1,53 @@
-name: Release Charts
+name: Lint and Release Charts
 
 on:
   push:
     branches:
-      - main
+      - "**"
     paths:
       - "charts/**"
+      - ".github/workflows/**"
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          # chart-testing 3.12.0 bundles a yamale that references ast.Num, which
+          # was removed in Python 3.12 — pin to 3.11 so the Chart.yaml schema
+          # validation step doesn't crash.
+          python-version: "3.11"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5.0.0
+        with:
+          version: latest
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.7.0
+
+      - name: Add chart repositories
+        run: helm repo add startechnica https://startechnica.github.io/apps
+
+      # `ct` diffs against the default branch and lints ONLY the charts that
+      # changed — building their dependencies and running helm lint + yamllint
+      # + yamale schema + maintainer + version-increment checks. On a direct
+      # push to the default branch nothing differs (so nothing is linted there);
+      # lint happens on the feature branch before the merge.
+      - name: Run chart-testing (lint)
+        run: ct lint --target-branch ${{ github.event.repository.default_branch }} --chart-dirs charts
+
   release:
+    needs: lint
+    # Lint runs on every branch; only publish releases from main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

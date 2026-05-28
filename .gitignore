@@ -8,6 +8,7 @@
 .gitignore
 .bzr/
 .bzrignore
+.claude/
 .hg/
 .hgignore
 .svn/
@@ -26,3 +27,7 @@
 
 # OWNERS file for Kubernetes
 OWNERS
+
+# Helm dependency build artifacts (downloaded subcharts + lock)
+charts/*/charts/
+charts/*/Chart.lock

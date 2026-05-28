@@ -1,0 +1,41 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if not .Values.clients.existingConfigMapName }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-clients" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  clients.conf: |-
+    {{- range $name, $client := omit .Values.clients "existingConfigMapName" }}
+    client {{ $name }} {
+        ipaddr = {{ $client.ipv4addr | quote }}
+        {{- if $client.ipv6addr }}
+        ipv6addr = {{ $client.ipv6addr | quote }}
+        {{- end }}
+        proto = {{ default "udp" $client.proto }}
+        secret = {{ $client.secret | quote }}
+        nas_type = {{ default "other" $client.nas_type }}
+        virtual_server = {{ default "default" $client.virtual_server }}
+        {{- if $client.coa_server }}
+        coa_server = {{ $client.coa_server }}
+        {{- end }}
+        {{- if $client.limit }}
+        limit {
+            max_connections = {{ default 16 $client.limit.max_connections }}
+            lifetime = {{ default 0 $client.limit.lifetime }}
+            idle_timeout = {{ default 30 $client.limit.idle_timeout }}
+        }
+        {{- end }}
+    }
+    {{- end }}
+{{- end }}
