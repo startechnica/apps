@@ -26,3 +26,12 @@ data:
 {{- if .Values.modules.pam.enabled }}
 {{ (.Files.Glob "files/modules/pam").AsConfig | indent 2 }}
 {{- end }}
+{{- if .Values.modules.eap.enabled }}
+  {{- /* eap is rendered through `tpl` so Helm directives inside
+         files/modules/eap are evaluated. Secret values stay as `$ENV{}`
+         (injected from a Secret at runtime, never baked into this ConfigMap).
+         The other module files are loaded verbatim via AsConfig because they
+         are vendored upstream configs that may contain literal `{{`. */}}
+  eap: |
+{{ tpl (.Files.Get "files/modules/eap") $ | indent 4 }}
+{{- end }}

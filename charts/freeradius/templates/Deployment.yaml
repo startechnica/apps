@@ -52,6 +52,9 @@ spec:
         {{- if include "freeradius.rest.tls.createSecret" . }}
         checksum/secret-rest-tls: {{ include (print $.Template.BasePath "/secret/rest-tls.yaml") . | sha256sum }}
         {{- end }}
+        {{- if include "freeradius.eap.tlsConfig.createSecret" . }}
+        checksum/secret-eap-tls: {{ include (print $.Template.BasePath "/secret/eap-tls.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.commonAnnotations }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 8 }}
         {{- end }}
@@ -244,6 +247,18 @@ spec:
                   name: {{ include "freeradius.rest.secretName" . }}
                   key: {{ include "freeradius.rest.secretKey" . }}
             {{- end }}
+            {{- if .Values.modules.eap.enabled }}
+            - name: FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.modsEapTlsPrivKeyPassword "context" $)) $ }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "modsEapTlsPrivKeyPassword") }}
+                {{- else }}
+                  name: {{ $globalSecretName }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "mods-eap-tls-privkey-password") }}
+                {{- end }}
+            {{- end }}
             {{- if .Values.extraEnvVars }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
@@ -387,6 +402,11 @@ spec:
               mountPath: /opt/startechnica/freeradius/certs-rest
               readOnly: true
             {{- end }}
+            {{- if .Values.modules.eap.enabled }}
+            - name: freeradius-eap-tls
+              mountPath: /opt/startechnica/freeradius/certs-eap
+              readOnly: true
+            {{- end }}
             - name: shared-certs
               mountPath: /opt/startechnica/freeradius/shared-certs
               readOnly: true
@@ -441,6 +461,11 @@ spec:
         - name: freeradius-rest-tls
           secret:
             secretName: {{ include "freeradius.rest.tls.secretName" . }}
+        {{- end }}
+        {{- if .Values.modules.eap.enabled }}
+        - name: freeradius-eap-tls
+          secret:
+            secretName: {{ include "freeradius.eap.tlsConfig.secretName" . }}
         {{- end }}
         {{- if or (.Files.Glob "files/radiusd.conf") .Values.configurations .Values.configurationsConfigMap }}
         - name: freeradius-config

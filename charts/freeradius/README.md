@@ -309,6 +309,69 @@ This chart allows you to set your custom affinity using the `affinity` parameter
 
 There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
 
+### Auto-generated credentials
+
+When you don't supply them, the chart auto-generates several credentials into the chart-managed Secret (`<release>-freeradius`):
+
+- `sites-status-secret` — shared secret for the RADIUS `status` virtual server (probes + metrics exporter).
+- `sites-tls-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled`).
+- `mods-sql-tls-privkey-password`, `mods-rest-password`, `database-password` — when the matching feature is enabled.
+
+These use the `lookup`-based "manage" pattern: on a normal `helm install` / `helm upgrade` **against a live cluster**, the existing value is read back and preserved, so it stays stable across releases.
+
+> **⚠️ They are regenerated on every apply in `helm template`-based workflows.** Helm's `lookup` returns nothing when there is no live API connection — i.e. during `helm template`, `helm install --dry-run` (client), `helm diff`, and GitOps tools that render with `helm template` (Argo CD, Flux in template mode). In those workflows a **fresh random value is produced on every render/sync**, which rotates the status secret and the RADSEC key passphrase out from under running pods and can break probes, the metrics exporter, and RADSEC until the pods restart with the new values.
+
+To make these deterministic, pin them explicitly instead of relying on auto-generation:
+
+```yaml
+# Option A — set the values directly
+sites:
+  status:
+    secret: "<your-status-secret>"
+  tls:
+    privateKeyPassword: "<your-radsec-key-password>"
+
+# Option B — bring your own Secret for everything
+auth:
+  existingSecret: my-freeradius-credentials
+
+# Option C — per-credential Secrets (e.g. managed by an external operator)
+auth:
+  existingSecretPerPassword:
+    keyMapping:
+      sitesStatusSecret: status-secret
+    sitesStatusSecret:
+      name: freeradius-status
+```
+
+#### Auto-generated TLS certificates behave the same way
+
+The same limitation applies to the chart's **self-signed TLS material** — the shared internal CA (`<release>-freeradius-tls-ca`) and every leaf it signs (in-pod RADSEC `tls.yaml`, SQL `sql-tls.yaml`, REST `rest-tls.yaml`, gateway `gateway-tls.yaml`). The CA is recovered via `lookup` (`freeradius.tls.ca.init`) and falls back to `genCA` when there is no live cluster, so in `helm template`-based workflows a **fresh CA + fresh leaf certificates are minted on every render/sync**. That rotates the CA out from under anything that already trusts it — RADSEC clients, SQL/REST peers — until they re-fetch.
+
+The deterministic escape hatches mirror the password ones:
+
+```yaml
+# Option A — let cert-manager own issuance (recommended; cert-manager,
+# not Helm, manages the Certificate, so no churn on re-render)
+tls:
+  certManager:
+    create: true
+    issuerRef:
+      kind: ClusterIssuer
+      name: my-issuer
+
+# Option B — bring your own certificate Secret (per TLS context)
+tls:
+  certificatesSecret: my-radsec-tls
+modules:
+  sql:
+    tls:
+      certificatesSecret: my-sql-tls
+  rest:
+    tls:
+      certificatesSecret: my-rest-tls
+```
+
 ## Troubleshooting
 
 Find more information about how to deal with common errors related to Startechnica's Helm charts in [this troubleshooting guide](https://startechnica.github.io/doc/troubleshoot-helm-chart-issues).
