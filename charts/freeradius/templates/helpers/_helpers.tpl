@@ -79,6 +79,25 @@ Usage: {{ include "freeradius.module.configMapName" (dict "module" "sql" "contex
 {{- end -}}
 
 {{/*
+ConfigMap name a virtual server mounts at `sites-enabled/<site>`: the BYO
+`sites.<key>.existingConfigMap` when set (tpl-evaluated), otherwise the
+chart-rendered `<fullname>-sites-<site>`. Distinct from the `extraSites`
+naming (`<fullname>-site-<name>`) so the two never collide.
+`site` is the FreeRADIUS-facing name (on-disk file / mount); `key` is the
+values-map key and defaults to `site` (pass it only when they differ, e.g.
+`inner-tunnel` on disk vs `innerTunnel` in values).
+Usage: {{ include "freeradius.site.configMapName" (dict "site" "default" "context" $) }}
+*/}}
+{{- define "freeradius.site.configMapName" -}}
+{{- $existing := index .context.Values.sites (.key | default .site) "existingConfigMap" -}}
+{{- if $existing -}}
+{{- tpl $existing .context -}}
+{{- else -}}
+{{- printf "%s-sites-%s" (include "st-common.names.fullname" .context) .site -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Configurations ConfigMap name (BYO via configurationsConfigMap, otherwise chart-rendered).
 */}}
 {{- define "freeradius.configurationCM" -}}

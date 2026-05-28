@@ -45,20 +45,13 @@ data:
 
   FREERADIUS_SITES_NAMESPACE: radius
 
-  FREERADIUS_SITES_DEFAULT_AUTH_PORT: {{ .Values.containerPorts.auth | quote }}
-  FREERADIUS_SITES_DEFAULT_ACCT_PORT: {{ .Values.containerPorts.acct | quote }}
-  {{- if .Values.sites.coa.enabled }}
-  FREERADIUS_SITES_COA_PORT: {{ .Values.containerPorts.coa | quote }}
-  {{- end }}
+  {{- /* Virtual-server (site) config — listen ports/addresses, TLS cert paths and
+         cipher — is now rendered directly from `.Values` into each per-site ConfigMap
+         (templates/sites/<name>.yaml). Only the status port stays here: the
+         Deployment's radclient liveness/readiness/startup probes reference
+         $FREERADIUS_SITES_STATUS_PORT. Site secrets (status secret, RADSEC key
+         password) are injected by the Deployment via secretKeyRef. */}}
   {{- if .Values.sites.status.enabled }}
-  FREERADIUS_SITES_STATUS_LISTEN: {{ .Values.sites.status.listen | quote }}
   FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
-  {{- end }}
-  {{- if .Values.tls.enabled }}
-  FREERADIUS_SITES_TLS_PORT: {{ .Values.containerPorts.radsec | quote }}
-  FREERADIUS_SITES_TLS_CA_FILE: {{ include "freeradius.tls.caCertPath" . | quote }}
-  FREERADIUS_SITES_TLS_CERTIFICATE_FILE: {{ include "freeradius.tls.certPath" . | quote }}
-  FREERADIUS_SITES_TLS_CIPHER: {{ default "DEFAULT" .Values.sites.tls.cipher | quote }}
-  FREERADIUS_SITES_TLS_PRIVKEY_FILE: {{ include "freeradius.tls.certKeyPath" . | quote }}
   {{- end }}
 {{- end }}

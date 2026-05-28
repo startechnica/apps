@@ -16,5 +16,5 @@ metadata:
   {{- end }}
 data:
   pam: |
-    {{- include "freeradius.tplvalues.renderConfig" (dict "value" (dict "pam" (omit .Values.modules.pam "enabled")) "context" $) | nindent 4 }}
+    {{- include "freeradius.tplvalues.renderConfig" (dict "value" (dict "pam" (omit .Values.modules.pam "enabled" "existingConfigMap")) "context" $) | nindent 4 }}
 {{- end }}

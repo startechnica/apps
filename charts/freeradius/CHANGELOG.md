@@ -6,7 +6,7 @@ Major release. End-to-end modernization: values.yaml restructured with
 section banners, TLS / cert-manager keys consolidated, a chart-internal
 shared CA helper, full Gateway API resource set adapted for RADIUS traffic
 (UDPRoute / TLSRoute), HPA template, bundled PostgreSQL subchart alongside
-MariaDB, REST/JSON/PAM modules, top-level Helm keys cleaned up
+MariaDB, REST/JSON/PAM/PAP modules, top-level Helm keys cleaned up
 (`modsEnabled:` → `modules:`, `sitesEnabled:` → `sites:`,
 `database.bootstrap.*` → `bootstrap.database.*`), and a long list of
 common template fixes.
@@ -115,6 +115,10 @@ common template fixes.
   whenever `sites.status.enabled` is true (was previously only
   bound on the pod's loopback interface, unreachable from other pods).
   `service.nodePorts.status` added for completeness.
+- `sites.dhcp.{enabled,existingConfigMap}` — optional DHCP virtual server
+  (`templates/sites/dhcp.yaml`, off by default). Enabling mounts the `dhcp`
+  virtual server at `sites-enabled/dhcp`; opening a DHCP listener port is left
+  to `containerPorts` / `service` / `extraPorts`.
 - A second `<fullname>-metrics` NetworkPolicy resource is rendered
   alongside the main one when `networkPolicy.enabled && metrics.enabled`:
   it allows Prometheus to scrape the exporter's `/metrics` endpoint and
@@ -207,6 +211,17 @@ common template fixes.
   `extraVolumes` / `extraVolumeMounts`. Virtual-server wiring
   (`Auth-Type := PAM` in `authorize`, `pam` in `authenticate {}`) is the
   user's responsibility.
+- **PAP authentication module support (rlm_pap).** New `modules.pap:`
+  values block (`enabled`, `existingConfigMap`, `normalise`, default `true`).
+  The pap module ConfigMap (`templates/modules/pap.yaml`) is rendered through
+  Helm `tpl`: every key under `modules.pap` except `enabled` /
+  `existingConfigMap` is emitted into the `pap {}` block as a `key = value`
+  directive (via `freeradius.tplvalues.renderConfig`), so values use
+  FreeRADIUS directive names directly. The module compares a cleartext
+  `User-Password` against a "known good" password supplied by another module
+  (`sql`, `files`, …). Virtual-server wiring (`pap` in `authorize {}` to set
+  `Auth-Type := PAP`, and in `authenticate {}` to verify) is the user's
+  responsibility.
 - **REST module support (rlm_rest).** New `modules.rest:` values block,
   rendered into its own `<release>-mods-rest` ConfigMap
   (`templates/modules/rest.yaml`) when `modules.rest.enabled: true`. Structural
@@ -306,16 +321,29 @@ common template fixes.
     directly from `.Values` into each module ConfigMap (no
     `FREERADIUS_MODS_*` env-var indirection); only secrets (DB/REST passwords,
     the EAP private-key passphrase) are injected as `$ENV{}` by the Deployment.
-- **`sitesEnabled:` → `sites:`** (top-level Helm key). Every sub-key keeps
-  its existing shape — `coa`, `status`, `tls` are unchanged. Related
-  chart-internal renames:
-  - Source directory `files/sites-available/` → `files/sites/`
-  - Template file `templates/configmap/sites-enabled.yaml` → `templates/configmap/sites.yaml`
-  - K8s resource names (`<release>-sites` ConfigMap, `freeradius-sites`
-    volume, `checksum/configmap-sites` annotation) were already in the
-    short form and are unchanged.
+- **`sitesEnabled:` → `sites:`** (top-level Helm key). Related
+  chart-internal changes (mirror the per-module split):
+  - Each virtual server renders into its OWN ConfigMap
+    (`templates/sites/<name>.yaml`, named `<release>-sites-<name>`), mounted
+    at `sites-enabled/<name>` via its own pod volume `freeradius-site-<name>`,
+    with a per-site `checksum/configmap-sites-<name>` pod annotation. There is
+    no single aggregated `<release>-sites` ConfigMap, and the source directory
+    `files/sites/` was removed — each site's config is inlined into its
+    template (mirroring `templates/modules/<name>.yaml`).
+  - Each site gained a `sites.<name>.existingConfigMap` BYO override (resolved
+    by the new `freeradius.site.configMapName` helper), matching the
+    per-module `existingConfigMap` pattern. `default` and `innerTunnel` are
+    always rendered; `coa`, `status`, `dhcp`, and the RADSEC `tls` site are
+    gated by their respective enable flags. The `inner-tunnel` on-disk/site
+    name maps to the `sites.innerTunnel` values key.
   - In-container mount path `/etc/freeradius/sites-enabled/<name>` is
-    unchanged (FreeRADIUS daemon convention).
+    unchanged (FreeRADIUS daemon convention). Site config (listen ports/
+    addresses, RADSEC cert/key/CA paths, cipher) is now rendered directly from
+    `.Values` into each site ConfigMap (no `FREERADIUS_SITES_*` env-var
+    indirection); only secrets (status secret, RADSEC private-key passphrase,
+    client secret) stay as `$ENV{}` injected by the Deployment. The lone
+    exception kept in `configmap/envvars.yaml` is `FREERADIUS_SITES_STATUS_PORT`,
+    still referenced by the Deployment's radclient probes.
 - `ingress.*` block (entire block) — FreeRADIUS doesn't speak HTTP. The
   `Certificate.yaml` template now derives `dnsNames` from `gateway.hostnames`
   and the Service FQDN; istio Gateway and VirtualService likewise consume
@@ -385,10 +413,18 @@ common template fixes.
 - configmap/clients.yaml: previously emitted the literal string `client`
   with no body. Now renders proper `client <name> { ... }` blocks from
   `.Values.clients`.
-- configmap/sites.yaml: gated the `tls` site on
+- sites `tls` (now `templates/sites/tls.yaml`): was gated on
   `sites.tls.enabled` even though the rest of the chart drives RADSEC
   off `tls.enabled` (the in-pod TLS flag). Now correctly gated on
   `tls.enabled`.
+- sites `inner-tunnel`: previously rendered into the bundled `<release>-sites`
+  ConfigMap but never mounted, so EAP-TTLS/PEAP fell back to the base image's
+  built-in copy. It is now mounted at `sites-enabled/inner-tunnel` from its
+  own ConfigMap so the chart-shipped config is authoritative.
+- sites `status` mount: was attached unconditionally even though its ConfigMap
+  entry was gated on `sites.status.enabled`, so disabling the status site left
+  a volumeMount referencing a missing subPath key (pod would fail to start).
+  The mount is now gated on `sites.status.enabled` too.
 - **rlm_sql schema not loaded into the database**
   ([#67](https://github.com/startechnica/apps/issues/67)). `files/schema/mysql.sql`
   shipped with the chart but no template wired it into MariaDB or any other

@@ -5,7 +5,7 @@ annotations:
       image: docker.io/freeradius/freeradius-server:3.2.8
   artifacthub.io/changes: |
     - kind: changed
-      description: "1.1.0 major release — values.yaml restructured, TLS/cert-manager keys consolidated, gateway-api stack adapted for RADIUS (UDPRoute/TLSRoute), bundled PostgreSQL subchart added alongside MariaDB, REST/JSON/PAM modules, top-level keys cleaned up (modsEnabled→modules, sitesEnabled→sites, database.bootstrap→bootstrap.database); see CHANGELOG.md and README §Upgrading for migration."
+      description: "1.1.0 major release — values.yaml restructured, TLS/cert-manager keys consolidated, gateway-api stack adapted for RADIUS (UDPRoute/TLSRoute), bundled PostgreSQL subchart added alongside MariaDB, REST/JSON/PAM/PAP modules, top-level keys cleaned up (modsEnabled→modules, sitesEnabled→sites, database.bootstrap→bootstrap.database); see CHANGELOG.md and README §Upgrading for migration."
 apiVersion: v2
 appVersion: 3.2.8
 dependencies:

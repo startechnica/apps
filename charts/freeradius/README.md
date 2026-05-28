@@ -262,11 +262,20 @@ The command removes all the Kubernetes components associated with the chart and 
 
 | Name                                       | Description                                                                     | Value             |
 | ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
-| `sites.coa.enabled`                 | Enable FreeRADIUS coa service                                                   | `false`           |
-| `sites.status.enabled`              | Enable FreeRADIUS status service                                                | `true`            |
-| `sites.tls.enabled`                 | Enable FreeRADIUS radsec service                                                | `false`           |
-| `sites.tls.cipher`                  |                                                                                 | `false`           |
-| `sites.tls.privateKeyPassword`      |                                                                                 | `false`           |
+| `sites.default.existingConfigMap`     | BYO ConfigMap (key `default`) mounted at `sites-enabled/default`; skips chart rendering            | `""`      |
+| `sites.innerTunnel.existingConfigMap` | BYO ConfigMap (key `inner-tunnel`) mounted at `sites-enabled/inner-tunnel`; skips chart rendering  | `""`      |
+| `sites.coa.enabled`                   | Enable the `coa` virtual server (Change-of-Authorization)                                          | `false`   |
+| `sites.coa.existingConfigMap`         | BYO ConfigMap (key `coa`) mounted at `sites-enabled/coa`; skips chart rendering                    | `""`      |
+| `sites.status.enabled`                | Enable the `status` virtual server                                                                 | `true`    |
+| `sites.status.listen`                 | Listen address for the status server                                                               | `0.0.0.0` |
+| `sites.status.secret`                 | Shared secret for the status `radclient` (auto-generated when empty)                               | `""`      |
+| `sites.status.existingConfigMap`      | BYO ConfigMap (key `status`) mounted at `sites-enabled/status`; skips chart rendering              | `""`      |
+| `sites.dhcp.enabled`                  | Enable the `dhcp` virtual server                                                                   | `false`   |
+| `sites.dhcp.existingConfigMap`        | BYO ConfigMap (key `dhcp`) mounted at `sites-enabled/dhcp`; skips chart rendering                  | `""`      |
+| `sites.tls.enabled`                   | Enable the RADSEC virtual server                                                                   | `false`   |
+| `sites.tls.cipher`                    | TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the image default)                   | `DEFAULT` |
+| `sites.tls.privateKeyPassword`        | Password for the RADSEC private key when it is password-protected                                  | `""`      |
+| `sites.tls.existingConfigMap`         | BYO ConfigMap (key `tls`) mounted at `sites-enabled/tls`; skips chart rendering                    | `""`      |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,

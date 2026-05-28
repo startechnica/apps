@@ -455,6 +455,30 @@ modules:
     ##
     pam_auth: radiusd
 
+  ## PAP authentication module (rlm_pap). Verifies a cleartext `User-Password`
+  ## against a "known good" password (`Cleartext-Password`, `Crypt-Password`,
+  ## `MD5-Password`, `SSHA-Password`, …) supplied by another module such as
+  ## `sql` or `files`. List `pap` in the `authorize {}` block of your virtual
+  ## server (so it can set `Auth-Type := PAP`) and in `authenticate {}` (so it
+  ## actually checks the password). This is the standalone module, independent
+  ## of the inner `pap` EAP method under `modules.eap`.
+  ##
+  ## Every key here except `enabled`/`existingConfigMap` is rendered verbatim
+  ## into the `pap {}` block as a `key = value` directive (via
+  ## `freeradius.tplvalues.renderConfig`), so use FreeRADIUS directive names
+  ## (snake_case) for any keys you add.
+  ##
+  pap:
+    ## @param modules.pap.enabled Enable the FreeRADIUS PAP module.
+    ##
+    enabled: false
+    ## @param modules.pap.existingConfigMap Mount an existing ConfigMap (must contain a `pap` key with the module config) at `mods-enabled/pap` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
+    ## @param modules.pap.normalise Detect the hash/encoding of "known good" passwords and normalise them so PAP can compare against them (`normalise`).
+    ##
+    normalise: true
+
   ## EAP module (rlm_eap). Provides TLS-based EAP methods that share one
   ## `tls-config` server certificate: EAP-TLS (mutual TLS, client
   ## certificate) and EAP-TTLS (TLS tunnel + inner auth via a virtual
@@ -492,8 +516,8 @@ modules:
       - tls
       - ttls
       - pap
-      # - peap
-      # - mschapv2
+      - peap
+      - mschapv2
       # - md5
 
     ## Per-method config. Which methods are rendered is controlled by `methods`
@@ -585,10 +609,24 @@ modules:
 ## into the `<release>-sites` ConfigMap by `templates/configmap/sites.yaml`.
 ##
 sites:
+  ## Core virtual servers, always rendered and mounted: `default` (the main
+  ## auth/acct server) and `inner-tunnel` (EAP-TTLS/PEAP inner identity). Set
+  ## `existingConfigMap` on either to bring your own instead.
+  ##
+  ## @param sites.default.existingConfigMap Mount an existing ConfigMap (must contain a `default` key with the virtual-server config) at `sites-enabled/default` instead of the chart-rendered one; the chart then skips rendering its own.
+  ##
+  default:
+    existingConfigMap: ""
+  ## @param sites.innerTunnel.existingConfigMap Mount an existing ConfigMap (must contain an `inner-tunnel` key with the virtual-server config) at `sites-enabled/inner-tunnel` instead of the chart-rendered one; the chart then skips rendering its own.
+  ##
+  innerTunnel:
+    existingConfigMap: ""
   ## @param sites.coa.enabled Enable the `coa` virtual server (Change-of-Authorization, UDP port `containerPorts.coa`).
+  ## @param sites.coa.existingConfigMap Mount an existing ConfigMap (must contain a `coa` key with the virtual-server config) at `sites-enabled/coa` instead of the chart-rendered one; the chart then skips rendering its own.
   ##
   coa:
     enabled: false
+    existingConfigMap: ""
   ## RADIUS `status` virtual server, used by the chart's liveness/readiness
   ## probes (`radclient status` over loopback) AND by the standalone metrics
   ## exporter Deployment (`metrics.enabled`) which talks to it over the
@@ -599,11 +637,23 @@ sites:
   ## @param sites.status.enabled Enable the `status` virtual server
   ## @param sites.status.listen Listen address for the status server. Default `0.0.0.0` so the standalone metrics exporter pod can reach it via the FreeRADIUS Service. Use `127.0.0.1` to keep it pod-local if you don't enable metrics (the chart's NetworkPolicy locks down the port either way).
   ## @param sites.status.secret Shared secret the status `radclient` uses. When empty, the chart auto-generates and persists one in `auth.existingSecret` under key `sites-status-secret`.
+  ## @param sites.status.existingConfigMap Mount an existing ConfigMap (must contain a `status` key with the virtual-server config) at `sites-enabled/status` instead of the chart-rendered one; the chart then skips rendering its own.
   ##
   status:
     enabled: true
     listen: 0.0.0.0
     secret: ""
+    existingConfigMap: ""
+  ## DHCP virtual server (rlm_dhcp / sqlippool). Disabled by default. Enabling
+  ## mounts the `dhcp` virtual server but does not open a DHCP listener port —
+  ## wire that up via `containerPorts` / `service` / `extraPorts` as needed.
+  ##
+  ## @param sites.dhcp.enabled Enable the `dhcp` virtual server
+  ## @param sites.dhcp.existingConfigMap Mount an existing ConfigMap (must contain a `dhcp` key with the virtual-server config) at `sites-enabled/dhcp` instead of the chart-rendered one; the chart then skips rendering its own.
+  ##
+  dhcp:
+    enabled: false
+    existingConfigMap: ""
   ## In-pod RADSEC server (TLS over TCP RADIUS). When enabled, the chart
   ## mounts the TLS material referenced by `tls.*` and opens the RADSEC
   ## container/Service port.
@@ -611,11 +661,13 @@ sites:
   ## @param sites.tls.enabled Enable the RADSEC virtual server
   ## @param sites.tls.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
   ## @param sites.tls.privateKeyPassword Password for the RADSEC private key when it is password-protected
+  ## @param sites.tls.existingConfigMap Mount an existing ConfigMap (must contain a `tls` key with the virtual-server config) at `sites-enabled/tls` instead of the chart-rendered one; the chart then skips rendering its own.
   ##
   tls:
     enabled: false
     cipher: "DEFAULT"
     privateKeyPassword: ""
+    existingConfigMap: ""
 
 ## RADIUS clients map rendered into a ConfigMap and mounted at
 ## `/etc/freeradius/clients.conf`. Each top-level entry becomes one `client`
@@ -943,7 +995,7 @@ extraVolumes: []
 ## @param extraVolumeMounts Additional volume mounts attached to the FreeRADIUS container.
 ##
 extraVolumeMounts: []
-## @param extraModules [array] Additional FreeRADIUS module files. Each entry gets its OWN ConfigMap (`<fullname>-module-<name>`) and pod volume, mounted at `mods-enabled/<name>` via `subPath`. `name` is the volume name + on-disk filename (must be a valid DNS-1123 label and not collide with a built-in volume name such as `data`, `temp`, `freeradius-sites`, or a built-in module name `sql`/`rest`/`json`/`pam`/`eap`); `config` is the raw module body, mounted verbatim (NOT rendered through `tpl`).
+## @param extraModules [array] Additional FreeRADIUS module files. Each entry gets its OWN ConfigMap (`<fullname>-module-<name>`) and pod volume, mounted at `mods-enabled/<name>` via `subPath`. `name` is the volume name + on-disk filename (must be a valid DNS-1123 label and not collide with a built-in volume name such as `data`, `temp`, `freeradius-sites`, or a built-in module name `sql`/`rest`/`json`/`pam`/`pap`/`eap`); `config` is the raw module body, mounted verbatim (NOT rendered through `tpl`).
 ## extraModules:
 ##   - name: ldap
 ##     config: |

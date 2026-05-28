@@ -37,7 +37,6 @@ spec:
       annotations:
         {{- if not .Values.existingConfigmap }}
         checksum/configmap-env: {{ include (print $.Template.BasePath "/configmap/envvars.yaml") . | sha256sum }}
-        checksum/configmap-sites: {{ include (print $.Template.BasePath "/configmap/sites.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.extraModules }}
         checksum/configmap-extra-modules: {{ include (print $.Template.BasePath "/configmap/extra-modules.yaml") . | sha256sum }}
@@ -45,11 +44,32 @@ spec:
         {{- if .Values.extraSites }}
         checksum/configmap-extra-sites: {{ include (print $.Template.BasePath "/configmap/extra-sites.yaml") . | sha256sum }}
         {{- end }}
+        {{- if not .Values.sites.default.existingConfigMap }}
+        checksum/configmap-sites-default: {{ include (print $.Template.BasePath "/sites/default.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if not .Values.sites.innerTunnel.existingConfigMap }}
+        checksum/configmap-sites-inner-tunnel: {{ include (print $.Template.BasePath "/sites/inner-tunnel.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.status.enabled (not .Values.sites.status.existingConfigMap) }}
+        checksum/configmap-sites-status: {{ include (print $.Template.BasePath "/sites/status.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.coa.enabled (not .Values.sites.coa.existingConfigMap) }}
+        checksum/configmap-sites-coa: {{ include (print $.Template.BasePath "/sites/coa.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.dhcp.enabled (not .Values.sites.dhcp.existingConfigMap) }}
+        checksum/configmap-sites-dhcp: {{ include (print $.Template.BasePath "/sites/dhcp.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.tls.enabled (not .Values.sites.tls.existingConfigMap) }}
+        checksum/configmap-sites-tls: {{ include (print $.Template.BasePath "/sites/tls.yaml") . | sha256sum }}
+        {{- end }}
         {{- if and .Values.modules.eap.enabled (not .Values.modules.eap.existingConfigMap) }}
         checksum/configmap-mods-eap: {{ include (print $.Template.BasePath "/modules/eap.yaml") . | sha256sum }}
         {{- end }}
         {{- if and .Values.modules.pam.enabled (not .Values.modules.pam.existingConfigMap) }}
         checksum/configmap-mods-pam: {{ include (print $.Template.BasePath "/modules/pam.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.pap.enabled (not .Values.modules.pap.existingConfigMap) }}
+        checksum/configmap-mods-pap: {{ include (print $.Template.BasePath "/modules/pap.yaml") . | sha256sum }}
         {{- end }}
         {{- if and .Values.modules.sql.enabled (not .Values.modules.sql.existingConfigMap) }}
         checksum/configmap-mods-sql: {{ include (print $.Template.BasePath "/modules/sql.yaml") . | sha256sum }}
@@ -410,19 +430,34 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/pam
               subPath: pam
             {{- end }}
-            - name: freeradius-sites
+            {{- if .Values.modules.pap.enabled }}
+            - name: freeradius-mods-pap
+              mountPath: /etc/freeradius/mods-enabled/pap
+              subPath: pap
+            {{- end }}
+            - name: freeradius-site-default
               mountPath: /etc/freeradius/sites-enabled/default
               subPath: default
-            - name: freeradius-sites
+            - name: freeradius-site-inner-tunnel
+              mountPath: /etc/freeradius/sites-enabled/inner-tunnel
+              subPath: inner-tunnel
+            {{- if .Values.sites.status.enabled }}
+            - name: freeradius-site-status
               mountPath: /etc/freeradius/sites-enabled/status
               subPath: status
+            {{- end }}
             {{- if .Values.sites.coa.enabled }}
-            - name: freeradius-sites
+            - name: freeradius-site-coa
               mountPath: /etc/freeradius/sites-enabled/coa
               subPath: coa
             {{- end }}
+            {{- if .Values.sites.dhcp.enabled }}
+            - name: freeradius-site-dhcp
+              mountPath: /etc/freeradius/sites-enabled/dhcp
+              subPath: dhcp
+            {{- end }}
             {{- if .Values.tls.enabled }}
-            - name: freeradius-sites
+            - name: freeradius-site-tls
               mountPath: /etc/freeradius/sites-enabled/tls
               subPath: tls
             - name: freeradius-tls
@@ -494,9 +529,37 @@ spec:
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "pam" "context" $) }}
         {{- end }}
-        - name: freeradius-sites
+        {{- if .Values.modules.pap.enabled }}
+        - name: freeradius-mods-pap
           configMap:
-            name: {{ printf "%s-sites" (include "st-common.names.fullname" .) }}
+            name: {{ include "freeradius.module.configMapName" (dict "module" "pap" "context" $) }}
+        {{- end }}
+        - name: freeradius-site-default
+          configMap:
+            name: {{ include "freeradius.site.configMapName" (dict "site" "default" "context" $) }}
+        - name: freeradius-site-inner-tunnel
+          configMap:
+            name: {{ include "freeradius.site.configMapName" (dict "site" "inner-tunnel" "key" "innerTunnel" "context" $) }}
+        {{- if .Values.sites.status.enabled }}
+        - name: freeradius-site-status
+          configMap:
+            name: {{ include "freeradius.site.configMapName" (dict "site" "status" "context" $) }}
+        {{- end }}
+        {{- if .Values.sites.coa.enabled }}
+        - name: freeradius-site-coa
+          configMap:
+            name: {{ include "freeradius.site.configMapName" (dict "site" "coa" "context" $) }}
+        {{- end }}
+        {{- if .Values.sites.dhcp.enabled }}
+        - name: freeradius-site-dhcp
+          configMap:
+            name: {{ include "freeradius.site.configMapName" (dict "site" "dhcp" "context" $) }}
+        {{- end }}
+        {{- if .Values.tls.enabled }}
+        - name: freeradius-site-tls
+          configMap:
+            name: {{ include "freeradius.site.configMapName" (dict "site" "tls" "context" $) }}
+        {{- end }}
         {{- range .Values.extraModules }}
         - name: {{ .name }}
           configMap:

@@ -3,10 +3,11 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{- if and .Values.modules.pap.enabled (not .Values.modules.pap.existingConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-sites" (include "st-common.names.fullname" .) }}
+  name: {{ printf "%s-mods-pap" (include "st-common.names.fullname" .) }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
@@ -14,14 +15,6 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-{{ (.Files.Glob "files/sites/default").AsConfig | indent 2 }}
-{{ (.Files.Glob "files/sites/inner-tunnel").AsConfig | indent 2 }}
-{{- if .Values.sites.coa.enabled }}
-{{ (.Files.Glob "files/sites/coa").AsConfig | indent 2 }}
-{{- end }}
-{{- if .Values.sites.status.enabled }}
-{{ (.Files.Glob "files/sites/status").AsConfig | indent 2 }}
-{{- end }}
-{{- if .Values.tls.enabled }}
-{{ (.Files.Glob "files/sites/tls").AsConfig | indent 2 }}
+  pap: |
+    {{- include "freeradius.tplvalues.renderConfig" (dict "value" (dict "pap" (omit .Values.modules.pap "enabled" "existingConfigMap")) "context" $) | nindent 4 }}
 {{- end }}
