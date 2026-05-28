@@ -692,6 +692,7 @@ modules:
 ## into the `<release>-sites` ConfigMap by `templates/configmap/sites.yaml`.
 ##
 sites:
+  includeDir: /opt/startechnica/freeradius/sites-enabled
   ## Core virtual servers, enabled by default: `default` (the main auth/acct
   ## server) and `inner-tunnel` (EAP-TTLS/PEAP inner identity). Disable either
   ## with `enabled: false`, or set `existingConfigMap` to bring your own.
@@ -1030,7 +1031,7 @@ startupProbe:
   exec:
     command:
       - sh
-      - /health/startup.sh
+      - /scripts/startup.sh
   initialDelaySeconds: 120
   periodSeconds: 15
   timeoutSeconds: 5
@@ -1048,7 +1049,7 @@ livenessProbe:
   exec:
     command:
       - sh
-      - /health/healthcheck.sh
+      - /scripts/healthcheck.sh
   initialDelaySeconds: 120
   periodSeconds: 60
   timeoutSeconds: 2
@@ -1066,7 +1067,7 @@ readinessProbe:
   exec:
     command:
       - sh
-      - /health/healthcheck.sh
+      - /scripts/healthcheck.sh
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 1
@@ -1084,18 +1085,6 @@ customReadinessProbe: {}
 ## @param startupWaitOptions Override default builtin startup wait check options for FreeRADIUS containers
 ##
 startupWaitOptions: {}
-## Health-check scripts the chart-default probes run. The chart renders
-## `startup.sh` / `healthcheck.sh` into a ConfigMap (`templates/configmap/health.yaml`)
-## and the default probes invoke them via `sh <mountPath>/<script>`.
-##
-## @param healthCheck.mountPath Directory the health-check scripts ConfigMap is mounted at inside the container
-## @param healthCheck.startupScript Filename of the startup-probe script (data key in the health ConfigMap)
-## @param healthCheck.livenessScript Filename of the liveness/readiness-probe script (data key in the health ConfigMap)
-##
-healthCheck:
-  mountPath: /health
-  startupScript: startup.sh
-  livenessScript: healthcheck.sh
 
 ## @param extraVolumes Additional volumes attached to the FreeRADIUS pod. Pair with `extraVolumeMounts` below.
 ## extraVolumes:
@@ -1136,7 +1125,7 @@ sidecars: []
 ## auto-mounted into the FreeRADIUS container at `persistence.mountPath`.
 ## When disabled, the chart falls back to an `emptyDir`. The FreeRADIUS image
 ## runs as UID/GID 101 — make sure the volume is writable by that user
-## (or enable `volumePermissions.enabled` to chown it via an init container).
+## (or enable `bootstrap.volumePermissions.enabled` to chown it via an init container).
 ## =============================================================================
 
 ## @param persistence.enabled Render a PersistentVolumeClaim AND mount it into the FreeRADIUS container at `persistence.mountPath`.
@@ -1162,39 +1151,6 @@ persistence:
   annotations: {}
   selector: {}
   dataSource: {}
-
-## `volumePermissions` init container — runs as root to chown the PVC mount
-## point to `containerSecurityContext.runAsUser:podSecurityContext.fsGroup`.
-## Only needed when the storage class doesn't honor `fsGroup` or you're
-## bringing a pre-existing volume.
-##
-volumePermissions:
-  ## @param volumePermissions.enabled Enable the init container that chowns the PV mount point
-  ##
-  enabled: false
-  ## @param volumePermissions.image.registry Image registry for the init container
-  ## @param volumePermissions.image.repository Image repository
-  ## @param volumePermissions.image.tag Image tag
-  ## @param volumePermissions.image.pullPolicy Image pull policy
-  ## @param volumePermissions.image.pullSecrets Image pull secrets
-  ##
-  image:
-    registry: public.ecr.aws
-    repository: bitnami/os-shell
-    tag: "12"
-    digest: ""
-    pullPolicy: IfNotPresent
-    pullSecrets: []
-  ## @param volumePermissions.resources.limits Resource limits for the init container
-  ## @param volumePermissions.resources.requests Requested resources for the init container
-  ##
-  resources:
-    limits: {}
-    requests: {}
-  ## @param volumePermissions.securityContext.runAsUser UID for the init container. Use `0` (root) so chown actually works; or `auto` for OpenShift's dynamic SCC.
-  ##
-  securityContext:
-    runAsUser: 0
 
 
 ## =============================================================================
@@ -1998,3 +1954,35 @@ bootstrap:
     ## @param bootstrap.database.waitTimeout Seconds to wait for the database to accept connections before failing. The init container retries every 2s.
     ##
     waitTimeout: 120
+  ## `volumePermissions` init container — runs as root to chown the persistence
+  ## mount point to `containerSecurityContext.runAsUser:podSecurityContext.fsGroup`.
+  ## Only needed when the storage class doesn't honor `fsGroup` or you're
+  ## bringing a pre-existing volume.
+  ##
+  volumePermissions:
+    ## @param bootstrap.volumePermissions.enabled Enable the init container that chowns the PV mount point
+    ##
+    enabled: true
+    ## @param bootstrap.volumePermissions.image.registry Image registry for the init container
+    ## @param bootstrap.volumePermissions.image.repository Image repository
+    ## @param bootstrap.volumePermissions.image.tag Image tag
+    ## @param bootstrap.volumePermissions.image.pullPolicy Image pull policy
+    ## @param bootstrap.volumePermissions.image.pullSecrets Image pull secrets
+    ##
+    image:
+      registry: public.ecr.aws
+      repository: bitnami/os-shell
+      tag: "12"
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    ## @param bootstrap.volumePermissions.resources.limits Resource limits for the init container
+    ## @param bootstrap.volumePermissions.resources.requests Requested resources for the init container
+    ##
+    resources:
+      limits: {}
+      requests: {}
+    ## @param bootstrap.volumePermissions.securityContext.runAsUser UID for the init container. Use `0` (root) so chown actually works; or `auto` for OpenShift's dynamic SCC.
+    ##
+    securityContext:
+      runAsUser: 0

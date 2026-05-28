@@ -138,15 +138,15 @@ spec:
       topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" $) | nindent 8 }}
       {{- end }}
       {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) -}}
-      {{- if or (and .Values.volumePermissions.enabled .Values.persistence.enabled) $needsDbBootstrap .Values.initContainers }}
+      {{- if or (and .Values.bootstrap.volumePermissions.enabled .Values.persistence.enabled) $needsDbBootstrap .Values.initContainers }}
       initContainers:
         {{- if .Values.initContainers }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
         {{- end }}
-        {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
+        {{- if .Values.bootstrap.volumePermissions.enabled }}
         - name: volume-permissions
-          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
-          imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.bootstrap.volumePermissions.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.bootstrap.volumePermissions.image.pullPolicy | quote }}
           command:
             - /bin/bash
           args:
@@ -154,14 +154,14 @@ spec:
             - |
               printf '%s\n' "[system] Change permission" >&2
               chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.persistence.mountPath }}
-              chmod 0711 {{ .Values.persistence.mountPath }}
-          {{- if eq ( toString ( .Values.volumePermissions.securityContext.runAsUser )) "auto" }}
-          securityContext: {{- omit .Values.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
+              chmod 0711 {{ .Values.persistence.mountPath }} {{ .Values.sites.includeDir }}
+          {{- if eq ( toString ( .Values.bootstrap.volumePermissions.securityContext.runAsUser )) "auto" }}
+          securityContext: {{- omit .Values.bootstrap.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
           {{- else }}
-          securityContext: {{- .Values.volumePermissions.securityContext | toYaml | nindent 12 }}
+          securityContext: {{- .Values.bootstrap.volumePermissions.securityContext | toYaml | nindent 12 }}
           {{- end }}
-          {{- if .Values.volumePermissions.resources }}
-          resources: {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
+          {{- if .Values.bootstrap.volumePermissions.resources }}
+          resources: {{- toYaml .Values.bootstrap.volumePermissions.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: data
@@ -178,30 +178,7 @@ spec:
             - /bin/bash
           args:
             - -ec
-            - |
-              set -euo pipefail
-              echo "[db-bootstrap] waiting up to {{ .Values.bootstrap.database.waitTimeout }}s for $DB_HOST:$DB_PORT" >&2
-              deadline=$(( $(date +%s) + {{ .Values.bootstrap.database.waitTimeout }} ))
-              while ! (echo > "/dev/tcp/$DB_HOST/$DB_PORT") 2>/dev/null; do
-                if [ "$(date +%s)" -ge "$deadline" ]; then
-                  echo "[db-bootstrap] timeout waiting for database" >&2
-                  exit 1
-                fi
-                sleep 2
-              done
-              echo "[db-bootstrap] loading schema into $DB_NAME" >&2
-              case "$DB_DIALECT" in
-                mysql)
-                  mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < /schema/schema.sql
-                  ;;
-                postgresql)
-                  PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f /schema/schema.sql
-                  ;;
-                *)
-                  echo "[db-bootstrap] no schema load for dialect '$DB_DIALECT'; skipping" >&2
-                  ;;
-              esac
-              echo "[db-bootstrap] schema applied" >&2
+            - /scripts/db-bootstrap.sh
           env:
             - name: DB_DIALECT
               value: {{ .Values.modules.sql.dialect | quote }}
@@ -227,6 +204,10 @@ spec:
           volumeMounts:
             - name: db-schema
               mountPath: /schema
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              subPath: db-bootstrap.sh
               readOnly: true
         {{- end }}
       {{- end }}
@@ -420,13 +401,11 @@ spec:
             {{- /* All virtual servers are projected into one volume (chart sites +
                    extraSites) and mounted as the whole sites-enabled directory. */}}
             - name: freeradius-sites
-              mountPath: /opt/startechnica/freeradius/sites-enabled
+              mountPath: {{ .Values.sites.includeDir }}
               readOnly: true
-            {{- if include "freeradius.healthcheck.create" . }}
             - name: scripts
-              mountPath: {{ .Values.healthCheck.mountPath }}
+              mountPath: /scripts
               readOnly: true
-            {{- end }}
             {{- if .Values.tls.enabled }}
             - name: freeradius-tls
               mountPath: /opt/startechnica/freeradius/certs

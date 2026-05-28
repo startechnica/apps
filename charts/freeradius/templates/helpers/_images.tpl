@@ -35,5 +35,5 @@ validator's allowed-dialect list.
 {{- end -}}
 
 {{- define "freeradius.image.pullSecrets" -}}
-  {{- include "st-common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.metrics.image .Values.bootstrap.database.image) "global" .Values.global) -}}
+  {{- include "st-common.images.pullSecrets" (dict "images" (list .Values.image .Values.bootstrap.volumePermissions.image .Values.metrics.image .Values.bootstrap.database.image) "global" .Values.global) -}}
 {{- end -}}
