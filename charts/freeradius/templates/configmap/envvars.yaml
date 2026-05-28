@@ -46,12 +46,9 @@ data:
   FREERADIUS_SITES_NAMESPACE: radius
 
   {{- /* Virtual-server (site) config — listen ports/addresses, TLS cert paths and
-         cipher — is now rendered directly from `.Values` into each per-site ConfigMap
-         (templates/sites/<name>.yaml). Only the status port stays here: the
-         Deployment's radclient liveness/readiness/startup probes reference
-         $FREERADIUS_SITES_STATUS_PORT. Site secrets (status secret, RADSEC key
-         password) are injected by the Deployment via secretKeyRef. */}}
-  {{- if .Values.sites.status.enabled }}
-  FREERADIUS_SITES_STATUS_PORT: {{ .Values.containerPorts.status | quote }}
-  {{- end }}
+         cipher — is rendered directly from `.Values` into each per-site ConfigMap
+         (templates/sites/<name>.yaml), and the Deployment's radclient probes render
+         the status port from `.Values.containerPorts.status` directly. Site secrets
+         (status secret, RADSEC key password) are injected by the Deployment via
+         secretKeyRef. */}}
 {{- end }}

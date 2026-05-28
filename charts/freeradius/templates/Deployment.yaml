@@ -357,7 +357,7 @@ spec:
                       exit 1
                   fi
                   {{- end }}
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:{{ .Values.containerPorts.status }} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.customLivenessProbe }}
           livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
@@ -368,7 +368,7 @@ spec:
                 - sh
                 - -c
                 - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:{{ .Values.containerPorts.status }} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.customReadinessProbe }}
           readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
@@ -379,7 +379,7 @@ spec:
                 - sh
                 - -c
                 - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:${FREERADIUS_SITES_STATUS_PORT} status ${FREERADIUS_SITES_STATUS_SECRET}
+                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:{{ .Values.containerPorts.status }} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- end }}
           {{- if .Values.resources }}
