@@ -137,7 +137,7 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" $) | nindent 8 }}
       {{- end }}
-      {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) -}}
+      {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) }}
       initContainers:
         {{- if .Values.initContainers }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
