@@ -376,7 +376,7 @@ modules:
     ## supply a custom `modules/rest` via `extraVolumes` /
     ## `extraVolumeMounts`.
     ##
-    ## @param modules.rest.auth HTTP auth method. Allowed: `none`, `basic`, `digest`, `bearer`. When set to anything 
+    ## @param modules.rest.auth HTTP auth method. Allowed: `none`, `basic`, `digest`, `bearer`. When set to anything
     ##   other than `none`, the chart wires `FREERADIUS_MODS_REST_PASSWORD` from a Secret.
     ## @param modules.rest.username Username for `basic`/`digest` auth. For `bearer`, leave empty (the token is the password).
     ## @param modules.rest.password Password (or bearer token) sent on every request. Auto-generated to a chart-managed value when empty AND `auth != none` AND no `existingSecret` is set.
