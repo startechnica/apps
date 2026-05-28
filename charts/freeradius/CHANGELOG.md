@@ -145,8 +145,7 @@ common template fixes.
   `freeradius.mariadb.fullname` for the new subchart.
 - `modules.sql.{readGroups,readProfiles}` values, mirroring the existing
   `readClients` knob. Both default to `true` (upstream rlm_sql default);
-  wired via `FREERADIUS_MODS_SQL_READ_GROUPS` / `FREERADIUS_MODS_SQL_READ_PROFILES`
-  into the previously-commented-out `read_groups` / `read_profiles`
+  rendered into the previously-commented-out `read_groups` / `read_profiles`
   directives in the sql module config (`templates/modules/sql.yaml`).
 - **EAP module support (rlm_eap) — EAP-TLS + EAP-TTLS.** New `modules.eap:`
   values block rendered into its own ConfigMap (`<release>-mods-eap`,
@@ -282,9 +281,9 @@ common template fixes.
 - **SQL connection helpers renamed**: `freeradius.mariadb.{host,port,name,user,secretName,secretKey}`
   → `freeradius.sql.{host,port,name,user,secretName,secretKey}`. The new
   helpers branch three ways on `mariadb.enabled` → `postgresql.enabled` →
-  `externalDatabase.*` (first match wins) and are wired into both the
-  envvars ConfigMap (`FREERADIUS_MODS_SQL_*`) and the `db-bootstrap` init
-  container. `freeradius.mariadb.fullname` is kept (still used internally to
+  `externalDatabase.*` (first match wins) and are wired into both the rendered
+  sql module ConfigMap (`templates/modules/sql.yaml`) and the `db-bootstrap`
+  init container. `freeradius.mariadb.fullname` is kept (still used internally to
   resolve the MariaDB subchart's Service name and Secret name).
 - **`externalDatabase.port` default changed** from `3306` to `""`. The
   `freeradius.sql.port` helper now picks a dialect-appropriate default
@@ -303,9 +302,10 @@ common template fixes.
     with a per-module `checksum/configmap-mods-<name>` pod annotation. There
     is no single aggregated `<release>-modules` ConfigMap.
   - In-container mount path `/etc/freeradius/mods-enabled/<name>` is
-    unchanged (FreeRADIUS daemon convention); env var names like
-    `FREERADIUS_MODS_SQL_*` are unchanged (container-internal, would
-    double the rename surface for no gain).
+    unchanged (FreeRADIUS daemon convention). Module config is now rendered
+    directly from `.Values` into each module ConfigMap (no
+    `FREERADIUS_MODS_*` env-var indirection); only secrets (DB/REST passwords,
+    the EAP private-key passphrase) are injected as `$ENV{}` by the Deployment.
 - **`sitesEnabled:` → `sites:`** (top-level Helm key). Every sub-key keeps
   its existing shape — `coa`, `status`, `tls` are unchanged. Related
   chart-internal renames:

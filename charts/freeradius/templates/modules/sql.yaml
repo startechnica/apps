@@ -3,7 +3,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.modules.sql.enabled }}
+{{- if and .Values.modules.sql.enabled (not .Values.modules.sql.existingConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -56,7 +56,7 @@ data:
     	#	mongo
     	#
     #	dialect = "sqlite"
-    	dialect = $ENV{FREERADIUS_MODS_SQL_DIALECT}
+    	dialect = {{ .Values.modules.sql.dialect }}
 
     	#
     	#  The driver module used to execute the queries.  Since we
@@ -88,10 +88,10 @@ data:
     	#
     	sqlite {
     		# Path to the sqlite database
-    		filename = $ENV{FREERADIUS_MODS_SQL_SQLITE_FILENAME}
+    		filename = {{ .Values.modules.sql.sqlite.filename }}
 
     		# How long to wait for write locks on the database to be released (in ms) before giving up.
-    		busy_timeout = $ENV{FREERADIUS_MODS_SQL_SQLITE_BUSY_TIMEOUT}
+    		busy_timeout = {{ .Values.modules.sql.sqlite.busyTimeout }}
 
     		# If the file above does not exist and bootstrap is set
     		# a new database file will be created, and the SQL statements
@@ -102,14 +102,14 @@ data:
     	mysql {
     		# If any of the files below are set, TLS encryption is enabled
     		tls {
-    #			ca_file = $ENV{FREERADIUS_MODS_SQL_TLS_CACERT}
+    #			ca_file = {{ include "freeradius.sql.tls.caCertPath" . }}
     #			ca_path = "/startechnica/freeradius/certs-sql/"
-    #			certificate_file = $ENV{FREERADIUS_MODS_SQL_TLS_CERTIFICATE}
-    #			private_key_file = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
+    #			certificate_file = {{ include "freeradius.sql.tls.certPath" . }}
+    #			private_key_file = {{ include "freeradius.sql.tls.certKeyPath" . }}
     #			cipher = "DHE-RSA-AES256-SHA:AES128-SHA"
-    #			cipher = $ENV{FREERADIUS_MODS_SQL_TLS_CIPHER}
+    #			cipher = {{ .Values.modules.sql.tls.ciphers }}
 
-    			tls_required = $ENV{FREERADIUS_MODS_SQL_TLS_ENABLE}
+    			tls_required = {{ ternary "yes" "no" .Values.modules.sql.tls.enabled }}
     			tls_check_cert = no
     			tls_check_cert_cn = no
     		}
@@ -165,9 +165,9 @@ data:
     		#  The TLS parameters here map directly to the Mongo TLS configuration
     		#
     		tls {
-    			certificate_file = $ENV{FREERADIUS_MODS_SQL_TLS_CERTIFICATE}
-    			certificate_password = $ENV{FREERADIUS_MODS_SQL_TLS_PRIVATEKEY}
-    			ca_file = $ENV{FREERADIUS_MODS_SQL_TLS_CACERT}
+    			certificate_file = {{ include "freeradius.sql.tls.certPath" . }}
+    			certificate_password = {{ include "freeradius.sql.tls.certKeyPath" . }}
+    			ca_file = {{ include "freeradius.sql.tls.caCertPath" . }}
     			ca_dir = /startechnica/freeradius/certs-sql/
     			# crl_file = /path/to/file
     			weak_cert_validation = false
@@ -177,9 +177,9 @@ data:
 
     	# Connection info:
     	#
-    	server = $ENV{FREERADIUS_MODS_SQL_SERVER}
-    	port = $ENV{FREERADIUS_MODS_SQL_PORT}
-    	login = $ENV{FREERADIUS_MODS_SQL_LOGIN}
+    	server = {{ include "freeradius.sql.host" . }}
+    	port = {{ include "freeradius.sql.port" . }}
+    	login = {{ include "freeradius.sql.user" . }}
     	password = $ENV{FREERADIUS_MODS_SQL_PASSWORD}
 
     	# Connection info for Mongo
@@ -195,13 +195,13 @@ data:
     	# server = mongodb://<DERIVED USERNAME>@192.168.0.2:PORT/DATABASE?authSource=$external&ssl=true&authMechanism=MONGODB-X509
 
     	# Database table configuration for everything except Oracle
-    	radius_db = $ENV{FREERADIUS_MODS_SQL_DB}
+    	radius_db = {{ include "freeradius.sql.name" . }}
 
     	# If you are using Oracle then use this instead
     #	radius_db = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SID=your_sid)))"
 
     	# If you're using postgresql this can also be used instead of the connection info parameters
-    #	radius_db = "dbname=$ENV{FREERADIUS_MODS_SQL_DB} host=$ENV{FREERADIUS_MODS_SQL_SERVER} port=$ENV{FREERADIUS_MODS_SQL_PORT} user=$ENV{FREERADIUS_MODS_SQL_LOGIN} password=$ENV{FREERADIUS_MODS_SQL_PASSWORD}"
+    #	radius_db = "dbname={{ include "freeradius.sql.name" . }} host={{ include "freeradius.sql.host" . }} port={{ include "freeradius.sql.port" . }} user={{ include "freeradius.sql.user" . }} password=$ENV{FREERADIUS_MODS_SQL_PASSWORD}"
 
         # Postgreql doesn't take tls{} options in its module config like mysql does - if you want to
         # use SSL connections then use this form of connection info parameter
@@ -211,30 +211,30 @@ data:
     	# same SQL table, leave this as is.  If you want them in
     	# different tables, put the start table in acct_table1
     	# and stop table in acct_table2
-    	acct_table1 = $ENV{FREERADIUS_MODS_SQL_TABLE_ACCT1}
-    	acct_table2 = $ENV{FREERADIUS_MODS_SQL_TABLE_ACCT2}
+    	acct_table1 = {{ .Values.modules.sql.table.acct1 }}
+    	acct_table2 = {{ .Values.modules.sql.table.acct2 }}
 
     	# Allow for storing data after authentication
-    	postauth_table = $ENV{FREERADIUS_MODS_SQL_TABLE_POSTAUTH}
+    	postauth_table = {{ .Values.modules.sql.table.postauth }}
 
     	# Tables containing 'check' items
-    	authcheck_table = $ENV{FREERADIUS_MODS_SQL_TABLE_AUTHCHECK}
-    	groupcheck_table = $ENV{FREERADIUS_MODS_SQL_TABLE_GROUPCHECK}
+    	authcheck_table = {{ .Values.modules.sql.table.authcheck }}
+    	groupcheck_table = {{ .Values.modules.sql.table.groupcheck }}
 
     	# Tables containing 'reply' items
-    	authreply_table = $ENV{FREERADIUS_MODS_SQL_TABLE_AUTHREPLY}
-    	groupreply_table = $ENV{FREERADIUS_MODS_SQL_TABLE_GROUPREPLY}
+    	authreply_table = {{ .Values.modules.sql.table.authreply }}
+    	groupreply_table = {{ .Values.modules.sql.table.groupreply }}
 
     	# Table to keep group info
-    	usergroup_table = $ENV{FREERADIUS_MODS_SQL_TABLE_USERGROUP}
+    	usergroup_table = {{ .Values.modules.sql.table.usergroup }}
 
     	# If set to 'yes' (default) we read the group tables unless Fall-Through = no in the reply table.
     	# If set to 'no' we do not read the group tables unless Fall-Through = yes in the reply table.
-    	read_groups = $ENV{FREERADIUS_MODS_SQL_READ_GROUPS}
+    	read_groups = {{ ternary "yes" "no" .Values.modules.sql.readGroups }}
 
     	# If set to 'yes' (default) we read profiles unless Fall-Through = no in the groupreply table.
     	# If set to 'no' we do not read profiles unless Fall-Through = yes in the groupreply table.
-    	read_profiles = $ENV{FREERADIUS_MODS_SQL_READ_PROFILES}
+    	read_profiles = {{ ternary "yes" "no" .Values.modules.sql.readProfiles }}
 
     	# Remove stale session if checkrad does not see a double login
     	delete_stale_sessions = yes
@@ -362,10 +362,10 @@ data:
     	#  virtual server, each with a different client list, then
     	#  the SQL clients are added only to the first listener.
     	#
-    	read_clients = $ENV{FREERADIUS_MODS_SQL_READ_CLIENTS}
+    	read_clients = {{ ternary "yes" "no" .Values.modules.sql.readClients }}
 
     	# Table to keep radius client info
-    	client_table = $ENV{FREERADIUS_MODS_SQL_TABLE_CLIENT}
+    	client_table = {{ .Values.modules.sql.table.client }}
 
     	#
     	# The group attribute specific to this instance of rlm_sql
@@ -377,7 +377,7 @@ data:
 
     	# This entry should be used for the default instance (sql {})
     	# of the SQL module.
-    	group_attribute = $ENV{FREERADIUS_MODS_SQL_GROUP_ATTRIBUTE}
+    	group_attribute = {{ .Values.modules.sql.groupAttribute }}
 
     	# Read database-specific queries
     	$INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf

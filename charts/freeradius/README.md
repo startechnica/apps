@@ -564,8 +564,10 @@ Related chart-internal changes (only matter if you override templates):
 
 The in-container mount path `/etc/freeradius/mods-enabled/<name>` is
 **unchanged** — that's the FreeRADIUS daemon's runtime path and isn't ours
-to rename. Env var names like `FREERADIUS_MODS_SQL_*` /
-`FREERADIUS_MODS_REST_*` are also unchanged.
+to rename. Module config is now rendered directly from `.Values` into each
+module ConfigMap (no `FREERADIUS_MODS_*` env-var indirection); only secrets
+(DB/REST passwords, the EAP private-key passphrase) are injected as `$ENV{}`
+by the Deployment.
 
 #### 9. `sitesEnabled:` renamed to `sites:` (and `files/sites-available/` → `files/sites/`)
 

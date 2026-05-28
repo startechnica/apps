@@ -93,8 +93,9 @@ true
 {{- end -}}
 
 {{/*
-SQL backend connection helpers — single source of truth for both the env-vars
-ConfigMap (`FREERADIUS_MODS_SQL_*`) and the `db-bootstrap` init container.
+SQL backend connection helpers — single source of truth for both the rendered
+sql module ConfigMap (`templates/modules/sql.yaml`) and the `db-bootstrap` init
+container.
 
 Resolution order (first match wins):
   1. `mariadb.enabled`     → bundled MariaDB subchart (mysql wire protocol).

@@ -64,6 +64,21 @@ Env-vars ConfigMap name (BYO via existingConfigmap, otherwise chart-rendered).
 {{- end -}}
 
 {{/*
+ConfigMap name a module mounts at `mods-enabled/<module>`: the BYO
+`modules.<module>.existingConfigMap` when set (tpl-evaluated), otherwise the
+chart-rendered `<fullname>-mods-<module>`.
+Usage: {{ include "freeradius.module.configMapName" (dict "module" "sql" "context" $) }}
+*/}}
+{{- define "freeradius.module.configMapName" -}}
+{{- $existing := index .context.Values.modules .module "existingConfigMap" -}}
+{{- if $existing -}}
+{{- tpl $existing .context -}}
+{{- else -}}
+{{- printf "%s-mods-%s" (include "st-common.names.fullname" .context) .module -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Configurations ConfigMap name (BYO via configurationsConfigMap, otherwise chart-rendered).
 */}}
 {{- define "freeradius.configurationCM" -}}

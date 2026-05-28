@@ -17,38 +17,10 @@ metadata:
 data:
   FREERADIUS_ENABLE_TLS: {{ ternary "true" "false" .Values.tls.enabled | quote }}
 
-  {{- if .Values.modules.sql.enabled }}
-  FREERADIUS_MODS_SQL_DIALECT: {{ .Values.modules.sql.dialect }}
-  FREERADIUS_MODS_SQL_SERVER: {{ include "freeradius.sql.host" . | quote }}
-  FREERADIUS_MODS_SQL_PORT: {{ include "freeradius.sql.port" . }}
-  FREERADIUS_MODS_SQL_LOGIN: {{ include "freeradius.sql.user" . | quote }}
-  FREERADIUS_MODS_SQL_DB: {{ include "freeradius.sql.name" . | quote }}
-  FREERADIUS_MODS_SQL_TABLE_ACCT1: {{ .Values.modules.sql.table.acct1 }}
-  FREERADIUS_MODS_SQL_TABLE_ACCT2: {{ .Values.modules.sql.table.acct2 }}
-  FREERADIUS_MODS_SQL_TABLE_AUTHCHECK: {{ .Values.modules.sql.table.authcheck }}
-  FREERADIUS_MODS_SQL_TABLE_AUTHREPLY: {{ .Values.modules.sql.table.authreply }}
-  FREERADIUS_MODS_SQL_TABLE_CLIENT: {{ .Values.modules.sql.table.client }}
-  FREERADIUS_MODS_SQL_TABLE_GROUPCHECK: {{ .Values.modules.sql.table.groupcheck }}
-  FREERADIUS_MODS_SQL_TABLE_GROUPREPLY: {{ .Values.modules.sql.table.groupreply }}
-  FREERADIUS_MODS_SQL_TABLE_POSTAUTH: {{ .Values.modules.sql.table.postauth }}
-  FREERADIUS_MODS_SQL_TABLE_USERGROUP: {{ .Values.modules.sql.table.usergroup }}
-  FREERADIUS_MODS_SQL_TLS_ENABLE: {{ ternary "yes" "no" .Values.modules.sql.tls.enabled | quote }}
-
-  FREERADIUS_MODS_SQL_READ_CLIENTS: {{ ternary "yes" "no" .Values.modules.sql.readClients | quote }}
-  FREERADIUS_MODS_SQL_READ_GROUPS: {{ ternary "yes" "no" .Values.modules.sql.readGroups | quote }}
-  FREERADIUS_MODS_SQL_READ_PROFILES: {{ ternary "yes" "no" .Values.modules.sql.readProfiles | quote }}
-  FREERADIUS_MODS_SQL_GROUP_ATTRIBUTE: {{ .Values.modules.sql.groupAttribute | quote }}
-
-  FREERADIUS_MODS_SQL_SQLITE_FILENAME: {{ .Values.modules.sql.sqlite.filename | quote }}
-  FREERADIUS_MODS_SQL_SQLITE_BUSY_TIMEOUT: {{ .Values.modules.sql.sqlite.busyTimeout | quote }}
-
-  {{- if .Values.modules.sql.tls.enabled }}
-  FREERADIUS_MODS_SQL_TLS_CACERT: {{ include "freeradius.sql.tls.caCertPath" . | quote }}
-  FREERADIUS_MODS_SQL_TLS_CIPHER: {{ .Values.modules.sql.tls.ciphers | quote }}
-  FREERADIUS_MODS_SQL_TLS_CERTIFICATE: {{ include "freeradius.sql.tls.certPath" . | quote }}
-  FREERADIUS_MODS_SQL_TLS_PRIVATEKEY: {{ include "freeradius.sql.tls.certKeyPath" . | quote }}
-  {{- end }}
-  {{- end }}
+  {{- /* SQL structural config is rendered directly from `.Values.modules.sql.*`
+         into the sql module ConfigMap (templates/modules/sql.yaml). The password
+         is injected by the Deployment via secretKeyRef as
+         FREERADIUS_MODS_SQL_PASSWORD; no other SQL env vars are needed here. */}}
 
   {{- if .Values.modules.rest.enabled }}
   ## rlm_rest structural config is rendered directly from `.Values.modules.rest.*`

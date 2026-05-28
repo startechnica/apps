@@ -45,19 +45,19 @@ spec:
         {{- if .Values.extraSites }}
         checksum/configmap-extra-sites: {{ include (print $.Template.BasePath "/configmap/extra-sites.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.modules.eap.enabled }}
+        {{- if and .Values.modules.eap.enabled (not .Values.modules.eap.existingConfigMap) }}
         checksum/configmap-mods-eap: {{ include (print $.Template.BasePath "/modules/eap.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.modules.pam.enabled }}
+        {{- if and .Values.modules.pam.enabled (not .Values.modules.pam.existingConfigMap) }}
         checksum/configmap-mods-pam: {{ include (print $.Template.BasePath "/modules/pam.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.modules.sql.enabled }}
+        {{- if and .Values.modules.sql.enabled (not .Values.modules.sql.existingConfigMap) }}
         checksum/configmap-mods-sql: {{ include (print $.Template.BasePath "/modules/sql.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.modules.rest.enabled }}
+        {{- if and .Values.modules.rest.enabled (not .Values.modules.rest.existingConfigMap) }}
         checksum/configmap-mods-rest: {{ include (print $.Template.BasePath "/modules/rest.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.modules.json.enabled }}
+        {{- if and .Values.modules.json.enabled (not .Values.modules.json.existingConfigMap) }}
         checksum/configmap-mods-json: {{ include (print $.Template.BasePath "/modules/json.yaml") . | sha256sum }}
         {{- end }}
         {{- if not .Values.auth.existingSecret }}
@@ -472,27 +472,27 @@ spec:
         {{- if .Values.modules.sql.enabled }}
         - name: freeradius-mods-sql
           configMap:
-            name: {{ printf "%s-mods-sql" (include "st-common.names.fullname" .) }}
+            name: {{ include "freeradius.module.configMapName" (dict "module" "sql" "context" $) }}
         {{- end }}
         {{- if .Values.modules.rest.enabled }}
         - name: freeradius-mods-rest
           configMap:
-            name: {{ printf "%s-mods-rest" (include "st-common.names.fullname" .) }}
+            name: {{ include "freeradius.module.configMapName" (dict "module" "rest" "context" $) }}
         {{- end }}
         {{- if .Values.modules.json.enabled }}
         - name: freeradius-mods-json
           configMap:
-            name: {{ printf "%s-mods-json" (include "st-common.names.fullname" .) }}
+            name: {{ include "freeradius.module.configMapName" (dict "module" "json" "context" $) }}
         {{- end }}
         {{- if .Values.modules.eap.enabled }}
         - name: freeradius-mods-eap
           configMap:
-            name: {{ printf "%s-mods-eap" (include "st-common.names.fullname" .) }}
+            name: {{ include "freeradius.module.configMapName" (dict "module" "eap" "context" $) }}
         {{- end }}
         {{- if .Values.modules.pam.enabled }}
         - name: freeradius-mods-pam
           configMap:
-            name: {{ printf "%s-mods-pam" (include "st-common.names.fullname" .) }}
+            name: {{ include "freeradius.module.configMapName" (dict "module" "pam" "context" $) }}
         {{- end }}
         - name: freeradius-sites
           configMap:

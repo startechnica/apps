@@ -3,7 +3,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.modules.json.enabled }}
+{{- if and .Values.modules.json.enabled (not .Values.modules.json.existingConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

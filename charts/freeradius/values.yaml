@@ -177,19 +177,24 @@ extraEnvVarsSecret: ""
 ## Every enabled module renders into its own ConfigMap (`templates/modules/<name>.yaml`,
 ## named `<fullname>-mods-<name>`) and is mounted at
 ## `/etc/freeradius/mods-enabled/<name>` inside the container so the upstream
-## daemon picks it up.
+## daemon picks it up. Set `<module>.existingConfigMap` to mount a BYO ConfigMap
+## (with a `<name>` key) instead — the chart then skips rendering that module.
 ##
 modules:
-  ## SQL backend for clients/users/accounting. When enabled, the chart
-  ## populates `FREERADIUS_MODS_SQL_*` env vars from the database connection
-  ## (the matching bundled subchart — `mariadb.*` for mysql, `postgresql.*` for
-  ## postgresql — or `externalDatabase.*` when no subchart is enabled) and
-  ## mounts the rendered `sql` module file into the pod.
+  ## SQL backend for clients/users/accounting. When enabled, the chart renders
+  ## the `sql` module config (`templates/modules/sql.yaml`) directly from these
+  ## values and the database-connection helpers (the matching bundled subchart —
+  ## `mariadb.*` for mysql, `postgresql.*` for postgresql — or `externalDatabase.*`
+  ## when no subchart is enabled), and mounts it into the pod. The DB password is
+  ## injected separately by the Deployment via secretKeyRef.
   ##
   sql:
     ## @param modules.sql.enabled Enable the FreeRADIUS SQL module
     ##
     enabled: false
+    ## @param modules.sql.existingConfigMap Mount an existing ConfigMap (must contain a `sql` key with the module config) at `mods-enabled/sql` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
     ## @param modules.sql.dialect SQL dialect understood by the rlm_sql driver. Allowed: `mysql`, `postgresql`,
     ##  `sqlite`. Must match whichever bundled subchart is enabled (`mariadb.enabled` ↔ `mysql`, `postgresql.enabled` ↔ `postgresql`);
     ##  the chart's hard validator rejects mismatches.
@@ -275,6 +280,9 @@ modules:
     ## @param modules.rest.enabled Enable the FreeRADIUS REST module.
     ##
     enabled: false
+    ## @param modules.rest.existingConfigMap Mount an existing ConfigMap (must contain a `rest` key with the module config) at `mods-enabled/rest` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
     ## @param modules.rest.connect_uri Base URI all per-section URIs are joined against (e.g. `https://api.example.com/radius`). Required when `enabled: true`.
     ##
     connect_uri: ""
@@ -397,6 +405,9 @@ modules:
     ## @param modules.json.enabled Enable the FreeRADIUS JSON xlat module.
     ##
     enabled: false
+    ## @param modules.json.existingConfigMap Mount an existing ConfigMap (must contain a `json` key with the module config) at `mods-enabled/json` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
     ## Output format of the `%{json_encode:...}` xlat.
     ##
     encode:
@@ -437,6 +448,9 @@ modules:
     ## @param modules.pam.enabled Enable the FreeRADIUS PAM module.
     ##
     enabled: false
+    ## @param modules.pam.existingConfigMap Mount an existing ConfigMap (must contain a `pam` key with the module config) at `mods-enabled/pam` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
     ## @param modules.pam.pam_auth PAM service name. Maps to `/etc/pam.d/<name>` inside the container. The `Pam-Auth` attribute set in `authorize` overrides this at request time.
     ##
     pam_auth: radiusd
@@ -456,6 +470,9 @@ modules:
     ## @param modules.eap.enabled Enable the FreeRADIUS EAP module.
     ##
     enabled: false
+    ## @param modules.eap.existingConfigMap Mount an existing ConfigMap (must contain an `eap` key with the module config) at `mods-enabled/eap` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
     ## @param modules.eap.defaultType Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled outer methods (`tls`, `ttls`) listed in `methods`.
     ##
     defaultType: ttls
@@ -474,10 +491,10 @@ modules:
     methods:
       - tls
       - ttls
-      - mschapv2
-      - md5
       - pap
-      - peap
+      # - peap
+      # - mschapv2
+      # - md5
 
     ## Per-method config. Which methods are rendered is controlled by `methods`
     ## above. Each method's config map (`modules.eap.<method>`) becomes the body
@@ -505,12 +522,16 @@ modules:
       tls: tls-common
       default_eap_type: pap
       copy_request_to_tunnel: "yes"
-      use_tunneled_reply: "no"
+      use_tunneled_reply: "yes"
       virtual_server: inner-tunnel
+      include_length: "yes"
+
+    pap:
+      normalise: yes
 
     peap:
       tls: tls-common
-      default_eap_type: mschapv2
+      default_eap_type: pap
       copy_request_to_tunnel: "yes"
       use_tunneled_reply: "yes"
       virtual_server: "inner-tunnel"
