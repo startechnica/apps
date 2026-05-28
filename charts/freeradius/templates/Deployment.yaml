@@ -444,7 +444,8 @@ spec:
             {{- end }}
             {{- if .Values.modules.sql.tls.enabled }}
             - name: freeradius-sql-tls
-              mountPath: /opt/startechnica/freeradius/certs
+              mountPath: /opt/startechnica/freeradius/certs-sql
+              readOnly: true
             {{- end }}
             {{- if and .Values.modules.rest.enabled .Values.modules.rest.tls.enabled }}
             - name: freeradius-rest-tls
@@ -579,13 +580,6 @@ spec:
         - name: freeradius-sql-tls
           secret:
             secretName: {{ include "freeradius.sql.tls.secretName" . }}
-            items:
-              - key: tls.crt
-                path: sql-tls.crt
-              - key: tls.key
-                path: sql-tls.key
-              - key: ca.crt
-                path: sql-ca.crt
         {{- end }}
         {{- if and .Values.modules.rest.enabled .Values.modules.rest.tls.enabled }}
         - name: freeradius-rest-tls
