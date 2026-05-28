@@ -28,5 +28,6 @@
 # OWNERS file for Kubernetes
 OWNERS
 
-# Helm dependency build artifacts (downloaded subcharts)
+# Helm dependency build artifacts (downloaded subcharts + lock)
 charts/*/charts/
+charts/*/Chart.lock
