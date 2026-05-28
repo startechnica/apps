@@ -515,7 +515,6 @@ modules:
     methods:
       - tls
       - ttls
-      - pap
       - peap
       - mschapv2
       # - md5
@@ -544,18 +543,15 @@ modules:
     ##
     ttls:
       tls: tls-common
-      default_eap_type: pap
+      # default_eap_type: pap
       copy_request_to_tunnel: "yes"
       use_tunneled_reply: "yes"
       virtual_server: inner-tunnel
       include_length: "yes"
 
-    pap:
-      normalise: yes
-
     peap:
       tls: tls-common
-      default_eap_type: pap
+      # default_eap_type: pap
       copy_request_to_tunnel: "yes"
       use_tunneled_reply: "yes"
       virtual_server: "inner-tunnel"
@@ -581,7 +577,6 @@ modules:
     ## @param modules.eap.tlsConfig.min_version Minimum TLS protocol version offered (`tls_min_version`).
     ## @param modules.eap.tlsConfig.max_version Maximum TLS protocol version offered (`tls_max_version`).
     ## @param modules.eap.tlsConfig.cache.enable Enable the EAP TLS session cache (`cache { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
-    ## @param modules.eap.tlsConfig.ocsp.enable Enable OCSP certificate checking (`ocsp { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
     ##
     tlsConfig:
       name: tls-common
@@ -598,9 +593,15 @@ modules:
       max_version: "1.3"
       cache:
         enable: "no"
+      ## @param modules.eap.tlsConfig.ocsp.enable Enable OCSP certificate checking (`ocsp { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
+      ##
       ocsp:
         enable: "no"
+        # name: "EAP module"
+        # persist_dir: "${logdir}/tlscache"
       verify: {}
+        # tmpdir: /tmp/radiusd
+        # client: "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
 
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
