@@ -1,27 +1,4 @@
-# -*- text -*-
-##
 ## modules/eap -- EAP module (rlm_eap), EAP-TLS + EAP-TTLS methods
-##
-## NOTE: this file is rendered through Helm `tpl` (see
-## templates/configmap/modules.yaml), so `{{ ... }}` directives are evaluated
-## at template time against the release context. Rules:
-##   - Structural / non-secret values are inlined with `{{ .Values.modules.eap.* }}`
-##     and helper includes for the certificate paths.
-##   - The private-key password stays as `$ENV{FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD}`
-##     so it is injected from a Secret at runtime and never written into the
-##     ConfigMap.
-##   - FreeRADIUS `${...}` config vars (e.g. `${max_requests}`) are not Go
-##     template syntax, so `tpl` leaves them untouched.
-##   - If you add literal `{{` here, escape it as {{ "{{" }} (and `}}` as {{ "}}" }}).
-##
-## `tls-config {{ .Values.modules.eap.tlsConfig.name }}` is the shared server
-## certificate + TLS engine settings (`modules.eap.tlsConfig.*`). Every method
-## listed in `modules.eap.methods` is rendered as its own block from the
-## matching `modules.eap.<method>` config map (via
-## `freeradius.tplvalues.renderConfig`); the TLS-based ones reference the shared
-## block through their `tls:` value (e.g. `tls = {{ .Values.modules.eap.tlsConfig.name }}`).
-## No `dh_file` is referenced — FreeRADIUS 3.2 negotiates ephemeral DH/ECDHE and
-## the chart ships no DH params file.
 ##
 eap {
 	default_eap_type = {{ .Values.modules.eap.defaultType }}
