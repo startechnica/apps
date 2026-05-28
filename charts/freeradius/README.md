@@ -280,6 +280,24 @@ The command removes all the Kubernetes components associated with the chart and 
 | `sites.tls.existingConfigMap`         | BYO ConfigMap (key `tls`) mounted at `sites-enabled/tls`; skips chart rendering                    | `""`      |
 
 
+### Keycloak integration parameters
+
+| Name                       | Description                                                                                                            | Value                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `keycloak.enabled`         | Render the Keycloak auth configs + Secret and mount them into the pod                                                 | `false`                    |
+| `keycloak.mode`            | Auth backend: `lua` (ROPC + introspection + role mapping via rlm_lua) or `rest` (ROPC-only via rlm_rest, no roles)    | `lua`                      |
+| `keycloak.url`             | Base URL of the Keycloak server                                                                                       | `https://auth.example.com` |
+| `keycloak.realm`           | Keycloak realm holding the users (required when enabled)                                                              | `""`                       |
+| `keycloak.clientId`        | OIDC client_id with Direct Access Grants enabled                                                                      | `freeradius`               |
+| `keycloak.clientSecret`    | Secret for a confidential client. Stored in a Secret and injected via `$ENV{KC_CLIENT_SECRET}`; empty = public client | `""`                       |
+| `keycloak.scope`           | Optional OAuth scope appended to the token request                                                                    | `""`                       |
+| `keycloak.connectTimeout`  | Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)                     | `4.0`                      |
+| `keycloak.wireDefaultSite` | Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module                           | `true`                     |
+| `keycloak.roleAttribute`   | (lua mode) Control attribute the Lua mapper populates with role names (one value per role)                            | `Class`                    |
+| `keycloak.denyWithoutRole` | (lua mode) Reject the request when no `roleMappings` entry matches                                                    | `false`                    |
+| `keycloak.roleMappings`    | (lua mode) Ordered role→reply map (first match wins): `role` + `reply` (list of unlang `Attr := value` lines)         | `[]`                       |
+
+
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
 ```console
@@ -319,6 +337,71 @@ This chart allows you to set your custom affinity using the `affinity` parameter
 ### Deploying extra resources
 
 There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
+
+### Keycloak (OIDC) authentication
+
+FreeRADIUS can authenticate users against a Keycloak realm using the OAuth2
+Resource Owner Password Credentials (ROPC) grant. Because ROPC needs the
+cleartext password, this only works for password-based flows — **PAP**, or
+**EAP-TTLS/PAP** as the inner method. MSCHAPv2/PEAP cannot authenticate against
+Keycloak. Enable **Direct Access Grants** on the Keycloak client.
+
+Two backends are available via `keycloak.mode`:
+
+| Mode            | Roles                         | Module              | Image needs                                  |
+| --------------- | ----------------------------- | ------------------- | -------------------------------------------- |
+| `lua` (default) | Yes — via token introspection | `rlm_lua` script    | `rlm_lua`, `lua-cjson`, `luasec`/`luasocket` |
+| `rest`          | No (auth-only)                | `rlm_rest` instance | `rlm_rest` with raw-body (`data`) support    |
+
+#### lua mode (default — full role mapping)
+
+```yaml
+keycloak:
+  enabled: true
+  url: https://auth.example.com
+  realm: corp
+  clientId: freeradius
+  clientSecret: "<confidential-client-secret>"   # omit for a public client
+  roleMappings:
+    - role: network-admin        # a *client* role on `clientId`
+      reply:
+        - 'Service-Type := Administrative-User'
+        - 'Cisco-AVPair := "shell:priv-lvl=15"'
+    - role: wifi-user
+      reply:
+        - 'Tunnel-Type:0 := VLAN'
+        - 'Tunnel-Medium-Type:0 := IEEE-802'
+        - 'Tunnel-Private-Group-Id:0 := "10"'
+  denyWithoutRole: true          # reject users with no matching role
+```
+
+The Lua script validates the password (ROPC), then reads the user's client
+roles via RFC 7662 token introspection and exposes them to the
+`keycloak_authorize` unlang policy, which maps the first matching role to the
+reply attributes above. `roleAttribute` (default `Class`) is the control
+attribute the script populates with role names.
+
+#### rest mode (auth-only, no roles)
+
+```yaml
+keycloak:
+  enabled: true
+  mode: rest
+  url: https://auth.example.com
+  realm: corp
+  clientId: freeradius
+  clientSecret: "<confidential-client-secret>"
+```
+
+A pure `rlm_rest` instance performs the ROPC POST; HTTP 200 accepts, 401
+rejects. `roleMappings` is ignored. The image's `rlm_rest` must support a raw
+request body (`data`) and the `%{urlquote:...}` xlat. The JSON token response
+is not consumed, so `radiusd -X` will print harmless "skipping unknown
+attribute" lines for `access_token` etc.
+
+By default (`wireDefaultSite: true`) the `default` virtual server's authorize
+section is wired automatically. Set it to `false` to call `keycloak_authorize`
+(lua) or `keycloak_rest` (rest) from your own site config.
 
 ### Auto-generated credentials
 
@@ -395,6 +478,12 @@ This is a major release. Most users with existing `values.yaml` overrides
 will need to migrate the keys below. The full change list is in
 [CHANGELOG.md](CHANGELOG.md).
 
+These notes apply to upgrades from **any pre-1.1.0 release**. The most recent
+prior release, **1.0.3**, still used the old `modsEnabled` / `sitesEnabled` /
+`ingress` / `configuration` / `tls.autoGenerator` keys, so the migrations below
+are required coming from 1.0.x just as much as from 0.x. The `# Before` blocks
+are labelled `≤ 1.0.3` accordingly.
+
 #### 1. Cert-manager keys consolidated under `tls.certManager.*`
 
 Cert-manager-driven TLS issuance is now configured in one canonical
@@ -402,7 +491,7 @@ location and covers both the in-pod RADSEC certificate and the
 gateway-namespace certificate.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 tls:
   autoGenerator:
     certmanager:
@@ -428,7 +517,7 @@ Hostnames previously set under `ingress.hostname` / `ingress.extraHosts`
 from) now live under `gateway.hostnames`.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 ingress:
   hostname: radius.example.com
   extraHosts:
@@ -448,7 +537,7 @@ The flat gateway knobs have been replaced with a nested form. The new
 `gateway.implementation` flag picks between the two resource sets.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 gateway:
   enabled: true
   gatewayApi: false        # if true → gateway-api; else → istio
@@ -468,12 +557,13 @@ gateway:
 #### 4. Gateway TLS knobs moved to `gateway.tls.*`
 
 The istio Gateway's TLS material is now configured under `gateway.tls`
-rather than via `tls.secretName` / `sitesEnabled.tls.enabled` (the latter
-was renamed to `sites.tls.enabled` in 1.0.0 — see Upgrading #10 — and the
-`enabled` flag itself moved to the top-level `tls.enabled`).
+rather than via `tls.secretName` / `sitesEnabled.tls.enabled`. In 1.1.0 the
+`sitesEnabled:` block became `sites:` (see Upgrading #10) and RADSEC
+enablement moved from the per-site `enabled` flag to the top-level
+`tls.enabled`.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 sitesEnabled:
   tls:
     enabled: true
@@ -501,7 +591,7 @@ to `certificatesSecret` for consistency. The old keys still work via a
 fallback in the helpers and are slated for removal in the next major bump.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 tls:
   existingSecretName: my-radsec-tls
 modsEnabled:
@@ -545,7 +635,7 @@ not a useful key name in values). Rename your overrides verbatim — every
 sub-key under it (`sql`, `rest`, `json`, `pam`) keeps its shape.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 modsEnabled:
   sql:
     enabled: true
@@ -588,7 +678,7 @@ a useful key name in values). Sub-keys (`coa`, `status`, `tls`) keep their
 shape.
 
 ```yaml
-# Before (0.x)
+# Before (≤ 1.0.3)
 sitesEnabled:
   coa:
     enabled: true
@@ -624,7 +714,7 @@ The chart now ships a `postgresql:` subchart block alongside the existing
 dialect/subchart pairs, `sqlite + subchart`, and "no backend at all".
 
 ```yaml
-# Before (0.x — postgresql users were forced to use externalDatabase)
+# Before (≤ 1.0.3 — postgresql users were forced to use externalDatabase)
 modsEnabled:
   sql:
     dialect: postgresql
@@ -659,7 +749,7 @@ not values.
 
 ## License
 
-Copyright &copy; 2023 Startechnica
+Copyright &copy; 2026 Startechnica
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

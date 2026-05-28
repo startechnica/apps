@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 (2026-05-27)
+## 1.1.0 (2026-05-29)
 
 Major release. End-to-end modernization: values.yaml restructured with
 section banners, TLS / cert-manager keys consolidated, a chart-internal
@@ -10,8 +10,10 @@ MariaDB, REST/JSON/PAM/PAP modules, top-level Helm keys cleaned up
 (`modsEnabled:` → `modules:`, `sitesEnabled:` → `sites:`,
 `database.bootstrap.*` → `bootstrap.database.*`), and a long list of
 common template fixes.
-**See "Upgrading from 0.x" in the README for the migration steps your
-`values.yaml` needs.**
+**See "Upgrading → To 1.1.0" in the README for the migration steps your
+`values.yaml` needs. These apply to any pre-1.1.0 release: the most recent,
+1.0.3, still used the old `modsEnabled` / `sitesEnabled` / `ingress` /
+`configuration` / `tls.autoGenerator` keys.**
 
 ### Added
 
@@ -240,6 +242,46 @@ common template fixes.
   helpers. The validator rejects `enabled: true` without `connect_uri`,
   `auth != none` without a password source, `tls.enabled` without a cert
   source, and unrecognised `auth` values.
+- **Keycloak authentication + client-role mapping.** New `keycloak.*` values
+  block. When `keycloak.enabled`, a self-contained `rlm_lua` script
+  (`scripts/keycloak-mapper.lua`, module instance `mods-enabled/keycloak_lua`)
+  authenticates users against Keycloak's OIDC token endpoint (OAuth2 ROPC
+  password grant) and reads their client roles via RFC 7662 token
+  introspection — performing the HTTPS calls itself (needs `rlm_lua`,
+  `lua-cjson` and an HTTPS Lua lib such as `luasec` in the image), so
+  `rlm_rest` is not involved. The Lua is pure fetch-and-parse: it sets one
+  `&control:Class` per role and returns a plain rcode. ALL policy lives in
+  unlang (`policy.d/keycloak`): `keycloak_authorize` sets
+  `&control:Auth-Type := Accept` on success and calls `keycloak_roles`, a
+  generated first-match-wins policy mapping roles → RADIUS reply attributes
+  from `keycloak.roleMappings`. ROPC only works for cleartext-password flows
+  (PAP / EAP-TTLS-PAP inner) — PEAP/MSCHAPv2 cannot. The confidential client
+  secret is held in a `<release>-keycloak` Secret and injected as
+  `$ENV{KC_CLIENT_SECRET}`; `KC_BASE_URL` / `KC_REALM` / `KC_CLIENT_ID` /
+  `KC_SCOPE` are passed as env. `keycloak.wireDefaultSite` (default true) wires
+  the call into the `default` site's `authorize` section; `keycloak.realm` is
+  required when enabled; `denyWithoutRole` rejects users whose roles match no
+  mapping. New templates under `templates/mods-config/keycloak/`
+  (`configmap-lua.yaml`, `configmap-policy.yaml`, `secret.yaml`).
+- **`modsConfig` — custom `mods-config` data.** New `modsConfig` map: each
+  top-level key is a subdirectory rendered into its own ConfigMap
+  (`templates/configmap/mods-config.yaml`) and projected at
+  `/etc/freeradius/mods-config/<subdir>/` (filenames = keys, values rendered
+  with `tpl`). For module *data* (REST body templates, policy snippets,
+  attribute maps) referenced from a `mods-enabled/` instance — placing a file
+  here does not load a module on its own.
+- **`prepare-sites` init container.** Always runs: copies the projected virtual
+  servers into a writable `emptyDir` and `chmod 0711`s the sites-enabled
+  directory (projected/configMap volumes are mounted read-only and cannot be
+  chmod'd).
+- `sites.includeDir` (`/opt/startechnica/freeradius/sites-enabled`) and
+  `policies.includeDir` (`/opt/startechnica/freeradius/policy.d`) — configurable
+  include directories. `sites.includeDir` also drives the `$INCLUDE` in the
+  bundled `radiusd.conf` (the inline `configurations` value is rendered through
+  `tpl`, so `{{ .Values.sites.includeDir }}` resolves there).
+- `<release>-scripts` ConfigMap (`templates/configmap/scripts.yaml`) holding the
+  health-check probe scripts and `db-bootstrap.sh`; the db-bootstrap script is
+  mounted into the bootstrap init container via `subPath`.
 
 ### Changed
 
@@ -305,6 +347,25 @@ common template fixes.
   (`3306` for mysql, `5432` for postgresql) when the value is empty, so
   postgresql users on external databases no longer have to flip an unrelated
   knob. Any explicit `externalDatabase.port` value still wins.
+- **Sites volume reworked.** All enabled virtual servers (chart sites +
+  `extraSites`) are aggregated into one projected volume (`freeradius-sites-tmp`)
+  and staged by the new `prepare-sites` init container into a `0711` `emptyDir`
+  mounted at `sites.includeDir`. This supersedes the per-site
+  `freeradius-site-<name>` read-only mounts (each site is still its own
+  ConfigMap, now projected rather than mounted directly). `radiusd.conf` is
+  bundled via the top-level `configurations` value and `$INCLUDE`s
+  `sites.includeDir`.
+- **`volumePermissions` → `bootstrap.volumePermissions`.** The chown/chmod init
+  container config moved under `bootstrap.*` and now defaults `enabled: true`.
+- **SQL TLS moved to its own directory.** `freeradius-sql-tls` now mounts at
+  `/opt/startechnica/freeradius/certs-sql` (read-only) using the native
+  `tls.crt` / `tls.key` / `ca.crt` filenames — resolving a path collision with
+  the RADSEC `freeradius-tls` mount at `/certs` and dropping the bespoke
+  `sql-*.crt` Secret `items` renaming. The `freeradius.sql.tls.*` path helpers
+  follow.
+- Health-check probes now invoke their scripts from `/scripts` (the new
+  `<release>-scripts` ConfigMap), and the status-probe port is rendered from
+  values (the `FREERADIUS_SITES_STATUS_PORT` env indirection was dropped).
 
 ### Removed (BREAKING — see Upgrading)
 
@@ -369,6 +430,14 @@ common template fixes.
   a single chart-fullname group when only flat rules are provided.
 - `auth.{createClientUser,clientUser,clientUserPassword}` (unused — the
   `clients.conf` rendering doesn't read these).
+- `freeradius-sqlite` `emptyDir` volume + its mount — the SQLite database file
+  lives on the `data` volume (its path sits under `persistence.mountPath`), so
+  the separate volume was redundant (and non-persistent).
+- dead `shared-certs` `emptyDir` volume + its read-only mount — nothing wrote to
+  or read from `/opt/startechnica/freeradius/shared-certs`.
+- top-level `volumePermissions` (relocated to `bootstrap.volumePermissions`).
+- `healthCheck.*` values indirection — the probe scripts now use fixed names
+  (`startup.sh` / `healthcheck.sh`) under `/scripts`.
 
 ### Deprecated
 
@@ -425,6 +494,19 @@ common template fixes.
   entry was gated on `sites.status.enabled`, so disabling the status site left
   a volumeMount referencing a missing subPath key (pod would fail to start).
   The mount is now gated on `sites.status.enabled` too.
+- **`helm template` failed outright on 1.0.3 with `unexpected EOF`**
+  ([#96](https://github.com/startechnica/apps/issues/96)). An unclosed
+  conditional in the 1.0.3 `Deployment.yaml` (`templates/Deployment.yaml:367`)
+  broke rendering for everyone pulling the published chart. The Deployment was
+  reworked for this release and now renders cleanly (`helm template` /
+  `helm lint` pass).
+- **initContainers from `values.yaml` were ignored**
+  ([#84](https://github.com/startechnica/apps/issues/84)). The 1.0.x
+  `initContainers:` block only rendered the `volume-permissions` container and
+  never appended `.Values.initContainers`. The Deployment now always emits an
+  `initContainers:` block and includes `.Values.initContainers` (via
+  `st-common.tplvalues.render`) ahead of the chart's own init containers
+  (`prepare-sites`, `volume-permissions`, `db-bootstrap`).
 - **rlm_sql schema not loaded into the database**
   ([#67](https://github.com/startechnica/apps/issues/67)). `files/schema/mysql.sql`
   shipped with the chart but no template wired it into MariaDB or any other
@@ -461,7 +543,8 @@ common template fixes.
   path short-circuits the helper and skips this template).
   Note: this rename `configuration`→`configurations` (and
   `configurationConfigMap`→`configurationsConfigMap`) is a breaking change
-  for any 0.x override that set those keys.
+  for any pre-1.1.0 override that set those keys (1.0.3 still shipped
+  `configuration`).
 
 ### Added (companion changes for the two fixes above)
 
@@ -498,13 +581,80 @@ common template fixes.
   `bootstrap.database.schemaConfigMap` + `extraVolumes` / `extraVolumeMounts`
   mounting over `/etc/freeradius/mods-config/sql/main/sqlite/schema.sql`.
 
-## 1.0.3 (2026-05-02)
+## Pre-1.1.0 history
 
-- Pre-1.1.0 incremental release. Superseded by 1.1.0 above. (Yes, the
-  version number was bumped past 1.0.0 during pre-modernization work —
-  apologies for the confusion. The current 1.1.0 release notes above are
-  authoritative.)
+These releases pre-date the authored changelog (introduced with the 1.1.0
+modernization) and had no `artifacthub.io/changes` entries. The notes below are
+reconstructed from the `freeradius-<version>` git tags — see `git log` between
+tags for the full commit detail.
 
-## 0.x
+### 1.0.3 (2025-03-19) — appVersion 3.2.7
 
-Older releases pre-dating the modernization. See `git log` for details.
+- Custom `livenessProbe` / `readinessProbe` / `startupProbe` support.
+- `resourcesPreset` support.
+- SQLite volume mount (`freeradius-sqlite`) for the SQLite dialect.
+- Database helper tidy-up.
+- Fixed a wrong env filename referenced in the Deployment's checksum annotations.
+
+### 1.0.2 (2025-03-13) — appVersion 3.2.7 (from 3.2.3)
+
+- Dropped the Bitnami common chart dependency.
+- Added an init container; reworked container `args` (thread enablement).
+- Added `containerSecurityContext`.
+- Added TLS to ingress; VirtualService fixes.
+- Fixed `allocateLoadBalancerNodePorts` logic; expanded README.
+
+### 1.0.1 (2023-07-25) — appVersion 3.2.3
+
+- Render fixes: removed range conditionals, fixed a stray `{{- end }}`, RADSEC
+  protocol, port indentation, and Gateway hosts/servers.
+
+### 1.0.0 (2023-07-25) — appVersion 3.2.3 (from 3.2.1)
+
+- First 1.0 release. Deployment checksum annotations; TLS mounts +
+  secret-conditional rendering; SQL TLS helper; PVC rename; repeated
+  `volumePermissions` and startup-args fixes.
+
+### 0.1.9 (2022-11-03) — appVersion 3.2.1
+
+- Updated images to FreeRADIUS v3.2.1.
+
+### 0.1.8 (2022-06-24) — appVersion 3.2.0
+
+- New dependencies; certs fix; removed Chart annotations.
+
+### 0.1.7 (2022-06-21) — appVersion 3.2.0
+
+- NetworkPolicy (with port protocol) and `namespaceOverride` values; security
+  parameter fixes; `service.allocateLoadBalancerNodePorts`; initscripts.
+
+### 0.1.6 (2022-06-03) — appVersion 3.2.0 (from 3.0.25)
+
+- Updated to FreeRADIUS 3.2.0. Added the `clients` template + `clients.conf`;
+  reworked initContainers / securityContext / volumes; diagnosticMode toggling.
+
+### 0.1.5 (2022-05-27) — appVersion 3.0.25
+
+- Fixed coa / tls / mods volumeMounts.
+
+### 0.1.4 (2022-05-27) — appVersion 3.0.25
+
+- RADSEC support: radsec Service, tls/coa sites, the `shared-certs` mount, and
+  TLS env / deployment / certificate fixes.
+
+### 0.1.3 (2022-02-16) — appVersion 3.0.25
+
+- TLS generator + secret volume; cert directory / altNames fixes; removed
+  dependencies.
+
+### 0.1.2 (2022-02-16) — appVersion 3.0.25
+
+- Added a TLS helper; documentation.
+
+### 0.1.1 (2022-02-15) — appVersion 3.0.25
+
+- Minor fixes.
+
+### 0.1.0 (2022-02-15) — appVersion 3.0.25
+
+- Initial FreeRADIUS Helm chart.
