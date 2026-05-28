@@ -74,6 +74,20 @@ spec:
         {{- if and .Values.modules.json.enabled (not .Values.modules.json.existingConfigMap) }}
         checksum/configmap-mods-json: {{ include (print $.Template.BasePath "/modules/json.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.modsConfig }}
+        checksum/configmap-mods-config: {{ include (print $.Template.BasePath "/configmap/mods-config.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.keycloak.enabled }}
+        {{- if eq .Values.keycloak.mode "lua" }}
+        checksum/configmap-keycloak-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/configmap-lua.yaml") . | sha256sum }}
+        checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/mods-config/keycloak/configmap-policy.yaml") . | sha256sum }}
+        {{- else if eq .Values.keycloak.mode "rest" }}
+        checksum/configmap-keycloak-rest: {{ include (print $.Template.BasePath "/mods-config/keycloak/configmap-rest.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.keycloak.clientSecret }}
+        checksum/secret-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- end }}
         {{- if not .Values.auth.existingSecret }}
         checksum/secret-credentials: {{ include (print $.Template.BasePath "/secret/credentials.yaml") . | sha256sum }}
         {{- end }}
@@ -312,6 +326,33 @@ spec:
                   key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "mods-eap-tls-privkey-password") }}
                 {{- end }}
             {{- end }}
+            {{- if .Values.keycloak.enabled }}
+            {{- if eq .Values.keycloak.mode "lua" }}
+            {{- /* lua reads Keycloak coordinates from env; rest bakes them into
+                   its ConfigMap, needing only KC_CLIENT_SECRET below. */}}
+            - name: KC_BASE_URL
+              value: {{ .Values.keycloak.url | quote }}
+            - name: KC_REALM
+              value: {{ .Values.keycloak.realm | quote }}
+            - name: KC_CLIENT_ID
+              value: {{ .Values.keycloak.clientId | quote }}
+            {{- if .Values.keycloak.scope }}
+            - name: KC_SCOPE
+              value: {{ .Values.keycloak.scope | quote }}
+            {{- end }}
+            {{- if .Values.keycloak.connectTimeout }}
+            - name: KC_CONNECT_TIMEOUT
+              value: {{ .Values.keycloak.connectTimeout | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.keycloak.clientSecret }}
+            - name: KC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
+                  key: client-secret
+            {{- end }}
+            {{- end }}
             {{- if .Values.extraEnvVars }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
@@ -438,10 +479,6 @@ spec:
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
             {{- end }}
-            {{- if and .Values.modules.sql.enabled (eq .Values.modules.sql.dialect "sqlite") }}
-            - name: freeradius-sqlite
-              mountPath: {{ .Values.modules.sql.sqlite.filename | quote }}
-            {{- end }}
             {{- if .Values.modules.sql.tls.enabled }}
             - name: freeradius-sql-tls
               mountPath: /opt/startechnica/freeradius/certs-sql
@@ -457,15 +494,40 @@ spec:
               mountPath: /opt/startechnica/freeradius/certs-eap
               readOnly: true
             {{- end }}
-            - name: shared-certs
-              mountPath: /opt/startechnica/freeradius/shared-certs
-              readOnly: true
             - name: temp
               mountPath: /startechnica/freeradius/tmp
             {{- range .Values.extraModules }}
             - name: {{ .name }}
               mountPath: /etc/freeradius/mods-enabled/{{ .name }}
               subPath: {{ .key | default .name }}
+            {{- end }}
+            {{- range $subdir, $files := .Values.modsConfig }}
+            {{- if $files }}
+            - name: {{ printf "mods-config-%s" $subdir }}
+              mountPath: /etc/freeradius/mods-config/{{ $subdir }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- if .Values.keycloak.enabled }}
+            {{- if eq .Values.keycloak.mode "lua" }}
+            - name: keycloak-lua
+              mountPath: /etc/freeradius/mods-enabled/keycloak_lua
+              subPath: keycloak_lua
+              readOnly: true
+            - name: keycloak-lua
+              mountPath: /etc/freeradius/scripts/keycloak-mapper.lua
+              subPath: keycloak-mapper.lua
+              readOnly: true
+            - name: keycloak-policy
+              mountPath: /etc/freeradius/policy.d/keycloak
+              subPath: keycloak
+              readOnly: true
+            {{- else if eq .Values.keycloak.mode "rest" }}
+            - name: keycloak-rest
+              mountPath: /etc/freeradius/mods-enabled/keycloak_rest
+              subPath: keycloak_rest
+              readOnly: true
+            {{- end }}
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
@@ -553,12 +615,31 @@ spec:
           configMap:
             name: {{ tpl .existingConfigMap $ }}
         {{- end }}
+        {{- range $subdir, $files := .Values.modsConfig }}
+        {{- if $files }}
+        - name: {{ printf "mods-config-%s" $subdir }}
+          configMap:
+            name: {{ printf "%s-mods-config-%s" (include "st-common.names.fullname" $) $subdir }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.keycloak.enabled }}
+        {{- if eq .Values.keycloak.mode "lua" }}
+        - name: keycloak-lua
+          configMap:
+            name: {{ printf "%s-keycloak-lua" (include "st-common.names.fullname" .) }}
+        - name: keycloak-policy
+          configMap:
+            name: {{ printf "%s-keycloak-policy" (include "st-common.names.fullname" .) }}
+        {{- else if eq .Values.keycloak.mode "rest" }}
+        - name: keycloak-rest
+          configMap:
+            name: {{ printf "%s-keycloak-rest" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- end }}
         - name: scripts
           configMap:
             name: {{ printf "%s-scripts" (include "st-common.names.fullname" .) }}
         - name: temp
-          emptyDir: {}
-        - name: shared-certs
           emptyDir: {}
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -567,10 +648,6 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        {{- if and .Values.modules.sql.enabled (eq .Values.modules.sql.dialect "sqlite") }}
-        - name: freeradius-sqlite
-          emptyDir: {}
-        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:

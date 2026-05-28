@@ -1,0 +1,32 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Chart-rendered `mods-config` data ConfigMaps. One ConfigMap per subdirectory
+declared under `.Values.modsConfig`, each projected by the Deployment at
+`/etc/freeradius/mods-config/<subdir>/`. Holds DATA only (REST body templates,
+policy snippets, attribute maps, files-style user lists); the module instances
+that reference them still live in `mods-enabled/`.
+*/}}
+{{- range $subdir, $files := .Values.modsConfig }}
+{{- if $files }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-mods-config-%s" (include "st-common.names.fullname" $) $subdir }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- range $filename, $content := $files }}
+  {{ $filename }}: |
+    {{- include "st-common.tplvalues.render" (dict "value" $content "context" $) | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

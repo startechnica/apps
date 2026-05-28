@@ -213,10 +213,10 @@ configurations: |
   }
 
   policy {
-    $INCLUDE policy.d/
+    $INCLUDE{{ .Values.policies.includeDir }}/
   }
 
-  $INCLUDE /opt/startechnica/freeradius/sites-enabled/
+  $INCLUDE {{ .Values.sites.includeDir }}/
 
 ## @param configurationsConfigMap Name of an externally-managed ConfigMap supplying FreeRADIUS configuration (Note: Overrides `configurations`). The value is evaluated as a template.
 ##
@@ -685,6 +685,13 @@ modules:
         # tmpdir: /tmp/radiusd
         # client: "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
 
+## FreeRADIUS policy definitions (the `policy { }` block in radiusd.conf).
+##
+## @param policies.includeDir Absolute path the `policy.d` directory is included from inside the container
+##
+policies:
+  includeDir: /opt/startechnica/freeradius/policy.d
+
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
 ## the corresponding container port / Service port / NetworkPolicy entry.
@@ -985,7 +992,7 @@ podSecurityContext:
 ## @param containerSecurityContext.capabilities Linux capabilities to add/drop on the FreeRADIUS container
 ## @param containerSecurityContext.runAsUser User ID for the FreeRADIUS container
 ## @param containerSecurityContext.runAsNonRoot Set FreeRADIUS container's Security Context runAsNonRoot
-## @param containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only. The chart already provides writable emptyDir mounts at `/startechnica/freeradius/tmp` and `/opt/startechnica/freeradius/shared-certs`, so this is generally safe.
+## @param containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only. The chart already provides a writable emptyDir mount at `/startechnica/freeradius/tmp`, so this is generally safe.
 ## @param containerSecurityContext.allowPrivilegeEscalation Block child processes from gaining more privileges than the parent (required by PSS "restricted")
 ## @param containerSecurityContext.seccompProfile Seccomp profile applied to the container
 ##
@@ -1110,6 +1117,88 @@ extraModules: []
 ##     key: my-vhost
 ##
 extraSites: []
+## Custom `mods-config` data projected into the container under
+## `/etc/freeradius/mods-config/<subdir>/`. Each top-level key is a subdirectory
+## name; its value is a map of `filename: content` (content is rendered with
+## `tpl`). These are DATA files only — REST body templates, policy snippets,
+## attribute maps, a `files`-style user list — referenced via `$INCLUDE`/xlat
+## from a module instance in `mods-enabled/` or a policy. Dropping a file here
+## does NOT load a module on its own; the module instance still lives in
+## `mods-enabled/` (e.g. a custom `rest` or `sql` instance).
+##
+## @param modsConfig [object] Map of mods-config subdirectories to their files (`modsConfig.<subdir>.<filename>`).
+## modsConfig:
+##   files:
+##     authorize: |
+##       # mods-config/files/authorize -- rlm_files user entries
+##       alice  Cleartext-Password := "s3cret"
+##              Reply-Message := "Hello %{User-Name}"
+##
+modsConfig: {}
+## Keycloak integration — authenticate RADIUS users against Keycloak's OIDC
+## token endpoint (ROPC password grant). ROPC only works for cleartext-password
+## flows (PAP, or EAP-TTLS/PAP inner) — PEAP/MSCHAPv2 cannot authenticate
+## against Keycloak. Enable "Direct Access Grants" on the Keycloak client.
+##
+## Two backends, selected by `keycloak.mode`:
+##   - `lua` (default): a self-contained `rlm_lua` script does ROPC + RFC 7662
+##     token introspection over HTTPS, extracts client roles, and feeds the
+##     `keycloak_authorize` unlang policy (role→reply mapping). Renders under
+##     `templates/mods-config/keycloak/`:
+##       * `mods-enabled/keycloak_lua` + `scripts/keycloak-mapper.lua`
+##       * `policy.d/keycloak` (`keycloak_authorize` + `keycloak_roles`)
+##     The image MUST provide `rlm_lua`, `lua-cjson`, and an HTTPS-capable Lua
+##     lib (`luasec`/`luasocket`).
+##   - `rest`: a pure `rlm_rest` instance (`mods-enabled/keycloak_rest`) does the
+##     ROPC POST only — AUTH-ONLY, no introspection, `roleMappings` is ignored.
+##     Requires an `rlm_rest` with raw-body (`data`) support.
+## Both modes store `clientSecret` (when set) in a Secret, injected via `$ENV`.
+## With `wireDefaultSite` (default), the `default` site's authorize section is
+## wired automatically (sets `Auth-Type := Accept` on success).
+##
+## @param keycloak.enabled Render the Keycloak auth configs + Secret and mount them into the pod
+## @param keycloak.mode Auth backend: `lua` (ROPC + introspection + role mapping via rlm_lua) or `rest` (ROPC-only via rlm_rest, no roles)
+## @param keycloak.url Base URL of the Keycloak server
+## @param keycloak.realm Keycloak realm holding the users (required when enabled)
+## @param keycloak.clientId OIDC client_id with Direct Access Grants enabled
+## @param keycloak.clientSecret Secret for a confidential client. Stored in a Secret and injected via `$ENV{KC_CLIENT_SECRET}`; leave empty for a public client.
+## @param keycloak.scope Optional OAuth scope appended to the token request
+## @param keycloak.connectTimeout Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)
+## @param keycloak.wireDefaultSite Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module (lua: `keycloak_authorize`; rest: `keycloak_rest`). Disable to wire it from your own site config.
+## @param keycloak.roleAttribute (lua mode) Control attribute the Lua mapper populates with role names (one value per role)
+## @param keycloak.denyWithoutRole (lua mode) Reject the request when no `roleMappings` entry matches
+## @param keycloak.roleMappings [array] (lua mode) Ordered role→reply map (first match wins). Each entry: `role` (Keycloak client role) + `reply` (list of literal unlang `Attr := value` lines).
+##
+keycloak:
+  enabled: false
+  mode: lua
+  url: https://auth.example.com
+  realm: ""
+  clientId: freeradius
+  clientSecret: ""
+  scope: ""
+  connectTimeout: "4.0"
+  wireDefaultSite: true
+  roleAttribute: Class
+  denyWithoutRole: false
+  roleMappings: []
+  #   - role: network-admin
+  #     reply:
+  #       - 'Service-Type := Administrative-User'
+  #       - 'Filter-Id := "network-admin-policy"'
+  #       - 'Cisco-AVPair := "shell:priv-lvl=15"'
+  #   - role: wifi-user
+  #     reply:
+  #       - 'Tunnel-Type:0 := VLAN'
+  #       - 'Tunnel-Medium-Type:0 := IEEE-802'
+  #       - 'Tunnel-Private-Group-Id:0 := "10"'
+  #       - 'Filter-Id := "wifi-user-policy"'
+  #   - role: wifi-guest
+  #     reply:
+  #       - 'Tunnel-Type:0 := VLAN'
+  #       - 'Tunnel-Medium-Type:0 := IEEE-802'
+  #       - 'Tunnel-Private-Group-Id:0 := "99"'
+  #       - 'Session-Timeout := 3600'
 ## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
 ##
 initContainers: []

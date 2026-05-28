@@ -1,0 +1,175 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "lua") }}
+{{- if not .Values.keycloak.realm }}
+  {{- fail "keycloak.enabled=true requires keycloak.realm to be set" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-keycloak-lua" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* `keycloak_lua` is the rlm_lua module instance (mounted at
+         mods-enabled/keycloak_lua); `keycloak-mapper.lua` is the script it runs
+         (mounted at /etc/freeradius/scripts/). The script talks to Keycloak
+         directly over HTTPS, so it needs luasec (ssl.https), luasocket (ltn12,
+         socket.url) and lua-cjson in the image, plus the KC_* env vars injected
+         by the Deployment. */}}
+  keycloak_lua: |-
+    ## modules/keycloak_lua -- rlm_lua instance running the Keycloak authenticator/mapper
+    lua keycloak_lua {
+        filename = "/etc/freeradius/scripts/keycloak-mapper.lua"
+        func_authorize = "authorize"
+        func_accounting = "accounting"
+    }
+  keycloak-mapper.lua: |-
+    --[[
+      keycloak-mapper.lua
+
+      Self-contained Keycloak authenticator + role mapper for rlm_lua, run in
+      the authorize phase (func_authorize = "authorize"):
+
+        1. ROPC password grant to Keycloak's token endpoint to validate
+           User-Name / User-Password.
+        2. RFC 7662 token introspection to read the user's client roles.
+        3. Sets one &control:Class per role and returns a plain rcode (ok /
+           reject / fail / noop). ALL policy decisions — Auth-Type, accept,
+           deny-without-role, role→reply mapping — live in the unlang
+           `keycloak_authorize` policy. This script is pure fetch-and-parse.
+
+      Requires luasec (ssl.https), luasocket (ltn12, socket.url) and lua-cjson
+      in the image. Configured via environment (injected by the Deployment):
+        KC_BASE_URL, KC_REALM, KC_CLIENT_ID, KC_CLIENT_SECRET, KC_SCOPE,
+        KC_CONNECT_TIMEOUT
+    --]]
+
+    local https = require("ssl.https")
+    local ltn12 = require("ltn12")
+    local url   = require("socket.url")
+    local json  = require("cjson")
+    local fr    = require("freeradius")
+
+    local BASE_URL      = os.getenv("KC_BASE_URL")
+    local REALM         = os.getenv("KC_REALM")
+    local CLIENT_ID     = os.getenv("KC_CLIENT_ID") or "freeradius"
+    local CLIENT_SECRET = os.getenv("KC_CLIENT_SECRET")
+    local SCOPE         = os.getenv("KC_SCOPE")
+
+    -- Socket timeout (seconds) for every Keycloak call. https.TIMEOUT is the
+    -- module-level default LuaSec applies to the underlying TCP socket.
+    local TIMEOUT = tonumber(os.getenv("KC_CONNECT_TIMEOUT"))
+    if TIMEOUT then https.TIMEOUT = TIMEOUT end
+
+    -- POST application/x-www-form-urlencoded. Returns http_status, decoded_body
+    -- (decoded_body is nil on network/TLS error or non-JSON response).
+    local function post_form(endpoint, fields)
+        local parts = {}
+        for k, v in pairs(fields) do
+            parts[#parts + 1] = url.escape(k) .. "=" .. url.escape(v)
+        end
+        local body = table.concat(parts, "&")
+        local resp = {}
+        local _, code = https.request{
+            url     = endpoint,
+            method  = "POST",
+            headers = {
+                ["Content-Type"]   = "application/x-www-form-urlencoded",
+                ["Content-Length"] = tostring(#body),
+            },
+            source  = ltn12.source.string(body),
+            sink    = ltn12.sink.table(resp),
+        }
+        if type(code) ~= "number" then
+            return nil, nil
+        end
+        local ok, data = pcall(json.decode, table.concat(resp))
+        if not ok then
+            return code, nil
+        end
+        return code, data
+    end
+
+    function authorize(p)
+        local username = p:get("request", "User-Name")
+        local password = p:get("request", "User-Password")
+
+        -- Not a cleartext-password request — leave it for other modules.
+        if not username or not password then
+            return fr.RLM_MODULE_NOOP
+        end
+
+        if not BASE_URL or not REALM then
+            fr.log(fr.L_ERR, "keycloak-mapper: KC_BASE_URL / KC_REALM not set")
+            return fr.RLM_MODULE_FAIL
+        end
+
+        local token_url      = string.format("%s/realms/%s/protocol/openid-connect/token", BASE_URL, REALM)
+        local introspect_url = token_url .. "/introspect"
+
+        -- 1. ROPC password grant -> validate credentials, obtain access_token.
+        local token_fields = {
+            grant_type = "password",
+            client_id  = CLIENT_ID,
+            username   = username,
+            password   = password,
+        }
+        if CLIENT_SECRET and CLIENT_SECRET ~= "" then token_fields.client_secret = CLIENT_SECRET end
+        if SCOPE and SCOPE ~= "" then token_fields.scope = SCOPE end
+
+        local code, token = post_form(token_url, token_fields)
+        if code == nil then
+            fr.log(fr.L_ERR, "keycloak-mapper: token request failed (network/TLS)")
+            return fr.RLM_MODULE_FAIL
+        end
+        if code ~= 200 or not token or not token.access_token then
+            fr.log(fr.L_AUTH, "keycloak-mapper: ROPC rejected for " .. tostring(username) .. " (HTTP " .. tostring(code) .. ")")
+            return fr.RLM_MODULE_REJECT
+        end
+
+        -- 2. Introspection -> active flag + resource_access roles.
+        local intro_fields = { token = token.access_token, client_id = CLIENT_ID }
+        if CLIENT_SECRET and CLIENT_SECRET ~= "" then intro_fields.client_secret = CLIENT_SECRET end
+
+        local icode, intro = post_form(introspect_url, intro_fields)
+        if icode ~= 200 or not intro then
+            fr.log(fr.L_ERR, "keycloak-mapper: introspection failed (HTTP " .. tostring(icode) .. ")")
+            return fr.RLM_MODULE_FAIL
+        end
+        if not intro.active then
+            fr.log(fr.L_AUTH, "keycloak-mapper: token not active for " .. tostring(username))
+            return fr.RLM_MODULE_REJECT
+        end
+
+        -- 3. Extract client roles -> one &control:Class per role.
+        local roles
+        if intro.resource_access and intro.resource_access[CLIENT_ID] then
+            roles = intro.resource_access[CLIENT_ID].roles
+        end
+        if roles and #roles > 0 then
+            for _, role in ipairs(roles) do
+                fr.log(fr.L_DBG, "keycloak-mapper: role -> " .. role)
+                p:add("control", "Class", role)
+            end
+        else
+            fr.log(fr.L_WARN, "keycloak-mapper: no '" .. CLIENT_ID .. "' client roles for " .. tostring(username))
+        end
+
+        -- Credentials valid + roles populated. The unlang keycloak_authorize
+        -- policy decides Auth-Type / accept / role mapping from here.
+        return fr.RLM_MODULE_OK
+    end
+
+    -- accounting: pass-through (handled by rlm_sql, not this script).
+    function accounting(p)
+        return fr.RLM_MODULE_NOOP
+    end
+{{- end }}
