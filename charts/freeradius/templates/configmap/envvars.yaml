@@ -84,9 +84,8 @@ data:
   FREERADIUS_MODS_REST_TLS_CHECK_CERT_CN: {{ ternary "yes" "no" .Values.modules.rest.tls.checkCertCN | quote }}
   {{- end }}
 
-  {{- if .Values.modules.pam.enabled }}
-  FREERADIUS_MODS_PAM_AUTH: {{ .Values.modules.pam.pamAuth | quote }}
-  {{- end }}
+  {{- /* PAM config (`pam_auth`) is rendered directly into files/modules/pam
+         via Helm `tpl`, so no FREERADIUS_MODS_PAM_AUTH env var is needed. */}}
 
   {{- /* EAP structural config (default type, inner tunnel, cert paths) is
          rendered directly into files/modules/eap via Helm `tpl`, so no

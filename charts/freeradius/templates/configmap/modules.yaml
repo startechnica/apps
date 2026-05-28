@@ -21,10 +21,16 @@ data:
 {{ (.Files.Glob "files/modules/rest").AsConfig | indent 2 }}
 {{- end }}
 {{- if .Values.modules.json.enabled }}
-{{ (.Files.Glob "files/modules/json").AsConfig | indent 2 }}
+  {{- /* json is rendered through `tpl`: the encode{} block structure is fixed
+         and its leaf directives are bound to `modules.json.encode.*`. */}}
+  json: |
+{{ tpl (.Files.Get "files/modules/json") $ | indent 4 }}
 {{- end }}
 {{- if .Values.modules.pam.enabled }}
-{{ (.Files.Glob "files/modules/pam").AsConfig | indent 2 }}
+  {{- /* pam is rendered through `tpl` so every key under `modules.pam`
+         (except `enabled`) is emitted into the pam block. */}}
+  pam: |
+{{ tpl (.Files.Get "files/modules/pam") $ | indent 4 }}
 {{- end }}
 {{- if .Values.modules.eap.enabled }}
   {{- /* eap is rendered through `tpl` so Helm directives inside

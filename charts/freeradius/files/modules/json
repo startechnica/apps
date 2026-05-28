@@ -2,9 +2,41 @@
 ##
 ## modules/json -- JSON xlat module (rlm_json)
 ##
-## Provides %{json_encode:...} / %{json_decode:...} / %{jpath_quote:...}
-## xlat expansions for working with JSON in policies and rlm_rest payloads.
-## No configurable knobs — loading the module is sufficient.
+## Provides the `%{json_encode:...}` xlat, which serialises a list of
+## attributes into a JSON document (handy in policies and rlm_rest payloads).
+## On FreeRADIUS 3.2 the only configurable knobs are the output *format* of
+## that xlat — exposed here as `modules.json.encode.*` in values.yaml.
+##
+## NOTE: rendered through Helm `tpl` (see templates/configmap/modules.yaml), so
+## `{{ ... }}` is evaluated at template time against the release context. The
+## block structure below is spelled out explicitly (rather than rendered from
+## values via `freeradius.tplvalues.renderConfig`) so each directive can carry
+## an inline comment and booleans render as FreeRADIUS `yes`/`no`. Only the leaf
+## directives are bound to `.Values.modules.json.encode.*`; FreeRADIUS `${...}`
+## config vars are not Go template syntax, so `tpl` leaves them untouched.
 ##
 json {
+	#  Output format of the `%{json_encode:...}` xlat.
+	encode {
+		#  Document layout. One of: object, object_simple, array,
+		#  array_of_names, array_of_values.
+		output_mode = {{ .Values.modules.json.encode.output_mode }}
+
+		#  Attribute-name formatting.
+		attribute {
+			{{- with .Values.modules.json.encode.attribute.prefix }}
+			#  Colon-delimited prefix added to every attribute name
+			#  (prefix "foo" renders `User-Name` as `foo:User-Name`).
+			prefix = "{{ . }}"
+			{{- end }}
+		}
+
+		#  Attribute-value formatting.
+		value {
+			single_value_as_array = {{ ternary "yes" "no" .Values.modules.json.encode.value.singleValueAsArray }}
+			enum_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.enumAsInteger }}
+			dates_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.datesAsInteger }}
+			always_string = {{ ternary "yes" "no" .Values.modules.json.encode.value.alwaysString }}
+		}
+	}
 }

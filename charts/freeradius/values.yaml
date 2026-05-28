@@ -363,31 +363,60 @@ modules:
       checkCert: true
       checkCertCN: true
 
-  ## JSON xlat module (rlm_json). Exposes `%{json_encode:...}`,
-  ## `%{json_decode:...}`, and `%{jpath_quote:...}` for working with JSON in
-  ## policies and rlm_rest payloads. No knobs — loading the module is
-  ## sufficient.
+  ## JSON xlat module (rlm_json). Exposes the `%{json_encode:...}` xlat for
+  ## serialising attributes into JSON (handy for rlm_rest payloads and
+  ## policies). On FreeRADIUS 3.2 the only knobs are the output format of that
+  ## xlat, configured below under `encode`. These leaves are inlined into the
+  ## nested `encode { attribute {} value {} }` block of `files/modules/json`
+  ## (the block structure is fixed; only these values are templated).
   ##
   json:
     ## @param modules.json.enabled Enable the FreeRADIUS JSON xlat module.
     ##
     enabled: false
+    ## Output format of the `%{json_encode:...}` xlat.
+    ##
+    encode:
+      ## @param modules.json.encode.outputMode JSON document layout. One of: `object`, `object_simple`, `array`, `array_of_names`, `array_of_values`.
+      ##
+      output_mode: object
+      attribute:
+        ## @param modules.json.encode.attribute.prefix Colon-delimited prefix added to every attribute name (e.g. `foo` renders `User-Name` as `foo:User-Name`). Empty disables the prefix.
+        ##
+        prefix: ""
+      value:
+        ## @param modules.json.encode.value.singleValueAsArray Always emit values as a JSON array, even single values.
+        ##
+        singleValueAsArray: false
+        ## @param modules.json.encode.value.enumAsInteger Emit the integer value of enumerated attributes instead of their textual alias.
+        ##
+        enumAsInteger: false
+        ## @param modules.json.encode.value.datesAsInteger Emit date attributes as seconds since the epoch instead of a textual date.
+        ##
+        datesAsInteger: false
+        ## @param modules.json.encode.value.alwaysString Force all values to be quoted JSON strings (integers are otherwise emitted unquoted).
+        ##
+        alwaysString: false
 
   ## PAM authentication module (rlm_pam). Hands authentication off to Linux
-  ## PAM (`/etc/pam.d/${pamAuth}` inside the container). The upstream
+  ## PAM (`/etc/pam.d/${pam_auth}` inside the container). The upstream
   ## `freeradius/freeradius-server` image ships `/etc/pam.d/radiusd` by
-  ## default — to use a custom PAM service, override `pamAuth` AND mount the
+  ## default — to use a custom PAM service, override `pam_auth` AND mount the
   ## matching config via `extraVolumes` / `extraVolumeMounts`. Don't forget
   ## to wire `Auth-Type := PAM` in `authorize` and add `pam` to the
   ## `authenticate {}` block of your virtual server.
+  ##
+  ## Every key here except `enabled` is rendered verbatim into the `pam {}`
+  ## block as a `key = value` directive (via `freeradius.tplvalues.renderConfig`),
+  ## so use FreeRADIUS directive names (snake_case) for any keys you add.
   ##
   pam:
     ## @param modules.pam.enabled Enable the FreeRADIUS PAM module.
     ##
     enabled: false
-    ## @param modules.pam.pamAuth PAM service name. Maps to `/etc/pam.d/<name>` inside the container. The `Pam-Auth` attribute set in `authorize` overrides this at request time.
+    ## @param modules.pam.pam_auth PAM service name. Maps to `/etc/pam.d/<name>` inside the container. The `Pam-Auth` attribute set in `authorize` overrides this at request time.
     ##
-    pamAuth: radiusd
+    pam_auth: radiusd
 
   ## EAP module (rlm_eap). Provides TLS-based EAP methods that share one
   ## `tls-config` server certificate: EAP-TLS (mutual TLS, client
@@ -404,53 +433,55 @@ modules:
     ## @param modules.eap.enabled Enable the FreeRADIUS EAP module.
     ##
     enabled: false
-    ## @param modules.eap.defaultType Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled methods (`tls`, `ttls`).
+    ## @param modules.eap.defaultType Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled outer methods (`tls`, `ttls`) listed in `methods`.
     ##
     defaultType: ttls
+    ## @param modules.eap.methods [array] EAP methods to render, each as its own block. Outer methods (`tls`, `ttls`)
+    ##   reference the shared `tlsConfig`; inner methods (`mschapv2`, `md5`, `pap`) render as empty blocks for use inside the TTLS tunnel (selected via `ttls.default_eap_type`). Remove a method to disable it — e.g. drop `md5` (EAP-MD5 is legacy/insecure).
+    ##
+    methods:
+      - tls
+      - ttls
+      - mschapv2
+      - md5
+      - pap
+      - peap
 
-    ## EAP methods. Each enabled method is rendered as its own block in the
-    ## eap module config. The TLS-based outer methods (`tls`, `ttls`)
-    ## reference the shared `tlsConfig`; `mschapv2` / `md5` are inner EAP
-    ## types used inside the TTLS tunnel (selected by `ttls.defaultEapType`)
-    ## — disable them if you don't tunnel those inner types.
+    ## Per-method config. Which methods are rendered is controlled by `methods`
+    ## above. Each method's config map (`modules.eap.<method>`) becomes the body
+    ## of its block: every key is emitted as a `key = value` directive (nested
+    ## maps become `key { ... }` sub-blocks) via `freeradius.tplvalues.renderConfig`,
+    ## evaluated through Helm `tpl` so values may reference `.Values` / `.Release`
+    ## (escape literal `{{` as `{{ "{{" }}`). The inner methods (`mschapv2` /
+    ## `md5` / `pap`) carry no config here, so they render as empty `<method> {}`
+    ## blocks; add any directive as a key to give one a body.
     ##
-    ## Every method block also accepts an `extraConfig` raw string that is
-    ## rendered verbatim inside the block (e.g. `require_client_cert = yes`
-    ## for `tls`, `with_ntdomain_hack = yes` for `mschapv2`). It is evaluated
-    ## through Helm `tpl`, so it can reference `.Values` / `.Release`; escape
-    ## literal `{{` as `{{ "{{" }}`.
-    ##
-    ## @param modules.eap.tls.enabled Enable EAP-TLS (mutual TLS; the peer presents a client certificate).
-    ## @param modules.eap.tls.extraConfig Extra directives rendered inside the `tls {}` block.
+    ## @param modules.eap.tls.tls Name of the `tls-config` block this method references (`tls = <name>`).
     ##
     tls:
-      enabled: true
-      extraConfig: ""
+      tls: tls-common
     ## EAP-TTLS — establishes a TLS tunnel, then authenticates the inner
     ## identity through a virtual server.
     ##
-    ## @param modules.eap.ttls.enabled Enable EAP-TTLS.
-    ## @param modules.eap.ttls.defaultEapType Inner EAP type used inside the TTLS tunnel (e.g. `mschapv2`, `md5`). Must be an enabled inner method below.
-    ## @param modules.eap.ttls.virtualServer Virtual server (`sites-enabled/<name>`) that authenticates the TTLS inner identity. Defaults to the chart-shipped `inner-tunnel` site.
-    ## @param modules.eap.ttls.extraConfig Extra directives rendered inside the `ttls {}` block.
+    ## @param modules.eap.ttls.tls Name of the `tls-config` block this method references (`tls = <name>`).
+    ## @param modules.eap.ttls.default_eap_type Inner EAP type used inside the TTLS tunnel (e.g. `mschapv2`, `md5`). Must be an inner method listed in `methods`.
+    ## @param modules.eap.ttls.copy_request_to_tunnel Copy outer request attributes into the tunnel (`copy_request_to_tunnel`).
+    ## @param modules.eap.ttls.use_tunneled_reply Copy tunnel reply attributes to the outer reply (`use_tunneled_reply`).
+    ## @param modules.eap.ttls.virtual_server Virtual server (`sites-enabled/<name>`) that authenticates the TTLS inner identity. Defaults to the chart-shipped `inner-tunnel` site.
     ##
     ttls:
-      enabled: true
-      defaultEapType: mschapv2
-      virtualServer: inner-tunnel
-      extraConfig: ""
-    ## @param modules.eap.mschapv2.enabled Render the inner `mschapv2 {}` EAP method block.
-    ## @param modules.eap.mschapv2.extraConfig Extra directives rendered inside the `mschapv2 {}` block (e.g. `with_ntdomain_hack = yes`).
-    ##
-    mschapv2:
-      enabled: true
-      extraConfig: ""
-    ## @param modules.eap.md5.enabled Render the inner `md5 {}` EAP method block. EAP-MD5 is legacy/insecure — off by default; enable only if a peer requires it.
-    ## @param modules.eap.md5.extraConfig Extra directives rendered inside the `md5 {}` block.
-    ##
-    md5:
-      enabled: false
-      extraConfig: ""
+      tls: tls-common
+      default_eap_type: mschapv2
+      copy_request_to_tunnel: "yes"
+      use_tunneled_reply: "no"
+      virtual_server: inner-tunnel
+
+    peap:
+      tls: tls-common
+      default_eap_type: mschapv2
+      copy_request_to_tunnel: "yes"
+      use_tunneled_reply: "yes"
+      virtual_server: "inner-tunnel"
 
     ## Shared TLS server configuration — FreeRADIUS `tls-config tls-common`.
     ## Consumed by every enabled TLS-based EAP method above. A separate TLS
@@ -462,36 +493,37 @@ modules:
     ##
     ## @param modules.eap.tlsConfig.name Name of the `tls-config` block (FreeRADIUS `tls-config <name>`). Each enabled method references it via `tls = <name>`.
     ## @param modules.eap.tlsConfig.autoGenerated Render `templates/secret/eap-tls.yaml` with a chart-generated leaf signed by the shared internal CA. Skipped when `certificatesSecret` is set.
-    ## @param modules.eap.tlsConfig.certificatesSecret Name of an existing Secret holding `tls.crt`/`tls.key`/`ca.crt` for EAP. Overrides chart-managed rendering.
-    ## @param modules.eap.tlsConfig.certFilename Override filename of the leaf certificate inside the mounted Secret.
-    ## @param modules.eap.tlsConfig.certKeyFilename Override filename of the leaf key inside the mounted Secret.
-    ## @param modules.eap.tlsConfig.certCAFilename Override filename of the CA certificate inside the mounted Secret.
-    ## @param modules.eap.tlsConfig.privateKeyPassword Password for the EAP leaf key when it is password-protected. Auto-generated into the chart credentials Secret (`mods-eap-tls-privkey-password`) when empty.
-    ## @param modules.eap.tlsConfig.randomFile Source of randomness passed to the TLS engine (`random_file`).
-    ## @param modules.eap.tlsConfig.cipherList OpenSSL cipher list (`cipher_list`). `DEFAULT` keeps the image's compiled-in list.
-    ## @param modules.eap.tlsConfig.cipherServerPreference Honour the server's cipher order over the client's (`cipher_server_preference`).
-    ## @param modules.eap.tlsConfig.minVersion Minimum TLS protocol version offered (`tls_min_version`).
-    ## @param modules.eap.tlsConfig.maxVersion Maximum TLS protocol version offered (`tls_max_version`).
-    ## @param modules.eap.tlsConfig.cache.enabled Enable the EAP TLS session cache (`cache { enable }`).
-    ## @param modules.eap.tlsConfig.ocsp.enabled Enable OCSP certificate checking (`ocsp { enable }`).
+    ## @param modules.eap.tlsConfig.certificates_secret Name of an existing Secret holding `tls.crt`/`tls.key`/`ca.crt` for EAP. Overrides chart-managed rendering.
+    ## @param modules.eap.tlsConfig.cert_filename Override filename of the leaf certificate inside the mounted Secret.
+    ## @param modules.eap.tlsConfig.cert_key_filename Override filename of the leaf key inside the mounted Secret.
+    ## @param modules.eap.tlsConfig.cert_ca_filename Override filename of the CA certificate inside the mounted Secret.
+    ## @param modules.eap.tlsConfig.private_key_password Password for the EAP leaf key when it is password-protected. Auto-generated into the chart credentials Secret (`mods-eap-tls-privkey-password`) when empty.
+    ## @param modules.eap.tlsConfig.random_file Source of randomness passed to the TLS engine (`random_file`).
+    ## @param modules.eap.tlsConfig.cipher_list OpenSSL cipher list (`cipher_list`). `DEFAULT` keeps the image's compiled-in list.
+    ## @param modules.eap.tlsConfig.cipher_server_preference Honour the server's cipher order over the client's (`cipher_server_preference`).
+    ## @param modules.eap.tlsConfig.min_version Minimum TLS protocol version offered (`tls_min_version`).
+    ## @param modules.eap.tlsConfig.max_version Maximum TLS protocol version offered (`tls_max_version`).
+    ## @param modules.eap.tlsConfig.cache.enable Enable the EAP TLS session cache (`cache { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
+    ## @param modules.eap.tlsConfig.ocsp.enable Enable OCSP certificate checking (`ocsp { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
     ##
     tlsConfig:
       name: tls-common
       autoGenerated: true
-      certificatesSecret: ""
-      certFilename: ""
-      certKeyFilename: ""
-      certCAFilename: ""
-      privateKeyPassword: ""
-      randomFile: /dev/urandom
-      cipherList: "DEFAULT"
-      cipherServerPreference: false
-      minVersion: "1.2"
-      maxVersion: "1.3"
+      certificates_secret: ""
+      cert_filename: ""
+      cert_key_filename: ""
+      cert_ca_filename: ""
+      private_key_password: ""
+      random_file: /dev/urandom
+      cipher_list: "DEFAULT"
+      cipher_server_preference: false
+      min_version: "1.2"
+      max_version: "1.3"
       cache:
-        enabled: false
+        enable: "no"
       ocsp:
-        enabled: false
+        enable: "no"
+      verify: {}
 
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
@@ -542,25 +574,25 @@ clients:
   ## @param clients.localhost.ipv6addr IPv6 address (or CIDR) the loopback client matches
   ## @param clients.localhost.proto Transport protocol (`udp` or `tcp`)
   ## @param clients.localhost.secret Shared secret used to authenticate this client
-  ## @param clients.localhost.nasType NAS-Type string reported by RADIUS attributes
-  ## @param clients.localhost.virtualServer Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
-  ## @param clients.localhost.coaServer Virtual server handling CoA requests for this client
-  ## @param clients.localhost.limit.maxConnections Maximum concurrent connections (TCP only)
+  ## @param clients.localhost.nas_type NAS-Type string reported by RADIUS attributes
+  ## @param clients.localhost.virtual_server Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
+  ## @param clients.localhost.coa_server Virtual server handling CoA requests for this client
+  ## @param clients.localhost.limit.max_connections Maximum concurrent connections (TCP only)
   ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
-  ## @param clients.localhost.limit.idleTimeout Idle timeout in seconds
+  ## @param clients.localhost.limit.idle_timeout Idle timeout in seconds
   ##
   localhost:
     ipv4addr: "127.0.0.1"
     ipv6addr: ""
     proto: udp
     secret: password
-    nasType: other
-    virtualServer: default
-    coaServer: coa
+    nas_type: other
+    virtual_server: default
+    coa_server: coa
     limit:
-      maxConnections: 16
+      max_connections: 16
       lifetime: 0
-      idleTimeout: 30
+      idle_timeout: 30
   ## @param clients.existingConfigMapName Name of an existing ConfigMap supplying `clients.conf`. Overrides the chart-rendered entries above.
   ##
   existingConfigMapName: ""
@@ -849,11 +881,34 @@ customReadinessProbe: {}
 startupWaitOptions: {}
 
 ## @param extraVolumes Additional volumes attached to the FreeRADIUS pod. Pair with `extraVolumeMounts` below.
+## extraVolumes:
+##  - name: my-volume
+##    configMap:
+##      name: my-configmap
 ##
 extraVolumes: []
 ## @param extraVolumeMounts Additional volume mounts attached to the FreeRADIUS container.
 ##
 extraVolumeMounts: []
+## @param extraModules [array] Additional FreeRADIUS module files. Each entry gets its OWN ConfigMap (`<fullname>-module-<name>`) and pod volume, mounted at `mods-enabled/<name>` via `subPath`. `name` is the volume name + on-disk filename (must be a valid DNS-1123 label and not collide with a built-in volume name such as `data`, `temp`, `freeradius-modules`); `config` is the raw module body, mounted verbatim (NOT rendered through `tpl`).
+## extraModules:
+##   - name: ldap
+##     config: |
+##       ldap {
+##         server = 'ldap://ldap.example.com'
+##         base_dn = 'dc=example,dc=com'
+##       }
+##
+extraModules: []
+## @param extraSites [array] Additional FreeRADIUS virtual-server (site) files. Each entry gets its OWN ConfigMap (`<fullname>-site-<name>`) and pod volume, mounted at `sites-enabled/<name>` via `subPath`. `name` is the volume name + on-disk filename (valid DNS-1123 label, no collision with built-in volume names); `config` is the raw site body, mounted verbatim (NOT rendered through `tpl`).
+## extraSites:
+##   - name: my-vhost
+##     config: |
+##       server my-vhost {
+##         listen { type = auth ipaddr = * port = 0 }
+##       }
+##
+extraSites: []
 ## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
 ##
 initContainers: []

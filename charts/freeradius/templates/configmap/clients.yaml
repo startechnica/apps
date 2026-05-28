@@ -24,16 +24,16 @@ data:
         {{- end }}
         proto = {{ default "udp" $client.proto }}
         secret = {{ $client.secret | quote }}
-        nas_type = {{ default "other" $client.nasType }}
-        virtual_server = {{ default "default" $client.virtualServer }}
-        {{- if $client.coaServer }}
-        coa_server = {{ $client.coaServer }}
+        nas_type = {{ default "other" $client.nas_type }}
+        virtual_server = {{ default "default" $client.virtual_server }}
+        {{- if $client.coa_server }}
+        coa_server = {{ $client.coa_server }}
         {{- end }}
         {{- if $client.limit }}
         limit {
-            max_connections = {{ default 16 $client.limit.maxConnections }}
+            max_connections = {{ default 16 $client.limit.max_connections }}
             lifetime = {{ default 0 $client.limit.lifetime }}
-            idle_timeout = {{ default 30 $client.limit.idleTimeout }}
+            idle_timeout = {{ default 30 $client.limit.idle_timeout }}
         }
         {{- end }}
     }

@@ -15,15 +15,15 @@
 ##   - If you add literal `{{` here, escape it as {{ "{{" }} (and `}}` as {{ "}}" }}).
 ##
 ## `tls-config {{ .Values.modules.eap.tlsConfig.name }}` is the shared server
-## certificate + TLS engine settings (`modules.eap.tlsConfig.*`). The EAP
-## methods (`modules.eap.{tls,ttls,mschapv2,md5}`) are rendered as their own
-## blocks and the TLS-based ones reference it via
-## `tls = {{ .Values.modules.eap.tlsConfig.name }}`. No
-## `dh_file` is referenced — FreeRADIUS 3.2 negotiates ephemeral DH/ECDHE and
+## certificate + TLS engine settings (`modules.eap.tlsConfig.*`). Every method
+## listed in `modules.eap.methods` is rendered as its own block from the
+## matching `modules.eap.<method>` config map (via
+## `freeradius.tplvalues.renderConfig`); the TLS-based ones reference the shared
+## block through their `tls:` value (e.g. `tls = {{ .Values.modules.eap.tlsConfig.name }}`).
+## No `dh_file` is referenced — FreeRADIUS 3.2 negotiates ephemeral DH/ECDHE and
 ## the chart ships no DH params file.
 ##
 eap {
-	#  Default EAP type offered to peers that don't negotiate a specific one.
 	default_eap_type = {{ .Values.modules.eap.defaultType }}
 
 	timer_expire = 60
@@ -31,72 +31,38 @@ eap {
 	cisco_accounting_username_bug = no
 	max_sessions = ${max_requests}
 
-	#  Shared TLS server material for the TLS-based EAP methods. Paths are
-	#  mounted from the chart's EAP TLS Secret at
-	#  /opt/startechnica/freeradius/certs-eap.
 	tls-config {{ .Values.modules.eap.tlsConfig.name }} {
 		certificate_file = {{ include "freeradius.eap.tlsConfig.certPath" . }}
 		private_key_file = {{ include "freeradius.eap.tlsConfig.certKeyPath" . }}
 		private_key_password = $ENV{FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD}
 		ca_file = {{ include "freeradius.eap.tlsConfig.caCertPath" . }}
-		random_file = {{ .Values.modules.eap.tlsConfig.randomFile }}
+		random_file = {{ .Values.modules.eap.tlsConfig.random_file }}
 
-		cipher_list = "{{ .Values.modules.eap.tlsConfig.cipherList }}"
-		cipher_server_preference = {{ ternary "yes" "no" .Values.modules.eap.tlsConfig.cipherServerPreference }}
-		tls_min_version = "{{ .Values.modules.eap.tlsConfig.minVersion }}"
-		tls_max_version = "{{ .Values.modules.eap.tlsConfig.maxVersion }}"
+		cipher_list = "{{ .Values.modules.eap.tlsConfig.cipher_list }}"
+		cipher_server_preference = {{ ternary "yes" "no" .Values.modules.eap.tlsConfig.cipher_server_preference }}
+		tls_min_version = "{{ .Values.modules.eap.tlsConfig.min_version }}"
+		tls_max_version = "{{ .Values.modules.eap.tlsConfig.max_version }}"
 
 		cache {
-			enable = {{ ternary "yes" "no" .Values.modules.eap.tlsConfig.cache.enabled }}
+			{{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.eap.tlsConfig.cache "context" $) | nindent 12 }}
 		}
 
 		verify {
+			{{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.eap.tlsConfig.verify "context" $) | nindent 12 }}
 		}
 
 		ocsp {
-			enable = {{ ternary "yes" "no" .Values.modules.eap.tlsConfig.ocsp.enabled }}
+			{{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.eap.tlsConfig.ocsp "context" $) | nindent 12 }}
 		}
 	}
 
-	{{- if .Values.modules.eap.tls.enabled }}
-	#  EAP-TLS — mutual TLS, client presents a certificate.
-	tls {
-		tls = {{ .Values.modules.eap.tlsConfig.name }}
-		{{- with .Values.modules.eap.tls.extraConfig }}
-		{{- tpl . $ | nindent 4 }}
-		{{- end }}
-	}
-	{{- end }}
-
-	{{- if .Values.modules.eap.ttls.enabled }}
-	#  EAP-TTLS — TLS tunnel; the inner identity is authenticated by the
-	#  `{{ .Values.modules.eap.ttls.virtualServer }}` virtual server
-	#  using `default_eap_type` (or a non-EAP method such as PAP inside the
-	#  tunnel).
-	ttls {
-		tls = {{ .Values.modules.eap.tlsConfig.name }}
-		default_eap_type = {{ .Values.modules.eap.ttls.defaultEapType }}
-		copy_request_to_tunnel = no
-		use_tunneled_reply = no
-		virtual_server = "{{ .Values.modules.eap.ttls.virtualServer }}"
-		{{- with .Values.modules.eap.ttls.extraConfig }}
-		{{- tpl . $ | nindent 4 }}
-		{{- end }}
-	}
-	{{- end }}
-
-	#  Inner EAP methods available to the TTLS tunnel.
-	{{- if .Values.modules.eap.mschapv2.enabled }}
-	mschapv2 {
-		{{- with .Values.modules.eap.mschapv2.extraConfig }}
-		{{- tpl . $ | nindent 8 }}
-		{{- end }}
-	}
-	{{- end }}
-	{{- if .Values.modules.eap.md5.enabled }}
-	md5 {
-		{{- with .Values.modules.eap.md5.extraConfig }}
-		{{- tpl . $ | nindent 8 }}
+	#  EAP methods, rendered from `modules.eap.methods`. Each method's config map
+	#  (`modules.eap.<method>`) becomes its block body via renderConfig; methods
+	#  with no config map render an empty `<method> {}`.
+	{{- range $method := .Values.modules.eap.methods }}
+	{{ $method }} {
+		{{- with index $.Values.modules.eap $method }}
+		{{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
 		{{- end }}
 	}
 	{{- end }}

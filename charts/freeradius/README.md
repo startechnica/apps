@@ -567,7 +567,7 @@ Related chart-internal renames (only matter if you override templates):
 The in-container mount path `/etc/freeradius/mods-enabled/<name>` is
 **unchanged** — that's the FreeRADIUS daemon's runtime path and isn't ours
 to rename. Env var names like `FREERADIUS_MODS_SQL_*` /
-`FREERADIUS_MODS_REST_*` / `FREERADIUS_MODS_PAM_AUTH` are also unchanged.
+`FREERADIUS_MODS_REST_*` are also unchanged.
 
 #### 9. `sitesEnabled:` renamed to `sites:` (and `files/sites-available/` → `files/sites/`)
 

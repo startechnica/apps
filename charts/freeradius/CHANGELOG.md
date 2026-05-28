@@ -166,9 +166,12 @@ common template fixes.
     TLS-based outer methods (reference tls-common); TTLS knobs
     (`defaultEapType`, `virtualServer`) nest under `ttls`. `mschapv2` / `md5`
     are inner EAP types tunnelled by TTLS (EAP-MD5 is legacy — off by
-    default). Every method block also takes an `extraConfig` raw string
-    (Helm-`tpl`-evaluated) rendered verbatim inside the block as an escape
-    hatch for directives the chart doesn't expose.
+    default). The TLS-based outer methods (`tls` / `ttls`) take an
+    `extraConfig` raw string (Helm-`tpl`-evaluated) rendered verbatim inside
+    the block as an escape hatch for directives the chart doesn't expose; the
+    inner methods (`mschapv2` / `md5`) instead render every key (except
+    `enabled`) as a `key = value` directive via
+    `freeradius.tplvalues.renderConfig`.
   - `modules.eap.defaultType` — `default_eap_type`; must be one of the
     enabled methods.
 
@@ -186,15 +189,25 @@ common template fixes.
   stays as `$ENV{}` so it is injected from a Secret and never baked into the
   ConfigMap.
 - **JSON xlat module support (rlm_json).** New `modules.json:` values
-  block (just `enabled: false`) and stub `files/modules/json`. When
-  enabled, the module exposes `%{json_encode:...}`, `%{json_decode:...}`,
-  and `%{jpath_quote:...}` xlat expansions for use in policies and
-  rlm_rest payloads. No other knobs — the module has no configurable state.
+  block and `files/modules/json`. When enabled, the module exposes the
+  `%{json_encode:...}` xlat for serialising attributes into JSON in policies
+  and rlm_rest payloads. The file is rendered through Helm `tpl`, but unlike
+  the flat modules the rlm_json config is a nested `encode { attribute {}
+  value {} }` stanza (which `freeradius.tplvalues.renderConfig`'s
+  `key = value` flattening cannot express), so the block structure is fixed
+  in the file and only the leaf directives are templated from
+  `modules.json.encode.*`: `outputMode` (object / object_simple / array /
+  array_of_names / array_of_values), `attribute.prefix`, and the
+  `value.{singleValueAsArray,enumAsInteger,datesAsInteger,alwaysString}`
+  value-formatting flags.
 - **PAM authentication module support (rlm_pam).** New `modules.pam:`
-  values block (`enabled`, `pamAuth`, default `radiusd`) and
-  `files/modules/pam` templated with `$ENV{FREERADIUS_MODS_PAM_AUTH}`.
-  The upstream image ships `/etc/pam.d/radiusd`; to use a custom PAM
-  service, override `pamAuth` AND mount the matching config via
+  values block (`enabled`, `pam_auth`, default `radiusd`). `files/modules/pam`
+  is rendered through Helm `tpl`: every key under `modules.pam` except
+  `enabled` is emitted into the `pam {}` block as a `key = value` directive
+  (via `freeradius.tplvalues.renderConfig`), so values use FreeRADIUS
+  directive names directly and no `FREERADIUS_MODS_PAM_AUTH` env var is
+  needed. The upstream image ships `/etc/pam.d/radiusd`; to use a custom PAM
+  service, override `pam_auth` AND mount the matching config via
   `extraVolumes` / `extraVolumeMounts`. Virtual-server wiring
   (`Auth-Type := PAM` in `authorize`, `pam` in `authenticate {}`) is the
   user's responsibility.
