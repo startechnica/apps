@@ -436,7 +436,9 @@ data:
     	#  Look in an SQL database.  The schema of the database is meant to mirror the "users" file.
     	#
     	#  See "Authorization Queries" in mods-available/sql
+    	{{- if .Values.modules.sql.enabled }}
     	-sql
+    	{{- end }}
 
     	#  If you are using /etc/smbpasswd, and are also doing mschap authentication, the un-comment this line, and configure the 'smbpasswd' module.
     #	smbpasswd
@@ -642,7 +644,9 @@ data:
 
     	#  Log traffic to an SQL database.
     	#  See "Accounting queries" in mods-available/sql
+    	{{- if .Values.modules.sql.enabled }}
     	-sql
+    	{{- end }}
 
     	#
     	#  If you receive stop packets with zero session length,
@@ -682,7 +686,9 @@ data:
     #	radutmp
 
     	#  See "Simultaneous Use Checking Queries" in mods-available/sql
+    	{{- if .Values.modules.sql.enabled }}
     	sql
+    	{{- end }}
     }
 
 
@@ -790,16 +796,14 @@ data:
     	#  'detail reply_log' module.
     #	reply_log
 
-    	#
     	#  After authenticating the user, do another SQL query.
-    	#
     	#  See "Authentication Logging Queries" in mods-available/sql
+    	{{- if .Values.modules.sql.enabled }}
     	-sql
+    	{{- end }}
 
-    	#
     	#  Un-comment the following if you want to modify the user's object
     	#  in LDAP after a successful login.
-    	#
     #	ldap
 
     	# For Exec-Program and Exec-Program-Wait
@@ -899,7 +903,9 @@ data:
     	#
     	Post-Auth-Type REJECT {
     		# log failed authentications in SQL, too.
+    		{{- if .Values.modules.sql.enabled }}
     		-sql
+    		{{- end }}
     		attr_filter.access_reject
 
     		# Insert EAP-Failure message if the request was rejected by policy instead of because of an authentication failure
