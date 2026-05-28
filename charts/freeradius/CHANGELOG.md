@@ -581,13 +581,6 @@ common template fixes.
   `bootstrap.database.schemaConfigMap` + `extraVolumes` / `extraVolumeMounts`
   mounting over `/etc/freeradius/mods-config/sql/main/sqlite/schema.sql`.
 
-## Pre-1.1.0 history
-
-These releases pre-date the authored changelog (introduced with the 1.1.0
-modernization) and had no `artifacthub.io/changes` entries. The notes below are
-reconstructed from the `freeradius-<version>` git tags — see `git log` between
-tags for the full commit detail.
-
 ### 1.0.3 (2025-03-19) — appVersion 3.2.7
 
 - Custom `livenessProbe` / `readinessProbe` / `startupProbe` support.
