@@ -405,6 +405,57 @@ entries:
     version: 0.1.0
   freeradius:
   - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: "1.1.0 major release — values.yaml restructured, TLS/cert-manager keys consolidated, gateway-api stack adapted for RADIUS (UDPRoute/TLSRoute), bundled PostgreSQL subchart added alongside MariaDB, REST/JSON/PAM/PAP modules, top-level keys cleaned up (modsEnabled→modules, sitesEnabled→sites, database.bootstrap→bootstrap.database); see CHANGELOG.md and README §Upgrading for migration."
+      artifacthub.io/images: |
+        - name: freeradius
+          image: docker.io/freeradius/freeradius-server:3.2.8
+      category: AccessManagement
+    apiVersion: v2
+    appVersion: 3.2.8
+    created: "2026-05-28T23:53:01.024423923Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: https://startechnica.github.io/apps
+      version: 0.1.21
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 20.x.x
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.x.x
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    digest: f384f803ca3a0354d0f6299fd378bd4b04131c52d600761ac16fbf7494f77198
+    home: https://github.com/startechnica/apps/tree/main/charts/freeradius
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - radsec
+    - mysql
+    - postgresql
+    - ldap
+    kubeVersion: '>=1.24.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    - https://github.com/FreeRADIUS/freeradius-server
+    - https://github.com/startechnica/apps.git
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-1.1.0/freeradius-1.1.0.tgz
+    version: 1.1.0
+  - annotations:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.2.7
@@ -3195,4 +3246,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-17T09:26:49.315027974Z"
+generated: "2026-05-28T23:53:01.0245842Z"
