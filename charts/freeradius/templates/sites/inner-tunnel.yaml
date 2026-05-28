@@ -3,7 +3,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if not .Values.sites.innerTunnel.existingConfigMap }}
+{{- if and .Values.sites.innerTunnel.enabled (not .Values.sites.innerTunnel.existingConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

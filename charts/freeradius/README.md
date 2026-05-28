@@ -262,7 +262,9 @@ The command removes all the Kubernetes components associated with the chart and 
 
 | Name                                       | Description                                                                     | Value             |
 | ------------------------------------------ | ------------------------------------------------------------------------------- | ----------------- |
+| `sites.default.enabled`               | Enable the `default` virtual server (the main auth/acct server)                                    | `true`    |
 | `sites.default.existingConfigMap`     | BYO ConfigMap (key `default`) mounted at `sites-enabled/default`; skips chart rendering            | `""`      |
+| `sites.innerTunnel.enabled`           | Enable the `inner-tunnel` virtual server (EAP-TTLS/PEAP inner identity)                            | `true`    |
 | `sites.innerTunnel.existingConfigMap` | BYO ConfigMap (key `inner-tunnel`) mounted at `sites-enabled/inner-tunnel`; skips chart rendering  | `""`      |
 | `sites.coa.enabled`                   | Enable the `coa` virtual server (Change-of-Authorization)                                          | `false`   |
 | `sites.coa.existingConfigMap`         | BYO ConfigMap (key `coa`) mounted at `sites-enabled/coa`; skips chart rendering                    | `""`      |

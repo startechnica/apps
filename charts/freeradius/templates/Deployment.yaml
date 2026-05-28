@@ -38,16 +38,10 @@ spec:
         {{- if not .Values.existingConfigmap }}
         checksum/configmap-env: {{ include (print $.Template.BasePath "/configmap/envvars.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.extraModules }}
-        checksum/configmap-extra-modules: {{ include (print $.Template.BasePath "/configmap/extra-modules.yaml") . | sha256sum }}
-        {{- end }}
-        {{- if .Values.extraSites }}
-        checksum/configmap-extra-sites: {{ include (print $.Template.BasePath "/configmap/extra-sites.yaml") . | sha256sum }}
-        {{- end }}
-        {{- if not .Values.sites.default.existingConfigMap }}
+        {{- if and .Values.sites.default.enabled (not .Values.sites.default.existingConfigMap) }}
         checksum/configmap-sites-default: {{ include (print $.Template.BasePath "/sites/default.yaml") . | sha256sum }}
         {{- end }}
-        {{- if not .Values.sites.innerTunnel.existingConfigMap }}
+        {{- if and .Values.sites.innerTunnel.enabled (not .Values.sites.innerTunnel.existingConfigMap) }}
         checksum/configmap-sites-inner-tunnel: {{ include (print $.Template.BasePath "/sites/inner-tunnel.yaml") . | sha256sum }}
         {{- end }}
         {{- if and .Values.sites.status.enabled (not .Values.sites.status.existingConfigMap) }}
@@ -346,40 +340,16 @@ spec:
           startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
           {{- else if .Values.startupProbe.enabled }}
           startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
-            exec:
-              command:
-                - sh
-                - -c
-                - |
-                  {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
-                  if [[ ! -f "{{ .Values.persistence.mountPath }}/.user_scripts_initialized" ]]; then
-                      echo "Init scripts still not executed. Skipping check"
-                      exit 1
-                  fi
-                  {{- end }}
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:{{ .Values.containerPorts.status }} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.customLivenessProbe }}
           livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
           {{- else if .Values.livenessProbe.enabled }}
           livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
-            exec:
-              command:
-                - sh
-                - -c
-                - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:{{ .Values.containerPorts.status }} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- if .Values.customReadinessProbe }}
           readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
           {{- else if .Values.readinessProbe.enabled }}
           readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
-            exec:
-              command:
-                - sh
-                - -c
-                - >-
-                  /bin/echo "Message-Authenticator = 0x00" | /usr/bin/radclient 127.0.0.1:{{ .Values.containerPorts.status }} status ${FREERADIUS_SITES_STATUS_SECRET}
           {{- end }}
           {{- end }}
           {{- if .Values.resources }}
@@ -435,31 +405,17 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/pap
               subPath: pap
             {{- end }}
-            - name: freeradius-site-default
-              mountPath: /etc/freeradius/sites-enabled/default
-              subPath: default
-            - name: freeradius-site-inner-tunnel
-              mountPath: /etc/freeradius/sites-enabled/inner-tunnel
-              subPath: inner-tunnel
-            {{- if .Values.sites.status.enabled }}
-            - name: freeradius-site-status
-              mountPath: /etc/freeradius/sites-enabled/status
-              subPath: status
-            {{- end }}
-            {{- if .Values.sites.coa.enabled }}
-            - name: freeradius-site-coa
-              mountPath: /etc/freeradius/sites-enabled/coa
-              subPath: coa
-            {{- end }}
-            {{- if .Values.sites.dhcp.enabled }}
-            - name: freeradius-site-dhcp
-              mountPath: /etc/freeradius/sites-enabled/dhcp
-              subPath: dhcp
+            {{- /* All virtual servers are projected into one volume (chart sites +
+                   extraSites) and mounted as the whole sites-enabled directory. */}}
+            - name: freeradius-sites
+              mountPath: /etc/freeradius/sites-enabled
+              readOnly: true
+            {{- if include "freeradius.healthcheck.create" . }}
+            - name: scripts
+              mountPath: {{ .Values.healthCheck.mountPath }}
+              readOnly: true
             {{- end }}
             {{- if .Values.tls.enabled }}
-            - name: freeradius-site-tls
-              mountPath: /etc/freeradius/sites-enabled/tls
-              subPath: tls
             - name: freeradius-tls
               mountPath: /opt/startechnica/freeradius/certs
               readOnly: true
@@ -490,12 +446,7 @@ spec:
             {{- range .Values.extraModules }}
             - name: {{ .name }}
               mountPath: /etc/freeradius/mods-enabled/{{ .name }}
-              subPath: {{ .name }}
-            {{- end }}
-            {{- range .Values.extraSites }}
-            - name: {{ .name }}
-              mountPath: /etc/freeradius/sites-enabled/{{ .name }}
-              subPath: {{ .name }}
+              subPath: {{ .key | default .name }}
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
@@ -534,42 +485,54 @@ spec:
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "pap" "context" $) }}
         {{- end }}
-        - name: freeradius-site-default
-          configMap:
-            name: {{ include "freeradius.site.configMapName" (dict "site" "default" "context" $) }}
-        - name: freeradius-site-inner-tunnel
-          configMap:
-            name: {{ include "freeradius.site.configMapName" (dict "site" "inner-tunnel" "key" "innerTunnel" "context" $) }}
-        {{- if .Values.sites.status.enabled }}
-        - name: freeradius-site-status
-          configMap:
-            name: {{ include "freeradius.site.configMapName" (dict "site" "status" "context" $) }}
-        {{- end }}
-        {{- if .Values.sites.coa.enabled }}
-        - name: freeradius-site-coa
-          configMap:
-            name: {{ include "freeradius.site.configMapName" (dict "site" "coa" "context" $) }}
-        {{- end }}
-        {{- if .Values.sites.dhcp.enabled }}
-        - name: freeradius-site-dhcp
-          configMap:
-            name: {{ include "freeradius.site.configMapName" (dict "site" "dhcp" "context" $) }}
-        {{- end }}
-        {{- if .Values.tls.enabled }}
-        - name: freeradius-site-tls
-          configMap:
-            name: {{ include "freeradius.site.configMapName" (dict "site" "tls" "context" $) }}
-        {{- end }}
+        {{- /* One projected volume aggregates every enabled virtual server
+               (chart sites + extraSites) into sites-enabled/. Each chart site
+               ConfigMap holds a single key named after the site, so it is
+               projected whole (the key becomes the filename); BYO and enable
+               gating are resolved per source via freeradius.site.configMapName.
+               extraSites use `items` since their key may differ from the path. */}}
+        - name: freeradius-sites
+          projected:
+            sources:
+              {{- if .Values.sites.default.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "default" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.innerTunnel.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "inner-tunnel" "key" "innerTunnel" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.status.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "status" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.coa.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "coa" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.dhcp.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "dhcp" "context" $) }}
+              {{- end }}
+              {{- if .Values.tls.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "tls" "context" $) }}
+              {{- end }}
+              {{- range .Values.extraSites }}
+              - configMap:
+                  name: {{ tpl .existingConfigMap $ }}
+                  items:
+                    - key: {{ .key | default .name }}
+                      path: {{ .name }}
+              {{- end }}
         {{- range .Values.extraModules }}
         - name: {{ .name }}
           configMap:
-            name: {{ printf "%s-module-%s" (include "st-common.names.fullname" $) .name }}
+            name: {{ tpl .existingConfigMap $ }}
         {{- end }}
-        {{- range .Values.extraSites }}
-        - name: {{ .name }}
+        - name: scripts
           configMap:
-            name: {{ printf "%s-site-%s" (include "st-common.names.fullname" $) .name }}
-        {{- end }}
+            name: {{ printf "%s-scripts" (include "st-common.names.fullname" .) }}
         - name: temp
           emptyDir: {}
         - name: shared-certs

@@ -81,8 +81,7 @@ Usage: {{ include "freeradius.module.configMapName" (dict "module" "sql" "contex
 {{/*
 ConfigMap name a virtual server mounts at `sites-enabled/<site>`: the BYO
 `sites.<key>.existingConfigMap` when set (tpl-evaluated), otherwise the
-chart-rendered `<fullname>-sites-<site>`. Distinct from the `extraSites`
-naming (`<fullname>-site-<name>`) so the two never collide.
+chart-rendered `<fullname>-sites-<site>`.
 `site` is the FreeRADIUS-facing name (on-disk file / mount); `key` is the
 values-map key and defaults to `site` (pass it only when they differ, e.g.
 `inner-tunnel` on disk vs `innerTunnel` in values).
@@ -94,6 +93,20 @@ Usage: {{ include "freeradius.site.configMapName" (dict "site" "default" "contex
 {{- tpl $existing .context -}}
 {{- else -}}
 {{- printf "%s-sites-%s" (include "st-common.names.fullname" .context) .site -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether the chart-managed health-check script ConfigMap
+(`templates/configmap/health.yaml`) is needed: not in diagnostic mode, and at
+least one probe uses the chart default (script-based) exec rather than a custom
+probe. Returns "true" when needed, empty otherwise.
+*/}}
+{{- define "freeradius.healthcheck.create" -}}
+{{- if not .Values.diagnosticMode.enabled -}}
+{{- if or (and (not .Values.customStartupProbe) .Values.startupProbe.enabled) (and (not .Values.customLivenessProbe) .Values.livenessProbe.enabled) (and (not .Values.customReadinessProbe) .Values.readinessProbe.enabled) -}}
+true
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

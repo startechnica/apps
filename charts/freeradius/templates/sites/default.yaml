@@ -3,7 +3,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if not .Values.sites.default.existingConfigMap }}
+{{- if and .Values.sites.default.enabled (not .Values.sites.default.existingConfigMap) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -582,17 +582,17 @@ data:
     #  the post-auth section is for.
     #
     authenticate {
-    	#
+    	{{- if .Values.modules.pap.enabled }}
     	#  PAP authentication, when a back-end database listed
     	#  in the 'authorize' section supplies a password.  The
     	#  password can be clear-text, or encrypted.
     	Auth-Type PAP {
     		pap
     	}
+    	{{- end }}
 
     #	dpsk
 
-    	#
     	#  Most people want CHAP authentication
     	#  A back-end database listed in the 'authorize' section
     	#  MUST supply a CLEAR TEXT password.  Encrypted passwords
@@ -601,15 +601,12 @@ data:
     		chap
     	}
 
-    	#
     	#  MSCHAP authentication.
     	Auth-Type MS-CHAP {
     		mschap
     	}
 
-    	#
     	#  For old names, too.
-    	#
     	mschap
 
     	#
@@ -618,7 +615,7 @@ data:
     	#  line in the 'authorize' section.
     	digest
 
-    	{{- if .Values.modules.eap.enabled }}
+    	{{- if .Values.modules.pam.enabled }}
     	#  Pluggable Authentication Modules.
     	pam
     	{{- end }}
