@@ -815,6 +815,10 @@ sites:
   coa:
     enabled: false
     existingConfigMap: ""
+    listen:
+      type: coa
+      ipaddr: "*"
+      virtual_server: coa
   ## RADIUS `status` virtual server, used by the chart's liveness/readiness
   ## probes (`radclient status` over loopback) AND by the standalone metrics
   ## exporter Deployment (`metrics.enabled`) which talks to it over the

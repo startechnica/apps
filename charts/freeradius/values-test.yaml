@@ -8,6 +8,8 @@ service:
   ipFamilyPolicy: PreferDualStack
 
 modules:
+  cache:
+    driver: redis
   sql:
     enabled: true
     dialect: mysql

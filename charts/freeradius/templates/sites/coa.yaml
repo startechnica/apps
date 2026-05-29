@@ -15,18 +15,15 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* Virtual-server config mounted at sites-enabled/coa via subPath by the
-         Deployment. The listen port is rendered directly from .Values.containerPorts. */}}
   coa: |-
     listen {
-    	type = coa
-    	# ipaddr = $ENV{FREERADIUS_SITES_COA_LISTEN}
-    	ipaddr = *
+    	type = {{ .Values.sites.coa.listen.type }}
+    	ipaddr = {{ .Values.sites.coa.listen.ipaddr }}
     	port = {{ .Values.containerPorts.coa }}
-    	virtual_server = coa
+    	virtual_server = {{ .Values.sites.coa.listen.virtual_server }}
     }
 
-    server coa {
+    server {{ .Values.sites.coa.listen.virtual_server }} {
     	#  When a packet is received, it is processed through the recv-coa section.  This applies to *both* CoA-Request and Disconnect-Request packets.
     	recv-coa {
     		#  CoA && Disconnect packets can be proxied in the same way as authentication or accounting packets.
