@@ -638,6 +638,10 @@ modules:
     ## @param modules.cache.maxEntries Maximum number of cached entries (0 = unlimited).
     ##
     maxEntries: 0
+    ## @param modules.cache.update Body of the required rlm_cache `update { }` section, rendered verbatim (through `tpl`, so values may be referenced). FreeRADIUS refuses to load the module unless this holds at least one map. Each line is FreeRADIUS map syntax `<list>:<attr> <op> <value>`: on store it is written to the cache entry, on retrieve it is copied back onto the request. The default caches the whole reply list; customise for what you actually need.
+    ##
+    update: |-
+      &reply: += &reply:
     ## @param modules.cache.config [object] Extra `rlm_cache` directives merged verbatim into the `cache { }` block (e.g. `epoch`, `add_stats`). Rendered via `freeradius.tplvalues.renderConfig`.
     ##
     config: {}

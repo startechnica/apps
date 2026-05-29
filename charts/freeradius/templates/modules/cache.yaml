@@ -25,6 +25,13 @@ data:
         {{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
         {{- end }}
 
+        # Attributes to cache. rlm_cache refuses to load unless this section
+        # holds at least one map ("Must have an 'update' section in order to
+        # cache anything").
+        update {
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.modules.cache.update "context" $) | nindent 12 }}
+        }
+
         {{- if eq .Values.modules.cache.driver "redis" }}
         # Redis backend — connection reused from modules.redis
         redis {

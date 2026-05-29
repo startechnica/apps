@@ -193,6 +193,12 @@ Validation message: cache module driver must be one of the supported backends.
 freeradius: modules.cache.driver
     `modules.cache.driver: {{ $driver }}` is not a recognised value. Allowed:
     `rbtree` (in-memory), `redis` (reuses the `modules.redis` connection), `memcached`.
+{{- else if not (trim (.Values.modules.cache.update | default "")) -}}
+freeradius: modules.cache.update
+    `modules.cache.enabled: true` requires a non-empty `modules.cache.update`.
+    rlm_cache refuses to load without at least one map ("Must have an 'update'
+    section in order to cache anything"). Set `modules.cache.update` to one or
+    more FreeRADIUS maps, e.g. `&reply: += &reply:`.
 {{- end -}}
 {{- end -}}
 {{- end -}}

@@ -15,8 +15,10 @@
 - `templates/modules/cache.yaml` + `modules.cache.*` — standalone rlm_cache
   module with a pluggable `driver` (`rbtree` in-memory, `redis` reusing the
   redis connection, `memcached`), rendered as `<fullname>-mods-cache` and
-  mounted at `mods-enabled/cache`. The driver value is checked by the new
-  `freeradius.validate.cache` aggregator rule.
+  mounted at `mods-enabled/cache`. Includes the required `update { }` section
+  (`modules.cache.update`, default `&reply: += &reply:`) — rlm_cache refuses to
+  load without at least one map. The driver value and a non-empty `update` are
+  both checked by the new `freeradius.validate.cache` aggregator rule.
 - `templates/Issuer.yaml` — self-signed CA chain bootstrapped via cert-manager
   (a self-signed `Issuer` → a CA `Certificate` with `isCA: true` → a CA
   `Issuer`). Rendered when the chart issues via cert-manager and no external

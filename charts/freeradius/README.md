@@ -354,6 +354,12 @@ modules:
     driver: redis      # default is rbtree (in-memory, per-pod)
 ```
 
+Regardless of driver, `rlm_cache` refuses to load without a non-empty
+`update { }` section, so `modules.cache.update` is **required**. It holds the
+attributes to cache in FreeRADIUS map syntax (`<list>:<attr> <op> <value>`, one
+per line) and defaults to `&reply: += &reply:` (cache the whole reply list).
+Override it for what you actually need to cache.
+
 With `redis.enabled: true` the chart auto-wires the connection: the cache targets
 the bundled `<release>-redis-master` Service and injects the Redis password from
 the subchart's Secret as `$ENV{FREERADIUS_MODS_REDIS_PASSWORD}` — you don't set a
