@@ -49,6 +49,10 @@ data:
             body = 'post'
             data = "grant_type=password&client_id={{ .Values.keycloak.clientId }}{{- if .Values.keycloak.clientSecret }}&client_secret=$ENV{KC_CLIENT_SECRET}{{- end }}{{- if .Values.keycloak.scope }}&scope={{ .Values.keycloak.scope }}{{- end }}&username=%{urlquote:%{User-Name}}&password=%{urlquote:%{User-Password}}"
             tls = ${..tls}
+
+            response {
+              format = "json"
+            }
         }
     }
 {{- end }}

@@ -777,7 +777,16 @@ modules:
       verify: {}
         # tmpdir: /tmp/radiusd
         # client: "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
-
+  files:
+    enabled: false
+    existingConfigMap: ""
+  ldap:
+    ## @param modules.ldap.enabled Enable the FreeRADIUS LDAP module.
+    ##
+    enabled: false
+    ## @param modules.ldap.existingConfigMap Mount an existing ConfigMap (must contain an `ldap` key with the module config) at `mods-enabled/ldap` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
 ## FreeRADIUS policy definitions (the `policy { }` block in radiusd.conf).
 ##
 ## @param policies.includeDir Directory the `policy { }` block includes policies from. A relative path resolves against the config dir (`/etc/freeradius`), so the default reads the image's bundled `policy.d` (filter, eap, …) plus any chart-mounted policies (e.g. Keycloak's `policy.d/keycloak`). The directory must exist in the container — point it at an absolute path only if you mount your own populated `policy.d`.
@@ -1260,7 +1269,7 @@ modsConfig: {}
 ## @param keycloak.realm Keycloak realm holding the users (required when enabled)
 ## @param keycloak.clientId OIDC client_id with Direct Access Grants enabled
 ## @param keycloak.clientSecret Secret for a confidential client. Stored in a Secret and injected via `$ENV{KC_CLIENT_SECRET}`; leave empty for a public client.
-## @param keycloak.scope Optional OAuth scope appended to the token request
+## @param keycloak.scope Optional OAuth scope appended to the token request (space-separated, e.g. `openid profile email`)
 ## @param keycloak.connectTimeout Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)
 ## @param keycloak.wireDefaultSite Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module (lua: `keycloak_authorize`; rest: `keycloak_rest`). Disable to wire it from your own site config.
 ## @param keycloak.roleAttribute (lua mode) Control attribute the Lua mapper populates with role names (one value per role)
@@ -1274,7 +1283,7 @@ keycloak:
   realm: ""
   clientId: freeradius
   clientSecret: ""
-  scope: ""
+  scope: ""                      # e.g. "openid profile email"
   connectTimeout: "4.0"
   wireDefaultSite: true
   roleAttribute: Class

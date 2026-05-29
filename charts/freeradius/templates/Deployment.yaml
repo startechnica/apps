@@ -3,7 +3,6 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- $globalSecretName := printf "%s" (tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $)) $) }}
 apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -281,68 +280,7 @@ spec:
             - stdout
           {{- end }}
           env:
-            {{- if .Values.modules.sql.enabled }}
-            - name: FREERADIUS_MODS_SQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                {{- if .Values.auth.existingSecretPerPassword }}
-                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
-                {{- else }}
-                  name: {{ include "freeradius.sql.secretName" . }}
-                  key: {{ include "freeradius.sql.secretKey" . }}
-                {{- end }}
-            {{- end }}
-            {{- if .Values.sites.status.enabled }}
-            - name: FREERADIUS_SITES_STATUS_SECRET
-              valueFrom:
-                secretKeyRef:
-                {{- if .Values.auth.existingSecretPerPassword }}
-                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesStatusSecret "context" $)) $ }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesStatusSecret") }}
-                {{- else }}
-                  name: {{ $globalSecretName }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
-                {{- end }}
-            {{- end }}
-            {{- if .Values.tls.enabled }}
-            - name: FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                {{- if .Values.auth.existingSecretPerPassword }}
-                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesTlsPrivKeyPassword "context" $)) $ }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesTlsPrivKeyPassword") }}
-                {{- else }}
-                  name: {{ $globalSecretName }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-tls-privkey-password") }}
-                {{- end }}
-            {{- end }}
-            {{- if and .Values.modules.rest.enabled (ne .Values.modules.rest.auth "none") }}
-            - name: FREERADIUS_MODS_REST_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "freeradius.rest.secretName" . }}
-                  key: {{ include "freeradius.rest.secretKey" . }}
-            {{- end }}
-            {{- if include "freeradius.redis.usePassword" . }}
-            - name: FREERADIUS_MODS_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "freeradius.redis.secretName" . }}
-                  key: {{ include "freeradius.redis.secretKey" . }}
-            {{- end }}
-            {{- if .Values.modules.eap.enabled }}
-            - name: FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                {{- if .Values.auth.existingSecretPerPassword }}
-                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.modsEapTlsPrivKeyPassword "context" $)) $ }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "modsEapTlsPrivKeyPassword") }}
-                {{- else }}
-                  name: {{ $globalSecretName }}
-                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "mods-eap-tls-privkey-password") }}
-                {{- end }}
-            {{- end }}
+            {{- include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
             {{- if .Values.keycloak.enabled }}
             {{- if eq .Values.keycloak.mode "lua" }}
             {{- /* lua reads Keycloak coordinates from env; rest bakes them into

@@ -49,20 +49,41 @@ data:
                 ok = return
             }
 
+            {{ if .Values.files.enabled }}
             files
+            {{- end }}
+            {{ if .Values.sql.enabled }}
             -sql
+            {{- end }}
         #	smbpasswd
+            {{ if .Values.ldap.enabled }}
             -ldap
+            {{- end }}
         #	daily
             expiration
             logintime
             pap
+
+            {{ if and .Values.keycloak.enabled (eq .Values.keycloak.mode "rest") }}
+            if (&User-Password) {
+                update control {
+                    Auth-Type := REST
+                }
+            }
+            {{- end }}
         }
 
         authenticate {
+
+            {{ if and .Values.keycloak.enabled (eq .Values.keycloak.mode "rest") }}
+            Auth-Type REST {
+                keycloak_rest
+            }
+            {{- else }}
             Auth-Type PAP {
                 pap
             }
+            {{- end }}
 
             Auth-Type CHAP {
                 chap
