@@ -15,9 +15,6 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* Verbatim virtual-server config, mounted at sites-enabled/inner-tunnel via subPath
-         by the Deployment. $ENV{} placeholders are resolved by FreeRADIUS at
-         runtime (see configmap/envvars.yaml + Deployment env). */}}
   inner-tunnel: |-
     ######################################################################
     #

@@ -36,7 +36,7 @@ spec:
       {{- if or .Values.podAnnotations .Values.commonAnnotations (not .Values.existingConfigmap) (not .Values.auth.existingSecret) }}
       annotations:
         {{- if not .Values.existingConfigmap }}
-        checksum/configmap-env: {{ include (print $.Template.BasePath "/configmap/envvars.yaml") . | sha256sum }}
+        checksum/secret-env: {{ include (print $.Template.BasePath "/secret/envvars.yaml") . | sha256sum }}
         {{- end }}
         {{- if and .Values.sites.default.enabled (not .Values.sites.default.existingConfigMap) }}
         checksum/configmap-sites-default: {{ include (print $.Template.BasePath "/sites/default.yaml") . | sha256sum }}
@@ -374,8 +374,13 @@ spec:
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           envFrom:
+            {{- if .Values.existingConfigmap }}
             - configMapRef:
                 name: {{ include "freeradius.names.envvars" . }}
+            {{- else }}
+            - secretRef:
+                name: {{ include "freeradius.names.envvars" . }}
+            {{- end }}
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:
                 name: {{ .Values.extraEnvVarsCM }}
