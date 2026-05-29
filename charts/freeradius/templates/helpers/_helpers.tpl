@@ -66,6 +66,44 @@ Usage: {{ include "freeradius.module.configMapName" (dict "module" "sql" "contex
 {{- end -}}
 
 {{/*
+Bundled Redis subchart helpers. When the `redis` subchart is enabled the
+rlm_redis module targets its `<fullname>-master` Service and (when
+`redis.auth.enabled`) pulls the password from the subchart's Secret as
+`$ENV{FREERADIUS_MODS_REDIS_PASSWORD}`. Otherwise the module uses
+`modules.redis.server` and whatever the user configures there.
+*/}}
+{{- define "freeradius.redis.fullname" -}}
+{{- include "st-common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) -}}
+{{- end -}}
+
+{{- define "freeradius.redis.host" -}}
+{{- if .Values.redis.enabled -}}
+{{- printf "%s-master" (include "freeradius.redis.fullname" .) -}}
+{{- else -}}
+{{- .Values.modules.redis.server -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.redis.usePassword" -}}
+{{- $redisConsumer := or .Values.modules.redis.enabled (and .Values.modules.cache.enabled (eq .Values.modules.cache.driver "redis")) -}}
+{{- if and $redisConsumer .Values.redis.enabled .Values.redis.auth.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.redis.secretName" -}}
+{{- if .Values.redis.auth.existingSecret -}}
+{{- tpl .Values.redis.auth.existingSecret $ -}}
+{{- else -}}
+{{- include "freeradius.redis.fullname" . -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.redis.secretKey" -}}
+{{- default "redis-password" .Values.redis.auth.existingSecretPasswordKey -}}
+{{- end -}}
+
+{{/*
 ConfigMap name a virtual server mounts at `sites-enabled/<site>`: the BYO
 `sites.<key>.existingConfigMap` when set (tpl-evaluated), otherwise the
 chart-rendered `<fullname>-sites-<site>`.

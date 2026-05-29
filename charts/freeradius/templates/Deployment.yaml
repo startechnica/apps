@@ -74,6 +74,12 @@ spec:
         {{- if and .Values.modules.json.enabled (not .Values.modules.json.existingConfigMap) }}
         checksum/configmap-mods-json: {{ include (print $.Template.BasePath "/modules/json.yaml") . | sha256sum }}
         {{- end }}
+        {{- if and .Values.modules.redis.enabled (not .Values.modules.redis.existingConfigMap) }}
+        checksum/configmap-mods-redis: {{ include (print $.Template.BasePath "/modules/redis.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.cache.enabled (not .Values.modules.cache.existingConfigMap) }}
+        checksum/configmap-mods-cache: {{ include (print $.Template.BasePath "/modules/cache.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.modsConfig }}
         checksum/configmap-mods-config: {{ include (print $.Template.BasePath "/configmap/mods-config.yaml") . | sha256sum }}
         {{- end }}
@@ -266,7 +272,11 @@ spec:
           args: {{- include "st-common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- else }}
           args:
+            {{- if .Values.image.debug }}
             - -fxx
+            {{- else }}
+            - -f
+            {{- end }}
             - -l
             - stdout
           {{- end }}
@@ -313,6 +323,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "freeradius.rest.secretName" . }}
                   key: {{ include "freeradius.rest.secretKey" . }}
+            {{- end }}
+            {{- if include "freeradius.redis.usePassword" . }}
+            - name: FREERADIUS_MODS_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "freeradius.redis.secretName" . }}
+                  key: {{ include "freeradius.redis.secretKey" . }}
             {{- end }}
             {{- if .Values.modules.eap.enabled }}
             - name: FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD
@@ -465,6 +482,16 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/pap
               subPath: pap
             {{- end }}
+            {{- if .Values.modules.redis.enabled }}
+            - name: freeradius-mods-redis
+              mountPath: /etc/freeradius/mods-enabled/redis
+              subPath: redis
+            {{- end }}
+            {{- if .Values.modules.cache.enabled }}
+            - name: freeradius-mods-cache
+              mountPath: /etc/freeradius/mods-enabled/cache
+              subPath: cache
+            {{- end }}
             {{- /* All virtual servers (chart sites + extraSites) staged by the
                    prepare-sites init container into a 0711 emptyDir, mounted as
                    the whole sites-enabled directory. */}}
@@ -496,6 +523,8 @@ spec:
             {{- end }}
             - name: temp
               mountPath: /startechnica/freeradius/tmp
+            - name: var-run-dir
+              mountPath: /var/run/radiusd
             {{- range .Values.extraModules }}
             - name: {{ .name }}
               mountPath: /etc/freeradius/mods-enabled/{{ .name }}
@@ -565,6 +594,16 @@ spec:
         - name: freeradius-mods-pap
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "pap" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.redis.enabled }}
+        - name: freeradius-mods-redis
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "redis" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.cache.enabled }}
+        - name: freeradius-mods-cache
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "cache" "context" $) }}
         {{- end }}
         {{- /* One projected volume aggregates every enabled virtual server
                (chart sites + extraSites). Each chart site ConfigMap holds a
@@ -640,6 +679,8 @@ spec:
           configMap:
             name: {{ printf "%s-scripts" (include "st-common.names.fullname" .) }}
         - name: temp
+          emptyDir: {}
+        - name: var-run-dir
           emptyDir: {}
         - name: data
           {{- if .Values.persistence.enabled }}

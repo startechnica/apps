@@ -1,0 +1,43 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+{{- if and .Values.modules.cache.enabled (not .Values.modules.cache.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-mods-cache" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  cache: |
+    # rlm_cache module — attribute cache with a pluggable backend driver
+    cache {
+        driver = "rlm_cache_{{ .Values.modules.cache.driver }}"
+        key = {{ .Values.modules.cache.key }}
+        ttl = {{ .Values.modules.cache.ttl }}
+        max_entries = {{ .Values.modules.cache.maxEntries }}
+        {{- with .Values.modules.cache.config }}
+        {{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+
+        {{- if eq .Values.modules.cache.driver "redis" }}
+        # Redis backend — connection reused from modules.redis
+        redis {
+            server = {{ include "freeradius.redis.host" . }}
+            {{- if include "freeradius.redis.usePassword" . }}
+            password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
+            {{- end }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit .Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
+        }
+        {{- else if eq .Values.modules.cache.driver "memcached" }}
+        memcached {
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.cache.memcached.config "context" $) | nindent 12 }}
+        }
+        {{- end }}
+    }
+{{- end }}

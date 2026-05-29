@@ -21,6 +21,10 @@ dependencies:
     condition: postgresql.enabled
     repository: oci://registry-1.docker.io/bitnamicharts
     version: 16.x.x
+  - name: redis
+    condition: redis.enabled
+    repository: oci://registry-1.docker.io/bitnamicharts
+    version: 25.x.x
 description: FreeRADIUS is a modular, high performance free RADIUS suite developed and
   distributed under the GNU General Public License, version 2, and is free for download and use.
 home: https://github.com/startechnica/apps/tree/main/charts/freeradius

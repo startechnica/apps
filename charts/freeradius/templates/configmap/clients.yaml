@@ -16,7 +16,8 @@ metadata:
   {{- end }}
 data:
   clients.conf: |-
-    {{- range $name, $client := omit .Values.clients "existingConfigMapName" }}
+    {{- range $name, $client := .Values.clients }}
+    {{- if kindIs "map" $client }}
     client {{ $name }} {
         ipaddr = {{ $client.ipv4addr | quote }}
         {{- if $client.ipv6addr }}
@@ -37,5 +38,6 @@ data:
         }
         {{- end }}
     }
+    {{- end }}
     {{- end }}
 {{- end }}

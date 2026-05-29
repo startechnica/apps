@@ -1,0 +1,78 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- /*
+Self-signed CA chain bootstrapped via cert-manager, rendered only when the chart
+issues via cert-manager (`freeradius.tls.useCertManager` — the cert-manager API
+is present and `tls.certManager.create` is true) AND no external `issuerRef.name`
+is supplied (see `freeradius.tls.certManager.bootstrapCA`). Provides:
+  1. a self-signed `Issuer` that bootstraps trust,
+  2. a CA `Certificate` (`isCA: true`) signed by (1), and
+  3. a CA `Issuer` consuming (2)'s Secret — referenced by the leaf
+     Certificates in `templates/Certificate.yaml`.
+All live in the release namespace, so the namespaced CA Issuer can sign both
+the RADSEC leaf and the gateway leaf only when the gateway Certificate shares
+that namespace (the default; see `gateway.gateway.namespace`).
+*/}}
+{{- if include "freeradius.tls.certManager.bootstrapCA" . }}
+{{- if ne (include "st-common.capabilities.certmanagerIssuer.apiVersion" .) "false" }}
+{{- $issuerApiVersion := include "st-common.capabilities.certmanagerIssuer.apiVersion" . }}
+{{- $certApiVersion := include "st-common.capabilities.certmanagerCertificate.apiVersion" . }}
+{{- $releaseNamespace := include "st-common.names.namespace" . }}
+{{- $fullname := include "st-common.names.fullname" . }}
+apiVersion: {{ $issuerApiVersion }}
+kind: Issuer
+metadata:
+  name: {{ include "freeradius.tls.certManager.selfSignedIssuerName" . }}
+  namespace: {{ $releaseNamespace | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  selfSigned: {}
+---
+apiVersion: {{ $certApiVersion }}
+kind: Certificate
+metadata:
+  name: {{ include "freeradius.tls.certManager.caIssuerName" . }}
+  namespace: {{ $releaseNamespace | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  isCA: true
+  commonName: {{ default (printf "%s CA" $fullname) .Values.tls.certManager.ca.commonName | quote }}
+  secretName: {{ include "freeradius.tls.certManager.caSecretName" . }}
+  duration: {{ .Values.tls.certManager.ca.duration | quote }}
+  {{- if .Values.tls.certManager.ca.renewBefore }}
+  renewBefore: {{ .Values.tls.certManager.ca.renewBefore | quote }}
+  {{- end }}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: {{ include "freeradius.tls.certManager.selfSignedIssuerName" . }}
+---
+apiVersion: {{ $issuerApiVersion }}
+kind: Issuer
+metadata:
+  name: {{ include "freeradius.tls.certManager.caIssuerName" . }}
+  namespace: {{ $releaseNamespace | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  ca:
+    secretName: {{ include "freeradius.tls.certManager.caSecretName" . }}
+{{- end }}
+{{- end }}
