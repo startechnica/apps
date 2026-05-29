@@ -776,10 +776,10 @@ modules:
 
 ## FreeRADIUS policy definitions (the `policy { }` block in radiusd.conf).
 ##
-## @param policies.includeDir Absolute path the `policy.d` directory is included from inside the container
+## @param policies.includeDir Directory the `policy { }` block includes policies from. A relative path resolves against the config dir (`/etc/freeradius`), so the default reads the image's bundled `policy.d` (filter, eap, …) plus any chart-mounted policies (e.g. Keycloak's `policy.d/keycloak`). The directory must exist in the container — point it at an absolute path only if you mount your own populated `policy.d`.
 ##
 policies:
-  includeDir: /opt/startechnica/freeradius/policy.d
+  includeDir: policy.d
 
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires

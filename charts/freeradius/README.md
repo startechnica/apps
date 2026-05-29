@@ -338,6 +338,32 @@ This chart allows you to set your custom affinity using the `affinity` parameter
 
 There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
 
+### Redis-backed cache
+
+The `rlm_cache` module (`modules.cache`) defaults to the in-memory `rbtree`
+driver, which is per-pod. To share cache state across replicas, switch it to the
+`redis` driver and bundle a Redis. The **minimum** values are:
+
+```yaml
+redis:
+  enabled: true        # bundle a Bitnami Redis (auth is on by default)
+
+modules:
+  cache:
+    enabled: true
+    driver: redis      # default is rbtree (in-memory, per-pod)
+```
+
+With `redis.enabled: true` the chart auto-wires the connection: the cache targets
+the bundled `<release>-redis-master` Service and injects the Redis password from
+the subchart's Secret as `$ENV{FREERADIUS_MODS_REDIS_PASSWORD}` — you don't set a
+host or password yourself. You do **not** need `modules.redis.enabled` (that only
+adds the `%{redis:...}` xlat); the cache reuses the connection settings under
+`modules.redis` on its own.
+
+To point the cache at an **external** Redis instead, leave `redis.enabled: false`
+and set the connection under `modules.redis` (e.g. `modules.redis.server`).
+
 ### Keycloak (OIDC) authentication
 
 FreeRADIUS can authenticate users against a Keycloak realm using the OAuth2
