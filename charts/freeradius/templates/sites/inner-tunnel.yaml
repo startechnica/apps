@@ -49,14 +49,14 @@ data:
                 ok = return
             }
 
-            {{ if .Values.files.enabled }}
+            {{ if .Values.modules.files.enabled }}
             files
             {{- end }}
-            {{ if .Values.sql.enabled }}
+            {{ if .Values.modules.sql.enabled }}
             -sql
             {{- end }}
         #	smbpasswd
-            {{ if .Values.ldap.enabled }}
+            {{ if .Values.modules.ldap.enabled }}
             -ldap
             {{- end }}
         #	daily
