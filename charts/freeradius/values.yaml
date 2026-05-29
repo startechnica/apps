@@ -2140,6 +2140,10 @@ redis:
     password: ""
     existingSecret: ""
     existingSecretPasswordKey: ""
+  master:
+    kind: Deployment
+    persistence:
+      enabled: false
 
 ## Database bootstrap. Loads the rlm_sql schema (`files/schema/<dialect>.sql`)
 ## into the configured database via an init container on the FreeRADIUS pod
