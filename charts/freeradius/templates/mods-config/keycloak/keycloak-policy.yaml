@@ -1,0 +1,80 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "lua") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-keycloak-policy" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* policy.d/keycloak — unlang wrapper around keycloak_lua that adds
+         cache-aside (when keycloak.cache.enabled) and role→reply mapping
+         (when roleMappings). Lua mode only; rest mode calls keycloak_rest
+         directly from the site. FreeRADIUS only parses `policy { }` blocks
+         when included from policy.d/, so this lives in its own ConfigMap
+         mounted at /etc/freeradius/policy.d/keycloak (cannot be co-located
+         with the mods-enabled/keycloak file). */}}
+  keycloak: |
+    #  Entry point. Call this from a virtual server's authorize {} section.
+    policy keycloak_authorize {
+        {{- if .Values.keycloak.cache.enabled }}
+        #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
+        #  recent successful result cached. cache_keycloak returns ok+populates
+        #  &control:{{ .Values.keycloak.roleAttribute }} on hit, notfound on miss.
+        cache_keycloak
+        if (notfound) {
+            keycloak_lua
+            if (ok) {
+                #  Store on success — role list is captured per cache_keycloak's update {}.
+                cache_keycloak
+            }
+        }
+        {{- else }}
+        #  keycloak_lua: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
+        keycloak_lua
+        {{- end }}
+        if (ok) {
+            #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.
+            update control {
+                &Auth-Type := Accept
+            }
+        {{- if .Values.keycloak.roleMappings }}
+            keycloak_roles
+        {{- end }}
+        }
+        #  reject (bad creds / inactive), fail (network/config) and noop
+        #  (not a password request) propagate unchanged to the caller.
+    }
+    {{- if .Values.keycloak.roleMappings }}
+
+    #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
+    #  to RADIUS reply attributes. First match wins.
+    policy keycloak_roles {
+    {{- range $i, $m := .Values.keycloak.roleMappings }}
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $.Values.keycloak.roleAttribute }}[*] == "{{ $m.role }}") {
+            update reply {
+            {{- range $line := $m.reply }}
+                {{ $line }}
+            {{- end }}
+            }
+        }
+    {{- end }}
+    {{- if .Values.keycloak.denyWithoutRole }}
+        else {
+            update reply {
+                Reply-Message := "Access denied: no valid Keycloak role"
+            }
+            reject
+        }
+    {{- end }}
+    }
+    {{- end }}
+{{- end }}

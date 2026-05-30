@@ -1353,7 +1353,7 @@ modsConfig: {}
 ##
 keycloak:
   enabled: false
-  mode: lua
+  mode: rest
   url: https://auth.example.com
   realm: ""
   clientId: freeradius
