@@ -55,9 +55,11 @@ data:
                 #  re-auth against Keycloak; Class round-trips Keycloak's
                 #  session UUID opaquely in accounting packets so usage can
                 #  be correlated back to a specific Keycloak session.
-                #  Requires modules.json.enabled and `response { force_to =
-                #  "plain" }` on the keycloak_rest instance.
-                map json "%{reply:REST-HTTP-Body}" {
+                #  Uses the dedicated `json_keycloak` rlm_json instance
+                #  defined alongside keycloak_rest in mods-enabled/keycloak.
+                #  Requires `response { force_to = "plain" }` on the
+                #  keycloak_rest instance (so REST-HTTP-Body is a raw string).
+                map json_keycloak "%{reply:REST-HTTP-Body}" {
                     &reply:Session-Timeout := '/expires_in'
                     &reply:Class           := '/session_state'
                     # If you need the access token instead, swap '/session_state'
@@ -85,7 +87,7 @@ data:
         if {{ $okRcode }} {
             #  rest mode (no cache): same JSON extraction as the cache-miss
             #  branch above. See comment there for the rationale.
-            map json "%{reply:REST-HTTP-Body}" {
+            map json_keycloak "%{reply:REST-HTTP-Body}" {
                 &reply:Session-Timeout := '/expires_in'
                 &reply:Class           := '/access_token'
             }

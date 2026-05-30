@@ -73,5 +73,14 @@ data:
             ttl = 3600
         }
     }
+
+    ## rlm_json instance dedicated to parsing Keycloak's token JSON response.
+    ## Registers a `json_keycloak` map proc that keycloak_authorize uses to
+    ## lift /expires_in and /session_state out of REST-HTTP-Body. Kept as a
+    ## named instance (rather than reusing the generic `json` module) so the
+    ## Keycloak feature is self-contained and doesn't require the chart-wide
+    ## modules.json.enabled toggle.
+    json json_keycloak {
+    }
     {{- end }}
 {{- end }}
