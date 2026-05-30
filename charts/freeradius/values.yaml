@@ -800,14 +800,14 @@ modules:
         enable: "no"
         lifetime: 86400                          # session lifetime in seconds (24h)
         max_entries: 255                         # in-memory entries cap
-        name: 'EAP module'                       # namespace for the cache (lets multiple tls-configs coexist)
+        name: EAP-module                         # namespace for the cache (lets multiple tls-configs coexist)
         persist_dir: "${logdir}/tlscache"        # OPTIONAL — persist sessions to disk so resumption survives restarts
         store_attributes: "yes"                  # write session attrs back into the request on resume
       ## @param modules.eap.tlsConfig.ocsp.enable Enable OCSP certificate checking (`ocsp { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
       ##
       ocsp:
         enable: "no"
-        name: 'EAP module'
+        name: EAP-module
         persist_dir: "${logdir}/tlscache"
       verify: {}
         # tmpdir: /tmp/radiusd
