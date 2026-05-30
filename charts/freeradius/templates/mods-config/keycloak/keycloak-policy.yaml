@@ -49,17 +49,20 @@ data:
             {{ $mod }}
             if {{ $okRcode }} {
                 {{- if not $isLua }}
-                #  rest mode: lift expires_in / access_token from the Keycloak
+                #  rest mode: lift expires_in / session_state from the Keycloak
                 #  JSON body. Session-Timeout makes the NAS terminate the
                 #  session when the OAuth token would have expired, forcing
-                #  re-auth against Keycloak; Class round-trips the access
-                #  token opaquely in accounting packets so usage can be
-                #  correlated back to a specific token. Requires
-                #  modules.json.enabled and `response { force_to = "plain" }`
-                #  on the keycloak_rest instance.
+                #  re-auth against Keycloak; Class round-trips Keycloak's
+                #  session UUID opaquely in accounting packets so usage can
+                #  be correlated back to a specific Keycloak session.
+                #  Requires modules.json.enabled and `response { force_to =
+                #  "plain" }` on the keycloak_rest instance.
                 map json "%{reply:REST-HTTP-Body}" {
                     &reply:Session-Timeout := '/expires_in'
-                    &reply:Class           := '/access_token'
+                    &reply:Class           := '/session_state'
+                    # If you need the access token instead, swap '/session_state'
+                    # for '/access_token' — note JWTs are ~800-1500 bytes which
+                    # some NASes truncate or reject in the Class attribute.
                 }
                 #  Drop the raw rest exposure attrs so they don't leak to the NAS.
                 update reply {
