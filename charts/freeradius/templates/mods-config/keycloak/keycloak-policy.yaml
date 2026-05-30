@@ -43,6 +43,7 @@ data:
         #  (populating &control:{{ .Values.keycloak.roleAttribute }} when in
         #  lua mode), notfound on miss.
         cache_keycloak
+
         if (notfound) {
             {{ $mod }}
             if {{ $okRcode }} {
