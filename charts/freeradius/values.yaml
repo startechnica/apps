@@ -2320,3 +2320,92 @@ bootstrap:
     ##
     securityContext:
       runAsUser: 0
+
+## Utility deployment that ships `radtest` / `radclient` (Debian
+## `freeradius-utils` package). The chart's main image
+## (`freeradius/freeradius-server`) strips client tools, so this is the
+## convenient way to send RADIUS Access-Requests against the in-cluster
+## service for debugging Keycloak / EAP / SQL flows. The pod runs
+## `sleep infinity` after installing the package on first start; usage:
+##
+##   kubectl exec -it deploy/<release>-freeradius-radtest -- bash
+##   # env vars RADIUS_HOST / RADIUS_AUTH_PORT / RADIUS_SECRET are
+##   # pre-populated; supply the user/password (Keycloak creds):
+##   radtest <user> <pass> $RADIUS_HOST $RADIUS_NAS_PORT $RADIUS_SECRET
+##
+## Disabled by default. Intended for short-lived debugging — DO NOT use
+## as a production traffic generator.
+##
+radtest:
+  ## @param radtest.enabled Render the radtest utility Deployment.
+  ##
+  enabled: false
+  ## @param radtest.replicaCount Number of radtest pods.
+  ##
+  replicaCount: 1
+  ## Container image for the radtest utility pod. Defaults to a slim Debian
+  ## that apt-installs `freeradius-utils` on first start. Override to any
+  ## image that already ships `radtest` / `radclient` if you need a
+  ## startup-cost-free pod or want to pin a specific FreeRADIUS client version.
+  ##
+  ## @param radtest.image.registry Image registry
+  ## @param radtest.image.repository Image repository
+  ## @param radtest.image.tag Image tag
+  ## @param radtest.image.digest Image digest (overrides `tag` when set)
+  ## @param radtest.image.pullPolicy Image pull policy
+  ## @param radtest.image.pullSecrets Image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: debian
+    tag: bookworm-slim
+    digest: ""
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  ## @param radtest.secret RADIUS shared secret used by the pre-populated `$RADIUS_SECRET` env var. Must match the entry in `clients.conf` for the source IP the radtest pod uses (cluster-internal — typically matches the loopback/in-cluster client entry).
+  ##
+  secret: password
+  ## @param radtest.extraEnvVars Extra environment variables for the radtest container.
+  ##
+  extraEnvVars: []
+  ## @param radtest.resources Set container requests/limits. Leave empty to fall back to `resourcesPreset`.
+  ## @param radtest.resourcesPreset Preset shorthand (`none`, `nano`, `micro`, `small`, ...) when `resources` is empty.
+  ##
+  resources: {}
+  resourcesPreset: nano
+  ## Radtest container security context. The container needs to apt-install
+  ## on first start, so `readOnlyRootFilesystem` is off and the user is root.
+  ## Tighten later if you bake the image with the package pre-installed.
+  ##
+  ## @param radtest.containerSecurityContext.enabled Apply the security context to the radtest container.
+  ## @param radtest.containerSecurityContext.runAsUser UID for the radtest container.
+  ## @param radtest.containerSecurityContext.runAsNonRoot Reject containers that try to run as root.
+  ## @param radtest.containerSecurityContext.allowPrivilegeEscalation Block child processes from gaining more privileges than the parent.
+  ## @param radtest.containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only.
+  ## @param radtest.containerSecurityContext.capabilities Linux capabilities to add/drop on the radtest container.
+  ## @param radtest.containerSecurityContext.seccompProfile Seccomp profile applied to the radtest container.
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 0
+    runAsNonRoot: false
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  ## @param radtest.podAnnotations Annotations for the radtest pod.
+  ## @param radtest.podLabels Labels for the radtest pod.
+  ##
+  podAnnotations: {}
+  podLabels: {}
+  ## @param radtest.nodeSelector Node selector for the radtest pod.
+  ## @param radtest.tolerations Tolerations for the radtest pod.
+  ## @param radtest.affinity Affinity rules for the radtest pod.
+  ## @param radtest.priorityClassName Priority class for the radtest pod.
+  ##
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  priorityClassName: ""
