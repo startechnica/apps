@@ -934,13 +934,16 @@ sites:
 ##
 clients:
   includeFile: clients.conf
+  ## @param clients.existingConfigMapName Name of an existing ConfigMap supplying `clients.conf`. Overrides the chart-rendered entries above.
+  ##
+  existingConfigMapName: ""
   ## @param clients.localhost.ipv4addr IPv4 address (or CIDR) the loopback client matches
   ## @param clients.localhost.ipv6addr IPv6 address (or CIDR) the loopback client matches
   ## @param clients.localhost.proto Transport protocol (`udp` or `tcp`)
   ## @param clients.localhost.secret Shared secret used to authenticate this client
   ## @param clients.localhost.nas_type NAS-Type string reported by RADIUS attributes
   ## @param clients.localhost.virtual_server Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
-  ## @param clients.localhost.coa_server Virtual server handling CoA requests for this client
+  ## @param clients.localhost.coa_server Name of a `home_server` (or `home_server_pool`) used to proxy **outbound** CoA-Request/Disconnect packets sent to this client. Leave empty unless you've defined a matching `home_server` block — this chart does NOT currently render any. Inbound CoA is handled separately by `sites.coa.enabled` (a `listen` block + virtual server, not a client directive).
   ## @param clients.localhost.limit.max_connections Maximum concurrent connections (TCP only)
   ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
   ## @param clients.localhost.limit.idle_timeout Idle timeout in seconds
@@ -952,14 +955,11 @@ clients:
     secret: password
     nas_type: other
     virtual_server: default
-    coa_server: coa
+    coa_server: ""
     limit:
       max_connections: 16
       lifetime: 0
       idle_timeout: 30
-  ## @param clients.existingConfigMapName Name of an existing ConfigMap supplying `clients.conf`. Overrides the chart-rendered entries above.
-  ##
-  existingConfigMapName: ""
 
 
 ## =============================================================================
