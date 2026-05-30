@@ -93,9 +93,14 @@ spec:
         checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-policy.yaml") . | sha256sum }}
         {{- if eq .Values.keycloak.mode "lua" }}
         checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-mapper-lua.yaml") . | sha256sum }}
+        {{- else if eq .Values.keycloak.mode "python" }}
+        checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-mapper-python.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.keycloak.clientSecret }}
         checksum/secret-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if include "freeradius.keycloak.tls.createSecret" . }}
+        checksum/secret-keycloak-tls: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret-tls.yaml") . | sha256sum }}
         {{- end }}
         {{- end }}
         {{- if not .Values.auth.existingSecret }}
@@ -287,26 +292,37 @@ spec:
           env:
             {{- include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
             {{- if .Values.keycloak.enabled }}
-            {{- if eq .Values.keycloak.mode "lua" }}
-            {{- /* lua reads Keycloak coordinates from env; rest bakes them into
-                   its ConfigMap, needing only KC_CLIENT_SECRET below. */}}
-            - name: KC_BASE_URL
+            {{- if or (eq .Values.keycloak.mode "lua") (eq .Values.keycloak.mode "python") }}
+            {{- /* Script-driven modes (lua, python) read Keycloak coordinates
+                   from env. Rest mode bakes them into its module ConfigMap,
+                   needing only FREERADIUS_KEYCLOAK_CLIENT_SECRET below. */}}
+            - name: FREERADIUS_KEYCLOAK_BASE_URL
               value: {{ .Values.keycloak.url | quote }}
-            - name: KC_REALM
+            - name: FREERADIUS_KEYCLOAK_REALM
               value: {{ .Values.keycloak.realm | quote }}
-            - name: KC_CLIENT_ID
+            - name: FREERADIUS_KEYCLOAK_CLIENT_ID
               value: {{ .Values.keycloak.clientId | quote }}
             {{- if .Values.keycloak.scope }}
-            - name: KC_SCOPE
+            - name: FREERADIUS_KEYCLOAK_SCOPE
               value: {{ .Values.keycloak.scope | quote }}
             {{- end }}
             {{- if .Values.keycloak.connectTimeout }}
-            - name: KC_CONNECT_TIMEOUT
+            - name: FREERADIUS_KEYCLOAK_CONNECT_TIMEOUT
               value: {{ .Values.keycloak.connectTimeout | quote }}
+            {{- end }}
+            - name: FREERADIUS_KEYCLOAK_ROLE_MAPPER
+              value: {{ .Values.keycloak.roleMapper | quote }}
+            {{- if include "freeradius.keycloak.tls.enabled" . }}
+            - name: FREERADIUS_KEYCLOAK_CA_FILE
+              value: {{ include "freeradius.keycloak.tls.caFilePath" . | quote }}
+            {{- end }}
+            {{- if .Values.keycloak.tls.insecure }}
+            - name: FREERADIUS_KEYCLOAK_INSECURE
+              value: "true"
             {{- end }}
             {{- end }}
             {{- if .Values.keycloak.clientSecret }}
-            - name: KC_CLIENT_SECRET
+            - name: FREERADIUS_KEYCLOAK_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
@@ -498,10 +514,20 @@ spec:
               mountPath: /etc/freeradius/policy.d/keycloak
               subPath: keycloak
               readOnly: true
+            {{- if include "freeradius.keycloak.tls.enabled" . }}
+            - name: keycloak-tls
+              mountPath: /etc/freeradius/certs-keycloak
+              readOnly: true
+            {{- end }}
             {{- if eq .Values.keycloak.mode "lua" }}
             - name: keycloak-mapper-lua
               mountPath: /etc/freeradius/scripts/keycloak-mapper.lua
               subPath: keycloak-mapper.lua
+              readOnly: true
+            {{- else if eq .Values.keycloak.mode "python" }}
+            - name: keycloak-mapper-python
+              mountPath: /etc/freeradius/scripts/keycloak_mapper.py
+              subPath: keycloak_mapper.py
               readOnly: true
             {{- end }}
             {{- end }}
@@ -619,10 +645,19 @@ spec:
         - name: keycloak-policy
           configMap:
             name: {{ printf "%s-keycloak-policy" (include "st-common.names.fullname" .) }}
+        {{- if include "freeradius.keycloak.tls.enabled" . }}
+        - name: keycloak-tls
+          secret:
+            secretName: {{ include "freeradius.keycloak.tls.secretName" . }}
+        {{- end }}
         {{- if eq .Values.keycloak.mode "lua" }}
         - name: keycloak-mapper-lua
           configMap:
             name: {{ printf "%s-keycloak-lua" (include "st-common.names.fullname" .) }}
+        {{- else if eq .Values.keycloak.mode "python" }}
+        - name: keycloak-mapper-python
+          configMap:
+            name: {{ printf "%s-keycloak-python" (include "st-common.names.fullname" .) }}
         {{- end }}
         {{- end }}
         - name: scripts

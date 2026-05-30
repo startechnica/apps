@@ -56,6 +56,13 @@
   than a ConfigMap. The Deployment `envFrom` switches to `secretRef` for the
   chart-managed env vars (the `existingConfigmap` BYO path still uses
   `configMapRef`).
+- Renamed the Keycloak coordinate env vars injected by the Deployment from
+  `KC_*` → `FREERADIUS_KEYCLOAK_*` (`BASE_URL`, `REALM`, `CLIENT_ID`,
+  `CLIENT_SECRET`, `SCOPE`, `CONNECT_TIMEOUT`) so they share the chart's
+  `FREERADIUS_` env-var namespace. The lua/python mapper scripts and the rest
+  module's `$ENV{...}` reference are updated in lockstep. Internal rename — no
+  `values.yaml` changes; only observable when exec'ing into the pod or
+  overriding the mapper-script ConfigMaps / `keycloak.yaml` module template.
 
 ### Fixed
 

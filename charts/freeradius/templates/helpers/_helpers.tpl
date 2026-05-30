@@ -193,6 +193,52 @@ and `freeradius.sql.secretKey` for the in-chart-managed branch.
 {{- end -}}
 
 {{/*
+Keycloak TLS verification helpers.
+
+`freeradius.keycloak.tls.enabled` — "true" when a CA bundle is configured
+  (either inline `caCert` or BYO `existingSecret`); empty otherwise.
+`freeradius.keycloak.tls.createSecret` — "true" when the chart should render
+  its own Secret (i.e. `caCert` set, `existingSecret` not).
+`freeradius.keycloak.tls.secretName` — resolved Secret name: BYO when set,
+  else chart-rendered `<fullname>-keycloak-ca`.
+`freeradius.keycloak.tls.caKey` — key within the resolved Secret that holds
+  the PEM bundle.
+`freeradius.keycloak.tls.caFilePath` — absolute path to the mounted CA file
+  inside the pod. Used by all three Keycloak backends.
+*/}}
+{{- define "freeradius.keycloak.tls.enabled" -}}
+{{- if or .Values.keycloak.tls.caCert .Values.keycloak.tls.existingSecret -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.tls.createSecret" -}}
+{{- if and .Values.keycloak.tls.caCert (not .Values.keycloak.tls.existingSecret) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.tls.secretName" -}}
+{{- if .Values.keycloak.tls.existingSecret -}}
+{{- tpl .Values.keycloak.tls.existingSecret $ -}}
+{{- else -}}
+{{- printf "%s-keycloak-ca" (include "st-common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.tls.caKey" -}}
+{{- if .Values.keycloak.tls.existingSecret -}}
+{{- default "ca.crt" .Values.keycloak.tls.existingSecretCaKey -}}
+{{- else -}}
+ca.crt
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.tls.caFilePath" -}}
+{{- printf "/etc/freeradius/certs-keycloak/%s" (include "freeradius.keycloak.tls.caKey" .) -}}
+{{- end -}}
+
+{{/*
 parentRefs body shared by `templates/gateway-api/UDPRoute.yaml` and
 `templates/gateway-api/TLSRoute.yaml`. Returns a YAML list (no leading
 `parentRefs:` key); callers are expected to emit the key and pipe through

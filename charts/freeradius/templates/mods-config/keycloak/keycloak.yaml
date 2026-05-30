@@ -18,18 +18,37 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* mods-enabled/keycloak — the active rlm_lua or rlm_rest instance. Only
-         one renders per mode: lua = `keycloak_lua` calling keycloak-mapper.lua
-         (mounted separately under scripts/, see keycloak-mapper-lua.yaml);
-         rest = `keycloak_rest` doing the ROPC password grant directly. The
-         lua-mode unlang policy wrapper (cache + role mapping) lives in its
-         own ConfigMap (keycloak-policy.yaml) since FreeRADIUS only parses
+  {{- /* mods-enabled/keycloak — the active backend instance. Exactly one
+         renders per mode:
+           - lua    : `keycloak_lua`    + keycloak-mapper.lua    (mounted at
+                      /etc/freeradius/scripts/keycloak-mapper.lua via
+                      keycloak-mapper-lua.yaml)
+           - python : `keycloak_python` + keycloak_mapper.py     (mounted at
+                      /etc/freeradius/scripts/keycloak_mapper.py via
+                      keycloak-mapper-python.yaml — note underscore: rlm_python3
+                      imports the file as a Python module so the name must be a
+                      valid identifier)
+           - rest   : `keycloak_rest`   doing the ROPC password grant directly
+         The unlang policy wrapper (cache + role mapping) lives in its own
+         ConfigMap (keycloak-policy.yaml) since FreeRADIUS only parses
          `policy { }` blocks when included from policy.d/. */}}
   keycloak: |
     {{- if eq .Values.keycloak.mode "lua" }}
     ## rlm_lua instance running the Keycloak authenticator/mapper
     lua keycloak_lua {
         filename = "/etc/freeradius/scripts/keycloak-mapper.lua"
+        func_authorize = "authorize"
+        func_accounting = "accounting"
+    }
+    {{- end }}
+
+    {{- if eq .Values.keycloak.mode "python" }}
+    ## rlm_python3 instance running the Keycloak authenticator/mapper.
+    ## rlm_python3.so is present in the default `freeradius/freeradius-server:3.2.8`
+    ## image alongside the rest of the stock module set.
+    python3 keycloak_python {
+        python_path = "/etc/freeradius/scripts"
+        module = "keycloak_mapper"
         func_authorize = "authorize"
         func_accounting = "accounting"
     }
@@ -42,9 +61,20 @@ data:
         connect_timeout = {{ .Values.keycloak.connectTimeout }}
 
         tls {
-            #  Verify Keycloak's TLS cert against the image's system CA bundle.
+            {{- if .Values.keycloak.tls.insecure }}
+            #  TLS verification disabled (keycloak.tls.insecure=true) — dev only.
+            check_cert = no
+            check_cert_cn = no
+            {{- else }}
+            #  Verify Keycloak's TLS cert against the configured CA bundle
+            #  (`keycloak.tls.caCert` / `existingSecret`) when set, otherwise
+            #  the image's system CA bundle.
             check_cert = yes
             check_cert_cn = yes
+            {{- if include "freeradius.keycloak.tls.enabled" . }}
+            ca_file = "{{ include "freeradius.keycloak.tls.caFilePath" . }}"
+            {{- end }}
+            {{- end }}
         }
 
         authorize {
@@ -57,7 +87,7 @@ data:
             #  "skipping unknown attribute" debug lines for access_token etc.;
             #  this is harmless, the accept decision is driven by the HTTP status.
             body = 'post'
-            data = "grant_type=password&client_id={{ .Values.keycloak.clientId }}{{- if .Values.keycloak.clientSecret }}&client_secret=$ENV{KC_CLIENT_SECRET}{{- end }}{{- if .Values.keycloak.scope }}&scope={{ .Values.keycloak.scope }}{{- end }}&username=%{urlquote:%{User-Name}}&password=%{urlquote:%{User-Password}}"
+            data = "grant_type=password&client_id={{ .Values.keycloak.clientId }}{{- if .Values.keycloak.clientSecret }}&client_secret=$ENV{FREERADIUS_KEYCLOAK_CLIENT_SECRET}{{- end }}{{- if .Values.keycloak.scope }}&scope={{ .Values.keycloak.scope }}{{- end }}&username=%{urlquote:%{User-Name}}&password=%{urlquote:%{User-Password}}"
             tls = ${..tls}
 
             response {

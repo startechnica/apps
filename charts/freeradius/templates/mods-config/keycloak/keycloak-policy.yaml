@@ -4,15 +4,25 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- if .Values.keycloak.enabled }}
-{{- $isLua := eq .Values.keycloak.mode "lua" -}}
-{{- $isRest := eq .Values.keycloak.mode "rest" -}}
-{{- /* rcodes after a successful call differ per module: rlm_lua returns `ok`
-       on RLM_MODULE_OK; rlm_rest returns `updated` when it parsed reply attrs
-       from the JSON body, otherwise `ok`. Match both for rest to be safe. */ -}}
+{{- $isLua    := eq .Values.keycloak.mode "lua" -}}
+{{- $isPython := eq .Values.keycloak.mode "python" -}}
+{{- $isRest   := eq .Values.keycloak.mode "rest" -}}
+{{- /* Script-driven modes (lua, python) populate &control:<roleAttribute> in
+       authorize{}, so role->reply mapping (roles_keycloak) is meaningful for
+       both. Rest mode doesn't extract roles (rlm_rest only fetches a token),
+       so role mapping is skipped there. */ -}}
+{{- $hasRoles := or $isLua $isPython -}}
+{{- /* rcodes after a successful call differ per module: rlm_lua and
+       rlm_python3 return `ok` on RLM_MODULE_OK; rlm_rest returns `updated`
+       when it parsed reply attrs from the JSON body, otherwise `ok` — match
+       both for rest to be safe. */ -}}
 {{- $mod := "" -}}
 {{- $okRcode := "" -}}
 {{- if $isLua -}}
   {{- $mod = "keycloak_lua" -}}
+  {{- $okRcode = "(ok)" -}}
+{{- else if $isPython -}}
+  {{- $mod = "keycloak_python" -}}
   {{- $okRcode = "(ok)" -}}
 {{- else if $isRest -}}
   {{- $mod = "keycloak_rest" -}}
@@ -30,9 +40,10 @@ metadata:
   {{- end }}
 data:
   {{- /* policy.d/keycloak — unlang wrapper around the active Keycloak backend
-         module (`keycloak_lua` in lua mode, `keycloak_rest` in rest mode).
-         Adds cache-aside when keycloak.cache.enabled and role→reply mapping
-         when roleMappings (lua only — rest mode doesn't populate role attrs,
+         module (`keycloak_lua` in lua mode, `keycloak_python` in python mode,
+         `keycloak_rest` in rest mode). Adds cache-aside when
+         keycloak.cache.enabled and role→reply mapping when roleMappings
+         (script-driven modes only — rest mode doesn't populate role attrs,
          since the chart's rlm_rest instance only hits the token endpoint).
          FreeRADIUS only parses `policy { }` blocks when included from
          policy.d/, so this lives in its own ConfigMap separate from the
@@ -44,7 +55,7 @@ data:
     #  a module call and fail with "Failed to find 'policy' as a module").
 
     #  Entry point. Call this from a virtual server's authorize {} section.
-    keycloak_authorize {
+    authorize_keycloak {
         {{- if .Values.keycloak.cache.enabled }}
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
         #  recent successful result cached. cache_keycloak returns ok on hit
@@ -64,6 +75,8 @@ data:
         {{- else }}
         {{- if $isLua }}
         #  keycloak_lua: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
+        {{- else if $isPython }}
+        #  keycloak_python: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
         {{- else if $isRest }}
         #  keycloak_rest: ROPC password grant -> HTTP 200 = ok/updated, 401 = reject.
         {{- end }}
@@ -74,18 +87,18 @@ data:
             update control {
                 &Auth-Type := Accept
             }
-        {{- if and $isLua .Values.keycloak.roleMappings }}
-            keycloak_roles
-        {{- end }}
+            {{- if and $hasRoles .Values.keycloak.roleMappings }}
+            roles_keycloak
+            {{- end }}
         }
         #  reject (bad creds / inactive), fail (network/config) and noop
         #  (not a password request) propagate unchanged to the caller.
     }
 
-    {{- if and $isLua .Values.keycloak.roleMappings }}
+    {{- if and $hasRoles .Values.keycloak.roleMappings }}
     #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
     #  to RADIUS reply attributes. First match wins.
-    keycloak_roles {
+    roles_keycloak {
     {{- range $i, $m := .Values.keycloak.roleMappings }}
         {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $.Values.keycloak.roleAttribute }}[*] == "{{ $m.role }}") {
             update reply {

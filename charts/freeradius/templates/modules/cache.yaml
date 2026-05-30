@@ -109,8 +109,8 @@ data:
     # rlm_cache instance dedicated to Keycloak auth results. Keyed on the
     # RADIUS User-Name; caches only the role attribute set by keycloak_lua
     # (&control:{{ .Values.keycloak.roleAttribute }}) so subsequent
-    # `keycloak_authorize` calls within TTL skip the ROPC + introspection
-    # roundtrip to Keycloak. Role->reply mapping (keycloak_roles) still runs
+    # `authorize_keycloak` calls within TTL skip the ROPC + introspection
+    # roundtrip to Keycloak. Role->reply mapping (roles_keycloak) still runs
     # on every request, regenerating reply attrs from the cached role list.
     # Rest mode caches nothing useful currently (rlm_rest only fetches the
     # token); the cache_keycloak short-circuit still saves the ROPC roundtrip.

@@ -17,7 +17,7 @@ metadata:
 data:
   {{- /* Virtual-server config mounted at sites-enabled/default via subPath by the
          Deployment. Listen ports are rendered directly from .Values.containerPorts. */}}
-  default: |-
+  default: |
     ######################################################################
     #
     #	As of 2.0.0, FreeRADIUS supports virtual hosts using the
@@ -483,15 +483,15 @@ data:
     	-sql
     	{{- end }}
 
-    	#
     	#  If you are using /etc/smbpasswd, and are also doing
     	#  mschap authentication, the un-comment this line, and
     	#  configure the 'smbpasswd' module.
     #	smbpasswd
 
-    	#
+    	{{- if .Values.modules.ldap.enabled }}
     	#  The ldap module reads passwords from the LDAP database.
     	-ldap
+    	{{- end }}
 
     	#
     	#  If you're using Active Directory and PAP, then uncomment
@@ -524,14 +524,14 @@ data:
     	#  This module should be listed last, so that the other modules
     	#  get a chance to set Auth-Type for themselves.
     	#
-{{- if and .Values.keycloak.enabled .Values.keycloak.wireDefaultSite }}
+		{{- if and .Values.keycloak.enabled .Values.keycloak.wireDefaultSite }}
     	#  Keycloak authorize policy. Wraps the active backend module
     	#  (`keycloak_lua` in lua mode, `keycloak_rest` in rest mode) with
     	#  cache-aside (when keycloak.cache.enabled) and — lua mode only —
     	#  role→reply mapping. Sets Auth-Type := Accept on a successful
     	#  ROPC; runs before `pap`. Defined in policy.d/keycloak.
-    	keycloak_authorize
-{{- end }}
+    	authorize_keycloak
+		{{- end }}
     	pap
 
     	#

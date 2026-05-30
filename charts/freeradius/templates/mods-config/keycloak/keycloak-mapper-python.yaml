@@ -1,0 +1,233 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "python") }}
+{{- if not .Values.keycloak.realm }}
+  {{- fail "keycloak.enabled=true requires keycloak.realm to be set" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-keycloak-python" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* Python module file mounted at /etc/freeradius/scripts/keycloak_mapper.py.
+         Note the underscore in the filename — rlm_python3's `module` directive
+         loads via `import <module>`, and Python module names cannot contain
+         hyphens. Behaviour mirrors keycloak-mapper.lua: ROPC against Keycloak,
+         then JWT-decode the returned access_token for roles, then one
+         `&control:Class` per role. ALL policy decisions (Auth-Type, accept,
+         deny-without-role, role->reply mapping) live in the unlang
+         `authorize_keycloak` policy; this script is pure fetch-and-parse. */}}
+  keycloak_mapper.py: |-
+    """
+    keycloak_mapper.py
+
+    Self-contained Keycloak authenticator + role mapper for rlm_python3,
+    run in the authorize phase (func_authorize = "authorize"):
+
+      1. ROPC password grant to Keycloak's token endpoint to validate
+         User-Name / User-Password.
+      2. Base64url-decode the access_token JWT payload (Keycloak already
+         validated the credentials by issuing the token; no separate
+         /introspect call needed — saves one HTTPS round-trip per auth).
+      3. Pick roles from `resource_access[CLIENT_ID].roles` (mapper=client)
+         or `realm_access.roles` (mapper=realm), set one &control:Class
+         per role, return a plain rcode (ok / reject / fail / noop).
+
+    Uses only the Python 3 stdlib (urllib + json + base64 + ssl). Configured
+    via environment (injected by the Deployment):
+        FREERADIUS_KEYCLOAK_BASE_URL, FREERADIUS_KEYCLOAK_REALM,
+        FREERADIUS_KEYCLOAK_CLIENT_ID, FREERADIUS_KEYCLOAK_CLIENT_SECRET,
+        FREERADIUS_KEYCLOAK_SCOPE, FREERADIUS_KEYCLOAK_CONNECT_TIMEOUT,
+        FREERADIUS_KEYCLOAK_ROLE_MAPPER  (client | realm, default client)
+        FREERADIUS_KEYCLOAK_CA_FILE      (path to PEM CA bundle, optional)
+        FREERADIUS_KEYCLOAK_INSECURE     ("true" to skip TLS verify, dev only)
+    """
+
+    import base64
+    import json
+    import os
+    import ssl
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    try:
+        import radiusd
+    except ImportError:
+        # Lets the file import for syntax checking outside FreeRADIUS.
+        class _Stub:
+            RLM_MODULE_OK     = 0
+            RLM_MODULE_REJECT = 1
+            RLM_MODULE_FAIL   = 2
+            RLM_MODULE_NOOP   = 7
+            L_AUTH = 0
+            L_ERR  = 4
+            L_WARN = 5
+            L_DBG  = 9
+            @staticmethod
+            def radlog(level, msg):
+                pass
+        radiusd = _Stub()
+
+    BASE_URL      = os.environ.get("FREERADIUS_KEYCLOAK_BASE_URL")
+    REALM         = os.environ.get("FREERADIUS_KEYCLOAK_REALM")
+    CLIENT_ID     = os.environ.get("FREERADIUS_KEYCLOAK_CLIENT_ID", "freeradius")
+    CLIENT_SECRET = os.environ.get("FREERADIUS_KEYCLOAK_CLIENT_SECRET")
+    SCOPE         = os.environ.get("FREERADIUS_KEYCLOAK_SCOPE")
+    ROLE_MAPPER   = os.environ.get("FREERADIUS_KEYCLOAK_ROLE_MAPPER", "client")
+    CA_FILE       = os.environ.get("FREERADIUS_KEYCLOAK_CA_FILE")
+    INSECURE      = os.environ.get("FREERADIUS_KEYCLOAK_INSECURE", "").lower() == "true"
+    try:
+        TIMEOUT = float(os.environ.get("FREERADIUS_KEYCLOAK_CONNECT_TIMEOUT", "5"))
+    except ValueError:
+        TIMEOUT = 5.0
+
+
+    def _ssl_context():
+        """Build the SSLContext for HTTPS calls to Keycloak.
+          - INSECURE=true       : unverified context (dev only)
+          - CA_FILE set         : default context with verify_locations(cafile)
+          - neither             : default context (system CA bundle)"""
+        if INSECURE:
+            return ssl._create_unverified_context()
+        ctx = ssl.create_default_context()
+        if CA_FILE:
+            ctx.load_verify_locations(cafile=CA_FILE)
+        return ctx
+
+
+    def _decode_jwt_claims(token):
+        """Base64url-decode a JWT's payload segment without verifying the
+        signature. Safe here because Keycloak just issued the token via ROPC
+        (so credentials were already validated); we only READ claims, we
+        don't trust them for security decisions. Returns {} on malformed
+        input — the script will then proceed with an empty role list."""
+        try:
+            payload = token.split(".", 2)[1]
+            payload += "=" * (-len(payload) % 4)  # restore base64url padding
+            return json.loads(base64.urlsafe_b64decode(payload))
+        except (IndexError, ValueError, TypeError, json.JSONDecodeError):
+            return {}
+
+
+    def _roles_from_claims(claims):
+        """Pick roles from client (resource_access[CLIENT_ID].roles) or realm
+        (realm_access.roles) per FREERADIUS_KEYCLOAK_ROLE_MAPPER. Unknown
+        values fall back to client."""
+        if ROLE_MAPPER == "realm":
+            return list(claims.get("realm_access", {}).get("roles", []))
+        return list((claims.get("resource_access") or {}).get(CLIENT_ID, {}).get("roles", []))
+
+
+    def _ropc(token_url, fields):
+        """POST the ROPC form. Returns (status, body_dict | None) for any
+        HTTP response (including 4xx via HTTPError); (None, None) on
+        network/TLS failure where we can't even reach Keycloak."""
+        data = urllib.parse.urlencode(fields).encode("ascii")
+        req = urllib.request.Request(
+            token_url, data=data, method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT, context=_ssl_context()) as resp:
+                raw = resp.read()
+                status = resp.status
+        except urllib.error.HTTPError as e:
+            status = e.code
+            try:
+                raw = e.read()
+            except Exception:
+                raw = b""
+        except (urllib.error.URLError, OSError):
+            return None, None
+        try:
+            return status, json.loads(raw or b"null")
+        except (ValueError, json.JSONDecodeError):
+            return status, None
+
+
+    def authorize(p):
+        attrs = {name: value for name, value in p}
+        username = attrs.get("User-Name")
+        password = attrs.get("User-Password")
+
+        # Not a cleartext-password request — leave it for other modules.
+        if not username or not password:
+            return radiusd.RLM_MODULE_NOOP
+
+        if not BASE_URL or not REALM:
+            radiusd.radlog(radiusd.L_ERR, "keycloak-mapper: FREERADIUS_KEYCLOAK_BASE_URL / FREERADIUS_KEYCLOAK_REALM not set")
+            return radiusd.RLM_MODULE_FAIL
+
+        token_url = "{}/realms/{}/protocol/openid-connect/token".format(BASE_URL, REALM)
+
+        # ROPC password grant -> validate credentials, obtain access_token.
+        fields = {
+            "grant_type": "password",
+            "client_id":  CLIENT_ID,
+            "username":   username,
+            "password":   password,
+        }
+        if CLIENT_SECRET:
+            fields["client_secret"] = CLIENT_SECRET
+        if SCOPE:
+            fields["scope"] = SCOPE
+
+        status, body = _ropc(token_url, fields)
+
+        # Status dispatch:
+        #   None       network/TLS error                  -> FAIL  (transient)
+        #   400, 401   credentials rejected by Keycloak   -> REJECT (final)
+        #   200        token issued                       -> proceed
+        #   other      unexpected (5xx, misconfig, etc.)  -> FAIL
+        if status is None:
+            radiusd.radlog(radiusd.L_ERR, "keycloak-mapper: token request failed (network/TLS)")
+            return radiusd.RLM_MODULE_FAIL
+        if status in (400, 401):
+            radiusd.radlog(
+                radiusd.L_AUTH,
+                "keycloak-mapper: ROPC rejected for {} (HTTP {})".format(username, status),
+            )
+            return radiusd.RLM_MODULE_REJECT
+        if status != 200 or not body or "access_token" not in body:
+            radiusd.radlog(
+                radiusd.L_ERR,
+                "keycloak-mapper: unexpected token response for {} (HTTP {})".format(username, status),
+            )
+            return radiusd.RLM_MODULE_FAIL
+
+        # Decode JWT claims directly — ROPC success means Keycloak already
+        # validated the user; no introspection round-trip needed.
+        claims = _decode_jwt_claims(body["access_token"])
+        roles  = _roles_from_claims(claims)
+
+        config_attrs = []
+        if roles:
+            for role in roles:
+                radiusd.radlog(radiusd.L_DBG, "keycloak-mapper: role -> {}".format(role))
+                config_attrs.append(("Class", role))
+        else:
+            radiusd.radlog(
+                radiusd.L_WARN,
+                "keycloak-mapper: no {} roles for {} (CLIENT_ID={})".format(ROLE_MAPPER, username, CLIENT_ID),
+            )
+
+        # rlm_python3 expects (rcode, reply_tuples, config_tuples). config_tuples
+        # populate &control: — the unlang authorize_keycloak policy reads from
+        # there to decide Auth-Type and run role->reply mapping.
+        return (radiusd.RLM_MODULE_OK, (), tuple(config_attrs))
+
+
+    def accounting(p):
+        # accounting: pass-through (handled by rlm_sql, not this script).
+        return radiusd.RLM_MODULE_NOOP
+{{- end }}

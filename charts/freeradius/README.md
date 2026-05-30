@@ -288,7 +288,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `keycloak.url`             | Base URL of the Keycloak server                                                                                       | `https://auth.example.com` |
 | `keycloak.realm`           | Keycloak realm holding the users (required when enabled)                                                              | `""`                       |
 | `keycloak.clientId`        | OIDC client_id with Direct Access Grants enabled                                                                      | `freeradius`               |
-| `keycloak.clientSecret`    | Secret for a confidential client. Stored in a Secret and injected via `$ENV{KC_CLIENT_SECRET}`; empty = public client | `""`                       |
+| `keycloak.clientSecret`    | Secret for a confidential client. Stored in a Secret and injected via `$ENV{FREERADIUS_KEYCLOAK_CLIENT_SECRET}`; empty = public client | `""`                       |
 | `keycloak.scope`           | Optional OAuth scope appended to the token request                                                                    | `""`                       |
 | `keycloak.connectTimeout`  | Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)                     | `4.0`                      |
 | `keycloak.wireDefaultSite` | Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module                           | `true`                     |
@@ -408,7 +408,7 @@ keycloak:
 
 The Lua script validates the password (ROPC), then reads the user's client
 roles via RFC 7662 token introspection and exposes them to the
-`keycloak_authorize` unlang policy, which maps the first matching role to the
+`authorize_keycloak` unlang policy, which maps the first matching role to the
 reply attributes above. `roleAttribute` (default `Class`) is the control
 attribute the script populates with role names.
 
@@ -431,7 +431,7 @@ is not consumed, so `radiusd -X` will print harmless "skipping unknown
 attribute" lines for `access_token` etc.
 
 By default (`wireDefaultSite: true`) the `default` virtual server's authorize
-section is wired automatically. Set it to `false` to call `keycloak_authorize`
+section is wired automatically. Set it to `false` to call `authorize_keycloak`
 (lua) or `keycloak_rest` (rest) from your own site config.
 
 ### Auto-generated credentials
@@ -553,6 +553,29 @@ tls:
 > cert-manager-issued certificates instead of the chart's self-signed genCA
 > material. To keep the old self-signed behaviour, set
 > `tls.certManager.create: false` explicitly.
+
+#### Keycloak script env vars renamed to `FREERADIUS_KEYCLOAK_*`
+
+The env vars carrying Keycloak coordinates from the Deployment into the
+lua/python mapper scripts (and into the rest module's body via `$ENV{...}`)
+have moved into the chart's `FREERADIUS_` namespace:
+
+| Before                | After                                 |
+| --------------------- | ------------------------------------- |
+| `KC_BASE_URL`         | `FREERADIUS_KEYCLOAK_BASE_URL`        |
+| `KC_REALM`            | `FREERADIUS_KEYCLOAK_REALM`           |
+| `KC_CLIENT_ID`        | `FREERADIUS_KEYCLOAK_CLIENT_ID`       |
+| `KC_CLIENT_SECRET`    | `FREERADIUS_KEYCLOAK_CLIENT_SECRET`   |
+| `KC_SCOPE`            | `FREERADIUS_KEYCLOAK_SCOPE`           |
+| `KC_CONNECT_TIMEOUT`  | `FREERADIUS_KEYCLOAK_CONNECT_TIMEOUT` |
+
+No `values.yaml` changes are required — these names are internal to the chart's
+generated config. The rename is only observable if you `kubectl exec` into the
+pod to inspect env, or if you override the mapper-script ConfigMaps
+(`keycloak-mapper-lua.yaml`, `keycloak-mapper-python.yaml`) or the
+`keycloak.yaml` module template — in which case update any
+`os.environ.get("KC_…")` / `os.getenv("KC_…")` / `$ENV{KC_…}` references to the
+new prefix.
 
 ### To 1.1.0 (breaking)
 

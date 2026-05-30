@@ -25,6 +25,7 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.tlsCache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.keycloakCache" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.keycloakMode" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -234,8 +235,40 @@ freeradius: modules.cache.instances.{{ $name }}.update
 {{- end -}}
 
 {{/*
+Validation message: keycloak.mode must be one of the supported backends.
+Each branch of keycloak-policy.yaml's mode dispatch routes to one of these
+three values; any other value would leave $mod / $okRcode empty and produce
+a broken policy file.
+*/}}
+{{- define "freeradius.validate.keycloakMode" -}}
+{{- if .Values.keycloak.enabled -}}
+{{- $allowed := list "lua" "python" "rest" -}}
+{{- if not (has .Values.keycloak.mode $allowed) }}
+freeradius: keycloak.mode
+    `keycloak.mode: {{ .Values.keycloak.mode }}` is not a recognised value.
+    Allowed: `lua` (rlm_lua + introspection + role mapping), `python`
+    (rlm_python3, same flow as lua), `rest` (rlm_rest ROPC-only, no roles).
+{{- end -}}
+{{- $roleMapperAllowed := list "client" "realm" -}}
+{{- if and (or (eq .Values.keycloak.mode "lua") (eq .Values.keycloak.mode "python")) (not (has .Values.keycloak.roleMapper $roleMapperAllowed)) }}
+freeradius: keycloak.roleMapper
+    `keycloak.roleMapper: {{ .Values.keycloak.roleMapper }}` is not a
+    recognised value. Allowed: `client` (resource_access[clientId].roles)
+    or `realm` (realm_access.roles).
+{{- end -}}
+{{- if and .Values.keycloak.tls.caCert .Values.keycloak.tls.existingSecret }}
+freeradius: keycloak.tls
+    `keycloak.tls.caCert` and `keycloak.tls.existingSecret` are mutually
+    exclusive — set one or the other. Use `caCert` to have the chart render
+    a Secret from an inline PEM, or `existingSecret` to reference a Secret
+    you manage outside this chart (cert-manager, ESO, etc.).
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Validation message: keycloak.cache preconditions. The cache wraps the
-keycloak_authorize policy and the chart standardises on Redis to make
+authorize_keycloak policy and the chart standardises on Redis to make
 cross-pod sharing reliable.
 */}}
 {{- define "freeradius.validate.keycloakCache" -}}
