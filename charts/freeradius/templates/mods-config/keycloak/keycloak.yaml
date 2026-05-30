@@ -48,8 +48,12 @@ data:
     ## image alongside the rest of the stock module set.
     python3 keycloak_python {
         python_path = "/etc/freeradius/scripts"
-        module = "keycloak_mapper"
+        # rlm_python3 requires `mod_<section>` paired with each
+        # `func_<section>` — the top-level `module` directive alone is
+        # insufficient and triggers "Instantiation failed" at startup.
+        mod_authorize  = "keycloak_mapper"
         func_authorize = "authorize"
+        mod_accounting  = "keycloak_mapper"
         func_accounting = "accounting"
     }
     {{- end }}
