@@ -18,19 +18,6 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* `keycloak_lua` is the rlm_lua module instance (mounted at
-         mods-enabled/keycloak_lua); `keycloak-mapper.lua` is the script it runs
-         (mounted at /etc/freeradius/scripts/). The script talks to Keycloak
-         directly over HTTPS, so it needs luasec (ssl.https), luasocket (ltn12,
-         socket.url) and lua-cjson in the image, plus the KC_* env vars injected
-         by the Deployment. */}}
-  keycloak_lua: |-
-    ## modules/keycloak_lua -- rlm_lua instance running the Keycloak authenticator/mapper
-    lua keycloak_lua {
-        filename = "/etc/freeradius/scripts/keycloak-mapper.lua"
-        func_authorize = "authorize"
-        func_accounting = "accounting"
-    }
   keycloak-mapper.lua: |-
     --[[
       keycloak-mapper.lua

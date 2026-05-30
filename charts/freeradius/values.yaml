@@ -811,7 +811,7 @@ modules:
         persist_dir: "${logdir}/tlscache"
       verify: {}
         # tmpdir: /tmp/radiusd
-        # client: "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
+        # client: "/usr/bin/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
   files:
     enabled: false
     existingConfigMap: ""

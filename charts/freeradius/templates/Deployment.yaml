@@ -86,11 +86,9 @@ spec:
         checksum/configmap-mods-config: {{ include (print $.Template.BasePath "/configmaps/mods-config.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.keycloak.enabled }}
+        checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak.yaml") . | sha256sum }}
         {{- if eq .Values.keycloak.mode "lua" }}
-        checksum/configmap-keycloak-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/configmap-lua.yaml") . | sha256sum }}
-        checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/mods-config/keycloak/configmap-policy.yaml") . | sha256sum }}
-        {{- else if eq .Values.keycloak.mode "rest" }}
-        checksum/configmap-keycloak-rest: {{ include (print $.Template.BasePath "/mods-config/keycloak/configmap-rest.yaml") . | sha256sum }}
+        checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-mapper-lua.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.keycloak.clientSecret }}
         checksum/secret-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret.yaml") . | sha256sum }}
@@ -484,23 +482,18 @@ spec:
             {{- end }}
             {{- end }}
             {{- if .Values.keycloak.enabled }}
-            {{- if eq .Values.keycloak.mode "lua" }}
-            - name: keycloak-lua
-              mountPath: /etc/freeradius/mods-enabled/keycloak_lua
-              subPath: keycloak_lua
-              readOnly: true
-            - name: keycloak-lua
-              mountPath: /etc/freeradius/scripts/keycloak-mapper.lua
-              subPath: keycloak-mapper.lua
-              readOnly: true
-            - name: keycloak-policy
-              mountPath: /etc/freeradius/policy.d/keycloak
+            - name: keycloak
+              mountPath: /etc/freeradius/mods-enabled/keycloak
               subPath: keycloak
               readOnly: true
-            {{- else if eq .Values.keycloak.mode "rest" }}
-            - name: keycloak-rest
-              mountPath: /etc/freeradius/mods-enabled/keycloak_rest
-              subPath: keycloak_rest
+            {{- if eq .Values.keycloak.mode "lua" }}
+            - name: keycloak
+              mountPath: /etc/freeradius/policy.d/keycloak
+              subPath: keycloak-policy
+              readOnly: true
+            - name: keycloak-mapper-lua
+              mountPath: /etc/freeradius/scripts/keycloak-mapper.lua
+              subPath: keycloak-mapper.lua
               readOnly: true
             {{- end }}
             {{- end }}
@@ -612,17 +605,13 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.keycloak.enabled }}
+        - name: keycloak
+          configMap:
+            name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
         {{- if eq .Values.keycloak.mode "lua" }}
-        - name: keycloak-lua
+        - name: keycloak-mapper-lua
           configMap:
             name: {{ printf "%s-keycloak-lua" (include "st-common.names.fullname" .) }}
-        - name: keycloak-policy
-          configMap:
-            name: {{ printf "%s-keycloak-policy" (include "st-common.names.fullname" .) }}
-        {{- else if eq .Values.keycloak.mode "rest" }}
-        - name: keycloak-rest
-          configMap:
-            name: {{ printf "%s-keycloak-rest" (include "st-common.names.fullname" .) }}
         {{- end }}
         {{- end }}
         - name: scripts

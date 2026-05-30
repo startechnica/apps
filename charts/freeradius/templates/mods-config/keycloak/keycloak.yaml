@@ -1,0 +1,128 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.keycloak.enabled }}
+{{- if not .Values.keycloak.realm }}
+  {{- fail "keycloak.enabled=true requires keycloak.realm to be set" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{- /* mods-enabled/keycloak — the active rlm_lua or rlm_rest instance. Only
+         one renders per mode: lua = `keycloak_lua` calling keycloak-mapper.lua
+         (mounted separately under scripts/); rest = `keycloak_rest` doing the
+         ROPC password grant directly. The accompanying `keycloak-policy`
+         key (lua mode only) holds the unlang wrapper that adds caching +
+         role→reply mapping; rest mode calls keycloak_rest directly from the
+         site's authorize{} so it needs no policy wrapper. */}}
+  keycloak: |
+    {{- if eq .Values.keycloak.mode "lua" }}
+    ## rlm_lua instance running the Keycloak authenticator/mapper
+    lua keycloak_lua {
+        filename = "/etc/freeradius/scripts/keycloak-mapper.lua"
+        func_authorize = "authorize"
+        func_accounting = "accounting"
+    }
+    {{- else if eq .Values.keycloak.mode "rest" }}
+    ## rlm_rest instance doing Keycloak ROPC (PAP only)
+    rest keycloak_rest {
+        connect_uri = "{{ .Values.keycloak.url }}"
+        connect_timeout = {{ .Values.keycloak.connectTimeout }}
+
+        tls {
+            #  Verify Keycloak's TLS cert against the image's system CA bundle.
+            check_cert = yes
+            check_cert_cn = yes
+        }
+
+        authorize {
+            uri = "${..connect_uri}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/token"
+            method = 'post'
+            #  Raw urlencoded ROPC body. `$ENV{}` expands at config-load time
+            #  (keeps the client secret out of this ConfigMap); `%{...}` xlats
+            #  expand per-request. `body = post` sets the form Content-Type.
+            #  Note: the JSON token response is not consumed — rlm_rest will log
+            #  "skipping unknown attribute" debug lines for access_token etc.;
+            #  this is harmless, the accept decision is driven by the HTTP status.
+            body = 'post'
+            data = "grant_type=password&client_id={{ .Values.keycloak.clientId }}{{- if .Values.keycloak.clientSecret }}&client_secret=$ENV{KC_CLIENT_SECRET}{{- end }}{{- if .Values.keycloak.scope }}&scope={{ .Values.keycloak.scope }}{{- end }}&username=%{urlquote:%{User-Name}}&password=%{urlquote:%{User-Password}}"
+            tls = ${..tls}
+
+            response {
+              format = "json"
+            }
+        }
+    }
+    {{- end }}
+  {{- if eq .Values.keycloak.mode "lua" }}
+  {{- /* policy.d/keycloak — unlang wrapper around keycloak_lua that adds
+         cache-aside (when keycloak.cache.enabled) and role→reply mapping
+         (when roleMappings). Lua mode only; rest mode calls keycloak_rest
+         directly from the site. */}}
+  keycloak-policy: |
+    #  Entry point. Call this from a virtual server's authorize {} section.
+    policy keycloak_authorize {
+        {{- if .Values.keycloak.cache.enabled }}
+        #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
+        #  recent successful result cached. cache_keycloak returns ok+populates
+        #  &control:{{ .Values.keycloak.roleAttribute }} on hit, notfound on miss.
+        cache_keycloak
+        if (notfound) {
+            keycloak_lua
+            if (ok) {
+                #  Store on success — role list is captured per cache_keycloak's update {}.
+                cache_keycloak
+            }
+        }
+        {{- else }}
+        #  keycloak_lua: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
+        keycloak_lua
+        {{- end }}
+        if (ok) {
+            #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.
+            update control {
+                &Auth-Type := Accept
+            }
+        {{- if .Values.keycloak.roleMappings }}
+            keycloak_roles
+        {{- end }}
+        }
+        #  reject (bad creds / inactive), fail (network/config) and noop
+        #  (not a password request) propagate unchanged to the caller.
+    }
+    {{- if .Values.keycloak.roleMappings }}
+
+    #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
+    #  to RADIUS reply attributes. First match wins.
+    policy keycloak_roles {
+    {{- range $i, $m := .Values.keycloak.roleMappings }}
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $.Values.keycloak.roleAttribute }}[*] == "{{ $m.role }}") {
+            update reply {
+            {{- range $line := $m.reply }}
+                {{ $line }}
+            {{- end }}
+            }
+        }
+    {{- end }}
+    {{- if .Values.keycloak.denyWithoutRole }}
+        else {
+            update reply {
+                Reply-Message := "Access denied: no valid Keycloak role"
+            }
+            reject
+        }
+    {{- end }}
+    }
+    {{- end }}
+  {{- end }}
+{{- end }}
