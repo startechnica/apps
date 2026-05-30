@@ -5,13 +5,12 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/*
 Utility pod for sending RADIUS Access-Requests against this chart's FreeRADIUS
-service from inside the cluster. The official `freeradius/freeradius-server`
-image strips the client tools (radclient / radtest live in Debian's
-`freeradius-utils` package), so this pod uses a Debian base, installs the
-package on startup, then runs `sleep infinity` so you can:
+service from inside the cluster. Uses `2stacks/radtest` (Alpine, ~8 MB) which
+ships `radtest` / `radclient` preinstalled, then runs `sleep infinity` so you
+can:
 
-  kubectl exec -it deploy/<release>-freeradius-radtest -- bash
-  radtest "$RADIUS_USER" "$RADIUS_PASSWORD" "$RADIUS_HOST" 0 "$RADIUS_SECRET"
+  kubectl exec -it deploy/<release>-freeradius-radtest -- sh
+  radtest <user> <pass> "$RADIUS_HOST" "$RADIUS_NAS_PORT" "$RADIUS_SECRET"
 
 Disabled by default (radtest.enabled). Intended for short-lived debugging,
 NOT for production traffic generation.
@@ -72,19 +71,10 @@ spec:
           image: {{ include "st-common.images.image" (dict "imageRoot" .Values.radtest.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.radtest.image.pullPolicy | quote }}
           command:
-            - /bin/bash
+            - /bin/sh
             - -ec
             - |
-              if ! command -v radtest >/dev/null 2>&1; then
-                printf '%s\n' "[radtest] installing freeradius-utils..." >&2
-                # `-o APT::Sandbox::User=root` keeps apt running as root for
-                # fetches instead of seteuid'ing to the `_apt` user. The
-                # container drops CAP_SETUID/SETGID (see containerSecurityContext)
-                # so the default sandbox-as-_apt behaviour fails with EPERM.
-                apt-get -o APT::Sandbox::User=root update -qq
-                apt-get -o APT::Sandbox::User=root install -y --no-install-recommends freeradius-utils >/dev/null
-              fi
-              printf '%s\n' "[radtest] ready. Try:" >&2
+              printf '%s\n' "[radtest] ready ($(radtest 2>&1 | head -1 || echo radtest)). Try:" >&2
               printf '%s\n' "[radtest]   radtest <user> <pass> $RADIUS_HOST $RADIUS_NAS_PORT $RADIUS_SECRET" >&2
               exec sleep infinity
           env:

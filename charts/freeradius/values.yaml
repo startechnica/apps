@@ -2343,10 +2343,10 @@ radtest:
   ## @param radtest.replicaCount Number of radtest pods.
   ##
   replicaCount: 1
-  ## Container image for the radtest utility pod. Defaults to a slim Debian
-  ## that apt-installs `freeradius-utils` on first start. Override to any
-  ## image that already ships `radtest` / `radclient` if you need a
-  ## startup-cost-free pod or want to pin a specific FreeRADIUS client version.
+  ## Container image for the radtest utility pod. Defaults to `2stacks/radtest`
+  ## — Alpine-based, ~8 MB, ships `radtest` / `radclient` preinstalled (no
+  ## startup install step). Override to any image that already includes the
+  ## FreeRADIUS client tools if you want to pin a specific client version.
   ##
   ## @param radtest.image.registry Image registry
   ## @param radtest.image.repository Image repository
@@ -2357,8 +2357,8 @@ radtest:
   ##
   image:
     registry: docker.io
-    repository: debian
-    tag: bookworm-slim
+    repository: 2stacks/radtest
+    tag: latest
     digest: ""
     pullPolicy: IfNotPresent
     pullSecrets: []
@@ -2373,12 +2373,14 @@ radtest:
   ##
   resources: {}
   resourcesPreset: nano
-  ## Radtest container security context. The container needs to apt-install
-  ## on first start, so `readOnlyRootFilesystem` is off and the user is root.
-  ## Tighten later if you bake the image with the package pre-installed.
+  ## Radtest container security context. Tight by default (PSS "restricted"):
+  ## radtest/radclient only open a UDP socket, read stdin, and write to
+  ## stdout/stderr — no privileged ops, no on-disk state. Safe with a
+  ## non-root UID, dropped caps and a read-only root filesystem.
   ##
   ## @param radtest.containerSecurityContext.enabled Apply the security context to the radtest container.
   ## @param radtest.containerSecurityContext.runAsUser UID for the radtest container.
+  ## @param radtest.containerSecurityContext.runAsGroup GID for the radtest container.
   ## @param radtest.containerSecurityContext.runAsNonRoot Reject containers that try to run as root.
   ## @param radtest.containerSecurityContext.allowPrivilegeEscalation Block child processes from gaining more privileges than the parent.
   ## @param radtest.containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only.
@@ -2387,10 +2389,11 @@ radtest:
   ##
   containerSecurityContext:
     enabled: true
-    runAsUser: 0
-    runAsNonRoot: false
+    runAsUser: 65534
+    runAsGroup: 65534
+    runAsNonRoot: true
     allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true
     capabilities:
       drop: ["ALL"]
     seccompProfile:
