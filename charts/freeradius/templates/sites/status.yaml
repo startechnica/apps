@@ -58,6 +58,13 @@ data:
     		port = {{ .Values.containerPorts.status }}
     	}
 
+      log {
+        auth          = no      # suppress "Auth: Login OK/incorrect" lines
+        auth_badpass  = no
+        auth_goodpass = no
+        stripped_names = no
+      }
+
     	#
     	#  We recommend that you list ONLY management clients here.
     	#  i.e. NOT your NASes or Access Points, and for an ISP,
@@ -71,7 +78,7 @@ data:
     	#  Do you really want your partners seeing the internal details
     	#  of what your RADIUS server is doing?
     	#
-    	client admin {
+    	client probe {
     		ipaddr = 127.0.0.1
     		secret = $ENV{FREERADIUS_SITES_STATUS_SECRET}
     	}
