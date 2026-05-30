@@ -9,7 +9,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{- /* rcodes after a successful call differ per module: rlm_lua returns `ok`
        on RLM_MODULE_OK; rlm_rest returns `updated` when it parsed reply attrs
        from the JSON body, otherwise `ok`. Match both for rest to be safe. */ -}}
-{{- $okRcode := ternary "ok" "(ok || updated)" $isLua -}}
+{{- $okRcode := ternary "(ok)" "(ok || updated)" $isLua -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -30,8 +30,13 @@ data:
          policy.d/, so this lives in its own ConfigMap separate from the
          mods-enabled/keycloak module file. */}}
   keycloak: |
+    #  Files in policy.d/ are $INCLUDEd inside radiusd.conf's top-level
+    #  `policy { }` block, so each named policy is declared with bare
+    #  `<name> { }` syntax (no `policy` keyword prefix — that would parse as
+    #  a module call and fail with "Failed to find 'policy' as a module").
+
     #  Entry point. Call this from a virtual server's authorize {} section.
-    policy keycloak_authorize {
+    keycloak_authorize {
         {{- if .Values.keycloak.cache.enabled }}
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
         #  recent successful result cached. cache_keycloak returns ok on hit
@@ -69,7 +74,7 @@ data:
 
     #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
     #  to RADIUS reply attributes. First match wins.
-    policy keycloak_roles {
+    keycloak_roles {
     {{- range $i, $m := .Values.keycloak.roleMappings }}
         {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $.Values.keycloak.roleAttribute }}[*] == "{{ $m.role }}") {
             update reply {
