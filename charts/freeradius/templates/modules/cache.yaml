@@ -119,17 +119,24 @@ data:
     {{- range $name, $cfg := $kcInstances }}
     {{- $cacheName := include "freeradius.keycloak.cacheName" (dict "name" $name) }}
     {{- $cacheKey := include "freeradius.keycloak.cacheKey" (dict "name" $name) }}
+    {{- $roleAttr := default "Class" $cfg.roleAttribute }}
+    {{- $groupAttr := default "Class" $cfg.groupAttribute }}
+    {{- $emitGroupAttr := and $cfg.groupMappings (ne $roleAttr $groupAttr) }}
+    {{- $replyAttrs := dict }}
+    {{- range $m := default list $cfg.attributeMappings }}{{- $_ := set $replyAttrs $m.reply true }}{{- end }}
 
     # rlm_cache instance dedicated to Keycloak auth results for instance
     # `{{ $name }}`. Keyed on `{{ $cacheKey }}` — instance-namespaced to
     # prevent cross-instance cache hits on common usernames (a corp user
     # `alice` cache hit must not return roles to a branch user `alice`).
-    # Caches only the role attribute set by the mapper script
-    # (&control:{{ default "Class" $cfg.roleAttribute }}) so subsequent
+    # Caches the attributes the mapper script populated (role list, plus
+    # any of: group list, attribute-mapping reply attrs, refresh_token
+    # when refreshTokenCache is set) so subsequent
     # `{{ include "freeradius.keycloak.policyName" (dict "name" $name) }}` calls within TTL skip
-    # the ROPC + JWT-decode roundtrip to Keycloak. Role->reply mapping
-    # (`{{ include "freeradius.keycloak.rolesPolicyName" (dict "name" $name) }}`) still runs
-    # on every request, regenerating reply attrs from the cached role list.
+    # the ROPC + JWT-decode roundtrip to Keycloak. Role/group->reply
+    # mapping (`{{ include "freeradius.keycloak.rolesPolicyName" (dict "name" $name) }}` /
+    # `{{ include "freeradius.keycloak.groupsPolicyName" (dict "name" $name) }}`) still runs
+    # on every request, regenerating reply attrs from the cached lists.
     # Always Redis-backed — freeradius.validate.keycloakInstances hard-fails
     # if no Redis is configured for an instance with cache.enabled (cross-pod
     # sharing is the point; per-pod caches still help but the chart
@@ -141,7 +148,16 @@ data:
         max_entries = 0
 
         update {
-            &control:{{ default "Class" $cfg.roleAttribute }} += &control:{{ default "Class" $cfg.roleAttribute }}
+            &control:{{ $roleAttr }} += &control:{{ $roleAttr }}
+            {{- if $emitGroupAttr }}
+            &control:{{ $groupAttr }} += &control:{{ $groupAttr }}
+            {{- end }}
+            {{- range $reply, $_ := $replyAttrs }}
+            &reply:{{ $reply }} += &reply:{{ $reply }}
+            {{- end }}
+            {{- if $cfg.refreshTokenCache }}
+            &control:Tmp-String-9 := &control:Tmp-String-9
+            {{- end }}
         }
 
         redis {

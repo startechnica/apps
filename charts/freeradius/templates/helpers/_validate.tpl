@@ -310,6 +310,58 @@ freeradius: keycloak.instances.{{ $name }}.cache.enabled
     standardises the per-instance `cache_keycloak_{{ $name }}` on Redis so
     state is shared across replicas.
 {{- end -}}
+{{- $roleAttr := default "Class" $cfg.roleAttribute -}}
+{{- $groupAttr := default "Class" $cfg.groupAttribute -}}
+{{- if and $cfg.roleMappings $cfg.groupMappings (eq $roleAttr $groupAttr) }}
+freeradius: keycloak.instances.{{ $name }}.groupAttribute
+    `keycloak.instances.{{ $name }}` defines both `roleMappings` and
+    `groupMappings` but `roleAttribute` and `groupAttribute` resolve to
+    the same control attribute (`{{ $roleAttr }}`). Roles and groups would
+    accumulate in the same `&control:{{ $roleAttr }}[*]` list, and a
+    Keycloak role name colliding with a Keycloak group name would
+    falsely match either policy. Set `groupAttribute` to a different
+    attribute (e.g. `Filter-Id`, `Tunnel-Private-Group-Id`) or fold the
+    case into `attributeMappings`.
+{{- end -}}
+{{- range $i, $m := default list $cfg.groupMappings }}
+{{- if not $m.group }}
+freeradius: keycloak.instances.{{ $name }}.groupMappings[{{ $i }}].group
+    Each `groupMappings` entry must set `group`. Use the Keycloak Group
+    Membership client mapper output verbatim (full path, e.g.
+    `/branch-a` or `/branch-a/hotspot`).
+{{- end -}}
+{{- end -}}
+{{- range $i, $m := default list $cfg.attributeMappings }}
+{{- if or (not $m.claim) (not $m.reply) }}
+freeradius: keycloak.instances.{{ $name }}.attributeMappings[{{ $i }}]
+    Each `attributeMappings` entry must set both `claim` (the JWT claim
+    name, top-level only — dotted paths are NOT supported) and `reply`
+    (the FreeRADIUS reply-attribute name to populate).
+{{- end -}}
+{{- end -}}
+{{- range $i, $r := default list $cfg.require }}
+{{- if not $r }}
+freeradius: keycloak.instances.{{ $name }}.require[{{ $i }}]
+    Each `require` entry must be a non-empty JWT claim name (top-level
+    only). Truthy values pass; everything else rejects the request.
+{{- end -}}
+{{- end -}}
+{{- if and $cfg.introspect (not $cfg.clientSecret) (not $cfg.existingSecret) }}
+freeradius: keycloak.instances.{{ $name }}.introspect
+    `keycloak.instances.{{ $name }}.introspect: true` requires a client
+    secret — RFC 7662 introspection is HTTP-Basic-authenticated and
+    Keycloak rejects unauthenticated introspect calls (401). Set
+    `keycloak.instances.{{ $name }}.clientSecret` (inline, chart-managed
+    Secret) or `keycloak.instances.{{ $name }}.existingSecret` (BYO).
+{{- end -}}
+{{- if and $cfg.refreshTokenCache (or (not $cfg.cache) (not $cfg.cache.enabled)) }}
+freeradius: keycloak.instances.{{ $name }}.refreshTokenCache
+    `keycloak.instances.{{ $name }}.refreshTokenCache: true` requires
+    `keycloak.instances.{{ $name }}.cache.enabled: true` — the refresh
+    flow runs on cache HIT (validates the cached refresh_token against
+    Keycloak), and with the cache disabled there is no hit path to
+    extend.
+{{- end -}}
 {{- $prefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) -}}
 {{- range $envName := $extraEnvNames -}}
 {{- if hasPrefix $prefix $envName }}

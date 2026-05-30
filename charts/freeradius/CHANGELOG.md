@@ -4,6 +4,46 @@
 
 ### Added
 
+- **Keycloak shared-library extensions** — five additive features on
+  top of the existing JWT/ROPC flow, all configured per-instance under
+  `keycloak.instances.<name>`:
+  - `groupMappings` / `groupAttribute` — mirror of `roleMappings` keyed
+    off the Keycloak `groups` claim (Group Membership client mapper).
+    Group paths land in `&control:<groupAttribute>` (default `Class` —
+    validator rejects when the role and group attributes collide and
+    both mappings are non-empty). A `groups_keycloak[_<name>]` policy
+    block fires on `ok` alongside the existing `roles_keycloak[_<name>]`.
+  - `require` — list of JWT claim names that must be truthy after
+    decode (or introspection). Catches "user authenticated but
+    admin-disabled-since-issuance" via e.g. `require: [email_verified]`;
+    rejects early before any reply attrs are populated.
+  - `attributeMappings` — generic `{claim, reply}` engine copying any
+    top-level JWT claim verbatim to a reply attribute (e.g.
+    `preferred_username` → `User-Name`, `sub` → `Class`). The chosen
+    reply attrs are added to the cache `update {}` so they survive
+    cache hits.
+  - `introspect` — switches the post-ROPC claim source from local
+    JWT-payload decode to RFC 7662 `/realms/<realm>/protocol/openid-connect/token/introspect`.
+    Catches token revocation, admin-disabled-since-issuance, and realm
+    key rotation. Validator rejects `introspect: true` without a client
+    secret (Keycloak introspect calls are HTTP-Basic-authenticated).
+  - `refreshTokenCache` — only meaningful with `cache.enabled`. The
+    ROPC response's `refresh_token` rides out in `&control:Tmp-String-9`
+    so the cache layer stores it; a second module instance
+    `keycloak_<name>_validate` (rlm_python3 / rlm_lua, same script,
+    `func_authorize = "validate"`) is rendered, and the policy calls it
+    on cache hit. The validator attempts `grant_type=refresh_token`
+    against Keycloak: HTTP 200 confirms the session is alive, 400/401
+    triggers cache-entry invalidation + reject, network FAIL falls
+    through gracefully with the cached attrs intact.
+- `freeradius.keycloak.groupsPolicyName` / `validateModuleName` helpers
+  for the per-instance groups policy and the cache-hit validator
+  module-instance name (legacy default short form vs `*_<name>` suffix).
+- `freeradius.validate.keycloakInstances` now enforces the new schema:
+  group/role attribute collision, introspect-requires-secret,
+  refreshTokenCache-requires-cache, and well-formed
+  `attributeMappings` / `groupMappings` / `require` entries.
+
 - **Multi-instance Keycloak.** Configure any number of Keycloak backends
   under `keycloak.instances.<name>` (each with its own `mode` / `url` /
   `realm` / `clientId` / `clientSecret` / `tls` / `cache` /

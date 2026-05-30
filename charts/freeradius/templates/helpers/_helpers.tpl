@@ -232,6 +232,12 @@ true AND `instances` doesn't already define `default` AND
       "roleMapper" "client"
       "denyWithoutRole" false
       "roleMappings" (list)
+      "groupAttribute" "Class"
+      "groupMappings" (list)
+      "attributeMappings" (list)
+      "require" (list)
+      "introspect" false
+      "refreshTokenCache" false
       "existingConfigMap" ""
       "existingSecret" "" -}}
 {{- $instances := dict -}}
@@ -316,6 +322,21 @@ values files; non-default instances suffix the name everywhere.
 {{- define "freeradius.keycloak.rolesPolicyName" -}}
 {{- if eq .name "default" -}}roles_keycloak
 {{- else -}}roles_keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.groupsPolicyName" -}}
+{{- if eq .name "default" -}}groups_keycloak
+{{- else -}}groups_keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.validateModuleName" -}}
+{{- if eq .name "default" -}}
+{{- if eq .mode "python" -}}keycloak_python_validate
+{{- else -}}keycloak_lua_validate
+{{- end -}}
+{{- else -}}keycloak_{{ .name }}_validate
 {{- end -}}
 {{- end -}}
 

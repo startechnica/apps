@@ -1368,6 +1368,11 @@ modsConfig: {}
 ## @param keycloak.cache.enabled [DEPRECATED — use `keycloak.instances.default.cache.enabled`] Render a `cache_keycloak_default` rlm_cache instance and wire it into the policy.
 ## @param keycloak.cache.ttl [DEPRECATED — use `keycloak.instances.default.cache.ttl`] Cache TTL (seconds).
 ##
+## Note: the deprecation shim does NOT mirror the newer per-instance keys
+## (`groupAttribute`, `groupMappings`, `require`, `attributeMappings`,
+## `introspect`, `refreshTokenCache`). To use any of those, migrate to
+## `keycloak.instances.default: { ... }`.
+##
 ## --- Per-instance schema ----------------------------------------------
 ##
 ## Each top-level key under `keycloak.instances` is a FreeRADIUS module
@@ -1399,6 +1404,48 @@ modsConfig: {}
 ## (`FREERADIUS_KEYCLOAK_CLIENT_SECRET`); CA mount `/etc/freeradius/certs-keycloak/`;
 ## script filenames `keycloak.lua` / `keycloak.py`.
 ##
+## Per-instance extras (also available on the legacy top-level when
+## migrated to `keycloak.instances.default`):
+##
+##   groupAttribute / groupMappings — mirror of role mapping, but reads
+##     the Keycloak `groups` claim (emitted by the "Group Membership" client
+##     mapper, e.g. `["/branch-a", "/branch-a/hotspot"]`) and matches each
+##     value against `groupMappings[*].group`. First match wins; same reply
+##     shape as `roleMappings`. The group list lands in
+##     `&control:<groupAttribute>` (default `Class` — collides with the role
+##     default, validator rejects that combination).
+##
+##   require — list of JWT claim names that must be truthy after decode (or
+##     introspection). Rejects early when any guard fails — e.g.
+##     `require: [email_verified]` blocks unverified-email logins even when
+##     ROPC itself succeeded. Cheap defence against
+##     "user authenticated but admin-disabled-since-issuance".
+##
+##   attributeMappings — generic `[{claim, reply}]` engine that copies any
+##     JWT claim verbatim to a reply attribute. `claim` is the JWT key
+##     (top-level only; dotted-path is NOT supported); `reply` is a
+##     FreeRADIUS reply-attribute name. Lower-level than role/group mapping
+##     (no per-value translation table) — use when you want
+##     `preferred_username` → `User-Name`, `sub` → `Class`, custom user
+##     attribute → `Filter-Id`, etc. Caches the chosen reply attrs so
+##     resumption after a cache hit preserves them.
+##
+##   introspect — switch from local JWT decode to RFC 7662
+##     `/realms/<realm>/protocol/openid-connect/token/introspect`. Catches
+##     token revocation, admin-disabled-since-issuance, realm key rotation
+##     at the cost of one extra HTTPS call per auth (or per cache miss).
+##     Requires `clientSecret` (introspection is Basic-Auth-authenticated).
+##
+##   refreshTokenCache — only meaningful when `cache.enabled`. Stores the
+##     `refresh_token` in `&control:Tmp-String-9` and renders a second
+##     module instance `keycloak_<name>_validate` (rlm_python3 / rlm_lua
+##     with `func_authorize = "validate"`). The policy calls it on cache
+##     hit: it attempts `grant_type=refresh_token` against Keycloak; if
+##     Keycloak rejects (user disabled, password changed, session
+##     revoked) the cache entry is invalidated and the request is
+##     rejected. Cuts the cost of role re-evaluation while keeping
+##     invalidation honest. Adds one HTTPS round-trip on every cache hit.
+##
 ## @param keycloak.instances [object] Named Keycloak backends. Map key = FreeRADIUS module instance name (matching `^[a-z][a-z0-9_]*$`); value = backend config dict (mirrors the legacy top-level keys). Bind a NAS to one with `clients.<name>.keycloak: <instance-name>`. The `default` instance, when present, is also the auto-wired fallback (see `wireDefaultSite`).
 ## instances:
 ##   default:
@@ -1418,10 +1465,22 @@ modsConfig: {}
 ##       ttl: 300
 ##     tls:
 ##       existingSecret: corp-keycloak-ca
+##     require:
+##       - email_verified
 ##     roleMappings:
 ##       - role: network-admin
 ##         reply:
 ##           - 'Service-Type := Administrative-User'
+##     groupAttribute: Filter-Id
+##     groupMappings:
+##       - group: "/branch-a"
+##         reply:
+##           - 'Tunnel-Private-Group-Id:0 := "10"'
+##     attributeMappings:
+##       - claim: preferred_username
+##         reply: User-Name
+##     introspect: true
+##     refreshTokenCache: true
 ##   nas2:
 ##     mode: lua
 ##     url: https://kc.branch.example.com
@@ -1474,6 +1533,9 @@ keycloak:
   #       - 'Tunnel-Private-Group-Id:0 := "99"'
   #       - 'Session-Timeout := 3600'
 
+  ## Newer per-instance fields are NOT mirrored by the legacy top-level
+  ## shim. Set them on `keycloak.instances.<name>` directly.
+  ##
   instances: {}
 ## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
 ##

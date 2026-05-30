@@ -9,8 +9,8 @@ Per-instance rlm_python3 wrapper scripts. Renders one ConfigMap per
 config is baked in at chart-render time by Helm — only `client_secret`
 (sensitive) is read from env, sourced from the per-instance
 `<fullname>-keycloak[-<name>]` Secret via the Deployment. Each wrapper
-delegates `authorize(p)` / `accounting(p)` to `keycloak_common`
-(rendered separately by `keycloak-common-py.yaml`).
+delegates `authorize(p)` / `accounting(p)` / `validate(p)` to
+`keycloak_common` (rendered separately by `keycloak-common-py.yaml`).
 
   default + python → `<fullname>-keycloak-python`          key: `keycloak.py`
   <name>  + python → `<fullname>-keycloak-<name>-python`   key: `keycloak_<name>.py`
@@ -21,6 +21,11 @@ so `import keycloak_common` resolves to the shared file.
 
 rlm_python3 is bundled in the default `freeradius/freeradius-server:3.2.8`
 image — no image rebuild needed.
+
+`groupMappings` / `attributeMappings` / `require` are rendered into the
+Python script as JSON literals. JSON is a syntactic subset of Python
+literal syntax for the types we use here (strings, numbers, lists, and
+dicts containing only those) — no `json.loads(...)` round-trip needed.
 */}}
 
 {{- if .Values.keycloak.enabled }}
@@ -56,17 +61,23 @@ data:
     import keycloak_common
 
     _CONFIG = {
-        "instance":       "{{ $name }}",
-        "role_attribute": "{{ default "Class" $cfg.roleAttribute }}",
-        "base_url":       "{{ $cfg.url }}",
-        "realm":          "{{ $cfg.realm }}",
-        "client_id":      "{{ default "freeradius" $cfg.clientId }}",
-        "client_secret":  os.environ.get("{{ $envPrefix }}CLIENT_SECRET"),
-        "scope":          "{{ default "" $cfg.scope }}",
-        "role_mapper":    "{{ default "client" $cfg.roleMapper }}",
-        "ca_file":        {{ if $hasTls }}"{{ include "freeradius.keycloak.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}None{{ end }},
-        "insecure":       {{ ternary "True" "False" $cfg.tls.insecure }},
-        "timeout":        {{ default "4.0" $cfg.connectTimeout }},
+        "instance":            "{{ $name }}",
+        "role_attribute":      "{{ default "Class" $cfg.roleAttribute }}",
+        "base_url":            "{{ $cfg.url }}",
+        "realm":               "{{ $cfg.realm }}",
+        "client_id":           "{{ default "freeradius" $cfg.clientId }}",
+        "client_secret":       os.environ.get("{{ $envPrefix }}CLIENT_SECRET"),
+        "scope":               "{{ default "" $cfg.scope }}",
+        "role_mapper":         "{{ default "client" $cfg.roleMapper }}",
+        "ca_file":             {{ if $hasTls }}"{{ include "freeradius.keycloak.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}None{{ end }},
+        "insecure":            {{ ternary "True" "False" $cfg.tls.insecure }},
+        "timeout":             {{ default "4.0" $cfg.connectTimeout }},
+        "group_attribute":     "{{ default "Class" $cfg.groupAttribute }}",
+        "group_mappings":      {{ $cfg.groupMappings | default list | toJson }},
+        "attribute_mappings":  {{ $cfg.attributeMappings | default list | toJson }},
+        "required":            {{ $cfg.require | default list | toJson }},
+        "introspect":          {{ ternary "True" "False" $cfg.introspect }},
+        "refresh_token_cache": {{ ternary "True" "False" $cfg.refreshTokenCache }},
     }
 
 
@@ -76,6 +87,10 @@ data:
 
     def accounting(p):
         return keycloak_common.accounting(p)
+
+
+    def validate(p):
+        return keycloak_common.validate(p, _CONFIG)
 {{- end }}
 {{- end }}
 {{- end }}

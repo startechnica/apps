@@ -12,23 +12,30 @@ each configured Keycloak backend. One ConfigMap per resolved instance:
   <name>  → `<fullname>-keycloak-<name>`    key: `keycloak_<name>`
 
 Mounted into the pod at `mods-enabled/<key>` via the Deployment. Each
-ConfigMap holds exactly one FreeRADIUS module block typed by the
-instance's `mode`:
+ConfigMap holds one (or two, when `refreshTokenCache: true`) FreeRADIUS
+module blocks typed by the instance's `mode`:
 
   - `lua keycloak_<name>` ............... rlm_lua wrapper (rlm_lua not
     bundled in the default image — bring `freeradius-lua` + lua-cjson +
     luasec/luasocket)
   - `python3 keycloak_<name>` ........... rlm_python3 wrapper (bundled)
-  - `rest keycloak_<name>` .............. rlm_rest doing the ROPC POST
+
+When `refreshTokenCache: true`, a SECOND module instance is appended:
+
+  - `lua keycloak_<name>_validate` / `python3 keycloak_<name>_validate`
+    — same script file, binds `func_authorize = "validate"`. Called by
+    the policy on cache hit to check the cached refresh_token is still
+    accepted by Keycloak; rejects when the user has been disabled /
+    password rotated / session revoked since the cache entry was stored.
 
 For the implicit `default` instance the module instance name keeps the
-legacy form `keycloak_lua` / `keycloak_python` (no
-`_default` suffix), so existing values files and dependent unlang stay
-working unchanged.
+legacy form `keycloak_lua` / `keycloak_python` (no `_default` suffix);
+the validate sibling is `keycloak_lua_validate` / `keycloak_python_validate`.
 
 BYO override: setting `keycloak.instances.<name>.existingConfigMap` skips
 the chart-rendered ConfigMap and reuses the named one (the user is
-responsible for the right key name).
+responsible for the right key name AND for emitting the validate
+sibling when refreshTokenCache is in play).
 */}}
 
 {{- if .Values.keycloak.enabled }}
@@ -37,9 +44,12 @@ responsible for the right key name).
 {{- range $name, $cfg := $resolved.instances }}
 {{- if not $cfg.existingConfigMap }}
 {{- $modName := include "freeradius.keycloak.moduleName" (dict "name" $name "mode" $cfg.mode) }}
+{{- $validateModName := include "freeradius.keycloak.validateModuleName" (dict "name" $name "mode" $cfg.mode) }}
 {{- $modKey := include "freeradius.keycloak.modKey" (dict "name" $name) }}
 {{- $cmName := ternary (printf "%s-keycloak" $fullname) (printf "%s-keycloak-%s" $fullname $name) (eq $name "default") }}
 {{- $envPrefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) }}
+{{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
+{{- $scriptBase := trimSuffix ".py" (trimSuffix ".lua" $scriptKey) }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -60,27 +70,54 @@ data:
     ## delegates to the shared `keycloak_common.lua` library. Only
     ## `{{ $envPrefix }}CLIENT_SECRET` (sensitive) rides in via env.
     lua {{ $modName }} {
-        filename = "/etc/freeradius/scripts/{{ include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}"
+        filename = "/etc/freeradius/scripts/{{ $scriptKey }}"
         func_authorize = "authorize"
         func_accounting = "accounting"
     }
+    {{- if $cfg.refreshTokenCache }}
+
+    ## Cache-hit refresh-token validator for `{{ $name }}`. Same script
+    ## as `{{ $modName }}`, binds `func_authorize = "validate"`. Reads
+    ## `&request:Tmp-String-9` (the cached refresh_token, moved there
+    ## from `&control:` by the policy on cache hit) and calls Keycloak's
+    ## /token endpoint with `grant_type=refresh_token` to confirm the
+    ## session is still alive.
+    lua {{ $validateModName }} {
+        filename = "/etc/freeradius/scripts/{{ $scriptKey }}"
+        func_authorize = "validate"
+    }
+    {{- end }}
     {{- else if eq $cfg.mode "python" }}
     ## rlm_python3 instance running the Keycloak authenticator/mapper for `{{ $name }}`.
     ## Bundled in the default `freeradius/freeradius-server:3.2.8` image.
-    ## The Python module file is `{{ include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}`
-    ## (mounted under `python_path`) — a per-instance wrapper with config
-    ## baked in by Helm that delegates to the shared `keycloak_common.py`
-    ## library. Only `{{ $envPrefix }}CLIENT_SECRET` (sensitive) rides in via env.
+    ## The Python module file is `{{ $scriptKey }}` (mounted under
+    ## `python_path`) — a per-instance wrapper with config baked in by
+    ## Helm that delegates to the shared `keycloak_common.py` library.
+    ## Only `{{ $envPrefix }}CLIENT_SECRET` (sensitive) rides in via env.
     python3 {{ $modName }} {
         python_path = "/etc/freeradius/scripts"
         # rlm_python3 requires `mod_<section>` paired with each
         # `func_<section>` — the top-level `module` directive alone is
         # insufficient and triggers "Instantiation failed" at startup.
-        mod_authorize  = "{{ trimSuffix ".py" (include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode)) }}"
+        mod_authorize  = "{{ $scriptBase }}"
         func_authorize = "authorize"
-        mod_accounting  = "{{ trimSuffix ".py" (include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode)) }}"
+        mod_accounting  = "{{ $scriptBase }}"
         func_accounting = "accounting"
     }
+    {{- if $cfg.refreshTokenCache }}
+
+    ## Cache-hit refresh-token validator for `{{ $name }}`. Same Python
+    ## module as `{{ $modName }}`, binds `func_authorize = "validate"`.
+    ## Reads `&request:Tmp-String-9` (the cached refresh_token, moved
+    ## there from `&control:` by the policy on cache hit) and calls
+    ## Keycloak's /token endpoint with `grant_type=refresh_token` to
+    ## confirm the session is still alive.
+    python3 {{ $validateModName }} {
+        python_path = "/etc/freeradius/scripts"
+        mod_authorize  = "{{ $scriptBase }}"
+        func_authorize = "validate"
+    }
+    {{- end }}
     {{- end }}
 {{- end }}
 {{- end }}

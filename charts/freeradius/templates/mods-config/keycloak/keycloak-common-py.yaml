@@ -9,8 +9,9 @@ script path once per release (regardless of how many python-mode
 instances exist). Per-instance wrappers (rendered by
 `keycloak-conf-py.yaml`) gather config from env vars and pass a
 plain dict into `keycloak_common.authorize(p, cfg)` /
-`keycloak_common.accounting(p)`. The library itself touches NO env vars
-and has NO module-level config — pure logic over the dict passed in.
+`keycloak_common.accounting(p)` / `keycloak_common.validate(p, cfg)`.
+The library itself touches NO env vars and has NO module-level config —
+pure logic over the dict passed in.
 
 Rendered whenever `keycloak.enabled: true` — the body is pure static
 logic, so an unused ConfigMap when no python instance exists is just
@@ -41,19 +42,26 @@ data:
 
         keycloak_common.authorize(p, cfg)
         keycloak_common.accounting(p)
+        keycloak_common.validate(p, cfg)
 
     Expected keys in `cfg`:
-        instance        str   — instance name (for logs)
-        role_attribute  str   — &control:<this> populated per role
-        base_url        str   — Keycloak server URL
-        realm           str   — realm name
-        client_id       str   — OIDC client_id
-        client_secret   str   — confidential-client secret (or "")
-        scope           str   — OAuth scope (or "")
-        role_mapper     str   — "client" or "realm"
-        ca_file         str   — path to PEM CA (or None)
-        insecure        bool  — skip TLS verify (dev only)
-        timeout         float — connect timeout (seconds)
+        instance              str         instance name (for logs)
+        role_attribute        str         &control:<this> populated per role
+        base_url              str         Keycloak server URL
+        realm                 str         realm name
+        client_id             str         OIDC client_id
+        client_secret         str         confidential-client secret (or "")
+        scope                 str         OAuth scope (or "")
+        role_mapper           str         "client" or "realm"
+        ca_file               str         path to PEM CA (or None)
+        insecure              bool        skip TLS verify (dev only)
+        timeout               float       connect timeout (seconds)
+        group_attribute       str         &control:<this> populated per group
+        group_mappings        list        non-empty -> caller wants groups
+        attribute_mappings    list        [{"claim": str, "reply": str}, ...]
+        required              list        JWT claim names that must be truthy
+        introspect            bool        RFC 7662 introspection over local decode
+        refresh_token_cache   bool        store refresh_token in &control:Tmp-String-9
     """
 
     import base64
@@ -81,6 +89,15 @@ data:
         radiusd = _Stub()
 
 
+    # Request-list attribute that carries the cached refresh_token from
+    # cache hit into validate(). Picked from the built-in Tmp-* range so
+    # no chart-managed dictionary is needed. The policy copies
+    # &control:Tmp-String-9 -> &request:Tmp-String-9 before calling the
+    # validate module, because rlm_python3 only exposes the request list
+    # to the script.
+    _REFRESH_TOKEN_ATTR = "Tmp-String-9"
+
+
     def _ssl_context(ca_file, insecure):
         if insecure:
             return ssl._create_unverified_context()
@@ -91,11 +108,15 @@ data:
 
 
     def _decode_jwt_claims(token):
+        """Base64url-decode a JWT's payload segment without verifying the
+        signature. Safe here because Keycloak just issued the token via
+        ROPC (so credentials were already validated); we only READ
+        claims, we don't trust them for security decisions."""
         try:
             payload = token.split(".", 2)[1]
             payload += "=" * (-len(payload) % 4)
             return json.loads(base64.urlsafe_b64decode(payload))
-        except (IndexError, ValueError, TypeError, json.JSONDecodeError):
+        except (IndexError, ValueError):
             return {}
 
 
@@ -105,12 +126,37 @@ data:
         return list((claims.get("resource_access") or {}).get(client_id, {}).get("roles", []))
 
 
-    def _ropc(token_url, fields, timeout, ca_file, insecure):
+    def _groups_from_claims(claims):
+        """Keycloak's `Group Membership` client mapper emits a flat list of
+        full group paths under the `groups` claim, e.g.
+        ["/branch-a", "/branch-a/hotspot"]. We pass it through verbatim;
+        path-shape decisions belong in the values-file mapping."""
+        return list(claims.get("groups") or [])
+
+
+    def _check_required(claims, required):
+        """Return the first required claim name that is missing or falsy,
+        else None. Truthy values (non-empty strings, true, non-zero
+        numbers, populated lists) pass; everything else fails."""
+        for name in (required or []):
+            if not claims.get(name):
+                return name
+        return None
+
+
+    def _basic_auth(client_id, client_secret):
+        raw = "{}:{}".format(client_id, client_secret).encode("ascii")
+        return "Basic " + base64.b64encode(raw).decode("ascii")
+
+
+    def _post_form(endpoint, fields, headers, timeout, ca_file, insecure):
+        """POST application/x-www-form-urlencoded. Returns (status, body)
+        where body is parsed JSON or None on parse failure; status is None
+        on network error."""
         data = urllib.parse.urlencode(fields).encode("ascii")
-        req = urllib.request.Request(
-            token_url, data=data, method="POST",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
+        merged = {"Content-Type": "application/x-www-form-urlencoded"}
+        merged.update(headers or {})
+        req = urllib.request.Request(endpoint, data=data, method="POST", headers=merged)
         try:
             with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context(ca_file, insecure)) as resp:
                 raw = resp.read()
@@ -119,23 +165,65 @@ data:
             status = e.code
             try:
                 raw = e.read()
-            except Exception:
+            except OSError:
                 raw = b""
         except (urllib.error.URLError, OSError):
             return None, None
         try:
             return status, json.loads(raw or b"null")
-        except (ValueError, json.JSONDecodeError):
+        except ValueError:
             return status, None
+
+
+    def _ropc(token_url, fields, timeout, ca_file, insecure):
+        return _post_form(token_url, fields, {}, timeout, ca_file, insecure)
+
+
+    def _introspect(introspect_url, token, client_id, client_secret, timeout, ca_file, insecure):
+        """RFC 7662 introspection. Returns the introspection response
+        dict when `active: true`, else None (revoked, expired, or
+        endpoint error). client_secret MUST be set — Keycloak rejects
+        unauthenticated introspect calls."""
+        headers = {"Authorization": _basic_auth(client_id, client_secret)}
+        status, body = _post_form(introspect_url, {"token": token}, headers,
+                                  timeout, ca_file, insecure)
+        if status == 200 and isinstance(body, dict) and body.get("active"):
+            return body
+        return None
+
+
+    def _refresh(token_url, refresh_token, client_id, client_secret, timeout, ca_file, insecure):
+        fields = {
+            "grant_type":    "refresh_token",
+            "client_id":     client_id,
+            "refresh_token": refresh_token,
+        }
+        if client_secret:
+            fields["client_secret"] = client_secret
+        return _post_form(token_url, fields, {}, timeout, ca_file, insecure)
+
+
+    def _kc_urls(cfg):
+        base = "{}/realms/{}/protocol/openid-connect".format(cfg["base_url"], cfg["realm"])
+        return base + "/token", base + "/token/introspect"
 
 
     def authorize(p, cfg):
         """Per-call authorize entry point.
 
-        ROPC password grant to Keycloak's token endpoint, decode JWT
-        claims, extract roles into `&control:<role_attribute>`. NOOP if
-        no User-Password (not a cleartext request); FAIL on
-        network/misconfig; REJECT on Keycloak 400/401."""
+        ROPC password grant to Keycloak's token endpoint. The access_token's
+        claims drive: account-status gating (`required`), role extraction
+        (-> &control:<role_attribute>), group extraction
+        (-> &control:<group_attribute>), and generic claim->reply mapping
+        (-> &reply:<...>). When `introspect` is set, /introspect supplies the
+        claims instead of a local JWT decode (catches revocation /
+        admin-disable-since-issuance). When `refresh_token_cache` is set, the
+        ROPC response's refresh_token rides out in &control:Tmp-String-9 so
+        the cache layer stores it for validate() to consume on cache hit.
+
+        NOOP if no User-Password (not a cleartext request); FAIL on
+        network/misconfig; REJECT on Keycloak 400/401 or required-claim
+        failure."""
         attrs = {name: value for name, value in p}
         username = attrs.get("User-Name")
         password = attrs.get("User-Password")
@@ -145,10 +233,14 @@ data:
         instance = cfg["instance"]
         if not cfg.get("base_url") or not cfg.get("realm"):
             radiusd.radlog(radiusd.L_ERR,
-                "keycloak[{}]: base_url / realm not set".format(instance))
+                f"keycloak[{instance}]: base_url / realm not set")
             return radiusd.RLM_MODULE_FAIL
 
-        token_url = "{}/realms/{}/protocol/openid-connect/token".format(cfg["base_url"], cfg["realm"])
+        token_url, introspect_url = _kc_urls(cfg)
+        ca_file = cfg.get("ca_file")
+        insecure = cfg.get("insecure", False)
+        timeout = cfg["timeout"]
+
         fields = {
             "grant_type": "password",
             "client_id":  cfg["client_id"],
@@ -160,38 +252,121 @@ data:
         if cfg.get("scope"):
             fields["scope"] = cfg["scope"]
 
-        status, body = _ropc(
-            token_url, fields,
-            cfg["timeout"], cfg.get("ca_file"), cfg.get("insecure", False),
-        )
+        status, body = _ropc(token_url, fields, timeout, ca_file, insecure)
 
         if status is None:
             radiusd.radlog(radiusd.L_ERR,
-                "keycloak[{}]: token request failed (network/TLS)".format(instance))
+                f"keycloak[{instance}]: token request failed (network/TLS)")
             return radiusd.RLM_MODULE_FAIL
         if status in (400, 401):
             radiusd.radlog(radiusd.L_AUTH,
-                "keycloak[{}]: ROPC rejected for {} (HTTP {})".format(instance, username, status))
+                f"keycloak[{instance}]: ROPC rejected for {username} (HTTP {status})")
             return radiusd.RLM_MODULE_REJECT
         if status != 200 or not body or "access_token" not in body:
             radiusd.radlog(radiusd.L_ERR,
-                "keycloak[{}]: unexpected token response for {} (HTTP {})".format(instance, username, status))
+                f"keycloak[{instance}]: unexpected token response for {username} (HTTP {status})")
             return radiusd.RLM_MODULE_FAIL
 
-        claims = _decode_jwt_claims(body["access_token"])
-        roles  = _roles_from_claims(claims, cfg.get("role_mapper", "client"), cfg["client_id"])
+        access_token  = body["access_token"]
+        refresh_token = body.get("refresh_token")
+
+        if cfg.get("introspect"):
+            if not cfg.get("client_secret"):
+                radiusd.radlog(radiusd.L_ERR,
+                    f"keycloak[{instance}]: introspect requires client_secret")
+                return radiusd.RLM_MODULE_FAIL
+            claims = _introspect(introspect_url, access_token,
+                                 cfg["client_id"], cfg["client_secret"],
+                                 timeout, ca_file, insecure)
+            if claims is None:
+                radiusd.radlog(radiusd.L_AUTH,
+                    f"keycloak[{instance}]: introspect rejected token for {username}")
+                return radiusd.RLM_MODULE_REJECT
+        else:
+            claims = _decode_jwt_claims(access_token)
+
+        missing = _check_required(claims, cfg.get("required"))
+        if missing:
+            radiusd.radlog(radiusd.L_AUTH,
+                f"keycloak[{instance}]: required claim `{missing}` not satisfied for {username}")
+            return radiusd.RLM_MODULE_REJECT
+
+        role_mapper = cfg.get("role_mapper", "client")
+        roles  = _roles_from_claims(claims, role_mapper, cfg["client_id"])
+        groups = _groups_from_claims(claims) if cfg.get("group_mappings") else []
 
         config_attrs = []
+        reply_attrs  = []
+
         if roles:
             for role in roles:
                 radiusd.radlog(radiusd.L_DBG,
-                    "keycloak[{}]: role -> {}".format(instance, role))
+                    f"keycloak[{instance}]: role -> {role}")
                 config_attrs.append((cfg["role_attribute"], role))
         else:
             radiusd.radlog(radiusd.L_WARN,
-                "keycloak[{}]: no {} roles for {} (CLIENT_ID={})".format(instance, cfg.get("role_mapper", "client"), username, cfg["client_id"]))
+                f"keycloak[{instance}]: no {role_mapper} roles for {username} (CLIENT_ID={cfg['client_id']})")
 
-        return (radiusd.RLM_MODULE_OK, (), tuple(config_attrs))
+        if groups:
+            ga = cfg.get("group_attribute", "Class")
+            for group in groups:
+                radiusd.radlog(radiusd.L_DBG,
+                    f"keycloak[{instance}]: group -> {group}")
+                config_attrs.append((ga, group))
+
+        for m in (cfg.get("attribute_mappings") or []):
+            val = claims.get(m.get("claim"))
+            if val is None:
+                continue
+            reply_attrs.append((m["reply"], str(val)))
+
+        if cfg.get("refresh_token_cache") and refresh_token:
+            config_attrs.append((_REFRESH_TOKEN_ATTR, refresh_token))
+
+        return (radiusd.RLM_MODULE_OK, tuple(reply_attrs), tuple(config_attrs))
+
+
+    def validate(p, cfg):
+        """Cache-hit freshness check. Called via the second module
+        instance `<modName>_validate` when `refresh_token_cache: true`.
+
+        The policy copies &control:Tmp-String-9 (the cached refresh_token,
+        set by authorize() on the previous miss) to &request:Tmp-String-9
+        before calling us. We attempt `grant_type=refresh_token` against
+        Keycloak: HTTP 200 means the Keycloak session is still alive,
+        400/401 means revoked (user disabled, password rotated, session
+        ended), anything else is treated as a network blip and propagates
+        as FAIL so the policy can fall through to a fresh ROPC instead of
+        wrongly rejecting the user."""
+        attrs = {name: value for name, value in p}
+        refresh_token = attrs.get(_REFRESH_TOKEN_ATTR)
+        instance = cfg["instance"]
+
+        if not refresh_token:
+            return radiusd.RLM_MODULE_NOOP
+
+        if not cfg.get("base_url") or not cfg.get("realm"):
+            radiusd.radlog(radiusd.L_ERR,
+                f"keycloak[{instance}]: base_url / realm not set (validate)")
+            return radiusd.RLM_MODULE_FAIL
+
+        token_url, _ = _kc_urls(cfg)
+        status, _ = _refresh(token_url, refresh_token,
+                             cfg["client_id"], cfg.get("client_secret", ""),
+                             cfg["timeout"], cfg.get("ca_file"),
+                             cfg.get("insecure", False))
+
+        if status == 200:
+            radiusd.radlog(radiusd.L_DBG,
+                f"keycloak[{instance}]: refresh-token validated (cache hit)")
+            return radiusd.RLM_MODULE_OK
+        if status in (400, 401):
+            radiusd.radlog(radiusd.L_AUTH,
+                f"keycloak[{instance}]: refresh-token rejected (cache hit -> session revoked)")
+            return radiusd.RLM_MODULE_REJECT
+        radiusd.radlog(radiusd.L_ERR,
+            f"keycloak[{instance}]: refresh-token request failed (HTTP {status})")
+        return radiusd.RLM_MODULE_FAIL
 
 
     def accounting(p):

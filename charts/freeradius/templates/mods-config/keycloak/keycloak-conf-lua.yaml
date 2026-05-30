@@ -9,8 +9,8 @@ Per-instance rlm_lua wrapper scripts. Renders one ConfigMap per
 is baked in at chart-render time by Helm — only `client_secret`
 (sensitive) is read from env, sourced from the per-instance
 `<fullname>-keycloak[-<name>]` Secret via the Deployment. Each wrapper
-delegates `authorize(p)` / `accounting(p)` to `keycloak_common`
-(rendered separately by `keycloak-common-lua.yaml`).
+delegates `authorize(p)` / `accounting(p)` / `validate(p)` to
+`keycloak_common` (rendered separately by `keycloak-common-lua.yaml`).
 
   default + lua → `<fullname>-keycloak-lua`            key: `keycloak.lua`
   <name>  + lua → `<fullname>-keycloak-<name>-lua`     key: `keycloak_<name>.lua`
@@ -23,6 +23,12 @@ file.
 rlm_lua is NOT bundled in the default `freeradius/freeradius-server:3.2.8`
 image — you'll need a custom image with `freeradius-lua`, `lua-cjson`,
 `luasec`, and `luasocket` baked in.
+
+`groupMappings` / `attributeMappings` / `require` go in as JSON strings
+decoded once at script load via cjson.decode — Lua table literals from
+arbitrary user data are noisy to render correctly from Helm; the JSON
+round-trip is cheap and survives any edge case the user can express in
+values.yaml.
 */}}
 
 {{- if .Values.keycloak.enabled }}
@@ -54,20 +60,27 @@ data:
     -- (`{{ $envPrefix }}CLIENT_SECRET`).
 
     package.path = package.path .. ";/etc/freeradius/scripts/?.lua"
-    local common = require("keycloak_common")
+    local common  = require("keycloak_common")
+    local _cjson  = require("cjson")
 
     local CONFIG = {
-        instance       = "{{ $name }}",
-        role_attribute = "{{ default "Class" $cfg.roleAttribute }}",
-        base_url       = "{{ $cfg.url }}",
-        realm          = "{{ $cfg.realm }}",
-        client_id      = "{{ default "freeradius" $cfg.clientId }}",
-        client_secret  = os.getenv("{{ $envPrefix }}CLIENT_SECRET"),
-        scope          = "{{ default "" $cfg.scope }}",
-        role_mapper    = "{{ default "client" $cfg.roleMapper }}",
-        ca_file        = {{ if $hasTls }}"{{ include "freeradius.keycloak.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}nil{{ end }},
-        insecure       = {{ ternary "true" "false" $cfg.tls.insecure }},
-        timeout        = {{ default "4.0" $cfg.connectTimeout }},
+        instance            = "{{ $name }}",
+        role_attribute      = "{{ default "Class" $cfg.roleAttribute }}",
+        base_url            = "{{ $cfg.url }}",
+        realm               = "{{ $cfg.realm }}",
+        client_id           = "{{ default "freeradius" $cfg.clientId }}",
+        client_secret       = os.getenv("{{ $envPrefix }}CLIENT_SECRET"),
+        scope               = "{{ default "" $cfg.scope }}",
+        role_mapper         = "{{ default "client" $cfg.roleMapper }}",
+        ca_file             = {{ if $hasTls }}"{{ include "freeradius.keycloak.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}nil{{ end }},
+        insecure            = {{ ternary "true" "false" $cfg.tls.insecure }},
+        timeout             = {{ default "4.0" $cfg.connectTimeout }},
+        group_attribute     = "{{ default "Class" $cfg.groupAttribute }}",
+        group_mappings      = _cjson.decode([[{{ $cfg.groupMappings | default list | toJson }}]]),
+        attribute_mappings  = _cjson.decode([[{{ $cfg.attributeMappings | default list | toJson }}]]),
+        required            = _cjson.decode([[{{ $cfg.require | default list | toJson }}]]),
+        introspect          = {{ ternary "true" "false" $cfg.introspect }},
+        refresh_token_cache = {{ ternary "true" "false" $cfg.refreshTokenCache }},
     }
 
     function authorize(p)
@@ -76,6 +89,10 @@ data:
 
     function accounting(p)
         return common.accounting(p)
+    end
+
+    function validate(p)
+        return common.validate(p, CONFIG)
     end
 {{- end }}
 {{- end }}
