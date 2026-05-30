@@ -85,6 +85,9 @@ spec:
         {{- if .Values.modsConfig }}
         checksum/configmap-mods-config: {{ include (print $.Template.BasePath "/configmaps/mods-config.yaml") . | sha256sum }}
         {{- end }}
+        {{- if not .Values.clients.existingConfigMapName }}
+        checksum/configmap-clients: {{ include (print $.Template.BasePath "/configmaps/clients.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.keycloak.enabled }}
         checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak.yaml") . | sha256sum }}
         checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-policy.yaml") . | sha256sum }}
@@ -393,6 +396,10 @@ spec:
               mountPath: /etc/freeradius/radiusd.conf
               subPath: radiusd.conf
             {{- end }}
+            - name: freeradius-clients
+              mountPath: /etc/freeradius/clients.conf
+              subPath: clients.conf
+              readOnly: true
             {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
             - name: custom-init-scripts
               mountPath: /docker-entrypoint-initdb.d
@@ -657,6 +664,9 @@ spec:
           configMap:
             name: {{ include "freeradius.configurationCM" . }}
         {{- end }}
+        - name: freeradius-clients
+          configMap:
+            name: {{ default (printf "%s-clients" (include "st-common.names.fullname" .)) .Values.clients.existingConfigMapName }}
         {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
         - name: custom-init-scripts
           configMap:
