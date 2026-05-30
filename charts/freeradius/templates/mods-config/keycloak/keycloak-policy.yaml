@@ -3,7 +3,13 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "lua") }}
+{{- if .Values.keycloak.enabled }}
+{{- $isLua := eq .Values.keycloak.mode "lua" -}}
+{{- $mod := ternary "keycloak_lua" "keycloak_rest" $isLua -}}
+{{- /* rcodes after a successful call differ per module: rlm_lua returns `ok`
+       on RLM_MODULE_OK; rlm_rest returns `updated` when it parsed reply attrs
+       from the JSON body, otherwise `ok`. Match both for rest to be safe. */ -}}
+{{- $okRcode := ternary "ok" "(ok || updated)" $isLua -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,45 +21,51 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* policy.d/keycloak — unlang wrapper around keycloak_lua that adds
-         cache-aside (when keycloak.cache.enabled) and role→reply mapping
-         (when roleMappings). Lua mode only; rest mode calls keycloak_rest
-         directly from the site. FreeRADIUS only parses `policy { }` blocks
-         when included from policy.d/, so this lives in its own ConfigMap
-         mounted at /etc/freeradius/policy.d/keycloak (cannot be co-located
-         with the mods-enabled/keycloak file). */}}
+  {{- /* policy.d/keycloak — unlang wrapper around the active Keycloak backend
+         module (`keycloak_lua` in lua mode, `keycloak_rest` in rest mode).
+         Adds cache-aside when keycloak.cache.enabled and role→reply mapping
+         when roleMappings (lua only — rest mode doesn't populate role attrs,
+         since the chart's rlm_rest instance only hits the token endpoint).
+         FreeRADIUS only parses `policy { }` blocks when included from
+         policy.d/, so this lives in its own ConfigMap separate from the
+         mods-enabled/keycloak module file. */}}
   keycloak: |
     #  Entry point. Call this from a virtual server's authorize {} section.
     policy keycloak_authorize {
         {{- if .Values.keycloak.cache.enabled }}
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
-        #  recent successful result cached. cache_keycloak returns ok+populates
-        #  &control:{{ .Values.keycloak.roleAttribute }} on hit, notfound on miss.
+        #  recent successful result cached. cache_keycloak returns ok on hit
+        #  (populating &control:{{ .Values.keycloak.roleAttribute }} when in
+        #  lua mode), notfound on miss.
         cache_keycloak
         if (notfound) {
-            keycloak_lua
-            if (ok) {
-                #  Store on success — role list is captured per cache_keycloak's update {}.
+            {{ $mod }}
+            if {{ $okRcode }} {
+                #  Store on success — role list captured per cache_keycloak's update {}.
                 cache_keycloak
             }
         }
         {{- else }}
+        {{- if $isLua }}
         #  keycloak_lua: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
-        keycloak_lua
+        {{- else }}
+        #  keycloak_rest: ROPC password grant -> HTTP 200 = ok/updated, 401 = reject.
         {{- end }}
-        if (ok) {
+        {{ $mod }}
+        {{- end }}
+        if {{ $okRcode }} {
             #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.
             update control {
                 &Auth-Type := Accept
             }
-        {{- if .Values.keycloak.roleMappings }}
+        {{- if and $isLua .Values.keycloak.roleMappings }}
             keycloak_roles
         {{- end }}
         }
         #  reject (bad creds / inactive), fail (network/config) and noop
         #  (not a password request) propagate unchanged to the caller.
     }
-    {{- if .Values.keycloak.roleMappings }}
+    {{- if and $isLua .Values.keycloak.roleMappings }}
 
     #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
     #  to RADIUS reply attributes. First match wins.

@@ -244,12 +244,6 @@ and the chart standardises on Redis to make cross-pod sharing reliable.
 freeradius: keycloak.cache.enabled
     `keycloak.cache.enabled: true` requires `keycloak.enabled: true` — there
     is nothing to cache otherwise.
-{{- else if ne .Values.keycloak.mode "lua" -}}
-freeradius: keycloak.cache.enabled
-    `keycloak.cache.enabled: true` requires `keycloak.mode: lua`. The cache
-    wraps the `keycloak_authorize` unlang policy, which is only rendered for
-    lua mode; rest mode wires rlm_rest directly into authorize {} and has no
-    policy to wrap.
 {{- else if and (not .Values.redis.enabled) (not .Values.modules.redis.server) -}}
 freeradius: keycloak.cache.enabled
     `keycloak.cache.enabled: true` requires a Redis backend. Either enable

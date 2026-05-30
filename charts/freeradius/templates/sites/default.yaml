@@ -525,21 +525,12 @@ data:
     	#  get a chance to set Auth-Type for themselves.
     	#
 {{- if and .Values.keycloak.enabled .Values.keycloak.wireDefaultSite }}
-  {{- if eq .Values.keycloak.mode "lua" }}
-    	#  Keycloak (lua): ROPC auth + role extraction + role→reply mapping, all
-    	#  driven by the unlang keycloak_authorize policy (the Lua only
-    	#  fetches/parses). Runs before `pap` so it can set Auth-Type := Accept.
+    	#  Keycloak authorize policy. Wraps the active backend module
+    	#  (`keycloak_lua` in lua mode, `keycloak_rest` in rest mode) with
+    	#  cache-aside (when keycloak.cache.enabled) and — lua mode only —
+    	#  role→reply mapping. Sets Auth-Type := Accept on a successful
+    	#  ROPC; runs before `pap`. Defined in policy.d/keycloak.
     	keycloak_authorize
-  {{- else if eq .Values.keycloak.mode "rest" }}
-    	#  Keycloak (rest): ROPC password grant via rlm_rest (PAP only, no roles).
-    	#  HTTP 200 -> ok -> accept; HTTP 401 -> reject. Runs before `pap`.
-    	keycloak_rest
-    	if (ok || updated) {
-    		update control {
-    			&Auth-Type := Accept
-    		}
-    	}
-  {{- end }}
 {{- end }}
     	pap
 
