@@ -44,7 +44,17 @@ data:
             tls_max_version = "{{ .Values.modules.eap.tlsConfig.max_version }}"
 
             cache {
+                {{- if .Values.sites.tlsCache.enabled }}
+                # Auto-wired by sites.tlsCache.enabled — externalises the
+                # OpenSSL session cache to the `tls-cache` virtual server,
+                # which calls the Redis-backed `cache_tls` rlm_cache instance.
+                enable = yes
+                method = stateful
+                virtual_server = tls-cache
+                {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit .Values.modules.eap.tlsConfig.cache "enable" "method" "virtual_server") "context" $) | nindent 16 }}
+                {{- else }}
                 {{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.eap.tlsConfig.cache "context" $) | nindent 16 }}
+                {{- end }}
             }
 
             verify {

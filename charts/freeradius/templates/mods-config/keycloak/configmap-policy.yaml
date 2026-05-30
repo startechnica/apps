@@ -23,10 +23,24 @@ data:
   keycloak: |-
     #  Entry point. Call this from a virtual server's authorize {} section.
     policy keycloak_authorize {
-        #  keycloak_lua: ROPC + introspection -> &control:Class (+ rcode).
+        {{- if .Values.keycloak.cache.enabled }}
+        #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
+        #  recent successful result cached. cache_keycloak returns ok+populates
+        #  &control:{{ .Values.keycloak.roleAttribute }} on hit, notfound on miss.
+        cache_keycloak
+        if (notfound) {
+            keycloak_lua
+            if (ok) {
+                #  Store on success — role list is captured per cache_keycloak's update {}.
+                cache_keycloak
+            }
+        }
+        {{- else }}
+        #  keycloak_lua: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
         keycloak_lua
+        {{- end }}
         if (ok) {
-            #  Credentials valid: accept and resolve role-based reply attrs.
+            #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.
             update control {
                 &Auth-Type := Accept
             }

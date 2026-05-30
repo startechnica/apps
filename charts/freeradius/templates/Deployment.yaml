@@ -55,6 +55,9 @@ spec:
         {{- if and .Values.tls.enabled (not .Values.sites.tls.existingConfigMap) }}
         checksum/configmap-sites-tls: {{ include (print $.Template.BasePath "/sites/tls.yaml") . | sha256sum }}
         {{- end }}
+        {{- if and .Values.sites.tlsCache.enabled (not .Values.sites.tlsCache.existingConfigMap) }}
+        checksum/configmap-sites-tls-cache: {{ include (print $.Template.BasePath "/sites/tls-cache.yaml") . | sha256sum }}
+        {{- end }}
         {{- if and .Values.modules.eap.enabled (not .Values.modules.eap.existingConfigMap) }}
         checksum/configmap-mods-eap: {{ include (print $.Template.BasePath "/modules/eap.yaml") . | sha256sum }}
         {{- end }}
@@ -76,7 +79,7 @@ spec:
         {{- if and .Values.modules.redis.enabled (not .Values.modules.redis.existingConfigMap) }}
         checksum/configmap-mods-redis: {{ include (print $.Template.BasePath "/modules/redis.yaml") . | sha256sum }}
         {{- end }}
-        {{- if and .Values.modules.cache.enabled (not .Values.modules.cache.existingConfigMap) }}
+        {{- if and (not .Values.modules.cache.existingConfigMap) (or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.keycloak.cache.enabled .Values.modules.cache.instances) }}
         checksum/configmap-mods-cache: {{ include (print $.Template.BasePath "/modules/cache.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.modsConfig }}
@@ -430,7 +433,7 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/redis
               subPath: redis
             {{- end }}
-            {{- if .Values.modules.cache.enabled }}
+            {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.keycloak.cache.enabled .Values.modules.cache.instances }}
             - name: freeradius-mods-cache
               mountPath: /etc/freeradius/mods-enabled/cache
               subPath: cache
@@ -543,7 +546,7 @@ spec:
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "redis" "context" $) }}
         {{- end }}
-        {{- if .Values.modules.cache.enabled }}
+        {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.keycloak.cache.enabled .Values.modules.cache.instances }}
         - name: freeradius-mods-cache
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "cache" "context" $) }}
@@ -582,6 +585,10 @@ spec:
               {{- if .Values.tls.enabled }}
               - configMap:
                   name: {{ include "freeradius.site.configMapName" (dict "site" "tls" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.tlsCache.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "tls-cache" "key" "tlsCache" "context" $) }}
               {{- end }}
               {{- range .Values.extraSites }}
               - configMap:

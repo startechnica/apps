@@ -651,6 +651,25 @@ modules:
     memcached:
       config:
         options: '"--SERVER=memcached:11211"'
+    ## Additional user-defined rlm_cache instances rendered alongside the base
+    ## `cache` instance (and the chart-managed `cache_tls` / `cache_keycloak`
+    ## siblings). Each top-level key is a FreeRADIUS module instance name
+    ## (used directly in unlang as `<name>`) with the same schema as the base:
+    ## `driver`, `key`, `ttl`, `maxEntries` (default 0), `update` (required),
+    ## `config`, `memcached.config`. One ConfigMap per instance renders into
+    ## `mods-enabled/<name>`. `driver: redis` auto-injects the `redis { }`
+    ## sub-block reusing `modules.redis.*` connection params, same as the base.
+    ##
+    ## @param modules.cache.instances [object] Additional named rlm_cache instances. Map key = FreeRADIUS instance name (e.g. `cache_coa`); value = config dict mirroring the base cache schema.
+    ## instances:
+    ##   cache_coa:
+    ##     driver: redis
+    ##     key: '"%{Acct-Session-Id}"'
+    ##     ttl: 7200
+    ##     update: |-
+    ##       &reply: += &reply:
+    ##
+    instances: {}
 
   ## EAP module (rlm_eap). Provides TLS-based EAP methods that share one
   ## `tls-config` server certificate: EAP-TLS (mutual TLS, client
@@ -749,7 +768,6 @@ modules:
     ## @param modules.eap.tlsConfig.cipher_server_preference Honour the server's cipher order over the client's (`cipher_server_preference`).
     ## @param modules.eap.tlsConfig.min_version Minimum TLS protocol version offered (`tls_min_version`).
     ## @param modules.eap.tlsConfig.max_version Maximum TLS protocol version offered (`tls_max_version`).
-    ## @param modules.eap.tlsConfig.cache.enable Enable the EAP TLS session cache (`cache { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
     ##
     tlsConfig:
       name: tls-common
@@ -764,14 +782,33 @@ modules:
       cipher_server_preference: false
       min_version: "1.2"
       max_version: "1.3"
+      ## @param modules.eap.tlsConfig.cache.enable Enable the EAP TLS session cache (`cache { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim). Overridden to `yes` when `sites.tlsCache.enabled` (the chart auto-wires that path).
+      ## EAP TLS session cache — OpenSSL session resumption for EAP-TLS / PEAP /
+      ## TTLS (distinct from `rlm_cache` / `modules.cache`). Enabling lets a
+      ## returning supplicant skip the full handshake.
+      ##
+      ## Multi-replica caveat: the cache is per-pod (in-memory by default).
+      ## `persist_dir` writes local disk only — shared RWX storage is unsafe for
+      ## concurrent OpenSSL session writes. With multiple replicas a supplicant
+      ## resuming on a different pod than the original will fall back to a full
+      ## handshake; useful only with `replicas: 1` or sticky session affinity on
+      ## the Service. For cross-pod resumption, enable `sites.tlsCache` — it
+      ## externalises the cache to a Redis-backed rlm_cache instance and
+      ## auto-wires `method = stateful` / `virtual_server = tls-cache` here.
+      ##
       cache:
         enable: "no"
+        lifetime: 86400                          # session lifetime in seconds (24h)
+        max_entries: 255                         # in-memory entries cap
+        name: "EAP module"                       # namespace for the cache (lets multiple tls-configs coexist)
+        persist_dir: "${logdir}/tlscache"        # OPTIONAL — persist sessions to disk so resumption survives restarts
+        store_attributes: "yes"                  # write session attrs back into the request on resume
       ## @param modules.eap.tlsConfig.ocsp.enable Enable OCSP certificate checking (`ocsp { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
       ##
       ocsp:
         enable: "no"
-        # name: "EAP module"
-        # persist_dir: "${logdir}/tlscache"
+        name: "EAP module"
+        persist_dir: "${logdir}/tlscache"
       verify: {}
         # tmpdir: /tmp/radiusd
         # client: "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
@@ -867,6 +904,27 @@ sites:
     existingConfigMap: ""
     cipher: "DEFAULT"
     privateKeyPassword: ""
+  ## `tls-cache` virtual server — backs EAP TLS session resumption with a
+  ## shared Redis-backed rlm_cache instance, fixing the per-pod caveat
+  ## documented on `modules.eap.tlsConfig.cache` above. Enabling renders:
+  ##   * `sites-enabled/tls-cache` (this template)
+  ##   * `mods-enabled/cache_tls` — dedicated rlm_cache instance keyed on
+  ##     `%{TLS-Session-Id}`, reusing the Redis connection from `modules.redis.*`
+  ##   * auto-wires `tls-config { cache { enable = yes, method = stateful,
+  ##     virtual_server = tls-cache } }` into the EAP module
+  ## REQUIRES `modules.eap.enabled: true` AND a Redis backend (bundled subchart
+  ## `redis.enabled: true` or external `modules.redis.server`). Rendering
+  ## hard-fails via `freeradius.validate.tlsCache` otherwise — an in-pod
+  ## backend would defeat the cross-replica resumption this site exists for.
+  ##
+  ## @param sites.tlsCache.enabled Enable the `tls-cache` virtual server. Auto-wires the EAP cache directives; hard-fails without Redis.
+  ## @param sites.tlsCache.existingConfigMap Mount an existing ConfigMap (must contain a `tls-cache` key with the virtual-server config) at `sites-enabled/tls-cache` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.tlsCache.ttl TTL (seconds) for cached TLS sessions in the dedicated `cache_tls` instance. Should match the desired resumption window (typically aligned with `modules.eap.tlsConfig.cache.lifetime` if set).
+  ##
+  tlsCache:
+    enabled: false
+    existingConfigMap: ""
+    ttl: 86400
 
 
 ## RADIUS clients map rendered into a ConfigMap and mounted at
@@ -1274,6 +1332,25 @@ modsConfig: {}
 ## @param keycloak.denyWithoutRole (lua mode) Reject the request when no `roleMappings` entry matches
 ## @param keycloak.roleMappings [array] (lua mode) Ordered role→reply map (first match wins). Each entry: `role` (Keycloak client role) + `reply` (list of literal unlang `Attr := value` lines).
 ##
+## Result caching — when enabled, the chart renders a dedicated `cache_keycloak`
+## rlm_cache instance (Redis-backed, sharing the `modules.redis.*` connection)
+## and wires it into the `keycloak_authorize` policy: cache lookup BEFORE
+## calling Keycloak, store on success. Cuts per-auth Keycloak roundtrips and
+## the ROPC + introspection latency within a TTL window.
+##
+## Caches only `&control:<roleAttribute>` (the role list set by keycloak_lua);
+## reply mapping (`keycloak_roles`) still runs on every request to regenerate
+## reply attrs from the cached role list. Keyed on `%{User-Name}` — Keycloak
+## credential rotation (password change) takes up to `cache.ttl` to take
+## effect, so keep the TTL short.
+##
+## REQUIRES `keycloak.mode: lua` AND a Redis backend (bundled subchart
+## `redis.enabled: true` or external `modules.redis.server`). Rendering
+## hard-fails via `freeradius.validate.keycloakCache` otherwise.
+##
+## @param keycloak.cache.enabled Render the `cache_keycloak` rlm_cache instance and wire it into the `keycloak_authorize` policy.
+## @param keycloak.cache.ttl Cache TTL (seconds) for stored Keycloak results. Keep short — credential rotation propagates only after expiry.
+##
 keycloak:
   enabled: false
   mode: lua
@@ -1286,6 +1363,9 @@ keycloak:
   wireDefaultSite: true
   roleAttribute: Class
   denyWithoutRole: false
+  cache:
+    enabled: false
+    ttl: 300
   roleMappings: []
   #   - role: network-admin
   #     reply:
