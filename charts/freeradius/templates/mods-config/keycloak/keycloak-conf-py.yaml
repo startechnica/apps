@@ -1,0 +1,81 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Per-instance rlm_python3 wrapper scripts. Renders one ConfigMap per
+`keycloak.instances.<name>` whose `mode` is `python`. Per-instance
+config is baked in at chart-render time by Helm — only `client_secret`
+(sensitive) is read from env, sourced from the per-instance
+`<fullname>-keycloak[-<name>]` Secret via the Deployment. Each wrapper
+delegates `authorize(p)` / `accounting(p)` to `keycloak_common`
+(rendered separately by `keycloak-common-py.yaml`).
+
+  default + python → `<fullname>-keycloak-python`          key: `keycloak.py`
+  <name>  + python → `<fullname>-keycloak-<name>-python`   key: `keycloak_<name>.py`
+
+Both the per-instance wrapper and the shared library are mounted into
+`/etc/freeradius/scripts/`. `rlm_python3 python_path = "/etc/freeradius/scripts"`
+so `import keycloak_common` resolves to the shared file.
+
+rlm_python3 is bundled in the default `freeradius/freeradius-server:3.2.8`
+image — no image rebuild needed.
+*/}}
+
+{{- if .Values.keycloak.enabled }}
+{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- range $name, $cfg := $resolved.instances }}
+{{- if eq $cfg.mode "python" }}
+{{- $cmName := ternary (printf "%s-keycloak-python" $fullname) (printf "%s-keycloak-%s-python" $fullname $name) (eq $name "default") }}
+{{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
+{{- $envPrefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) }}
+{{- $hasTls := include "freeradius.keycloak.tls.enabled" (dict "instance" $cfg) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $cmName }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+    app.firmansyah.id/keycloak-instance: {{ $name | quote }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{ $scriptKey }}: |-
+    """
+    Per-instance wrapper for Keycloak instance `{{ $name }}`. Config is
+    baked in by Helm at chart-render time; only `client_secret` (sensitive)
+    comes from the per-instance Secret via env (`{{ $envPrefix }}CLIENT_SECRET`).
+    """
+
+    import os
+    import keycloak_common
+
+    _CONFIG = {
+        "instance":       "{{ $name }}",
+        "role_attribute": "{{ default "Class" $cfg.roleAttribute }}",
+        "base_url":       "{{ $cfg.url }}",
+        "realm":          "{{ $cfg.realm }}",
+        "client_id":      "{{ default "freeradius" $cfg.clientId }}",
+        "client_secret":  os.environ.get("{{ $envPrefix }}CLIENT_SECRET"),
+        "scope":          "{{ default "" $cfg.scope }}",
+        "role_mapper":    "{{ default "client" $cfg.roleMapper }}",
+        "ca_file":        {{ if $hasTls }}"{{ include "freeradius.keycloak.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}None{{ end }},
+        "insecure":       {{ ternary "True" "False" $cfg.tls.insecure }},
+        "timeout":        {{ default "4.0" $cfg.connectTimeout }},
+    }
+
+
+    def authorize(p):
+        return keycloak_common.authorize(p, _CONFIG)
+
+
+    def accounting(p):
+        return keycloak_common.accounting(p)
+{{- end }}
+{{- end }}
+{{- end }}

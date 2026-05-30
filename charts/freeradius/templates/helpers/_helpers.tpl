@@ -193,49 +193,263 @@ and `freeradius.sql.secretKey` for the in-chart-managed branch.
 {{- end -}}
 
 {{/*
-Keycloak TLS verification helpers.
+Keycloak multi-instance helpers.
 
-`freeradius.keycloak.tls.enabled` — "true" when a CA bundle is configured
-  (either inline `caCert` or BYO `existingSecret`); empty otherwise.
-`freeradius.keycloak.tls.createSecret` — "true" when the chart should render
-  its own Secret (i.e. `caCert` set, `existingSecret` not).
-`freeradius.keycloak.tls.secretName` — resolved Secret name: BYO when set,
-  else chart-rendered `<fullname>-keycloak-ca`.
-`freeradius.keycloak.tls.caKey` — key within the resolved Secret that holds
-  the PEM bundle.
-`freeradius.keycloak.tls.caFilePath` — absolute path to the mounted CA file
-  inside the pod. Used by all three Keycloak backends.
+Resolution (`freeradius.keycloak.resolveInstances`) — returns a YAML
+document with a single `instances:` key holding the effective map.
+Templates parse it with `fromYaml`:
+
+  {{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
+  {{- range $name, $cfg := $resolved.instances }}
+    ...
+  {{- end }}
+
+Direction: NAS → instance. Each `clients.<x>.keycloak` references one of
+the resolved instance names. The chart special-cases the instance named
+`default` to keep legacy resource names (module instance `keycloak_lua`/
+`keycloak_python`, policy `authorize_keycloak`, Secret
+`<fullname>-keycloak`, unprefixed env vars, etc.) so existing values
+files keep rendering identically.
+
+Deprecation shim: legacy top-level fields (`keycloak.url`, `realm`, …)
+auto-synthesise an `instances.default` entry when `keycloak.enabled` is
+true AND `instances` doesn't already define `default` AND
+`keycloak.realm` is non-empty. Removal slated for the next major.
+*/}}
+
+{{- define "freeradius.keycloak.resolveInstances" -}}
+{{- $tlsDefaults := dict "caCert" "" "existingSecret" "" "existingSecretCaKey" "ca.crt" "insecure" false -}}
+{{- $cacheDefaults := dict "enabled" false "ttl" 300 -}}
+{{- $instanceDefaults := dict
+      "mode" "python"
+      "url" ""
+      "realm" ""
+      "clientId" "freeradius"
+      "clientSecret" ""
+      "scope" ""
+      "connectTimeout" "4.0"
+      "roleAttribute" "Class"
+      "roleMapper" "client"
+      "denyWithoutRole" false
+      "roleMappings" (list)
+      "existingConfigMap" ""
+      "existingSecret" "" -}}
+{{- $instances := dict -}}
+{{- range $name, $cfg := (default dict .Values.keycloak.instances) -}}
+{{- $tls := merge (deepCopy (default dict $cfg.tls)) $tlsDefaults -}}
+{{- $cache := merge (deepCopy (default dict $cfg.cache)) $cacheDefaults -}}
+{{- $merged := merge (deepCopy $cfg) (dict "tls" $tls "cache" $cache) $instanceDefaults -}}
+{{- $_ := set $instances $name $merged -}}
+{{- end -}}
+{{- if and .Values.keycloak.enabled (not (hasKey $instances "default")) .Values.keycloak.realm -}}
+{{- $legacy := dict
+      "mode" .Values.keycloak.mode
+      "url" .Values.keycloak.url
+      "realm" .Values.keycloak.realm
+      "clientId" .Values.keycloak.clientId
+      "clientSecret" .Values.keycloak.clientSecret
+      "scope" .Values.keycloak.scope
+      "connectTimeout" .Values.keycloak.connectTimeout
+      "roleAttribute" .Values.keycloak.roleAttribute
+      "roleMapper" .Values.keycloak.roleMapper
+      "denyWithoutRole" .Values.keycloak.denyWithoutRole
+      "roleMappings" .Values.keycloak.roleMappings -}}
+{{- $tls := merge (deepCopy (default dict .Values.keycloak.tls)) $tlsDefaults -}}
+{{- $cache := merge (deepCopy (default dict .Values.keycloak.cache)) $cacheDefaults -}}
+{{- $defaultEntry := merge $legacy (dict "tls" $tls "cache" $cache) $instanceDefaults -}}
+{{- $_ := set $instances "default" $defaultEntry -}}
+{{- end -}}
+{{- (dict "instances" $instances) | toYaml -}}
+{{- end -}}
+
+{{/*
+True when the legacy top-level fields synthesised the `default` instance
+(used by NOTES.txt to emit a deprecation warning).
+*/}}
+{{- define "freeradius.keycloak.shimFired" -}}
+{{- if and .Values.keycloak.enabled (not (hasKey (default dict .Values.keycloak.instances) "default")) .Values.keycloak.realm -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Per-instance naming helpers. Each takes a dict with `name` (instance
+name); some also need `mode` (the per-instance `mode` value) for
+module/script naming. The `default` instance maps to legacy names for
+byte-identical backwards-compat rendering against pre-multi-instance
+values files; non-default instances suffix the name everywhere.
+
+  envVarPrefix       FREERADIUS_KEYCLOAK_                / FREERADIUS_KEYCLOAK_<NAME>_
+  moduleName         keycloak_lua|python|rest            / keycloak_<name>
+  policyName         authorize_keycloak                  / authorize_keycloak_<name>
+  rolesPolicyName    roles_keycloak                      / roles_keycloak_<name>
+  cacheName          cache_keycloak                      / cache_keycloak_<name>
+  cacheKey           "keycloak:%{User-Name}"             / "keycloak:<name>:%{User-Name}"
+                                                          (forced, non-overridable)
+  modKey             keycloak                            / keycloak_<name>
+  policyKey          keycloak                            / keycloak_<name>
+  scriptKey          keycloak.lua | keycloak.py          / keycloak_<name>.lua
+                                                          | keycloak_<name>.py
+*/}}
+
+{{- define "freeradius.keycloak.envVarPrefix" -}}
+{{- if eq .name "default" -}}FREERADIUS_KEYCLOAK_
+{{- else -}}FREERADIUS_KEYCLOAK_{{ .name | upper }}_
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.moduleName" -}}
+{{- if eq .name "default" -}}
+{{- if eq .mode "python" -}}keycloak_python
+{{- else -}}keycloak_lua
+{{- end -}}
+{{- else -}}keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.policyName" -}}
+{{- if eq .name "default" -}}authorize_keycloak
+{{- else -}}authorize_keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.rolesPolicyName" -}}
+{{- if eq .name "default" -}}roles_keycloak
+{{- else -}}roles_keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.cacheName" -}}
+{{- if eq .name "default" -}}cache_keycloak
+{{- else -}}cache_keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.cacheKey" -}}
+{{- if eq .name "default" -}}"keycloak:%{User-Name}"
+{{- else -}}"keycloak:{{ .name }}:%{User-Name}"
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.modKey" -}}
+{{- if eq .name "default" -}}keycloak
+{{- else -}}keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.policyKey" -}}
+{{- if eq .name "default" -}}keycloak
+{{- else -}}keycloak_{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{- define "freeradius.keycloak.scriptKey" -}}
+{{- if eq .mode "lua" -}}
+{{- if eq .name "default" -}}keycloak.lua
+{{- else -}}keycloak_{{ .name }}.lua
+{{- end -}}
+{{- else if eq .mode "python" -}}
+{{- if eq .name "default" -}}keycloak.py
+{{- else -}}keycloak_{{ .name }}.py
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Per-instance client-secret Secret name. BYO via `instance.existingSecret`,
+otherwise chart-managed: `<fullname>-keycloak` for default,
+`<fullname>-keycloak-<name>` for non-default. Requires (name, instance,
+context).
+*/}}
+{{- define "freeradius.keycloak.clientSecretName" -}}
+{{- if .instance.existingSecret -}}
+{{- tpl .instance.existingSecret .context -}}
+{{- else if eq .name "default" -}}
+{{- printf "%s-keycloak" (include "st-common.names.fullname" .context) -}}
+{{- else -}}
+{{- printf "%s-keycloak-%s" (include "st-common.names.fullname" .context) .name -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Keycloak TLS verification helpers — per-instance. All take a dict with
+`name` (instance name), `instance` (per-instance config dict), and
+`context` (root `$`).
+
+  tls.enabled       "true" when CA bundle is configured for the instance
+  tls.createSecret  "true" when the chart renders its own per-instance Secret
+  tls.secretName    BYO existingSecret OR <fullname>-keycloak[-<name>]-ca
+  tls.caKey         key within the resolved Secret holding the PEM bundle
+  tls.caFilePath    absolute path of the mounted CA file inside the pod
+                    (/etc/freeradius/certs-keycloak/<key> for default,
+                     /etc/freeradius/certs-keycloak-<name>/<key> otherwise)
 */}}
 {{- define "freeradius.keycloak.tls.enabled" -}}
-{{- if or .Values.keycloak.tls.caCert .Values.keycloak.tls.existingSecret -}}
+{{- if or .instance.tls.caCert .instance.tls.existingSecret -}}
 true
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.keycloak.tls.createSecret" -}}
-{{- if and .Values.keycloak.tls.caCert (not .Values.keycloak.tls.existingSecret) -}}
+{{- if and .instance.tls.caCert (not .instance.tls.existingSecret) -}}
 true
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.keycloak.tls.secretName" -}}
-{{- if .Values.keycloak.tls.existingSecret -}}
-{{- tpl .Values.keycloak.tls.existingSecret $ -}}
+{{- if .instance.tls.existingSecret -}}
+{{- tpl .instance.tls.existingSecret .context -}}
+{{- else if eq .name "default" -}}
+{{- printf "%s-keycloak-ca" (include "st-common.names.fullname" .context) -}}
 {{- else -}}
-{{- printf "%s-keycloak-ca" (include "st-common.names.fullname" .) -}}
+{{- printf "%s-keycloak-%s-ca" (include "st-common.names.fullname" .context) .name -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.keycloak.tls.caKey" -}}
-{{- if .Values.keycloak.tls.existingSecret -}}
-{{- default "ca.crt" .Values.keycloak.tls.existingSecretCaKey -}}
+{{- if .instance.tls.existingSecret -}}
+{{- default "ca.crt" .instance.tls.existingSecretCaKey -}}
 {{- else -}}
 ca.crt
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.keycloak.tls.caFilePath" -}}
+{{- if eq .name "default" -}}
 {{- printf "/etc/freeradius/certs-keycloak/%s" (include "freeradius.keycloak.tls.caKey" .) -}}
+{{- else -}}
+{{- printf "/etc/freeradius/certs-keycloak-%s/%s" .name (include "freeradius.keycloak.tls.caKey" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Mount-volume names for per-instance projected ConfigMaps / Secrets. Used
+by Deployment.yaml so the same name is referenced by both the volume and
+volumeMount blocks.
+
+  tlsVolumeName     keycloak-tls          / keycloak-<name>-tls
+*/}}
+{{- define "freeradius.keycloak.tlsVolumeName" -}}
+{{- if eq .name "default" -}}keycloak-tls
+{{- else -}}keycloak-{{ .name }}-tls
+{{- end -}}
+{{- end -}}
+
+{{/*
+Dispatch arms — list of (client, instance) pairs derived from
+`clients.<x>.keycloak`. Returns a YAML `arms: [...]` document so templates
+can `fromYaml` it. Each entry: `client`, `ipv4`, `ipv6`, `instance`. Order
+is map-iteration order (alphabetical by client name in Helm) — deterministic
+but does not preserve declaration order from values.yaml.
+*/}}
+{{- define "freeradius.keycloak.dispatchArms" -}}
+{{- $arms := list -}}
+{{- range $clientName, $client := .Values.clients -}}
+{{- if and (kindIs "map" $client) $client.keycloak $client.ipv4addr -}}
+{{- $arms = append $arms (dict "client" $clientName "ipv4" $client.ipv4addr "ipv6" (default "" $client.ipv6addr) "instance" $client.keycloak) -}}
+{{- end -}}
+{{- end -}}
+{{- (dict "arms" $arms) | toYaml -}}
 {{- end -}}
 
 {{/*

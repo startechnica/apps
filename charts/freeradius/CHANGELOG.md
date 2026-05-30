@@ -4,6 +4,55 @@
 
 ### Added
 
+- **Multi-instance Keycloak.** Configure any number of Keycloak backends
+  under `keycloak.instances.<name>` (each with its own `mode` / `url` /
+  `realm` / `clientId` / `clientSecret` / `tls` / `cache` /
+  `roleMappings`). Bind each NAS to a backend with the new
+  `clients.<x>.keycloak: <name>` field; the chart renders an
+  `if (Packet-Src-IP-Address == …) { authorize_keycloak_<name> }`
+  dispatch chain into the shared `sites/default` and `sites/inner-tunnel`
+  virtual servers. The previously singleton `keycloak.*` fields auto-
+  synthesise an `instances.default` entry for backwards-compat (a
+  `NOTES.txt` deprecation notice fires).
+- `keycloak.unmatchedReject` — when `true` AND no `default` instance is
+  wired, the dispatch chain's `else` branch rejects unmatched NAS
+  instead of falling through to `pap`.
+- Per-instance K8s resources: one ConfigMap per instance for
+  `mods-enabled/keycloak[_<name>]`, `policy.d/keycloak[_<name>]`, and
+  (lua/python only) the mapper-script file. One Secret per instance for
+  `client-secret` and (when configured) the TLS CA bundle. Per-instance
+  TLS mount under `/etc/freeradius/certs-keycloak[-<name>]/ca.crt`.
+- Shared mapper-script library — `keycloak_common.{py,lua}` rendered
+  once per release in a dedicated ConfigMap
+  (`<fullname>-keycloak-{python,lua}-common`), mounted at
+  `/etc/freeradius/scripts/keycloak_common.{py,lua}`. The per-instance
+  ConfigMaps drop from ~200 lines each to ~25-line wrappers that
+  `import keycloak_common` (python) / `require("keycloak_common")`
+  (lua) and delegate `authorize(p)` / `accounting(p)` over a config
+  dict/table baked in at chart-render time. Dedupes the implementation
+  body across N instances; one bug fix to the library propagates to
+  every instance on the next `helm upgrade`. The library itself is
+  pure logic — no env-var reads, no module-level config — so it's
+  safely shared across instances inside the rlm_python3 process-global
+  interpreter.
+- `cache cache_keycloak[_<name>]` rlm_cache instance per Keycloak
+  instance whose `cache.enabled: true`, rendered into the shared
+  `mods-enabled/cache` file. The cache key is hard-coded to
+  `keycloak:<name>:%{User-Name}` (non-overridable) to prevent silent
+  cross-instance cache hits on common usernames.
+- `freeradius.keycloak.resolveInstances` / `envVarPrefix` / `moduleName`
+  / `policyName` / `rolesPolicyName` / `cacheName` / `cacheKey` /
+  `dispatchArms` / `clientSecretName` helpers, plus per-instance
+  `freeradius.keycloak.tls.*` helpers (now taking `(name, instance,
+  context)`). Single-source-of-truth for the legacy-default-vs-named
+  naming split.
+- `freeradius.validate.keycloakInstances` and
+  `freeradius.validate.keycloakClientBindings` — per-instance schema
+  validation (mode, roleMapper, TLS exclusivity, cache-requires-Redis,
+  instance-name regex, realm-non-empty, no `extraEnvVars` shadowing
+  the `FREERADIUS_KEYCLOAK_*` prefix) and a typo guard on every
+  `clients.<x>.keycloak` reference.
+
 - Bundled **Redis** subchart (Bitnami, `condition: redis.enabled`) as an
   optional backend for the redis/cache modules. When enabled, the modules
   auto-target the `<release>-redis-master` Service and pull the password from the
@@ -63,6 +112,34 @@
   module's `$ENV{...}` reference are updated in lockstep. Internal rename — no
   `values.yaml` changes; only observable when exec'ing into the pod or
   overriding the mapper-script ConfigMaps / `keycloak.yaml` module template.
+- Keycloak mapper-script filenames renamed for the multi-instance
+  refactor: `keycloak-mapper.lua` → `keycloak.lua`,
+  `keycloak_mapper.py` → `keycloak.py` (default instance);
+  `keycloak_mapper_<name>.{py,lua}` → `keycloak_<name>.{py,lua}`
+  (named instances). The rendered `python3 keycloak_<name>` module's
+  `mod_authorize` directive updates to match (`"keycloak"` /
+  `"keycloak_<name>"`).
+- **Keycloak `rest` mode removed.** `python` mode is a strict superset
+  (same ROPC POST + JWT-decode for role extraction, both via bundled
+  modules — no custom image needed) so the rest variant added nothing.
+  `keycloak.instances.<name>.mode` is now `lua | python` only; the
+  legacy `keycloak.mode: rest` default switches to `python`. Setting
+  `mode: rest` explicitly fails validation with a migration message.
+  Dropped along with it: the `rest keycloak_<name> { … }` module body
+  in `mods-config/keycloak/keycloak.yaml`, the `$isRest` branch in
+  `keycloak-policy.yaml` (`okRcode` is always `(ok)`), and the
+  `Auth-Type REST { keycloak_rest }` wiring in `sites/inner-tunnel`.
+
+### Deprecated
+
+- Top-level `keycloak.mode`, `keycloak.url`, `keycloak.realm`,
+  `keycloak.clientId`, `keycloak.clientSecret`, `keycloak.scope`,
+  `keycloak.connectTimeout`, `keycloak.roleAttribute`, `keycloak.roleMapper`,
+  `keycloak.denyWithoutRole`, `keycloak.roleMappings`, `keycloak.tls.*`
+  and `keycloak.cache.*` — use `keycloak.instances.default.<field>`
+  instead. Existing values files continue to render via a shim that
+  synthesises `instances.default` from the legacy fields; the shim and
+  the legacy fields will be removed in the next major.
 
 ### Fixed
 

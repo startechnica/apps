@@ -284,7 +284,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | Name                       | Description                                                                                                            | Value                      |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `keycloak.enabled`         | Render the Keycloak auth configs + Secret and mount them into the pod                                                 | `false`                    |
-| `keycloak.mode`            | Auth backend: `lua` (ROPC + introspection + role mapping via rlm_lua) or `rest` (ROPC-only via rlm_rest, no roles)    | `lua`                      |
+| `keycloak.mode`            | Auth backend: `python` (bundled `rlm_python3`) or `lua` (custom image with `rlm_lua`). Both do ROPC + JWT-decode + role mapping.                                   | `python`                   |
 | `keycloak.url`             | Base URL of the Keycloak server                                                                                       | `https://auth.example.com` |
 | `keycloak.realm`           | Keycloak realm holding the users (required when enabled)                                                              | `""`                       |
 | `keycloak.clientId`        | OIDC client_id with Direct Access Grants enabled                                                                      | `freeradius`               |
@@ -377,62 +377,49 @@ cleartext password, this only works for password-based flows — **PAP**, or
 **EAP-TTLS/PAP** as the inner method. MSCHAPv2/PEAP cannot authenticate against
 Keycloak. Enable **Direct Access Grants** on the Keycloak client.
 
-Two backends are available via `keycloak.mode`:
+Two backends are available via `keycloak.instances.<name>.mode`:
 
-| Mode            | Roles                         | Module              | Image needs                                  |
-| --------------- | ----------------------------- | ------------------- | -------------------------------------------- |
-| `lua` (default) | Yes — via token introspection | `rlm_lua` script    | `rlm_lua`, `lua-cjson`, `luasec`/`luasocket` |
-| `rest`          | No (auth-only)                | `rlm_rest` instance | `rlm_rest` with raw-body (`data`) support    |
+| Mode                | Module              | Image needs                                  |
+| ------------------- | ------------------- | -------------------------------------------- |
+| `python` (default)  | `rlm_python3` script (config baked in by Helm, delegates to shared `keycloak_common.py`) | Bundled — no rebuild needed |
+| `lua`               | `rlm_lua` script (same shape, shared `keycloak_common.lua`)                              | `rlm_lua`, `lua-cjson`, `luasec`/`luasocket` |
 
-#### lua mode (default — full role mapping)
-
-```yaml
-keycloak:
-  enabled: true
-  url: https://auth.example.com
-  realm: corp
-  clientId: freeradius
-  clientSecret: "<confidential-client-secret>"   # omit for a public client
-  roleMappings:
-    - role: network-admin        # a *client* role on `clientId`
-      reply:
-        - 'Service-Type := Administrative-User'
-        - 'Cisco-AVPair := "shell:priv-lvl=15"'
-    - role: wifi-user
-      reply:
-        - 'Tunnel-Type:0 := VLAN'
-        - 'Tunnel-Medium-Type:0 := IEEE-802'
-        - 'Tunnel-Private-Group-Id:0 := "10"'
-  denyWithoutRole: true          # reject users with no matching role
-```
-
-The Lua script validates the password (ROPC), then reads the user's client
-roles via RFC 7662 token introspection and exposes them to the
-`authorize_keycloak` unlang policy, which maps the first matching role to the
-reply attributes above. `roleAttribute` (default `Class`) is the control
-attribute the script populates with role names.
-
-#### rest mode (auth-only, no roles)
+Both modes do the same flow: ROPC password grant against the token endpoint,
+then JWT-decode the returned `access_token` to read the user's client roles,
+then expose them to the `authorize_keycloak_<name>` unlang policy which maps
+the first matching role to the reply attributes.
 
 ```yaml
 keycloak:
   enabled: true
-  mode: rest
-  url: https://auth.example.com
-  realm: corp
-  clientId: freeradius
-  clientSecret: "<confidential-client-secret>"
+  instances:
+    default:
+      mode: python
+      url: https://auth.example.com
+      realm: corp
+      clientId: freeradius
+      clientSecret: "<confidential-client-secret>"   # omit for a public client
+      roleMappings:
+        - role: network-admin        # a *client* role on `clientId`
+          reply:
+            - 'Service-Type := Administrative-User'
+            - 'Cisco-AVPair := "shell:priv-lvl=15"'
+        - role: wifi-user
+          reply:
+            - 'Tunnel-Type:0 := VLAN'
+            - 'Tunnel-Medium-Type:0 := IEEE-802'
+            - 'Tunnel-Private-Group-Id:0 := "10"'
+      denyWithoutRole: true          # reject users with no matching role
 ```
 
-A pure `rlm_rest` instance performs the ROPC POST; HTTP 200 accepts, 401
-rejects. `roleMappings` is ignored. The image's `rlm_rest` must support a raw
-request body (`data`) and the `%{urlquote:...}` xlat. The JSON token response
-is not consumed, so `radiusd -X` will print harmless "skipping unknown
-attribute" lines for `access_token` etc.
+`roleAttribute` (default `Class`) is the control attribute the script
+populates with role names. `roleMapper` selects where roles come from in the
+JWT: `client` (`resource_access[clientId].roles`) or `realm`
+(`realm_access.roles`).
 
 By default (`wireDefaultSite: true`) the `default` virtual server's authorize
-section is wired automatically. Set it to `false` to call `authorize_keycloak`
-(lua) or `keycloak_rest` (rest) from your own site config.
+section is wired to the `default` instance automatically. Set it to `false`
+to call `authorize_keycloak` from your own site config.
 
 ### Auto-generated credentials
 
@@ -554,6 +541,104 @@ tls:
 > material. To keep the old self-signed behaviour, set
 > `tls.certManager.create: false` explicitly.
 
+#### Keycloak is now multi-instance — NAS → instance binding via `clients.<x>.keycloak`
+
+The singleton `keycloak.*` block is replaced by `keycloak.instances.<name>`,
+with NAS-to-instance binding declared on the NAS side
+(`clients.<x>.keycloak: <name>`). The chart renders an
+`if (Packet-Src-IP-Address == …) { authorize_keycloak_<name> }` dispatch
+chain into the shared `sites/default` and `sites/inner-tunnel` virtual
+servers. Existing single-Keycloak `values.yaml` keeps working — the chart
+synthesises `keycloak.instances.default` from the legacy top-level fields
+and a `NOTES.txt` deprecation warning fires.
+
+```yaml
+# Before (1.1.0) — singleton
+keycloak:
+  enabled: true
+  mode: rest
+  url: https://auth.example.com
+  realm: master
+  clientId: freeradius
+  clientSecret: "…"
+  cache: { enabled: true, ttl: 300 }
+
+# After (Unreleased) — multi-instance, NAS → backend
+clients:
+  hotspot-a:
+    ipv4addr: "10.0.1.1"
+    secret: corp-secret
+    keycloak: nas1          # binds this NAS to the `nas1` Keycloak
+  hotspot-b:
+    ipv4addr: "10.0.2.1"
+    secret: branch-secret
+    keycloak: nas2          # binds this NAS to the `nas2` Keycloak
+  legacy:
+    ipv4addr: "10.0.9.1"
+    secret: legacy-secret   # no `keycloak:` → falls through to `default`
+
+keycloak:
+  enabled: true
+  wireDefaultSite: true     # auto-wire the `default` instance as the else branch
+  unmatchedReject: false    # else fallthrough to pap (vs reject)
+  instances:
+    default:                # fallback for unbound NAS (when wireDefaultSite)
+      mode: rest
+      url: https://auth.example.com
+      realm: master
+      clientId: freeradius
+      clientSecret: "…"
+    nas1:
+      mode: python
+      url: https://kc.corp.example.com
+      realm: corp
+      clientId: nas-corp
+      clientSecret: "…"
+      cache: { enabled: true, ttl: 300 }
+      roleMappings:
+        - role: network-admin
+          reply:
+            - 'Service-Type := Administrative-User'
+    nas2:
+      mode: rest
+      url: https://kc.branch.example.com
+      realm: branch
+      clientId: nas-branch
+      clientSecret: "…"
+```
+
+Per-instance resources rendered for `<name>`:
+
+| Concern                | `default` instance (legacy name)           | Named instance                                  |
+| ---------------------- | ------------------------------------------ | ----------------------------------------------- |
+| Module instance        | `keycloak_lua` / `_python` / `_rest`       | `keycloak_<name>`                               |
+| Policy                 | `authorize_keycloak`                       | `authorize_keycloak_<name>`                     |
+| Cache instance         | `cache_keycloak`                           | `cache_keycloak_<name>`                         |
+| Cache key (forced)     | `keycloak:%{User-Name}`                    | `keycloak:<name>:%{User-Name}`                  |
+| Mapper script path     | `/etc/freeradius/scripts/keycloak.{py,lua}`| `/etc/freeradius/scripts/keycloak_<name>.{py,lua}` |
+| ConfigMap (module)     | `<fullname>-keycloak`                      | `<fullname>-keycloak-<name>`                    |
+| ConfigMap (policy)     | `<fullname>-keycloak-policy`               | `<fullname>-keycloak-<name>-policy`             |
+| ConfigMap (script lua) | `<fullname>-keycloak-lua`                  | `<fullname>-keycloak-<name>-lua`                |
+| ConfigMap (script py)  | `<fullname>-keycloak-python`               | `<fullname>-keycloak-<name>-python`             |
+| Client-secret Secret   | `<fullname>-keycloak`                      | `<fullname>-keycloak-<name>`                    |
+| TLS CA Secret          | `<fullname>-keycloak-ca`                   | `<fullname>-keycloak-<name>-ca`                 |
+| CA mount path          | `/etc/freeradius/certs-keycloak/`          | `/etc/freeradius/certs-keycloak-<name>/`        |
+| Env-var prefix         | `FREERADIUS_KEYCLOAK_*`                    | `FREERADIUS_KEYCLOAK_<NAME>_*`                  |
+
+> **⚠️ One-time cache flush on upgrade.** Existing Redis-backed
+> `cache_keycloak` entries were keyed as `%{User-Name}`; the chart now
+> uses the instance-namespaced `keycloak:<name>:%{User-Name}` (security:
+> prevents silent cross-instance hits on common usernames). After
+> upgrade, old entries are unreachable and naturally expire at `cache.ttl`.
+> Flush sooner with `redis-cli FLUSHDB` against the chart's Redis if
+> stale entries matter.
+
+> **⚠️ Mapper-script filenames renamed.** `keycloak-mapper.lua` →
+> `keycloak.lua`, `keycloak_mapper.py` → `keycloak.py` (default
+> instance); `keycloak_<name>.{lua,py}` (named). Only affects users who
+> override the mapper-script ConfigMaps or reference the in-pod script
+> paths directly.
+
 #### Keycloak script env vars renamed to `FREERADIUS_KEYCLOAK_*`
 
 The env vars carrying Keycloak coordinates from the Deployment into the
@@ -572,7 +657,7 @@ have moved into the chart's `FREERADIUS_` namespace:
 No `values.yaml` changes are required — these names are internal to the chart's
 generated config. The rename is only observable if you `kubectl exec` into the
 pod to inspect env, or if you override the mapper-script ConfigMaps
-(`keycloak-mapper-lua.yaml`, `keycloak-mapper-python.yaml`) or the
+(`keycloak-conf-lua.yaml`, `keycloak-conf-py.yaml`) or the
 `keycloak.yaml` module template — in which case update any
 `os.environ.get("KC_…")` / `os.getenv("KC_…")` / `$ENV{KC_…}` references to the
 new prefix.

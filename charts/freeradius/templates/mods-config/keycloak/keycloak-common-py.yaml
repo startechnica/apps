@@ -1,0 +1,200 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Shared Python library — `keycloak_common.py` — mounted into the pod's
+script path once per release (regardless of how many python-mode
+instances exist). Per-instance wrappers (rendered by
+`keycloak-conf-py.yaml`) gather config from env vars and pass a
+plain dict into `keycloak_common.authorize(p, cfg)` /
+`keycloak_common.accounting(p)`. The library itself touches NO env vars
+and has NO module-level config — pure logic over the dict passed in.
+
+Rendered whenever `keycloak.enabled: true` — the body is pure static
+logic, so an unused ConfigMap when no python instance exists is just
+inert (cheaper than a detection loop in the template).
+*/}}
+
+{{- if .Values.keycloak.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-keycloak-python-common" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  keycloak_common.py: |-
+    """
+    keycloak_common.py — shared Python logic for the per-instance Keycloak
+    authenticator/mapper wrappers (rlm_python3, FreeRADIUS 3.2.x).
+
+    Pure logic — no env-var reads, no module-level config. Each
+    per-instance wrapper (`keycloak[_<name>].py`) gathers its config from
+    its own env-var prefix and passes a plain dict in:
+
+        keycloak_common.authorize(p, cfg)
+        keycloak_common.accounting(p)
+
+    Expected keys in `cfg`:
+        instance        str   — instance name (for logs)
+        role_attribute  str   — &control:<this> populated per role
+        base_url        str   — Keycloak server URL
+        realm           str   — realm name
+        client_id       str   — OIDC client_id
+        client_secret   str   — confidential-client secret (or "")
+        scope           str   — OAuth scope (or "")
+        role_mapper     str   — "client" or "realm"
+        ca_file         str   — path to PEM CA (or None)
+        insecure        bool  — skip TLS verify (dev only)
+        timeout         float — connect timeout (seconds)
+    """
+
+    import base64
+    import json
+    import ssl
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    try:
+        import radiusd
+    except ImportError:
+        class _Stub:
+            RLM_MODULE_OK     = 0
+            RLM_MODULE_REJECT = 1
+            RLM_MODULE_FAIL   = 2
+            RLM_MODULE_NOOP   = 7
+            L_AUTH = 0
+            L_ERR  = 4
+            L_WARN = 5
+            L_DBG  = 9
+            @staticmethod
+            def radlog(level, msg):
+                pass
+        radiusd = _Stub()
+
+
+    def _ssl_context(ca_file, insecure):
+        if insecure:
+            return ssl._create_unverified_context()
+        ctx = ssl.create_default_context()
+        if ca_file:
+            ctx.load_verify_locations(cafile=ca_file)
+        return ctx
+
+
+    def _decode_jwt_claims(token):
+        try:
+            payload = token.split(".", 2)[1]
+            payload += "=" * (-len(payload) % 4)
+            return json.loads(base64.urlsafe_b64decode(payload))
+        except (IndexError, ValueError, TypeError, json.JSONDecodeError):
+            return {}
+
+
+    def _roles_from_claims(claims, role_mapper, client_id):
+        if role_mapper == "realm":
+            return list(claims.get("realm_access", {}).get("roles", []))
+        return list((claims.get("resource_access") or {}).get(client_id, {}).get("roles", []))
+
+
+    def _ropc(token_url, fields, timeout, ca_file, insecure):
+        data = urllib.parse.urlencode(fields).encode("ascii")
+        req = urllib.request.Request(
+            token_url, data=data, method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context(ca_file, insecure)) as resp:
+                raw = resp.read()
+                status = resp.status
+        except urllib.error.HTTPError as e:
+            status = e.code
+            try:
+                raw = e.read()
+            except Exception:
+                raw = b""
+        except (urllib.error.URLError, OSError):
+            return None, None
+        try:
+            return status, json.loads(raw or b"null")
+        except (ValueError, json.JSONDecodeError):
+            return status, None
+
+
+    def authorize(p, cfg):
+        """Per-call authorize entry point.
+
+        ROPC password grant to Keycloak's token endpoint, decode JWT
+        claims, extract roles into `&control:<role_attribute>`. NOOP if
+        no User-Password (not a cleartext request); FAIL on
+        network/misconfig; REJECT on Keycloak 400/401."""
+        attrs = {name: value for name, value in p}
+        username = attrs.get("User-Name")
+        password = attrs.get("User-Password")
+        if not username or not password:
+            return radiusd.RLM_MODULE_NOOP
+
+        instance = cfg["instance"]
+        if not cfg.get("base_url") or not cfg.get("realm"):
+            radiusd.radlog(radiusd.L_ERR,
+                "keycloak[{}]: base_url / realm not set".format(instance))
+            return radiusd.RLM_MODULE_FAIL
+
+        token_url = "{}/realms/{}/protocol/openid-connect/token".format(cfg["base_url"], cfg["realm"])
+        fields = {
+            "grant_type": "password",
+            "client_id":  cfg["client_id"],
+            "username":   username,
+            "password":   password,
+        }
+        if cfg.get("client_secret"):
+            fields["client_secret"] = cfg["client_secret"]
+        if cfg.get("scope"):
+            fields["scope"] = cfg["scope"]
+
+        status, body = _ropc(
+            token_url, fields,
+            cfg["timeout"], cfg.get("ca_file"), cfg.get("insecure", False),
+        )
+
+        if status is None:
+            radiusd.radlog(radiusd.L_ERR,
+                "keycloak[{}]: token request failed (network/TLS)".format(instance))
+            return radiusd.RLM_MODULE_FAIL
+        if status in (400, 401):
+            radiusd.radlog(radiusd.L_AUTH,
+                "keycloak[{}]: ROPC rejected for {} (HTTP {})".format(instance, username, status))
+            return radiusd.RLM_MODULE_REJECT
+        if status != 200 or not body or "access_token" not in body:
+            radiusd.radlog(radiusd.L_ERR,
+                "keycloak[{}]: unexpected token response for {} (HTTP {})".format(instance, username, status))
+            return radiusd.RLM_MODULE_FAIL
+
+        claims = _decode_jwt_claims(body["access_token"])
+        roles  = _roles_from_claims(claims, cfg.get("role_mapper", "client"), cfg["client_id"])
+
+        config_attrs = []
+        if roles:
+            for role in roles:
+                radiusd.radlog(radiusd.L_DBG,
+                    "keycloak[{}]: role -> {}".format(instance, role))
+                config_attrs.append((cfg["role_attribute"], role))
+        else:
+            radiusd.radlog(radiusd.L_WARN,
+                "keycloak[{}]: no {} roles for {} (CLIENT_ID={})".format(instance, cfg.get("role_mapper", "client"), username, cfg["client_id"]))
+
+        return (radiusd.RLM_MODULE_OK, (), tuple(config_attrs))
+
+
+    def accounting(p):
+        """Accounting pass-through — rlm_sql handles accounting."""
+        return radiusd.RLM_MODULE_NOOP
+{{- end }}

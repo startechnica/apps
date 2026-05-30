@@ -3,109 +3,85 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{/*
+Per-instance ConfigMaps holding the FreeRADIUS module-instance block for
+each configured Keycloak backend. One ConfigMap per resolved instance:
+
+  default → `<fullname>-keycloak`           key: `keycloak`
+            (legacy names — kept stable for backwards-compat)
+  <name>  → `<fullname>-keycloak-<name>`    key: `keycloak_<name>`
+
+Mounted into the pod at `mods-enabled/<key>` via the Deployment. Each
+ConfigMap holds exactly one FreeRADIUS module block typed by the
+instance's `mode`:
+
+  - `lua keycloak_<name>` ............... rlm_lua wrapper (rlm_lua not
+    bundled in the default image — bring `freeradius-lua` + lua-cjson +
+    luasec/luasocket)
+  - `python3 keycloak_<name>` ........... rlm_python3 wrapper (bundled)
+  - `rest keycloak_<name>` .............. rlm_rest doing the ROPC POST
+
+For the implicit `default` instance the module instance name keeps the
+legacy form `keycloak_lua` / `keycloak_python` (no
+`_default` suffix), so existing values files and dependent unlang stay
+working unchanged.
+
+BYO override: setting `keycloak.instances.<name>.existingConfigMap` skips
+the chart-rendered ConfigMap and reuses the named one (the user is
+responsible for the right key name).
+*/}}
+
 {{- if .Values.keycloak.enabled }}
-{{- if not .Values.keycloak.realm }}
-  {{- fail "keycloak.enabled=true requires keycloak.realm to be set" }}
-{{- end }}
+{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- range $name, $cfg := $resolved.instances }}
+{{- if not $cfg.existingConfigMap }}
+{{- $modName := include "freeradius.keycloak.moduleName" (dict "name" $name "mode" $cfg.mode) }}
+{{- $modKey := include "freeradius.keycloak.modKey" (dict "name" $name) }}
+{{- $cmName := ternary (printf "%s-keycloak" $fullname) (printf "%s-keycloak-%s" $fullname $name) (eq $name "default") }}
+{{- $envPrefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
-  namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  name: {{ $cmName }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    app.firmansyah.id/keycloak-instance: {{ $name | quote }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* mods-enabled/keycloak — the active backend instance. Exactly one
-         renders per mode:
-           - lua    : `keycloak_lua`    + keycloak-mapper.lua    (mounted at
-                      /etc/freeradius/scripts/keycloak-mapper.lua via
-                      keycloak-mapper-lua.yaml)
-           - python : `keycloak_python` + keycloak_mapper.py     (mounted at
-                      /etc/freeradius/scripts/keycloak_mapper.py via
-                      keycloak-mapper-python.yaml — note underscore: rlm_python3
-                      imports the file as a Python module so the name must be a
-                      valid identifier)
-           - rest   : `keycloak_rest`   doing the ROPC password grant directly
-         The unlang policy wrapper (cache + role mapping) lives in its own
-         ConfigMap (keycloak-policy.yaml) since FreeRADIUS only parses
-         `policy { }` blocks when included from policy.d/. */}}
-  keycloak: |
-    {{- if eq .Values.keycloak.mode "lua" }}
-    ## rlm_lua instance running the Keycloak authenticator/mapper
-    lua keycloak_lua {
-        filename = "/etc/freeradius/scripts/keycloak-mapper.lua"
+  {{ $modKey }}: |
+    {{- if eq $cfg.mode "lua" }}
+    ## rlm_lua instance running the Keycloak authenticator/mapper for `{{ $name }}`.
+    ## The script is a per-instance wrapper (config baked in by Helm) that
+    ## delegates to the shared `keycloak_common.lua` library. Only
+    ## `{{ $envPrefix }}CLIENT_SECRET` (sensitive) rides in via env.
+    lua {{ $modName }} {
+        filename = "/etc/freeradius/scripts/{{ include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}"
         func_authorize = "authorize"
         func_accounting = "accounting"
     }
-    {{- end }}
-
-    {{- if eq .Values.keycloak.mode "python" }}
-    ## rlm_python3 instance running the Keycloak authenticator/mapper.
-    ## rlm_python3.so is present in the default `freeradius/freeradius-server:3.2.8`
-    ## image alongside the rest of the stock module set.
-    python3 keycloak_python {
+    {{- else if eq $cfg.mode "python" }}
+    ## rlm_python3 instance running the Keycloak authenticator/mapper for `{{ $name }}`.
+    ## Bundled in the default `freeradius/freeradius-server:3.2.8` image.
+    ## The Python module file is `{{ include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}`
+    ## (mounted under `python_path`) — a per-instance wrapper with config
+    ## baked in by Helm that delegates to the shared `keycloak_common.py`
+    ## library. Only `{{ $envPrefix }}CLIENT_SECRET` (sensitive) rides in via env.
+    python3 {{ $modName }} {
         python_path = "/etc/freeradius/scripts"
         # rlm_python3 requires `mod_<section>` paired with each
         # `func_<section>` — the top-level `module` directive alone is
         # insufficient and triggers "Instantiation failed" at startup.
-        mod_authorize  = "keycloak_mapper"
+        mod_authorize  = "{{ trimSuffix ".py" (include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode)) }}"
         func_authorize = "authorize"
-        mod_accounting  = "keycloak_mapper"
+        mod_accounting  = "{{ trimSuffix ".py" (include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode)) }}"
         func_accounting = "accounting"
     }
     {{- end }}
-
-    {{- if eq .Values.keycloak.mode "rest" }}
-    ## rlm_rest instance doing Keycloak ROPC (PAP only)
-    rest keycloak_rest {
-        connect_uri = "{{ .Values.keycloak.url }}"
-        connect_timeout = {{ .Values.keycloak.connectTimeout }}
-
-        tls {
-            {{- if .Values.keycloak.tls.insecure }}
-            #  TLS verification disabled (keycloak.tls.insecure=true) — dev only.
-            check_cert = no
-            check_cert_cn = no
-            {{- else }}
-            #  Verify Keycloak's TLS cert against the configured CA bundle
-            #  (`keycloak.tls.caCert` / `existingSecret`) when set, otherwise
-            #  the image's system CA bundle.
-            check_cert = yes
-            check_cert_cn = yes
-            {{- if include "freeradius.keycloak.tls.enabled" . }}
-            ca_file = "{{ include "freeradius.keycloak.tls.caFilePath" . }}"
-            {{- end }}
-            {{- end }}
-        }
-
-        authorize {
-            uri = "${..connect_uri}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/token"
-            method = 'post'
-            #  Raw urlencoded ROPC body. `$ENV{}` expands at config-load time
-            #  (keeps the client secret out of this ConfigMap); `%{...}` xlats
-            #  expand per-request. `body = post` sets the form Content-Type.
-            #  Note: the JSON token response is not consumed — rlm_rest will log
-            #  "skipping unknown attribute" debug lines for access_token etc.;
-            #  this is harmless, the accept decision is driven by the HTTP status.
-            body = 'post'
-            data = "grant_type=password&client_id={{ .Values.keycloak.clientId }}{{- if .Values.keycloak.clientSecret }}&client_secret=$ENV{FREERADIUS_KEYCLOAK_CLIENT_SECRET}{{- end }}{{- if .Values.keycloak.scope }}&scope={{ .Values.keycloak.scope }}{{- end }}&username=%{urlquote:%{User-Name}}&password=%{urlquote:%{User-Password}}"
-            tls = ${..tls}
-
-            response {
-              format = "json"
-            }
-        }
-
-        pool {
-            start = 1
-            min = 1
-            max = 5
-            spare = 1
-            ttl = 3600
-        }
-    }
-    {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

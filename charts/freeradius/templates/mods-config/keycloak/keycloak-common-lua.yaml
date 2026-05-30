@@ -1,0 +1,195 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Shared Lua library — `keycloak_common.lua` — mounted into the pod's
+script path once per release (regardless of how many lua-mode instances
+exist). Per-instance wrappers (rendered by `keycloak-conf-lua.yaml`)
+gather config from env vars and pass a plain table into
+`common.authorize(p, cfg)` / `common.accounting(p)`. The library itself
+touches NO env vars and has NO module-level config — pure logic over
+the table passed in.
+
+Rendered whenever `keycloak.enabled: true` — the body is pure static
+logic, so an unused ConfigMap when no lua instance exists is just
+inert (cheaper than a detection loop in the template).
+
+Requires luasec (ssl.https), luasocket (ltn12, socket.url, mime) and
+lua-cjson in the image — rlm_lua is not bundled in the default
+`freeradius/freeradius-server:3.2.8` image.
+*/}}
+
+{{- if .Values.keycloak.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-keycloak-lua-common" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  keycloak_common.lua: |-
+    --[[
+      keycloak_common.lua — shared Lua logic for the per-instance Keycloak
+      authenticator/mapper wrappers (rlm_lua, FreeRADIUS 3.2.x).
+
+      Pure logic — no env-var reads, no module-level config. Each
+      per-instance wrapper (`keycloak[_<name>].lua`) gathers its config
+      from its own env-var prefix and passes a plain table in:
+
+          common.authorize(p, cfg)
+          common.accounting(p)
+
+      Expected keys in `cfg`:
+          instance        string  — instance name (for logs)
+          role_attribute  string  — &control:<this> populated per role
+          base_url        string  — Keycloak server URL
+          realm           string  — realm name
+          client_id       string  — OIDC client_id
+          client_secret   string  — confidential-client secret (or "")
+          scope           string  — OAuth scope (or "")
+          role_mapper     string  — "client" or "realm"
+          ca_file         string  — path to PEM CA (or nil)
+          insecure        bool    — skip TLS verify (dev only)
+          timeout         number  — connect timeout (seconds, or nil)
+    --]]
+
+    local M = {}
+
+    local https = require("ssl.https")
+    local ltn12 = require("ltn12")
+    local url   = require("socket.url")
+    local mime  = require("mime")
+    local json  = require("cjson")
+    local fr    = require("freeradius")
+
+    local function decode_jwt_claims(token)
+        if not token then return {} end
+        local payload = token:match("^[^.]+%.([^.]+)%.")
+        if not payload then return {} end
+        payload = payload:gsub("-", "+"):gsub("_", "/")
+        local pad = (4 - (#payload % 4)) % 4
+        if pad > 0 then payload = payload .. string.rep("=", pad) end
+        local decoded = mime.unb64(payload)
+        if not decoded then return {} end
+        local ok, data = pcall(json.decode, decoded)
+        if not ok then return {} end
+        return data
+    end
+
+    local function roles_from_claims(claims, role_mapper, client_id)
+        if role_mapper == "realm" then
+            return ((claims or {}).realm_access or {}).roles or {}
+        end
+        local ra = (claims or {}).resource_access or {}
+        return (ra[client_id] or {}).roles or {}
+    end
+
+    local function post_form(endpoint, fields, tls_params)
+        local parts = {}
+        for k, v in pairs(fields) do
+            parts[#parts + 1] = url.escape(k) .. "=" .. url.escape(v)
+        end
+        local body = table.concat(parts, "&")
+        local resp = {}
+        local _, code = https.request{
+            url     = endpoint,
+            method  = "POST",
+            headers = {
+                ["Content-Type"]   = "application/x-www-form-urlencoded",
+                ["Content-Length"] = tostring(#body),
+            },
+            source  = ltn12.source.string(body),
+            sink    = ltn12.sink.table(resp),
+            verify  = tls_params.verify,
+            cafile  = tls_params.cafile,
+            options = tls_params.options,
+        }
+        if type(code) ~= "number" then
+            return nil, nil
+        end
+        local ok, data = pcall(json.decode, table.concat(resp))
+        if not ok then
+            return code, nil
+        end
+        return code, data
+    end
+
+    function M.authorize(p, cfg)
+        local username = p:get("request", "User-Name")
+        local password = p:get("request", "User-Password")
+        if not username or not password then
+            return fr.RLM_MODULE_NOOP
+        end
+
+        local instance = cfg.instance
+        if not cfg.base_url or not cfg.realm then
+            fr.log(fr.L_ERR, "keycloak[" .. instance .. "]: base_url / realm not set")
+            return fr.RLM_MODULE_FAIL
+        end
+
+        if cfg.timeout then https.TIMEOUT = cfg.timeout end
+
+        local tls_params = { mode = "client", protocol = "tlsv1_2" }
+        if cfg.insecure then
+            tls_params.verify = "none"
+        elseif cfg.ca_file then
+            tls_params.verify = "peer"
+            tls_params.cafile = cfg.ca_file
+            tls_params.options = "all"
+        end
+
+        local token_url = string.format("%s/realms/%s/protocol/openid-connect/token",
+                                        cfg.base_url, cfg.realm)
+
+        local fields = {
+            grant_type = "password",
+            client_id  = cfg.client_id,
+            username   = username,
+            password   = password,
+        }
+        if cfg.client_secret and cfg.client_secret ~= "" then fields.client_secret = cfg.client_secret end
+        if cfg.scope and cfg.scope ~= "" then fields.scope = cfg.scope end
+
+        local code, body = post_form(token_url, fields, tls_params)
+
+        if code == nil then
+            fr.log(fr.L_ERR, "keycloak[" .. instance .. "]: token request failed (network/TLS)")
+            return fr.RLM_MODULE_FAIL
+        end
+        if code == 400 or code == 401 then
+            fr.log(fr.L_AUTH, "keycloak[" .. instance .. "]: ROPC rejected for " .. tostring(username) .. " (HTTP " .. tostring(code) .. ")")
+            return fr.RLM_MODULE_REJECT
+        end
+        if code ~= 200 or not body or not body.access_token then
+            fr.log(fr.L_ERR, "keycloak[" .. instance .. "]: unexpected token response for " .. tostring(username) .. " (HTTP " .. tostring(code) .. ")")
+            return fr.RLM_MODULE_FAIL
+        end
+
+        local claims = decode_jwt_claims(body.access_token)
+        local roles  = roles_from_claims(claims, cfg.role_mapper or "client", cfg.client_id)
+
+        if roles and #roles > 0 then
+            for _, role in ipairs(roles) do
+                fr.log(fr.L_DBG, "keycloak[" .. instance .. "]: role -> " .. role)
+                p:add("control", cfg.role_attribute, role)
+            end
+        else
+            fr.log(fr.L_WARN, "keycloak[" .. instance .. "]: no " .. (cfg.role_mapper or "client") .. " roles for " .. tostring(username) .. " (CLIENT_ID=" .. cfg.client_id .. ")")
+        end
+
+        return fr.RLM_MODULE_OK
+    end
+
+    function M.accounting(p)
+        return fr.RLM_MODULE_NOOP
+    end
+
+    return M
+{{- end }}

@@ -37,3 +37,29 @@ FreeRADIUS has been installed.
 {{- end }}
 
 {{- include "freeradius.validate" . }}
+{{- if include "freeradius.keycloak.shimFired" . }}
+
+DEPRECATION: top-level `keycloak.mode`, `keycloak.url`, `keycloak.realm`,
+`keycloak.clientId`, `keycloak.clientSecret`, `keycloak.scope`,
+`keycloak.connectTimeout`, `keycloak.roleAttribute`, `keycloak.roleMapper`,
+`keycloak.denyWithoutRole`, `keycloak.roleMappings`, `keycloak.tls.*` and
+`keycloak.cache.*` are deprecated. The chart synthesised
+`keycloak.instances.default` from those values for backwards-compat —
+migrate to the new shape at your convenience:
+
+  keycloak:
+    enabled: true
+    wireDefaultSite: true
+    instances:
+      default:
+        mode: {{ .Values.keycloak.mode | quote }}
+        url: {{ .Values.keycloak.url | quote }}
+        realm: {{ .Values.keycloak.realm | quote }}
+        clientId: {{ .Values.keycloak.clientId | quote }}
+        clientSecret: <move clientSecret here>
+        # … remaining keys mirror the legacy schema
+
+Multi-instance: add additional named entries under `keycloak.instances.<name>`
+and bind NAS to them via `clients.<x>.keycloak: <name>`. The legacy keys
+will be removed in the next major release.
+{{- end }}

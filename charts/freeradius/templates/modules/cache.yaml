@@ -7,10 +7,11 @@ SPDX-License-Identifier: APACHE-2.0
 Single ConfigMap, single key (`cache`), holding every rlm_cache instance the
 chart manages concatenated into one FreeRADIUS module file. Sections rendered
 on demand:
-  - `cache { }`                — base       (modules.cache.enabled)
-  - `cache cache_tls { }`      — EAP TLS    (sites.tlsCache.enabled)
-  - `cache cache_keycloak { }` — Keycloak   (keycloak.cache.enabled)
-  - `cache <name> { }`         — per-entry  (modules.cache.instances.<name>)
+  - `cache { }`                       — base       (modules.cache.enabled)
+  - `cache cache_tls { }`             — EAP TLS    (sites.tlsCache.enabled)
+  - `cache cache_keycloak[_<name>]`   — Keycloak   (one per keycloak instance
+                                                    whose `cache.enabled: true`)
+  - `cache <name> { }`                — per-entry  (modules.cache.instances.<name>)
 
 The Deployment mounts this as one file at `mods-enabled/cache`; rlm_cache
 parses every `cache <name>` block in the file and registers each as its own
@@ -18,8 +19,9 @@ instance.
 
 BYO override: `modules.cache.existingConfigMap` skips this template entirely
 and the user provides the full module file themselves. Chart-managed
-`cache_tls` / `cache_keycloak` bodies interpolate chart values, so combining
-BYO with `sites.tlsCache` or `keycloak.cache` is not supported.
+`cache_tls` / `cache_keycloak[_<name>]` bodies interpolate chart values, so
+combining BYO with `sites.tlsCache` or any keycloak instance's `cache` is
+not supported.
 
 The `redis { }` sub-block is intentionally inlined per instance — no shared
 helper, because the indirection hurts readability more than the duplication.
@@ -27,7 +29,16 @@ helper, because the indirection hurts readability more than the duplication.
 {{- if not .Values.modules.cache.existingConfigMap -}}
 {{- $base := .Values.modules.cache.enabled -}}
 {{- $tls := .Values.sites.tlsCache.enabled -}}
-{{- $kc := .Values.keycloak.cache.enabled -}}
+{{- $resolvedKc := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
+{{- $kcInstances := dict -}}
+{{- if .Values.keycloak.enabled -}}
+{{- range $name, $cfg := $resolvedKc.instances -}}
+{{- if and $cfg.cache $cfg.cache.enabled -}}
+{{- $_ := set $kcInstances $name $cfg -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $kc := not (empty $kcInstances) -}}
 {{- $inst := not (empty .Values.modules.cache.instances) -}}
 {{- if or $base $tls $kc $inst }}
 apiVersion: v1
@@ -105,36 +116,43 @@ data:
     }
     {{- end }}
     {{- if $kc }}
+    {{- range $name, $cfg := $kcInstances }}
+    {{- $cacheName := include "freeradius.keycloak.cacheName" (dict "name" $name) }}
+    {{- $cacheKey := include "freeradius.keycloak.cacheKey" (dict "name" $name) }}
 
-    # rlm_cache instance dedicated to Keycloak auth results. Keyed on the
-    # RADIUS User-Name; caches only the role attribute set by keycloak_lua
-    # (&control:{{ .Values.keycloak.roleAttribute }}) so subsequent
-    # `authorize_keycloak` calls within TTL skip the ROPC + introspection
-    # roundtrip to Keycloak. Role->reply mapping (roles_keycloak) still runs
+    # rlm_cache instance dedicated to Keycloak auth results for instance
+    # `{{ $name }}`. Keyed on `{{ $cacheKey }}` — instance-namespaced to
+    # prevent cross-instance cache hits on common usernames (a corp user
+    # `alice` cache hit must not return roles to a branch user `alice`).
+    # Caches only the role attribute set by the mapper script
+    # (&control:{{ default "Class" $cfg.roleAttribute }}) so subsequent
+    # `{{ include "freeradius.keycloak.policyName" (dict "name" $name) }}` calls within TTL skip
+    # the ROPC + JWT-decode roundtrip to Keycloak. Role->reply mapping
+    # (`{{ include "freeradius.keycloak.rolesPolicyName" (dict "name" $name) }}`) still runs
     # on every request, regenerating reply attrs from the cached role list.
-    # Rest mode caches nothing useful currently (rlm_rest only fetches the
-    # token); the cache_keycloak short-circuit still saves the ROPC roundtrip.
-    # Always Redis-backed — freeradius.validate.keycloakCache hard-fails if
-    # no Redis is configured (cross-pod sharing is the point; per-pod caches
-    # still help but the chart standardises on Redis for predictability).
-    cache cache_keycloak {
+    # Always Redis-backed — freeradius.validate.keycloakInstances hard-fails
+    # if no Redis is configured for an instance with cache.enabled (cross-pod
+    # sharing is the point; per-pod caches still help but the chart
+    # standardises on Redis for predictability).
+    cache {{ $cacheName }} {
         driver = "rlm_cache_redis"
-        key = "%{User-Name}"
-        ttl = {{ .Values.keycloak.cache.ttl }}
+        key = {{ $cacheKey }}
+        ttl = {{ $cfg.cache.ttl }}
         max_entries = 0
 
         update {
-            &control:{{ .Values.keycloak.roleAttribute }} += &control:{{ .Values.keycloak.roleAttribute }}
+            &control:{{ default "Class" $cfg.roleAttribute }} += &control:{{ default "Class" $cfg.roleAttribute }}
         }
 
         redis {
-            server = {{ include "freeradius.redis.host" . }}
-            {{- if include "freeradius.redis.usePassword" . }}
+            server = {{ include "freeradius.redis.host" $ }}
+            {{- if include "freeradius.redis.usePassword" $ }}
             password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
             {{- end }}
-            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit .Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit $.Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
         }
     }
+    {{- end }}
     {{- end }}
     {{- range $name, $cfg := .Values.modules.cache.instances }}
 

@@ -3,104 +3,97 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{/*
+Per-instance ConfigMaps holding the unlang policy wrapper for each
+configured Keycloak backend. FreeRADIUS only parses `policy { }` blocks
+when included from `policy.d/`, so these live in their own ConfigMaps
+separate from the module-instance files rendered by `keycloak.yaml`.
+
+  default → `<fullname>-keycloak-policy`           key: `keycloak`
+            policy names: `authorize_keycloak` / `roles_keycloak`
+  <name>  → `<fullname>-keycloak-<name>-policy`    key: `keycloak_<name>`
+            policy names: `authorize_keycloak_<name>` / `roles_keycloak_<name>`
+
+The policy wraps the per-instance module instance (`keycloak_lua` /
+`keycloak_python` for default, `keycloak_<name>` for named) with:
+  - optional cache-aside via the dedicated `cache_keycloak[_<name>]`
+    rlm_cache instance (when `cache.enabled`),
+  - `&control:Auth-Type := Accept` on success (so authenticate{} is
+    bypassed),
+  - role→reply mapping via `roles_keycloak[_<name>]` when
+    `roleMappings` is non-empty.
+*/}}
+
 {{- if .Values.keycloak.enabled }}
-{{- $isLua    := eq .Values.keycloak.mode "lua" -}}
-{{- $isPython := eq .Values.keycloak.mode "python" -}}
-{{- $isRest   := eq .Values.keycloak.mode "rest" -}}
-{{- /* Script-driven modes (lua, python) populate &control:<roleAttribute> in
-       authorize{}, so role->reply mapping (roles_keycloak) is meaningful for
-       both. Rest mode doesn't extract roles (rlm_rest only fetches a token),
-       so role mapping is skipped there. */ -}}
-{{- $hasRoles := or $isLua $isPython -}}
-{{- /* rcodes after a successful call differ per module: rlm_lua and
-       rlm_python3 return `ok` on RLM_MODULE_OK; rlm_rest returns `updated`
-       when it parsed reply attrs from the JSON body, otherwise `ok` — match
-       both for rest to be safe. */ -}}
-{{- $mod := "" -}}
-{{- $okRcode := "" -}}
-{{- if $isLua -}}
-  {{- $mod = "keycloak_lua" -}}
-  {{- $okRcode = "(ok)" -}}
-{{- else if $isPython -}}
-  {{- $mod = "keycloak_python" -}}
-  {{- $okRcode = "(ok)" -}}
-{{- else if $isRest -}}
-  {{- $mod = "keycloak_rest" -}}
-  {{- $okRcode = "(ok || updated)" -}}
-{{- end -}}
+{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- range $name, $cfg := $resolved.instances }}
+{{- $modName := include "freeradius.keycloak.moduleName" (dict "name" $name "mode" $cfg.mode) -}}
+{{- $polName := include "freeradius.keycloak.policyName" (dict "name" $name) -}}
+{{- $rolesPolName := include "freeradius.keycloak.rolesPolicyName" (dict "name" $name) -}}
+{{- $cacheName := include "freeradius.keycloak.cacheName" (dict "name" $name) -}}
+{{- $polKey := include "freeradius.keycloak.policyKey" (dict "name" $name) -}}
+{{- $cmName := ternary (printf "%s-keycloak-policy" $fullname) (printf "%s-keycloak-%s-policy" $fullname $name) (eq $name "default") -}}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ printf "%s-keycloak-policy" (include "st-common.names.fullname" .) }}
-  namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  name: {{ $cmName }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+    app.firmansyah.id/keycloak-instance: {{ $name | quote }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  {{- /* policy.d/keycloak — unlang wrapper around the active Keycloak backend
-         module (`keycloak_lua` in lua mode, `keycloak_python` in python mode,
-         `keycloak_rest` in rest mode). Adds cache-aside when
-         keycloak.cache.enabled and role→reply mapping when roleMappings
-         (script-driven modes only — rest mode doesn't populate role attrs,
-         since the chart's rlm_rest instance only hits the token endpoint).
-         FreeRADIUS only parses `policy { }` blocks when included from
-         policy.d/, so this lives in its own ConfigMap separate from the
-         mods-enabled/keycloak module file. */}}
-  keycloak: |
+  {{ $polKey }}: |
     #  Files in policy.d/ are $INCLUDEd inside radiusd.conf's top-level
     #  `policy { }` block, so each named policy is declared with bare
     #  `<name> { }` syntax (no `policy` keyword prefix — that would parse as
     #  a module call and fail with "Failed to find 'policy' as a module").
 
-    #  Entry point. Call this from a virtual server's authorize {} section.
-    authorize_keycloak {
-        {{- if .Values.keycloak.cache.enabled }}
+    #  Entry point — call from a virtual server's authorize{} section. With
+    #  multi-instance, the chart's dispatch chain in sites/default chooses
+    #  which `authorize_keycloak[_<name>]` to call based on NAS-IP-Address.
+    {{ $polName }} {
+        {{- if and $cfg.cache $cfg.cache.enabled }}
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
-        #  recent successful result cached. cache_keycloak returns ok on hit
-        #  (populating &control:{{ .Values.keycloak.roleAttribute }} in lua
-        #  mode; nothing in rest mode — the chart's rlm_rest instance only
-        #  fetches a token without extracting any attributes), notfound on
-        #  miss.
-        cache_keycloak
+        #  recent successful result cached. Keyed on
+        #  `keycloak:{{ $name }}:%{User-Name}` — instance-namespaced to prevent
+        #  cross-instance cache hits on common usernames.
+        {{ $cacheName }}
 
         if (notfound) {
-            {{ $mod }}
-            if {{ $okRcode }} {
-                #  Store the post-auth attribute set per cache_keycloak's update {}.
-                cache_keycloak
+            {{ $modName }}
+            if (ok) {
+                #  Store the post-auth attribute set per {{ $cacheName }}'s update{}.
+                {{ $cacheName }}
             }
         }
         {{- else }}
-        {{- if $isLua }}
-        #  keycloak_lua: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
-        {{- else if $isPython }}
-        #  keycloak_python: ROPC + introspection -> &control:{{ .Values.keycloak.roleAttribute }} (+ rcode).
-        {{- else if $isRest }}
-        #  keycloak_rest: ROPC password grant -> HTTP 200 = ok/updated, 401 = reject.
+        #  {{ $modName }}: ROPC + JWT claims -> &control:{{ $cfg.roleAttribute }} (+ rcode).
+        {{ $modName }}
         {{- end }}
-        {{ $mod }}
-        {{- end }}
-        if {{ $okRcode }} {
+        if (ok) {
             #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.
             update control {
                 &Auth-Type := Accept
             }
-            {{- if and $hasRoles .Values.keycloak.roleMappings }}
-            roles_keycloak
+            {{- if $cfg.roleMappings }}
+            {{ $rolesPolName }}
             {{- end }}
         }
         #  reject (bad creds / inactive), fail (network/config) and noop
         #  (not a password request) propagate unchanged to the caller.
     }
 
-    {{- if and $hasRoles .Values.keycloak.roleMappings }}
-    #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
+    {{- if $cfg.roleMappings }}
+    #  Map Keycloak client roles (&control:{{ $cfg.roleAttribute }})
     #  to RADIUS reply attributes. First match wins.
-    roles_keycloak {
-    {{- range $i, $m := .Values.keycloak.roleMappings }}
-        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $.Values.keycloak.roleAttribute }}[*] == "{{ $m.role }}") {
+    {{ $rolesPolName }} {
+    {{- range $i, $m := $cfg.roleMappings }}
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $cfg.roleAttribute }}[*] == "{{ $m.role }}") {
             update reply {
             {{- range $line := $m.reply }}
                 {{ $line }}
@@ -108,7 +101,7 @@ data:
             }
         }
     {{- end }}
-    {{- if .Values.keycloak.denyWithoutRole }}
+    {{- if $cfg.denyWithoutRole }}
         else {
             update reply {
                 Reply-Message := "Access denied: no valid Keycloak role"
@@ -118,4 +111,5 @@ data:
     {{- end }}
     }
     {{- end }}
+{{- end }}
 {{- end }}

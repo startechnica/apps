@@ -24,8 +24,8 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.cache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.tlsCache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.keycloakCache" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.keycloakMode" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.keycloakInstances" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.keycloakClientBindings" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -235,53 +235,121 @@ freeradius: modules.cache.instances.{{ $name }}.update
 {{- end -}}
 
 {{/*
-Validation message: keycloak.mode must be one of the supported backends.
-Each branch of keycloak-policy.yaml's mode dispatch routes to one of these
-three values; any other value would leave $mod / $okRcode empty and produce
-a broken policy file.
+Per-instance Keycloak validation. Iterates the effective instances map
+(legacy top-level fields go through the deprecation shim in
+`freeradius.keycloak.resolveInstances` before we see them). For each
+instance:
+  - `mode` must be one of lua / python,
+  - `roleMapper` must be client / realm,
+  - `tls.caCert` and `tls.existingSecret` are mutually exclusive,
+  - `cache.enabled: true` requires a Redis backend (the chart standardises
+    on Redis so the per-instance `cache_keycloak_<name>` shares state
+    across replicas),
+  - `realm` must be non-empty (centralised here — used to be duplicated
+    across keycloak.yaml / keycloak-mapper-{lua,python}.yaml's `fail`
+    calls; we now want all per-instance failures to surface at once),
+  - instance name matches `^[a-z][a-z0-9_]*$` — required because the name
+    is used as a Python module filename (`keycloak_<name>.py`, which is
+    imported via `import keycloak_<name>`, forbidding hyphens) and as
+    part of K8s resource names (DNS-1123 subdomain — lowercase + digits
+    + dashes; we use the stricter Python-module rule which is also a
+    valid DNS subdomain segment),
+  - `extraEnvVars` must not shadow the per-instance env-var prefix the
+    chart will emit (silent override bugs).
 */}}
-{{- define "freeradius.validate.keycloakMode" -}}
+{{- define "freeradius.validate.keycloakInstances" -}}
 {{- if .Values.keycloak.enabled -}}
-{{- $allowed := list "lua" "python" "rest" -}}
-{{- if not (has .Values.keycloak.mode $allowed) }}
-freeradius: keycloak.mode
-    `keycloak.mode: {{ .Values.keycloak.mode }}` is not a recognised value.
-    Allowed: `lua` (rlm_lua + introspection + role mapping), `python`
-    (rlm_python3, same flow as lua), `rest` (rlm_rest ROPC-only, no roles).
-{{- end -}}
+{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
+{{- $modeAllowed := list "lua" "python" -}}
 {{- $roleMapperAllowed := list "client" "realm" -}}
-{{- if and (or (eq .Values.keycloak.mode "lua") (eq .Values.keycloak.mode "python")) (not (has .Values.keycloak.roleMapper $roleMapperAllowed)) }}
-freeradius: keycloak.roleMapper
-    `keycloak.roleMapper: {{ .Values.keycloak.roleMapper }}` is not a
+{{- $nameRe := "^[a-z][a-z0-9_]*$" -}}
+{{- $hasRedis := or .Values.redis.enabled .Values.modules.redis.server -}}
+{{- $extraEnvNames := list -}}
+{{- range $e := .Values.extraEnvVars -}}{{- $extraEnvNames = append $extraEnvNames $e.name -}}{{- end -}}
+{{- range $name, $cfg := $resolved.instances }}
+{{- if not (regexMatch $nameRe $name) }}
+freeradius: keycloak.instances.{{ $name }}
+    Instance name `{{ $name }}` must match `^[a-z][a-z0-9_]*$` — the name is
+    used as a Python module filename (`keycloak_<name>.py`, imported via
+    `import keycloak_<name>`, which forbids hyphens) and as a suffix on
+    K8s resource names. Use lowercase letters, digits, and underscores;
+    start with a letter.
+{{- end -}}
+{{- if not (has $cfg.mode $modeAllowed) }}
+freeradius: keycloak.instances.{{ $name }}.mode
+    `keycloak.instances.{{ $name }}.mode: {{ $cfg.mode }}` is not a recognised value.
+    Allowed: `lua` (rlm_lua — custom image required, see [[reference_freeradius_3_2_8_bundled_modules]])
+    or `python` (rlm_python3 — bundled).
+{{- end -}}
+{{- if not $cfg.realm }}
+freeradius: keycloak.instances.{{ $name }}.realm
+    `keycloak.instances.{{ $name }}.realm` is required — the OIDC token
+    endpoint URL ends with `/realms/<realm>/protocol/openid-connect/token`
+    and FreeRADIUS has no sensible default. Set it to the realm holding
+    the users this instance authenticates.
+{{- end -}}
+{{- if not (has $cfg.roleMapper $roleMapperAllowed) }}
+freeradius: keycloak.instances.{{ $name }}.roleMapper
+    `keycloak.instances.{{ $name }}.roleMapper: {{ $cfg.roleMapper }}` is not a
     recognised value. Allowed: `client` (resource_access[clientId].roles)
     or `realm` (realm_access.roles).
 {{- end -}}
-{{- if and .Values.keycloak.tls.caCert .Values.keycloak.tls.existingSecret }}
-freeradius: keycloak.tls
-    `keycloak.tls.caCert` and `keycloak.tls.existingSecret` are mutually
-    exclusive — set one or the other. Use `caCert` to have the chart render
-    a Secret from an inline PEM, or `existingSecret` to reference a Secret
-    you manage outside this chart (cert-manager, ESO, etc.).
+{{- if and $cfg.tls $cfg.tls.caCert $cfg.tls.existingSecret }}
+freeradius: keycloak.instances.{{ $name }}.tls
+    `keycloak.instances.{{ $name }}.tls.caCert` and
+    `keycloak.instances.{{ $name }}.tls.existingSecret` are mutually
+    exclusive — set one or the other. Use `caCert` for an inline PEM
+    rendered into a chart-managed Secret, or `existingSecret` to
+    reference a Secret you manage outside this chart.
+{{- end -}}
+{{- if and $cfg.cache $cfg.cache.enabled (not $hasRedis) }}
+freeradius: keycloak.instances.{{ $name }}.cache.enabled
+    `keycloak.instances.{{ $name }}.cache.enabled: true` requires a Redis
+    backend. Either enable the bundled subchart (`redis.enabled: true`)
+    or point `modules.redis.server` at an external Redis. The chart
+    standardises the per-instance `cache_keycloak_{{ $name }}` on Redis so
+    state is shared across replicas.
+{{- end -}}
+{{- $prefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) -}}
+{{- range $envName := $extraEnvNames -}}
+{{- if hasPrefix $prefix $envName }}
+freeradius: extraEnvVars
+    `extraEnvVars` contains `{{ $envName }}`, which shadows the chart-emitted
+    prefix `{{ $prefix }}*` for `keycloak.instances.{{ $name }}`. Pick a
+    non-`FREERADIUS_KEYCLOAK_*` name to avoid silently overriding the
+    chart's own injection.
+{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Validation message: keycloak.cache preconditions. The cache wraps the
-authorize_keycloak policy and the chart standardises on Redis to make
-cross-pod sharing reliable.
+Validation message: every non-empty `clients.<x>.keycloak` must reference
+an existing `keycloak.instances.<name>` entry, and the client must have a
+non-empty `ipv4addr` (the dispatch chain in `sites/default` matches on
+`Packet-Src-IP-Address`). Typo guard — a misspelled instance name in
+`clients.foo.keycloak: typo` would otherwise render `authorize_keycloak_typo`
+unlang that fails to load at runtime instead of at `helm install` time.
 */}}
-{{- define "freeradius.validate.keycloakCache" -}}
-{{- if .Values.keycloak.cache.enabled -}}
-{{- if not .Values.keycloak.enabled -}}
-freeradius: keycloak.cache.enabled
-    `keycloak.cache.enabled: true` requires `keycloak.enabled: true` — there
-    is nothing to cache otherwise.
-{{- else if and (not .Values.redis.enabled) (not .Values.modules.redis.server) -}}
-freeradius: keycloak.cache.enabled
-    `keycloak.cache.enabled: true` requires a Redis backend. Either enable
-    the bundled subchart (`redis.enabled: true`) or point `modules.redis.server`
-    at an external Redis.
+{{- define "freeradius.validate.keycloakClientBindings" -}}
+{{- if .Values.keycloak.enabled -}}
+{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
+{{- range $clientName, $client := .Values.clients -}}
+{{- if and (kindIs "map" $client) $client.keycloak -}}
+{{- if not (hasKey $resolved.instances $client.keycloak) }}
+freeradius: clients.{{ $clientName }}.keycloak
+    `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` references
+    an undefined instance — add it under `keycloak.instances.{{ $client.keycloak }}`
+    or fix the typo. Defined instances: {{ join ", " (keys $resolved.instances) }}.
+{{- else if not $client.ipv4addr }}
+freeradius: clients.{{ $clientName }}.keycloak
+    `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` requires a
+    non-empty `clients.{{ $clientName }}.ipv4addr` — the dispatch chain in
+    `sites/default` matches on `Packet-Src-IP-Address` and has nothing to
+    bind against.
+{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

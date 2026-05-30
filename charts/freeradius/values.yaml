@@ -945,6 +945,7 @@ clients:
   ## @param clients.localhost.virtual_server Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
   ## @param clients.localhost.coa_server Name of a `home_server` (or `home_server_pool`) used to proxy **outbound** CoA-Request/Disconnect packets sent to this client. Leave empty unless you've defined a matching `home_server` block — this chart does NOT currently render any. Inbound CoA is handled separately by `sites.coa.enabled` (a `listen` block + virtual server, not a client directive).
   ## @param clients.localhost.require_message_authenticator Reject Access-Requests that arrive without a `Message-Authenticator` attribute. Mitigates the BlastRADIUS attack (CVE-2024-3596). Safe to enable when every NAS that hits this client entry is known to add Message-Authenticator (all modern radclients do).
+  ## @param clients.localhost.keycloak Bind this NAS to a named Keycloak backend defined under `keycloak.instances.<name>`. When set, the chart renders an `if (Packet-Src-IP-Address == <ipv4addr>) { authorize_keycloak_<name> }` arm into the dispatch chain in `sites/default` (and `sites/inner-tunnel`). Leave empty to fall through to the `default` instance (when `keycloak.wireDefaultSite: true`) or to `pap`. Not emitted into `clients.conf` — FR3 client blocks are schema-validated and reject unknown directives.
   ## @param clients.localhost.limit.max_connections Maximum concurrent connections (TCP only)
   ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
   ## @param clients.localhost.limit.idle_timeout Idle timeout in seconds
@@ -958,6 +959,7 @@ clients:
     virtual_server: default
     coa_server: ""
     require_message_authenticator: false
+    keycloak: ""
     limit:
       max_connections: 16
       lifetime: 0
@@ -1305,92 +1307,149 @@ modsConfig: {}
 ## flows (PAP, or EAP-TTLS/PAP inner) — PEAP/MSCHAPv2 cannot authenticate
 ## against Keycloak. Enable "Direct Access Grants" on the Keycloak client.
 ##
-## Three backends, selected by `keycloak.mode`:
-##   - `lua`: a self-contained `rlm_lua` script does ROPC + RFC 7662 token
-##     introspection over HTTPS, extracts client roles, and feeds the
-##     `authorize_keycloak` unlang policy (role→reply mapping). Renders under
-##     `templates/mods-config/keycloak/`:
-##       * `mods-enabled/keycloak_lua` + `scripts/keycloak-mapper.lua`
-##       * `policy.d/keycloak` (`authorize_keycloak` + `roles_keycloak`)
-##     rlm_lua is NOT bundled in the default `freeradius/freeradius-server:3.2.8`
-##     image — you'll need a custom image with `freeradius-lua`, `lua-cjson`,
-##     and an HTTPS-capable Lua lib (`luasec`/`luasocket`) baked in.
-##   - `python`: an `rlm_python3` script (`keycloak_mapper.py`) doing the same
-##     ROPC + introspection + role-extraction flow as lua, using only the Py3
-##     stdlib (urllib + json — no `requests`). Same `authorize_keycloak` policy
-##     wraps it (cache + role→reply mapping). Renders:
-##       * `mods-enabled/keycloak_python` + `scripts/keycloak_mapper.py`
-##       * `policy.d/keycloak`
-##     rlm_python3 is bundled in the default `freeradius/freeradius-server:3.2.8`
-##     image — no image rebuild needed.
-##   - `rest`: a pure `rlm_rest` instance (`mods-enabled/keycloak_rest`) does the
-##     ROPC POST only — AUTH-ONLY, no introspection, `roleMappings` is ignored.
-##     Requires an `rlm_rest` with raw-body (`data`) support.
-## All modes store `clientSecret` (when set) in a Secret, injected via `$ENV`.
-## With `wireDefaultSite` (default), the `default` site's authorize section is
-## wired automatically (sets `Auth-Type := Accept` on success).
+## Multi-instance: configure one or more Keycloak backends under
+## `keycloak.instances.<name>`, then bind each NAS to a backend via
+## `clients.<x>.keycloak: <name>`. Direction is NAS → instance, never the
+## reverse. The chart renders an if/elsif dispatch chain in the shared
+## default virtual server, matching `Packet-Src-IP-Address` against each
+## bound client's `ipv4addr` and calling the matching instance's
+## `authorize_keycloak_<name>` policy. A `default` instance (when present
+## with `wireDefaultSite: true`) is wired as the `else` branch — unmatched
+## NAS fall through to it.
 ##
-## @param keycloak.enabled Render the Keycloak auth configs + Secret and mount them into the pod
-## @param keycloak.mode Auth backend: `lua` (rlm_lua + introspection + role mapping), `python` (rlm_python3, same flow as lua), or `rest` (rlm_rest ROPC-only, no roles).
-## @param keycloak.url Base URL of the Keycloak server
-## @param keycloak.realm Keycloak realm holding the users (required when enabled)
-## @param keycloak.clientId OIDC client_id with Direct Access Grants enabled
-## @param keycloak.clientSecret Secret for a confidential client. Stored in a Secret and injected via `$ENV{FREERADIUS_KEYCLOAK_CLIENT_SECRET}`; leave empty for a public client.
-## @param keycloak.scope Optional OAuth scope appended to the token request (space-separated, e.g. `openid profile email`)
-## @param keycloak.connectTimeout Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; python: `urllib.request.urlopen(..., timeout=)`; rest: `connect_timeout`)
-## @param keycloak.wireDefaultSite Auto-wire the `default` virtual server's authorize section to call the `authorize_keycloak` policy. Disable to wire it from your own site config.
-## @param keycloak.roleAttribute (lua/python modes) Control attribute the mapper script populates with role names (one value per role)
-## @param keycloak.roleMapper (lua/python modes) Source of role names from the Keycloak JWT: `client` reads `resource_access[clientId].roles` (per-client role bindings), `realm` reads `realm_access.roles` (realm-wide). Choose whichever your Keycloak admin uses; `client` is the typical pattern for service-scoped role configs.
-## @param keycloak.denyWithoutRole (lua/python modes) Reject the request when no `roleMappings` entry matches
-## @param keycloak.roleMappings [array] (lua/python modes) Ordered role→reply map (first match wins). Each entry: `role` (Keycloak client role) + `reply` (list of literal unlang `Attr := value` lines).
+## Two backends per instance, selected by `instances.<name>.mode`:
+##   - `python`: rlm_python3 script doing ROPC + JWT-claims flow using only
+##     the Py3 stdlib. Renders into a per-instance ConfigMap key
+##     `keycloak_<name>.py` (Python module name — underscores only;
+##     instance names with hyphens are rejected). rlm_python3 IS bundled in
+##     the default `freeradius/freeradius-server:3.2.8` image — no rebuild
+##     needed. Recommended.
+##   - `lua`: rlm_lua script doing the same flow. Renders into a
+##     per-instance ConfigMap key `keycloak_<name>.lua`. rlm_lua is NOT
+##     bundled — needs a custom image with `freeradius-lua`, `lua-cjson`,
+##     `luasec`, and `luasocket`.
 ##
-## Result caching — when enabled, the chart renders a dedicated `cache_keycloak`
-## rlm_cache instance (Redis-backed, sharing the `modules.redis.*` connection)
-## and wires it into the `authorize_keycloak` policy: cache lookup BEFORE
-## calling Keycloak, store on success. Cuts per-auth Keycloak roundtrips and
-## the ROPC + introspection latency within a TTL window.
+## All modes store `clientSecret` (when set) in a per-instance Secret and
+## inject it via `$ENV{FREERADIUS_KEYCLOAK_<NAME>_CLIENT_SECRET}`. The
+## implicit `default` instance keeps the legacy unprefixed env-var name
+## (`FREERADIUS_KEYCLOAK_CLIENT_SECRET`) and the legacy Secret name
+## (`<fullname>-keycloak`) for backwards compatibility.
 ##
-## Caches only `&control:<roleAttribute>` (the role list set by keycloak_lua);
-## reply mapping (`roles_keycloak`) still runs on every request to regenerate
-## reply attrs from the cached role list. Keyed on `%{User-Name}` — Keycloak
-## credential rotation (password change) takes up to `cache.ttl` to take
-## effect, so keep the TTL short.
+## Deprecation: top-level fields (`keycloak.mode`, `keycloak.url`,
+## `keycloak.realm`, …) are DEPRECATED. When set and `keycloak.instances`
+## has no `default` entry, the chart synthesises one from them and emits a
+## warning via NOTES.txt. Migrate to `keycloak.instances.default: { … }`
+## at your convenience.
 ##
-## REQUIRES `keycloak.mode: lua` AND a Redis backend (bundled subchart
-## `redis.enabled: true` or external `modules.redis.server`). Rendering
-## hard-fails via `freeradius.validate.keycloakCache` otherwise.
+## @param keycloak.enabled Render the Keycloak auth configs + Secrets and mount them into the pod. Acts as the master feature gate; renders nothing when `false`.
+## @param keycloak.wireDefaultSite Auto-wire the `default` instance's `authorize_keycloak` as the `else` branch of the dispatch chain in `sites/default` (catches NAS that aren't bound to a named instance via `clients.<x>.keycloak`). No-op when no `default` instance is configured.
+## @param keycloak.unmatchedReject When `true` AND no `default` instance is wired, the dispatch chain's `else` branch rejects unmatched NAS instead of falling through to `pap`. Off by default.
 ##
-## @param keycloak.cache.enabled Render the `cache_keycloak` rlm_cache instance and wire it into the `authorize_keycloak` policy.
-## @param keycloak.cache.ttl Cache TTL (seconds) for stored Keycloak results. Keep short — credential rotation propagates only after expiry.
+## --- Legacy top-level fields (DEPRECATED) -----------------------------
+## Setting any of these auto-synthesises `keycloak.instances.default` with
+## the values below. Prefer `keycloak.instances.default: { … }` in new
+## values files. The shim will be removed in the next major.
+##
+## @param keycloak.mode [DEPRECATED — use `keycloak.instances.default.mode`] Auth backend: `lua` / `python`.
+## @param keycloak.url [DEPRECATED — use `keycloak.instances.default.url`] Base URL of the Keycloak server.
+## @param keycloak.realm [DEPRECATED — use `keycloak.instances.default.realm`] Keycloak realm holding the users.
+## @param keycloak.clientId [DEPRECATED — use `keycloak.instances.default.clientId`] OIDC client_id with Direct Access Grants enabled.
+## @param keycloak.clientSecret [DEPRECATED — use `keycloak.instances.default.clientSecret`] Confidential-client secret. Stored in a Secret and injected via `$ENV`.
+## @param keycloak.scope [DEPRECATED — use `keycloak.instances.default.scope`] OAuth scope (space-separated).
+## @param keycloak.connectTimeout [DEPRECATED — use `keycloak.instances.default.connectTimeout`] Socket timeout (seconds).
+## @param keycloak.roleAttribute [DEPRECATED — use `keycloak.instances.default.roleAttribute`] Control attribute the mapper populates with role names.
+## @param keycloak.roleMapper [DEPRECATED — use `keycloak.instances.default.roleMapper`] Source of role names: `client` or `realm`.
+## @param keycloak.denyWithoutRole [DEPRECATED — use `keycloak.instances.default.denyWithoutRole`] Reject when no role matches.
+## @param keycloak.roleMappings [DEPRECATED — use `keycloak.instances.default.roleMappings`] Ordered role→reply map (first match wins).
+## @param keycloak.tls.caCert [DEPRECATED — use `keycloak.instances.default.tls.caCert`] Inline PEM CA bundle.
+## @param keycloak.tls.existingSecret [DEPRECATED — use `keycloak.instances.default.tls.existingSecret`] BYO Secret with CA bundle.
+## @param keycloak.tls.existingSecretCaKey [DEPRECATED — use `keycloak.instances.default.tls.existingSecretCaKey`] Key inside `existingSecret`.
+## @param keycloak.tls.insecure [DEPRECATED — use `keycloak.instances.default.tls.insecure`] Skip TLS verification (dev only).
+## @param keycloak.cache.enabled [DEPRECATED — use `keycloak.instances.default.cache.enabled`] Render a `cache_keycloak_default` rlm_cache instance and wire it into the policy.
+## @param keycloak.cache.ttl [DEPRECATED — use `keycloak.instances.default.cache.ttl`] Cache TTL (seconds).
+##
+## --- Per-instance schema ----------------------------------------------
+##
+## Each top-level key under `keycloak.instances` is a FreeRADIUS module
+## instance name (used as `keycloak_<name>` in unlang, must match
+## `^[a-z][a-z0-9_]*$`). The chart renders, per instance:
+##   * one `keycloak_<name>` module block (`mods-enabled/keycloak_<name>`)
+##     of type `lua` / `python3` / `rest` per `mode`
+##   * one `authorize_keycloak_<name>` policy + (lua/python) one
+##     `roles_keycloak_<name>` policy (`policy.d/keycloak_<name>`)
+##   * (lua/python) one mapper-script file at
+##     `/etc/freeradius/scripts/{keycloak_<name>.lua, keycloak_<name>.py}` —
+##     a per-instance wrapper with config baked in by Helm at chart-render
+##     time that delegates to the shared `keycloak_common.{lua,py}` library
+##   * one Opaque Secret `<fullname>-keycloak-<name>` holding the
+##     `client-secret` (when `clientSecret` is non-empty and
+##     `existingSecret` empty)
+##   * (when TLS CA configured) one Opaque Secret
+##     `<fullname>-keycloak-<name>-ca` mounted at
+##     `/etc/freeradius/certs-keycloak-<name>/ca.crt`
+##   * (when `cache.enabled`) one `cache cache_keycloak_<name>` rlm_cache
+##     block in `mods-enabled/cache`, Redis-backed, with the cache key
+##     hard-coded to `keycloak:<name>:%{User-Name}` (non-overridable —
+##     namespacing prevents cross-instance cache hits on common usernames)
+##
+## The implicit `default` instance keeps the legacy resource names for
+## backwards compatibility: module instance `keycloak_lua` / `keycloak_python`
+## / `keycloak_rest`; policy `authorize_keycloak`; Secret `<fullname>-keycloak`
+## with key `client-secret`; `_CLIENT_SECRET` env var unprefixed
+## (`FREERADIUS_KEYCLOAK_CLIENT_SECRET`); CA mount `/etc/freeradius/certs-keycloak/`;
+## script filenames `keycloak.lua` / `keycloak.py`.
+##
+## @param keycloak.instances [object] Named Keycloak backends. Map key = FreeRADIUS module instance name (matching `^[a-z][a-z0-9_]*$`); value = backend config dict (mirrors the legacy top-level keys). Bind a NAS to one with `clients.<name>.keycloak: <instance-name>`. The `default` instance, when present, is also the auto-wired fallback (see `wireDefaultSite`).
+## instances:
+##   default:
+##     mode: python
+##     url: https://auth.example.com
+##     realm: "master"
+##     clientId: freeradius
+##     clientSecret: ""
+##   nas1:
+##     mode: python
+##     url: https://kc.corp.example.com
+##     realm: corp
+##     clientId: nas-corp
+##     clientSecret: "..."
+##     cache:
+##       enabled: true
+##       ttl: 300
+##     tls:
+##       existingSecret: corp-keycloak-ca
+##     roleMappings:
+##       - role: network-admin
+##         reply:
+##           - 'Service-Type := Administrative-User'
+##   nas2:
+##     mode: lua
+##     url: https://kc.branch.example.com
+##     realm: branch
+##     clientId: nas-branch
 ##
 keycloak:
   enabled: false
-  mode: rest
+  wireDefaultSite: true
+  unmatchedReject: false
+
+  ## Legacy top-level fields — see deprecation notes above. Leave at defaults
+  ## (empty `realm`) to disable the implicit-default shim. Setting any of
+  ## these auto-creates `keycloak.instances.default` at render time.
+  ##
+  mode: python
   url: https://auth.example.com
   realm: ""
   clientId: freeradius
   clientSecret: ""
   scope: ""                      # e.g. "openid profile email"
   connectTimeout: "4.0"
-  wireDefaultSite: true
   roleAttribute: Class
   roleMapper: client
   denyWithoutRole: false
   cache:
     enabled: false
     ttl: 300
-  ## TLS verification of the Keycloak server certificate. When neither
-  ## `caCert` nor `existingSecret` is set, the FreeRADIUS image's system CA
-  ## bundle is used — fine for Keycloak fronted by a public-CA cert. Set one
-  ## of them when Keycloak uses a private/internal CA. `insecure: true`
-  ## disables verification entirely (dev only). All three modes (lua, python,
-  ## rest) consume the same CA via env vars / `ca_file` directive.
-  ##
-  ## @param keycloak.tls.caCert Inline PEM bundle of one or more CA certs. When non-empty, the chart renders a Secret holding the bundle and mounts it at `/etc/freeradius/certs-keycloak/ca.crt`. Mutually exclusive with `existingSecret`.
-  ## @param keycloak.tls.existingSecret Name of a pre-existing Secret containing the CA bundle. Mounted in the same location. Use when the bundle is managed outside this chart (e.g. cert-manager, ESO).
-  ## @param keycloak.tls.existingSecretCaKey Key within `existingSecret` that holds the PEM bundle. Defaults to `ca.crt`.
-  ## @param keycloak.tls.insecure Skip TLS verification when connecting to Keycloak. **Dev only** — silently accepts any cert. Overrides `caCert`/`existingSecret` (which become no-ops). Renders `check_cert = no` for rest mode and `ssl._create_unverified_context()` / `https.verify = "none"` for python/lua modes.
-  ##
   tls:
     caCert: ""
     existingSecret: ""
@@ -1414,6 +1473,8 @@ keycloak:
   #       - 'Tunnel-Medium-Type:0 := IEEE-802'
   #       - 'Tunnel-Private-Group-Id:0 := "99"'
   #       - 'Session-Timeout := 3600'
+
+  instances: {}
 ## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
 ##
 initContainers: []

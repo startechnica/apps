@@ -524,13 +524,42 @@ data:
     	#  This module should be listed last, so that the other modules
     	#  get a chance to set Auth-Type for themselves.
     	#
-		{{- if and .Values.keycloak.enabled .Values.keycloak.wireDefaultSite }}
-    	#  Keycloak authorize policy. Wraps the active backend module
-    	#  (`keycloak_lua` in lua mode, `keycloak_rest` in rest mode) with
-    	#  cache-aside (when keycloak.cache.enabled) and — lua mode only —
-    	#  role→reply mapping. Sets Auth-Type := Accept on a successful
-    	#  ROPC; runs before `pap`. Defined in policy.d/keycloak.
+		{{- if .Values.keycloak.enabled }}
+		{{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+		{{- $kcArms := (include "freeradius.keycloak.dispatchArms" .) | fromYaml }}
+		{{- $kcHasDefault := hasKey $kcResolved.instances "default" }}
+		{{- $kcWireDefault := and $kcHasDefault .Values.keycloak.wireDefaultSite }}
+		{{- if $kcArms.arms }}
+    	#  Keycloak multi-instance dispatch — pick the per-NAS instance by
+    	#  matching `Packet-Src-IP-Address` against each `clients.<x>.ipv4addr`
+    	#  whose `clients.<x>.keycloak: <instance>` is set. Each
+    	#  `authorize_keycloak_<name>` policy wraps the matching module
+    	#  (`keycloak_<name>`) with cache-aside (when its `cache.enabled`)
+    	#  and — lua/python modes — role→reply mapping. Sets
+    	#  `Auth-Type := Accept` on a successful ROPC; runs before `pap`.
+		{{- range $i, $arm := $kcArms.arms }}
+    	{{ if $i }}elsif{{ else }}if{{ end }} (Packet-Src-IP-Address == {{ $arm.ipv4 | quote }}) {
+    		{{ include "freeradius.keycloak.policyName" (dict "name" $arm.instance) }}
+    	}
+		{{- end }}
+		{{- if $kcWireDefault }}
+    	else {
+    		#  Default instance — catches NAS without an explicit
+    		#  `clients.<x>.keycloak` binding (wireDefaultSite: true).
+    		authorize_keycloak
+    	}
+		{{- else if .Values.keycloak.unmatchedReject }}
+    	else {
+    		#  No matching instance and no default fallback — reject
+    		#  (`keycloak.unmatchedReject: true`).
+    		reject
+    	}
+		{{- end }}
+		{{- else if $kcWireDefault }}
+    	#  Keycloak: only the default instance is wired (no `clients.*` has
+    	#  a `keycloak:` binding). Calls `authorize_keycloak` directly.
     	authorize_keycloak
+		{{- end }}
 		{{- end }}
     	pap
 

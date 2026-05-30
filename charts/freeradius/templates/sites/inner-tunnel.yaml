@@ -64,26 +64,41 @@ data:
             logintime
             pap
 
-            {{ if and .Values.keycloak.enabled (eq .Values.keycloak.mode "rest") }}
-            if (&User-Password) {
-                update control {
-                    Auth-Type := REST
-                }
+            {{- if .Values.keycloak.enabled }}
+            {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+            {{- $kcArms := (include "freeradius.keycloak.dispatchArms" .) | fromYaml }}
+            {{- $kcHasDefault := hasKey $kcResolved.instances "default" }}
+            {{- $kcWireDefault := and $kcHasDefault .Values.keycloak.wireDefaultSite }}
+            {{- if $kcArms.arms }}
+            #  Keycloak multi-instance dispatch — same shape as the default
+            #  virtual server. Picks the per-NAS instance by matching
+            #  `Packet-Src-IP-Address` against each `clients.<x>.ipv4addr`
+            #  whose `clients.<x>.keycloak: <instance>` is set.
+            {{- range $i, $arm := $kcArms.arms }}
+            {{ if $i }}elsif{{ else }}if{{ end }} (Packet-Src-IP-Address == {{ $arm.ipv4 | quote }}) {
+                {{ include "freeradius.keycloak.policyName" (dict "name" $arm.instance) }}
             }
+            {{- end }}
+            {{- if $kcWireDefault }}
+            else {
+                authorize_keycloak
+            }
+            {{- else if .Values.keycloak.unmatchedReject }}
+            else {
+                reject
+            }
+            {{- end }}
+            {{- else if $kcWireDefault }}
+            authorize_keycloak
+            {{- end }}
             {{- end }}
         }
 
         authenticate {
 
-            {{ if and .Values.keycloak.enabled (eq .Values.keycloak.mode "rest") }}
-            Auth-Type REST {
-                keycloak_rest
-            }
-            {{- else }}
             Auth-Type PAP {
                 pap
             }
-            {{- end }}
 
             Auth-Type CHAP {
                 chap

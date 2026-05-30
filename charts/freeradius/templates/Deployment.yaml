@@ -89,17 +89,31 @@ spec:
         checksum/configmap-clients: {{ include (print $.Template.BasePath "/configmaps/clients.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.keycloak.enabled }}
+        {{- $kcResolvedAnno := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+        {{- $kcHasLua := false -}}{{- $kcHasPython := false -}}{{- $kcHasSecret := false -}}{{- $kcHasTls := false -}}
+        {{- range $name, $cfg := $kcResolvedAnno.instances -}}
+        {{- if eq $cfg.mode "lua" }}{{- $kcHasLua = true }}{{- end -}}
+        {{- if eq $cfg.mode "python" }}{{- $kcHasPython = true }}{{- end -}}
+        {{- if and $cfg.clientSecret (not $cfg.existingSecret) }}{{- $kcHasSecret = true }}{{- end -}}
+        {{- if include "freeradius.keycloak.tls.createSecret" (dict "instance" $cfg) }}{{- $kcHasTls = true }}{{- end -}}
+        {{- end }}
         checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak.yaml") . | sha256sum }}
         checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-policy.yaml") . | sha256sum }}
-        {{- if eq .Values.keycloak.mode "lua" }}
-        checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-mapper-lua.yaml") . | sha256sum }}
-        {{- else if eq .Values.keycloak.mode "python" }}
-        checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-mapper-python.yaml") . | sha256sum }}
+        {{- if $kcHasLua }}
+        {{- /* keycloak_common.lua is pure static logic (no env reads,
+               no per-instance config baked in) — changes only on chart
+               upgrade, which restarts pods via the chart-version checksum
+               elsewhere. The per-instance wrapper checksum still flips on
+               instance-name / roleAttribute / env-prefix changes. */}}
+        checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-conf-lua.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.keycloak.clientSecret }}
+        {{- if $kcHasPython }}
+        checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-conf-py.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $kcHasSecret }}
         checksum/secret-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret.yaml") . | sha256sum }}
         {{- end }}
-        {{- if include "freeradius.keycloak.tls.createSecret" . }}
+        {{- if $kcHasTls }}
         checksum/secret-keycloak-tls: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret-tls.yaml") . | sha256sum }}
         {{- end }}
         {{- end }}
@@ -292,41 +306,22 @@ spec:
           env:
             {{- include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
             {{- if .Values.keycloak.enabled }}
-            {{- if or (eq .Values.keycloak.mode "lua") (eq .Values.keycloak.mode "python") }}
-            {{- /* Script-driven modes (lua, python) read Keycloak coordinates
-                   from env. Rest mode bakes them into its module ConfigMap,
-                   needing only FREERADIUS_KEYCLOAK_CLIENT_SECRET below. */}}
-            - name: FREERADIUS_KEYCLOAK_BASE_URL
-              value: {{ .Values.keycloak.url | quote }}
-            - name: FREERADIUS_KEYCLOAK_REALM
-              value: {{ .Values.keycloak.realm | quote }}
-            - name: FREERADIUS_KEYCLOAK_CLIENT_ID
-              value: {{ .Values.keycloak.clientId | quote }}
-            {{- if .Values.keycloak.scope }}
-            - name: FREERADIUS_KEYCLOAK_SCOPE
-              value: {{ .Values.keycloak.scope | quote }}
-            {{- end }}
-            {{- if .Values.keycloak.connectTimeout }}
-            - name: FREERADIUS_KEYCLOAK_CONNECT_TIMEOUT
-              value: {{ .Values.keycloak.connectTimeout | quote }}
-            {{- end }}
-            - name: FREERADIUS_KEYCLOAK_ROLE_MAPPER
-              value: {{ .Values.keycloak.roleMapper | quote }}
-            {{- if include "freeradius.keycloak.tls.enabled" . }}
-            - name: FREERADIUS_KEYCLOAK_CA_FILE
-              value: {{ include "freeradius.keycloak.tls.caFilePath" . | quote }}
-            {{- end }}
-            {{- if .Values.keycloak.tls.insecure }}
-            - name: FREERADIUS_KEYCLOAK_INSECURE
-              value: "true"
-            {{- end }}
-            {{- end }}
-            {{- if .Values.keycloak.clientSecret }}
-            - name: FREERADIUS_KEYCLOAK_CLIENT_SECRET
+            {{- /* Per-instance `<prefix>CLIENT_SECRET` only. URL / realm /
+                   clientId / scope / connectTimeout / roleMapper / ca_file /
+                   insecure are baked into the wrapper ConfigMaps at
+                   chart-render time; the client_secret is the only
+                   sensitive value, so it stays in a Secret and rides in
+                   via env. */}}
+            {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+            {{- range $name, $cfg := $kcResolved.instances }}
+            {{- if $cfg.clientSecret }}
+            {{- $envPrefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) }}
+            - name: {{ $envPrefix }}CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
+                  name: {{ include "freeradius.keycloak.clientSecretName" (dict "name" $name "instance" $cfg "context" $) }}
                   key: client-secret
+            {{- end }}
             {{- end }}
             {{- end }}
             {{- if .Values.extraEnvVars }}
@@ -506,28 +501,59 @@ spec:
             {{- end }}
             {{- end }}
             {{- if .Values.keycloak.enabled }}
-            - name: keycloak
-              mountPath: /etc/freeradius/mods-enabled/keycloak
-              subPath: keycloak
+            {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+            {{- range $name, $cfg := $kcResolved.instances }}
+            {{- $modKey := include "freeradius.keycloak.modKey" (dict "name" $name) }}
+            {{- $polKey := include "freeradius.keycloak.policyKey" (dict "name" $name) }}
+            {{- $volModName := ternary "keycloak" (printf "keycloak-%s" $name) (eq $name "default") }}
+            {{- $volPolName := ternary "keycloak-policy" (printf "keycloak-%s-policy" $name) (eq $name "default") }}
+            - name: {{ $volModName }}
+              mountPath: /etc/freeradius/mods-enabled/{{ $modKey }}
+              subPath: {{ $modKey }}
               readOnly: true
-            - name: keycloak-policy
-              mountPath: /etc/freeradius/policy.d/keycloak
-              subPath: keycloak
+            - name: {{ $volPolName }}
+              mountPath: /etc/freeradius/policy.d/{{ $polKey }}
+              subPath: {{ $polKey }}
               readOnly: true
-            {{- if include "freeradius.keycloak.tls.enabled" . }}
-            - name: keycloak-tls
-              mountPath: /etc/freeradius/certs-keycloak
+            {{- if include "freeradius.keycloak.tls.enabled" (dict "instance" $cfg) }}
+            - name: {{ include "freeradius.keycloak.tlsVolumeName" (dict "name" $name) }}
+              mountPath: {{ ternary "/etc/freeradius/certs-keycloak" (printf "/etc/freeradius/certs-keycloak-%s" $name) (eq $name "default") }}
               readOnly: true
             {{- end }}
-            {{- if eq .Values.keycloak.mode "lua" }}
-            - name: keycloak-mapper-lua
-              mountPath: /etc/freeradius/scripts/keycloak-mapper.lua
-              subPath: keycloak-mapper.lua
+            {{- if eq $cfg.mode "lua" }}
+            {{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
+            {{- $volScriptName := ternary "keycloak-mapper-lua" (printf "keycloak-%s-lua" $name) (eq $name "default") }}
+            - name: {{ $volScriptName }}
+              mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
+              subPath: {{ $scriptKey }}
               readOnly: true
-            {{- else if eq .Values.keycloak.mode "python" }}
-            - name: keycloak-mapper-python
-              mountPath: /etc/freeradius/scripts/keycloak_mapper.py
-              subPath: keycloak_mapper.py
+            {{- else if eq $cfg.mode "python" }}
+            {{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
+            {{- $volScriptName := ternary "keycloak-mapper-python" (printf "keycloak-%s-python" $name) (eq $name "default") }}
+            - name: {{ $volScriptName }}
+              mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
+              subPath: {{ $scriptKey }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- /* Shared keycloak_common.{lua,py} libraries — one mount each
+                   regardless of instance count. The per-instance wrappers
+                   above `require` / `import` from this. */}}
+            {{- $kcHasLua := false }}{{- $kcHasPython := false }}
+            {{- range $name, $cfg := $kcResolved.instances -}}
+            {{- if eq $cfg.mode "lua" }}{{- $kcHasLua = true }}{{- end -}}
+            {{- if eq $cfg.mode "python" }}{{- $kcHasPython = true }}{{- end -}}
+            {{- end }}
+            {{- if $kcHasLua }}
+            - name: keycloak-lua-common
+              mountPath: /etc/freeradius/scripts/keycloak_common.lua
+              subPath: keycloak_common.lua
+              readOnly: true
+            {{- end }}
+            {{- if $kcHasPython }}
+            - name: keycloak-python-common
+              mountPath: /etc/freeradius/scripts/keycloak_common.py
+              subPath: keycloak_common.py
               readOnly: true
             {{- end }}
             {{- end }}
@@ -639,25 +665,55 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.keycloak.enabled }}
-        - name: keycloak
+        {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+        {{- $fullname := include "st-common.names.fullname" . }}
+        {{- range $name, $cfg := $kcResolved.instances }}
+        {{- $volModName := ternary "keycloak" (printf "keycloak-%s" $name) (eq $name "default") }}
+        {{- $volPolName := ternary "keycloak-policy" (printf "keycloak-%s-policy" $name) (eq $name "default") }}
+        {{- $cmModName := ternary (printf "%s-keycloak" $fullname) (printf "%s-keycloak-%s" $fullname $name) (eq $name "default") }}
+        {{- $cmPolName := ternary (printf "%s-keycloak-policy" $fullname) (printf "%s-keycloak-%s-policy" $fullname $name) (eq $name "default") }}
+        - name: {{ $volModName }}
           configMap:
-            name: {{ printf "%s-keycloak" (include "st-common.names.fullname" .) }}
-        - name: keycloak-policy
+            name: {{ default $cmModName $cfg.existingConfigMap }}
+        - name: {{ $volPolName }}
           configMap:
-            name: {{ printf "%s-keycloak-policy" (include "st-common.names.fullname" .) }}
-        {{- if include "freeradius.keycloak.tls.enabled" . }}
-        - name: keycloak-tls
+            name: {{ $cmPolName }}
+        {{- if include "freeradius.keycloak.tls.enabled" (dict "instance" $cfg) }}
+        - name: {{ include "freeradius.keycloak.tlsVolumeName" (dict "name" $name) }}
           secret:
-            secretName: {{ include "freeradius.keycloak.tls.secretName" . }}
+            secretName: {{ include "freeradius.keycloak.tls.secretName" (dict "name" $name "instance" $cfg "context" $) }}
         {{- end }}
-        {{- if eq .Values.keycloak.mode "lua" }}
-        - name: keycloak-mapper-lua
+        {{- if eq $cfg.mode "lua" }}
+        {{- $volScriptName := ternary "keycloak-mapper-lua" (printf "keycloak-%s-lua" $name) (eq $name "default") }}
+        {{- $cmScriptName := ternary (printf "%s-keycloak-lua" $fullname) (printf "%s-keycloak-%s-lua" $fullname $name) (eq $name "default") }}
+        - name: {{ $volScriptName }}
           configMap:
-            name: {{ printf "%s-keycloak-lua" (include "st-common.names.fullname" .) }}
-        {{- else if eq .Values.keycloak.mode "python" }}
-        - name: keycloak-mapper-python
+            name: {{ $cmScriptName }}
+        {{- else if eq $cfg.mode "python" }}
+        {{- $volScriptName := ternary "keycloak-mapper-python" (printf "keycloak-%s-python" $name) (eq $name "default") }}
+        {{- $cmScriptName := ternary (printf "%s-keycloak-python" $fullname) (printf "%s-keycloak-%s-python" $fullname $name) (eq $name "default") }}
+        - name: {{ $volScriptName }}
           configMap:
-            name: {{ printf "%s-keycloak-python" (include "st-common.names.fullname" .) }}
+            name: {{ $cmScriptName }}
+        {{- end }}
+        {{- end }}
+        {{- /* Shared keycloak_common.{lua,py} library volumes — one each
+               regardless of instance count. The per-instance wrappers
+               above `require` / `import` from this. */}}
+        {{- $kcHasLua := false }}{{- $kcHasPython := false }}
+        {{- range $name, $cfg := $kcResolved.instances -}}
+        {{- if eq $cfg.mode "lua" }}{{- $kcHasLua = true }}{{- end -}}
+        {{- if eq $cfg.mode "python" }}{{- $kcHasPython = true }}{{- end -}}
+        {{- end }}
+        {{- if $kcHasLua }}
+        - name: keycloak-lua-common
+          configMap:
+            name: {{ printf "%s-keycloak-lua-common" $fullname }}
+        {{- end }}
+        {{- if $kcHasPython }}
+        - name: keycloak-python-common
+          configMap:
+            name: {{ printf "%s-keycloak-python-common" $fullname }}
         {{- end }}
         {{- end }}
         - name: scripts
