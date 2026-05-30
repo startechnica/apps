@@ -25,7 +25,6 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.tlsCache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.keycloakCache" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.keycloakRest" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -230,25 +229,6 @@ freeradius: modules.cache.instances.{{ $name }}.update
     rlm_cache refuses to load without at least one map ("Must have an
     'update' section in order to cache anything"). Set `update` to one or
     more FreeRADIUS maps, e.g. `&reply: += &reply:`.
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Validation message: keycloak rest mode preconditions. The rest-mode policy
-parses the token JSON body via `map json` which requires the rlm_json module
-to be loaded (its map proc is hardcoded in the FR 3.2.x unlang parser to the
-literal `json` name, so a dedicated json instance won't work).
-*/}}
-{{- define "freeradius.validate.keycloakRest" -}}
-{{- if and .Values.keycloak.enabled (eq .Values.keycloak.mode "rest") -}}
-{{- if not .Values.modules.json.enabled -}}
-freeradius: keycloak.mode
-    `keycloak.mode: rest` requires `modules.json.enabled: true`. The
-    keycloak_authorize policy uses `map json` to lift /expires_in and
-    /session_state out of the Keycloak token response into Session-Timeout
-    and Class reply attributes. Without rlm_json loaded, the policy fails
-    to parse: "Expecting section start brace '{' after 'map json'".
 {{- end -}}
 {{- end -}}
 {{- end -}}

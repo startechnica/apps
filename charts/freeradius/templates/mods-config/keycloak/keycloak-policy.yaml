@@ -49,42 +49,14 @@ data:
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
         #  recent successful result cached. cache_keycloak returns ok on hit
         #  (populating &control:{{ .Values.keycloak.roleAttribute }} in lua
-        #  mode, or &reply:Session-Timeout / &reply:Class in rest mode),
-        #  notfound on miss.
+        #  mode; nothing in rest mode — the chart's rlm_rest instance only
+        #  fetches a token without extracting any attributes), notfound on
+        #  miss.
         cache_keycloak
 
         if (notfound) {
             {{ $mod }}
             if {{ $okRcode }} {
-                {{- if $isRest }}
-                #  rest mode: lift expires_in / session_state from the Keycloak
-                #  JSON body. Session-Timeout makes the NAS terminate the
-                #  session when the OAuth token would have expired, forcing
-                #  re-auth against Keycloak; Class round-trips Keycloak's
-                #  session UUID opaquely in accounting packets so usage can
-                #  be correlated back to a specific Keycloak session.
-                #  `map json` is a parser built-in tied to the `rlm_json`
-                #  module loaded via `modules.json.enabled: true` (FR 3.2.x
-                #  doesn't honor per-instance map proc names for rlm_json,
-                #  so a dedicated `json json_keycloak {}` instance can't be
-                #  referenced as `map json_keycloak`). Requires
-                #  `response { force_to = "plain" }` on keycloak_rest (so
-                #  REST-HTTP-Body is a raw string for the parser).
-                map json "%{reply:REST-HTTP-Body}" {
-                    &reply:Session-Timeout := '/expires_in'
-                    &reply:Class           := '/session_state'
-                    # If you need the access token instead, swap '/session_state'
-                    # for '/access_token' — note JWTs are ~800-1500 bytes which
-                    # some NASes truncate or reject in the Class attribute.
-                }
-
-                #  Drop the raw rest exposure attrs so they don't leak to the NAS.
-                update reply {
-                    &REST-HTTP-Status-Code !* ANY
-                    &REST-HTTP-Body !* ANY
-                }
-                {{- end }}
-
                 #  Store the post-auth attribute set per cache_keycloak's update {}.
                 cache_keycloak
             }
@@ -96,20 +68,6 @@ data:
         #  keycloak_rest: ROPC password grant -> HTTP 200 = ok/updated, 401 = reject.
         {{- end }}
         {{ $mod }}
-        {{- if $isRest }}
-        if {{ $okRcode }} {
-            #  rest mode (no cache): same JSON extraction as the cache-miss
-            #  branch above. See comment there for the rationale.
-            map json "%{reply:REST-HTTP-Body}" {
-                &reply:Session-Timeout := '/expires_in'
-                &reply:Class           := '/session_state'
-            }
-            update reply {
-                &REST-HTTP-Status-Code !* ANY
-                &REST-HTTP-Body !* ANY
-            }
-        }
-        {{- end }}
         {{- end }}
         if {{ $okRcode }} {
             #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.
@@ -123,8 +81,8 @@ data:
         #  reject (bad creds / inactive), fail (network/config) and noop
         #  (not a password request) propagate unchanged to the caller.
     }
-    {{- if and $isLua .Values.keycloak.roleMappings }}
 
+    {{- if and $isLua .Values.keycloak.roleMappings }}
     #  Map Keycloak client roles (&control:{{ .Values.keycloak.roleAttribute }})
     #  to RADIUS reply attributes. First match wins.
     keycloak_roles {
