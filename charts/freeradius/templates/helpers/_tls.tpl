@@ -20,7 +20,7 @@ RADSEC in-pod TLS secret name. Resolution order:
 {{- end -}}
 
 {{/*
-Whether the chart should render `templates/secret/tls.yaml` with a self-signed
+Whether the chart should render `templates/secrets/tls.yaml` with a self-signed
 RADSEC leaf. False when the user is bringing their own Secret or cert-manager
 owns issuance.
 */}}
@@ -180,15 +180,15 @@ true
 Name of the Kubernetes Secret holding the TLS material referenced by the
 Gateway TLS listener — `credentialName` on the istio path,
 `certificateRefs[].name` on the gateway-api path, and the resource name
-produced by `templates/secret/gateway-tls.yaml`. Single source of truth so
+produced by `templates/secrets/gateway-tls.yaml`. Single source of truth so
 the listener and the secret can never drift apart.
 
 Resolution order (first match wins):
   1. `gateway.tls.existingSecret`       — BYO Secret managed outside the chart.
-  2. `gateway.tls.secrets[0].name`      — first user-supplied PEM Secret rendered by `templates/secret/gateway-tls.yaml`.
+  2. `gateway.tls.secrets[0].name`      — first user-supplied PEM Secret rendered by `templates/secrets/gateway-tls.yaml`.
                                           For multi-secret SNI setups, override via `gateway.listeners`.
   3. `<gateway-hostname>-tls`           — chart-managed default that matches the secret name produced by the
-                                          self-signed branch in `templates/secret/gateway-tls.yaml` and the
+                                          self-signed branch in `templates/secrets/gateway-tls.yaml` and the
                                           `Certificate.spec.secretName` in `templates/Certificate.yaml`.
                                           Falls back to `<fullname>-tls` when no hostnames are configured.
 */}}
@@ -218,7 +218,7 @@ Whether the chart should issue its TLS material through cert-manager rather than
 the in-template genCA path. True when cert-manager issuance is requested
 (`tls.certManager.create`, default true) AND the cluster actually exposes the
 cert-manager Certificate API. When the API is absent the chart falls back to the
-self-signed genCA path (`templates/secret/tls.yaml` + `tls-ca.yaml`). Set
+self-signed genCA path (`templates/secrets/tls.yaml` + `tls-ca.yaml`). Set
 `tls.certManager.create: false` to force the genCA path even where cert-manager
 is installed.
 
@@ -280,7 +280,7 @@ self-signed TLS Certificate Authority — a sprig `certificate` struct
 compatible with `genSignedCert`.
 
 Recovery chain on first invocation per render:
-  1. lookup the persistent CA Secret rendered by `templates/secret/tls-ca.yaml`
+  1. lookup the persistent CA Secret rendered by `templates/secrets/tls-ca.yaml`
      in the release namespace; recover Cert+Key if present.
   2. otherwise fall back to `genCA` (first install path).
 */}}

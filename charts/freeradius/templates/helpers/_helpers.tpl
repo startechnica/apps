@@ -14,7 +14,7 @@ Name of the chart-rendered metrics exporter Deployment / Service / ServiceAccoun
 Name of the ConfigMap holding the rlm_sql schema loaded by the `db-bootstrap`
 init container. Resolution order:
   1. `bootstrap.database.schemaConfigMap` — BYO ConfigMap.
-  2. Chart-rendered `<fullname>-db-schema` from `templates/configmap/db-schema.yaml`.
+  2. Chart-rendered `<fullname>-db-schema` from `templates/configmaps/db-schema.yaml`.
 */}}
 {{- define "freeradius.bootstrap.database.schemaConfigMapName" -}}
 {{- default (printf "%s-db-schema" (include "st-common.names.fullname" .)) .Values.bootstrap.database.schemaConfigMap -}}
@@ -123,7 +123,7 @@ Usage: {{ include "freeradius.site.configMapName" (dict "site" "default" "contex
 
 {{/*
 Whether the chart-managed health-check script ConfigMap
-(`templates/configmap/health.yaml`) is needed: not in diagnostic mode, and at
+(`templates/configmaps/health.yaml`) is needed: not in diagnostic mode, and at
 least one probe uses the chart default (script-based) exec rather than a custom
 probe. Returns "true" when needed, empty otherwise.
 */}}

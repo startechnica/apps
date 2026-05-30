@@ -38,7 +38,7 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
     {{- end }}
 {{- end }}
-{{- if .Values.tls.enabled }}
+{{- if and .Values.tls.enabled .Values.sites.tls.privateKeyPassword }}
 - name: FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD
   valueFrom:
     secretKeyRef:
@@ -64,7 +64,7 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       name: {{ include "freeradius.redis.secretName" . }}
       key: {{ include "freeradius.redis.secretKey" . }}
 {{- end }}
-{{- if .Values.modules.eap.enabled }}
+{{- if and .Values.modules.eap.enabled .Values.modules.eap.tlsConfig.private_key_password }}
 - name: FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD
   valueFrom:
     secretKeyRef:

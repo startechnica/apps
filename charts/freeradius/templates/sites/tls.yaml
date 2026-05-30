@@ -166,7 +166,9 @@ data:
     		#  to refer to the "site1" sub-section of the "tls" section.
     		#
     		tls {
+    				{{- if .Values.sites.tls.privateKeyPassword }}
     				private_key_password = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD}
+    				{{- end }}
     				private_key_file = {{ include "freeradius.tls.certKeyPath" . }}
 
     				# Accept an expired Certificate Revocation List
@@ -500,7 +502,9 @@ data:
     				#
     		#       hostname = "example.com"
 
+    				{{- if .Values.sites.tls.privateKeyPassword }}
     				private_key_password = $ENV{FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD}
+    				{{- end }}
     				# private_key_file = ${certdir}/client.pem
     				private_key_file = {{ include "freeradius.tls.certKeyPath" . }}
 

@@ -32,7 +32,9 @@ data:
         tls-config {{ .Values.modules.eap.tlsConfig.name }} {
             certificate_file = {{ include "freeradius.eap.tlsConfig.certPath" . }}
             private_key_file = {{ include "freeradius.eap.tlsConfig.certKeyPath" . }}
+            {{- if .Values.modules.eap.tlsConfig.private_key_password }}
             private_key_password = $ENV{FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD}
+            {{- end }}
             ca_file = {{ include "freeradius.eap.tlsConfig.caCertPath" . }}
             random_file = {{ .Values.modules.eap.tlsConfig.random_file }}
 
