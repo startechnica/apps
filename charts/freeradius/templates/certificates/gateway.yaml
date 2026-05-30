@@ -1,0 +1,37 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and (include "freeradius.tls.useCertManager" .) .Values.gateway.enabled .Values.gateway.tls.enabled }}
+{{- $apiVersion := include "st-common.capabilities.certmanagerCertificate.apiVersion" . -}}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- $primaryHost := default $fullname (first .Values.gateway.hostnames) }}
+{{- $altNames := default (list $primaryHost) .Values.gateway.hostnames }}
+apiVersion: {{ $apiVersion }}
+kind: Certificate
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ include "st-common.gateway.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ include "freeradius.gateway.tlsSecretName" . }}
+  issuerRef:
+    {{- include "freeradius.tls.certManager.issuerRef" . | nindent 4 }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ $fullname }}
+  dnsNames:
+    {{- range $altNames }}
+    - {{ . | quote }}
+    {{- end }}
+{{- end }}

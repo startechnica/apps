@@ -3,17 +3,16 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if include "freeradius.tls.useCertManager" . }}
+{{- if and (include "freeradius.tls.useCertManager" .) .Values.tls.enabled }}
 {{- $apiVersion := include "st-common.capabilities.certmanagerCertificate.apiVersion" . -}}
 {{- $releaseNamespace := include "st-common.names.namespace" . }}
 {{- $clusterDomain := .Values.clusterDomain }}
 {{- $fullname := include "st-common.names.fullname" . }}
 {{- $svcDnsNames := list (printf "%s.%s.svc.%s" $fullname $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $fullname $releaseNamespace) (printf "%s.%s" $fullname $releaseNamespace) $fullname }}
-{{- if .Values.tls.enabled }}
 apiVersion: {{ $apiVersion }}
 kind: Certificate
 metadata:
-  name: {{ $fullname }}
+  name: {{ printf "%s-radsec" $fullname }}
   namespace: {{ $releaseNamespace | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
@@ -31,7 +30,7 @@ spec:
     organizations:
       - {{ .Release.Name | quote }}
     organizationalUnits:
-      - {{ $fullname }}
+      - {{ printf "%s-radsec" $fullname }}
   dnsNames:
     {{- range $svcDnsNames }}
     - {{ . | quote }}
@@ -39,38 +38,4 @@ spec:
     {{- range .Values.gateway.hostnames }}
     - {{ . | quote }}
     {{- end }}
-{{- end }}
-{{- if and .Values.gateway.enabled .Values.gateway.tls.enabled }}
-{{- if .Values.tls.enabled }}
----
-{{- end }}
-{{- $primaryHost := default $fullname (first .Values.gateway.hostnames) }}
-{{- $altNames := default (list $primaryHost) .Values.gateway.hostnames }}
-apiVersion: {{ $apiVersion }}
-kind: Certificate
-metadata:
-  name: {{ $fullname }}
-  namespace: {{ include "st-common.gateway.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-  {{- end }}
-spec:
-  secretName: {{ include "freeradius.gateway.tlsSecretName" . }}
-  issuerRef:
-    {{- include "freeradius.tls.certManager.issuerRef" . | nindent 4 }}
-  privateKey:
-    algorithm: ECDSA
-    rotationPolicy: Always
-    size: 256
-  subject:
-    organizations:
-      - {{ .Release.Name | quote }}
-    organizationalUnits:
-      - {{ $fullname }}
-  dnsNames:
-    {{- range $altNames }}
-    - {{ . | quote }}
-    {{- end }}
-{{- end }}
 {{- end }}

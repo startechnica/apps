@@ -1,0 +1,38 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if include "freeradius.eap.tlsConfig.createCertificate" . }}
+{{- $apiVersion := include "st-common.capabilities.certmanagerCertificate.apiVersion" . -}}
+{{- $releaseNamespace := include "st-common.names.namespace" . }}
+{{- $clusterDomain := .Values.clusterDomain }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- $eapAltNames := list (printf "*.%s.%s.svc.%s" $fullname $releaseNamespace $clusterDomain) (printf "%s.%s.svc" $fullname $releaseNamespace) (printf "%s.%s" $fullname $releaseNamespace) $fullname }}
+apiVersion: {{ $apiVersion }}
+kind: Certificate
+metadata:
+  name: {{ printf "%s-eap" $fullname }}
+  namespace: {{ $releaseNamespace | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  secretName: {{ include "freeradius.eap.tlsConfig.secretName" . }}
+  issuerRef:
+    {{- include "freeradius.tls.certManager.issuerRef" . | nindent 4 }}
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Always
+    size: 256
+  subject:
+    organizations:
+      - {{ .Release.Name | quote }}
+    organizationalUnits:
+      - {{ printf "%s-eap" $fullname }}
+  dnsNames:
+    {{- range $eapAltNames }}
+    - {{ . | quote }}
+    {{- end }}
+{{- end }}
