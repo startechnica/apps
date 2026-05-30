@@ -944,6 +944,7 @@ clients:
   ## @param clients.localhost.nas_type NAS-Type string reported by RADIUS attributes
   ## @param clients.localhost.virtual_server Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
   ## @param clients.localhost.coa_server Name of a `home_server` (or `home_server_pool`) used to proxy **outbound** CoA-Request/Disconnect packets sent to this client. Leave empty unless you've defined a matching `home_server` block — this chart does NOT currently render any. Inbound CoA is handled separately by `sites.coa.enabled` (a `listen` block + virtual server, not a client directive).
+  ## @param clients.localhost.require_message_authenticator Reject Access-Requests that arrive without a `Message-Authenticator` attribute. Mitigates the BlastRADIUS attack (CVE-2024-3596). Safe to enable when every NAS that hits this client entry is known to add Message-Authenticator (all modern radclients do).
   ## @param clients.localhost.limit.max_connections Maximum concurrent connections (TCP only)
   ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
   ## @param clients.localhost.limit.idle_timeout Idle timeout in seconds
@@ -956,6 +957,7 @@ clients:
     nas_type: other
     virtual_server: default
     coa_server: ""
+    require_message_authenticator: false
     limit:
       max_connections: 16
       lifetime: 0

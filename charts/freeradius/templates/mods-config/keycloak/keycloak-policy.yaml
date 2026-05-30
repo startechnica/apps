@@ -40,14 +40,34 @@ data:
         {{- if .Values.keycloak.cache.enabled }}
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a
         #  recent successful result cached. cache_keycloak returns ok on hit
-        #  (populating &control:{{ .Values.keycloak.roleAttribute }} when in
-        #  lua mode), notfound on miss.
+        #  (populating &control:{{ .Values.keycloak.roleAttribute }} in lua
+        #  mode, or &reply:Session-Timeout / &reply:Class in rest mode),
+        #  notfound on miss.
         cache_keycloak
 
         if (notfound) {
             {{ $mod }}
             if {{ $okRcode }} {
-                #  Store on success — role list captured per cache_keycloak's update {}.
+                {{- if not $isLua }}
+                #  rest mode: lift expires_in / access_token from the Keycloak
+                #  JSON body. Session-Timeout makes the NAS terminate the
+                #  session when the OAuth token would have expired, forcing
+                #  re-auth against Keycloak; Class round-trips the access
+                #  token opaquely in accounting packets so usage can be
+                #  correlated back to a specific token. Requires
+                #  modules.json.enabled and `response { force_to = "plain" }`
+                #  on the keycloak_rest instance.
+                map json "%{reply:REST-HTTP-Body}" {
+                    &reply:Session-Timeout := '/expires_in'
+                    &reply:Class           := '/access_token'
+                }
+                #  Drop the raw rest exposure attrs so they don't leak to the NAS.
+                update reply {
+                    &REST-HTTP-Status-Code !* ANY
+                    &REST-HTTP-Body !* ANY
+                }
+                {{- end }}
+                #  Store the post-auth attribute set per cache_keycloak's update {}.
                 cache_keycloak
             }
         }
@@ -58,6 +78,20 @@ data:
         #  keycloak_rest: ROPC password grant -> HTTP 200 = ok/updated, 401 = reject.
         {{- end }}
         {{ $mod }}
+        {{- if not $isLua }}
+        if {{ $okRcode }} {
+            #  rest mode (no cache): same JSON extraction as the cache-miss
+            #  branch above. See comment there for the rationale.
+            map json "%{reply:REST-HTTP-Body}" {
+                &reply:Session-Timeout := '/expires_in'
+                &reply:Class           := '/access_token'
+            }
+            update reply {
+                &REST-HTTP-Status-Code !* ANY
+                &REST-HTTP-Body !* ANY
+            }
+        }
+        {{- end }}
         {{- end }}
         if {{ $okRcode }} {
             #  Credentials valid (fresh or cached): accept and resolve role-based reply attrs.

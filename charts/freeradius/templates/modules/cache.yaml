@@ -107,11 +107,15 @@ data:
     {{- if $kc }}
 
     # rlm_cache instance dedicated to Keycloak auth results. Keyed on the
-    # RADIUS User-Name; caches only the role attribute set by keycloak_lua
-    # (&control:{{ .Values.keycloak.roleAttribute }}) so subsequent
-    # `keycloak_authorize` calls within TTL skip the ROPC + introspection
-    # roundtrip to Keycloak. Role->reply mapping (keycloak_roles) still runs
-    # on every request, regenerating reply attrs from the cached role list.
+    # RADIUS User-Name; caches the post-auth attribute set so subsequent
+    # `keycloak_authorize` calls within TTL skip the ROPC roundtrip to
+    # Keycloak. Captures:
+    #   - lua mode:  &control:{{ .Values.keycloak.roleAttribute }}
+    #                (role list — keycloak_roles policy still runs on every
+    #                request, regenerating reply attrs from the cached list)
+    #   - rest mode: &reply:Session-Timeout and &reply:Class
+    #                (lifted from the Keycloak JSON body by keycloak_authorize)
+    # Lists not populated in the active mode are simply empty in the cache.
     # Always Redis-backed — freeradius.validate.keycloakCache hard-fails if
     # no Redis is configured (cross-pod sharing is the point; per-pod caches
     # still help but the chart standardises on Redis for predictability).
@@ -123,6 +127,8 @@ data:
 
         update {
             &control:{{ .Values.keycloak.roleAttribute }} += &control:{{ .Values.keycloak.roleAttribute }}
+            &reply:Session-Timeout += &reply:Session-Timeout
+            &reply:Class += &reply:Class
         }
 
         redis {

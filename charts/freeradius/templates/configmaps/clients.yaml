@@ -30,6 +30,9 @@ data:
         {{- if $client.coa_server }}
         coa_server = {{ $client.coa_server }}
         {{- end }}
+        {{- if $client.require_message_authenticator }}
+        require_message_authenticator = yes
+        {{- end }}
         {{- if $client.limit }}
         limit {
             max_connections = {{ default 16 $client.limit.max_connections }}
