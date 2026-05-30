@@ -77,8 +77,12 @@ spec:
             - |
               if ! command -v radtest >/dev/null 2>&1; then
                 printf '%s\n' "[radtest] installing freeradius-utils..." >&2
-                apt-get update -qq
-                apt-get install -y --no-install-recommends freeradius-utils >/dev/null
+                # `-o APT::Sandbox::User=root` keeps apt running as root for
+                # fetches instead of seteuid'ing to the `_apt` user. The
+                # container drops CAP_SETUID/SETGID (see containerSecurityContext)
+                # so the default sandbox-as-_apt behaviour fails with EPERM.
+                apt-get -o APT::Sandbox::User=root update -qq
+                apt-get -o APT::Sandbox::User=root install -y --no-install-recommends freeradius-utils >/dev/null
               fi
               printf '%s\n' "[radtest] ready. Try:" >&2
               printf '%s\n' "[radtest]   radtest <user> <pass> $RADIUS_HOST $RADIUS_NAS_PORT $RADIUS_SECRET" >&2
