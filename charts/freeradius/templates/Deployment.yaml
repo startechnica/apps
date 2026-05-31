@@ -97,24 +97,24 @@ spec:
         {{- if and $cfg.clientSecret (not $cfg.existingSecret) }}{{- $kcHasSecret = true }}{{- end -}}
         {{- if include "freeradius.keycloak.tls.createSecret" (dict "instance" $cfg) }}{{- $kcHasTls = true }}{{- end -}}
         {{- end }}
-        checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak.yaml") . | sha256sum }}
-        checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-policy.yaml") . | sha256sum }}
+        checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak.yaml") . | sha256sum }}
+        checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-policy.yaml") . | sha256sum }}
         {{- if $kcHasLua }}
         {{- /* keycloak_common.lua is pure static logic (no env reads,
                no per-instance config baked in) — changes only on chart
                upgrade, which restarts pods via the chart-version checksum
                elsewhere. The per-instance wrapper checksum still flips on
                instance-name / roleAttribute / env-prefix changes. */}}
-        checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-conf-lua.yaml") . | sha256sum }}
+        checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-conf-lua.yaml") . | sha256sum }}
         {{- end }}
         {{- if $kcHasPython }}
-        checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/mods-config/keycloak/keycloak-conf-py.yaml") . | sha256sum }}
+        checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-conf-py.yaml") . | sha256sum }}
         {{- end }}
         {{- if $kcHasSecret }}
-        checksum/secret-keycloak: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret.yaml") . | sha256sum }}
+        checksum/secret-keycloak: {{ include (print $.Template.BasePath "/modules/keycloak/secret.yaml") . | sha256sum }}
         {{- end }}
         {{- if $kcHasTls }}
-        checksum/secret-keycloak-tls: {{ include (print $.Template.BasePath "/mods-config/keycloak/secret-tls.yaml") . | sha256sum }}
+        checksum/secret-keycloak-tls: {{ include (print $.Template.BasePath "/modules/keycloak/secret-tls.yaml") . | sha256sum }}
         {{- end }}
         {{- end }}
         {{- if not .Values.auth.existingSecret }}
