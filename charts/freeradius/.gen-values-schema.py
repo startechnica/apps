@@ -31,12 +31,6 @@ def scalar_type(value: Any) -> str | None:
         return "number"
     if isinstance(value, str):
         return "string"
-    if value is None:
-        # Conservative default: most null fields in this values.yaml are
-        # placeholders for strings (existing-secret names, hostnames,
-        # etc.). Schema permits null too so the chart doesn't reject a
-        # genuine null override.
-        return "string"
     return None
 
 
@@ -54,6 +48,12 @@ def schema_for(value: Any) -> dict[str, Any]:
             ):
                 node["items"] = {"type": scalar_kinds.pop()}
         return node
+    if value is None:
+        # Nullable placeholder (typically `~` in values.yaml for things
+        # like `existingGateway`, `existingVirtualService`). Allow both
+        # null (the default) AND string (any override the user supplies)
+        # so `helm lint` accepts both the shipped defaults and overrides.
+        return {"type": ["string", "null"]}
     return {"type": scalar_type(value) or "string"}
 
 

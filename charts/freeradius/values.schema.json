@@ -1976,7 +1976,10 @@
           "type": "array"
         },
         "existingGateway": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "hostnames": {
           "type": "array"
@@ -2021,7 +2024,10 @@
           "type": "object",
           "properties": {
             "existingVirtualService": {
-              "type": "string"
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "tls": {
               "type": "array"
