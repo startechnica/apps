@@ -34,10 +34,36 @@ def scalar_type(value: Any) -> str | None:
     return None
 
 
-def schema_for(value: Any) -> dict[str, Any]:
+def is_port_context(key: str | None, parent_key: str | None) -> bool:
+    """True for keys that idiomatically hold a TCP/UDP port number.
+
+    Catches direct port fields (`port`, `nodePort`, `targetPort`,
+    `containerPort`) and children of *Ports / nodePorts containers
+    (`service.nodePorts.auth`, `containerPorts.acct`). When the chart
+    default is `""` (sentinel for "not set"), users naturally override
+    with an integer — schema must accept both shapes.
+    """
+    if key:
+        lowered = key.lower()
+        if lowered == "port" or lowered.endswith("port"):
+            return True
+    if parent_key:
+        plowered = parent_key.lower()
+        if plowered == "ports" or plowered == "nodeports" or plowered.endswith("ports"):
+            return True
+    return False
+
+
+def schema_for(
+    value: Any,
+    key: str | None = None,
+    parent_key: str | None = None,
+) -> dict[str, Any]:
     if isinstance(value, dict):
         node: dict[str, Any] = {"type": "object"}
-        node["properties"] = {k: schema_for(v) for k, v in value.items()}
+        node["properties"] = {
+            k: schema_for(v, key=k, parent_key=key) for k, v in value.items()
+        }
         return node
     if isinstance(value, list):
         node = {"type": "array"}
@@ -54,6 +80,8 @@ def schema_for(value: Any) -> dict[str, Any]:
         # null (the default) AND string (any override the user supplies)
         # so `helm lint` accepts both the shipped defaults and overrides.
         return {"type": ["string", "null"]}
+    if value == "" and is_port_context(key, parent_key):
+        return {"type": ["string", "integer"]}
     return {"type": scalar_type(value) or "string"}
 
 

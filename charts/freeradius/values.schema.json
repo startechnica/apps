@@ -1737,22 +1737,40 @@
           "type": "object",
           "properties": {
             "auth": {
-              "type": "string"
+              "type": [
+                "string",
+                "integer"
+              ]
             },
             "acct": {
-              "type": "string"
+              "type": [
+                "string",
+                "integer"
+              ]
             },
             "coa": {
-              "type": "string"
+              "type": [
+                "string",
+                "integer"
+              ]
             },
             "radsec": {
-              "type": "string"
+              "type": [
+                "string",
+                "integer"
+              ]
             },
             "status": {
-              "type": "string"
+              "type": [
+                "string",
+                "integer"
+              ]
             },
             "metrics": {
-              "type": "string"
+              "type": [
+                "string",
+                "integer"
+              ]
             }
           }
         },
@@ -2157,7 +2175,10 @@
           "type": "string"
         },
         "port": {
-          "type": "string"
+          "type": [
+            "string",
+            "integer"
+          ]
         },
         "user": {
           "type": "string"
