@@ -15,7 +15,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  tls-cache: |-
+  tls-cache: |
     ######################################################################
     #
     #  tls-cache — virtual server backing EAP TLS session resumption.

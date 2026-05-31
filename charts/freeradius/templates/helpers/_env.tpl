@@ -38,16 +38,16 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
     {{- end }}
 {{- end }}
-{{- if and .Values.tls.enabled .Values.sites.tls.privateKeyPassword }}
-- name: FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD
+{{- if and .Values.tls.enabled .Values.sites.radsec.privateKeyPassword }}
+- name: FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD
   valueFrom:
     secretKeyRef:
     {{- if .Values.auth.existingSecretPerPassword }}
-      name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesTlsPrivKeyPassword "context" $)) $ }}
-      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesTlsPrivKeyPassword") }}
+      name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.sitesRadsecPrivKeyPassword "context" $)) $ }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "sitesRadsecPrivKeyPassword") }}
     {{- else }}
       name: {{ $globalSecretName }}
-      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-tls-privkey-password") }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-radsec-privkey-password") }}
     {{- end }}
 {{- end }}
 {{- if .Values.tls.enabled }}

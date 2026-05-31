@@ -894,13 +894,13 @@ sites:
   ## mounts the TLS material referenced by `tls.*` and opens the RADSEC
   ## container/Service port.
   ##
-  ## @param sites.tls.enabled Enable the RADSEC virtual server
-  ## @param sites.tls.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
-  ## @param sites.tls.privateKeyPassword Password for the RADSEC private key when it is password-protected
-  ## @param sites.tls.radsecSecret RADIUS shared secret for the loopback `clients radsec { client 127.0.0.1 { secret = … } }` block in the RADSEC virtual server. Stored under `clients-radsec-secret` in the chart-managed credentials Secret and injected via `$ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}`. Auto-generated when empty; FreeRADIUS defaults the secret to literal `"radsec"` for `proto = tls` so any value works.
-  ## @param sites.tls.existingConfigMap Mount an existing ConfigMap (must contain a `tls` key with the virtual-server config) at `sites-enabled/tls` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.radsec.enabled Enable the RADSEC virtual server
+  ## @param sites.radsec.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
+  ## @param sites.radsec.privateKeyPassword Password for the RADSEC private key when it is password-protected
+  ## @param sites.radsec.radsecSecret RADIUS shared secret for the loopback `clients radsec { client 127.0.0.1 { secret = … } }` block in the RADSEC virtual server. Stored under `clients-radsec-secret` in the chart-managed credentials Secret and injected via `$ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}`. Auto-generated when empty; FreeRADIUS defaults the secret to literal `"radsec"` for `proto = tls` so any value works.
+  ## @param sites.radsec.existingConfigMap Mount an existing ConfigMap (must contain a `radsec` key with the virtual-server config) at `sites-enabled/radsec` instead of the chart-rendered one; the chart then skips rendering its own.
   ##
-  tls:
+  radsec:
     enabled: false
     existingConfigMap: ""
     cipher: "DEFAULT"
@@ -977,7 +977,7 @@ clients:
 ## =============================================================================
 
 auth:
-  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-tls-privkey-password` / `mods-eap-tls-privkey-password` when the matching `privateKeyPassword` is set). Overrides chart-rendered Secret rendering.
+  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `privateKeyPassword` is set). Overrides chart-rendered Secret rendering.
   ##
   existingSecret: ""
   ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`).

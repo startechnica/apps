@@ -273,10 +273,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `sites.status.existingConfigMap`      | BYO ConfigMap (key `status`) mounted at `sites-enabled/status`; skips chart rendering              | `""`      |
 | `sites.dhcp.enabled`                  | Enable the `dhcp` virtual server                                                                   | `false`   |
 | `sites.dhcp.existingConfigMap`        | BYO ConfigMap (key `dhcp`) mounted at `sites-enabled/dhcp`; skips chart rendering                  | `""`      |
-| `sites.tls.enabled`                   | Enable the RADSEC virtual server                                                                   | `false`   |
-| `sites.tls.cipher`                    | TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the image default)                   | `DEFAULT` |
-| `sites.tls.privateKeyPassword`        | Password for the RADSEC private key when it is password-protected                                  | `""`      |
-| `sites.tls.existingConfigMap`         | BYO ConfigMap (key `tls`) mounted at `sites-enabled/tls`; skips chart rendering                    | `""`      |
+| `sites.radsec.enabled`                   | Enable the RADSEC virtual server                                                                   | `false`   |
+| `sites.radsec.cipher`                    | TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the image default)                   | `DEFAULT` |
+| `sites.radsec.privateKeyPassword`        | Password for the RADSEC private key when it is password-protected                                  | `""`      |
+| `sites.radsec.existingConfigMap`         | BYO ConfigMap (key `radsec`) mounted at `sites-enabled/radsec`; skips chart rendering                    | `""`      |
 
 
 ### Keycloak integration parameters
@@ -426,8 +426,8 @@ to call `keycloak_authorize` from your own site config.
 When you don't supply them, the chart auto-generates several credentials into the chart-managed Secret (`<release>-freeradius`):
 
 - `sites-status-secret` — shared secret for the RADIUS `status` virtual server (probes + metrics exporter).
-- `clients-radsec-secret` — RADIUS shared secret for the RADSEC loopback `client 127.0.0.1` (only when `tls.enabled`; auto-generated when `sites.tls.radsecSecret` is empty).
-- `sites-tls-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled` AND `sites.tls.privateKeyPassword` is set).
+- `clients-radsec-secret` — RADIUS shared secret for the RADSEC loopback `client 127.0.0.1` (only when `tls.enabled`; auto-generated when `sites.radsec.radsecSecret` is empty).
+- `sites-radsec-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled` AND `sites.radsec.privateKeyPassword` is set).
 - `mods-eap-tls-privkey-password` — EAP private-key passphrase (only when `modules.eap.enabled` AND `modules.eap.tlsConfig.private_key_password` is set).
 - `mods-rest-password`, `database-password` — when the matching feature is enabled.
 
@@ -772,7 +772,7 @@ gateway:
     selfSigned: false
 ```
 
-`sites.tls.{cipher,privateKeyPassword}` remain — only the
+`sites.radsec.{cipher,privateKeyPassword}` remain — only the
 `enabled` flag moved.
 
 #### 5. SQL TLS / RADSEC TLS Secret keys renamed

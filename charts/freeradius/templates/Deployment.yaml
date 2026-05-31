@@ -52,8 +52,8 @@ spec:
         {{- if and .Values.sites.dhcp.enabled (not .Values.sites.dhcp.existingConfigMap) }}
         checksum/configmap-sites-dhcp: {{ include (print $.Template.BasePath "/sites/dhcp.yaml") . | sha256sum }}
         {{- end }}
-        {{- if and .Values.tls.enabled (not .Values.sites.tls.existingConfigMap) }}
-        checksum/configmap-sites-tls: {{ include (print $.Template.BasePath "/sites/tls.yaml") . | sha256sum }}
+        {{- if and .Values.tls.enabled (not .Values.sites.radsec.existingConfigMap) }}
+        checksum/configmap-sites-radsec: {{ include (print $.Template.BasePath "/sites/radsec.yaml") . | sha256sum }}
         {{- end }}
         {{- if and .Values.sites.tlsCache.enabled (not .Values.sites.tlsCache.existingConfigMap) }}
         checksum/configmap-sites-tls-cache: {{ include (print $.Template.BasePath "/sites/tls-cache.yaml") . | sha256sum }}
@@ -637,7 +637,7 @@ spec:
               {{- end }}
               {{- if .Values.tls.enabled }}
               - configMap:
-                  name: {{ include "freeradius.site.configMapName" (dict "site" "tls" "context" $) }}
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "radsec" "context" $) }}
               {{- end }}
               {{- if .Values.sites.tlsCache.enabled }}
               - configMap:

@@ -822,7 +822,7 @@
             }
           }
         },
-        "tls": {
+        "radsec": {
           "type": "object",
           "properties": {
             "enabled": {
@@ -835,6 +835,9 @@
               "type": "string"
             },
             "privateKeyPassword": {
+              "type": "string"
+            },
+            "radsecSecret": {
               "type": "string"
             }
           }
