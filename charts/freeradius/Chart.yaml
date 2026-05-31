@@ -5,12 +5,26 @@ annotations:
       image: docker.io/freeradius/freeradius-server:3.2.8
   artifacthub.io/changes: |
     - kind: added
-      description: "Keycloak per-instance shared-library extensions — `groupMappings` (mirror of roleMappings keyed off the `groups` claim), `require` (JWT-claim guard list), `attributeMappings` (generic claim→reply engine), `introspect` (RFC 7662 introspection in place of local JWT decode), and `refreshTokenCache` (cache-hit freshness check via `grant_type=refresh_token`, second module instance `keycloak_<name>_validate`); see CHANGELOG.md §1.2.0."
+      description: "Keycloak per-instance `groupMappings` — mirror of `roleMappings` keyed off the `groups` claim; emits a `groups_keycloak[_<name>]` policy alongside the existing roles policy."
+    - kind: added
+      description: "Keycloak per-instance `require` — JWT-claim guard list; rejects early on falsy claim (e.g. `require: [email_verified]`)."
+    - kind: added
+      description: "Keycloak per-instance `attributeMappings` — generic `{claim, reply}` engine copying any top-level JWT claim verbatim to a reply attribute; reply attrs are added to the cache `update {}` so hits preserve them."
+    - kind: added
+      description: "Keycloak per-instance `introspect` — switches the post-ROPC claim source to RFC 7662 `/token/introspect` (catches revocation / admin-disable / realm-key rotation). Validator requires a client secret."
+    - kind: added
+      description: "Keycloak per-instance `refreshTokenCache` — caches `refresh_token` and renders a second `keycloak_<name>_validate` module instance the policy calls on cache hit to confirm the Keycloak session is still alive; REJECT invalidates the entry, network FAIL falls through gracefully."
+    - kind: added
+      description: "`values.schema.json` — type-only JSON Schema draft-07 ships with the chart so `helm install/template/lint` catches gross value-type mismatches at submit time."
+    - kind: added
+      description: "`.helmignore` — excludes the schema regen helper (`.gen-*.py`), `ci/` render fixtures, and Claude-side artifacts (`.claude/`, `CLAUDE.md`) from the packaged chart."
+    - kind: changed
+      description: "`st-common` dependency moved from the GitHub Pages HTTP repo to the GHCR OCI registry (`oci://ghcr.io/startechnica/charts`) — aligns with the chart's own publish path (per `.github/workflows/release.yaml`) and removes the Pages-index round-trip."
 apiVersion: v2
 appVersion: 3.2.8
 dependencies:
   - name: st-common
-    repository: https://startechnica.github.io/apps
+    repository: oci://ghcr.io/startechnica/charts
     version: 0.1.21
     alias: startechnica-common
   - name: mariadb

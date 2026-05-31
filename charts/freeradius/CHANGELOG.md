@@ -43,6 +43,19 @@
   group/role attribute collision, introspect-requires-secret,
   refreshTokenCache-requires-cache, and well-formed
   `attributeMappings` / `groupMappings` / `require` entries.
+- **`values.schema.json`** — JSON Schema draft-07, type-only walk of
+  `values.yaml` (matches the convention used by charts/adminer and
+  charts/open-appsec-injector). Catches gross value-type mismatches at
+  `helm install` / `helm template` / `helm lint` time without trying to
+  be a value-level lint. Nullable placeholders (e.g.
+  `gateway.existingGateway: ~`) are typed as `["string", "null"]` so
+  both the default and any user override validate. Regen helper at
+  `charts/freeradius/.gen-values-schema.py`; excluded from the package
+  via `.helmignore`.
+- **`.helmignore`** — first-class chart packaging excludes: standard
+  VCS / IDE patterns plus this repo's build helpers (`.gen-*.py`,
+  `ci/` render fixtures) and Claude-side artifacts (`.claude/`,
+  `CLAUDE.md`).
 
 - **Multi-instance Keycloak.** Configure any number of Keycloak backends
   under `keycloak.instances.<name>` (each with its own `mode` / `url` /
@@ -123,6 +136,13 @@
 
 ### Changed
 
+- **`st-common` dependency moved from the GitHub Pages HTTP repo to the
+  GHCR OCI registry.** `repository: oci://ghcr.io/startechnica/charts`
+  (was `https://startechnica.github.io/apps`). Same chart, same version
+  (0.1.21) — just a different fetch path. Aligns with the chart's own
+  publish path (`.github/workflows/release.yaml` pushes to
+  `oci://ghcr.io/<owner>/charts`) and skips the Pages-index round-trip.
+  `helm dependency build` re-fetches; existing renders are byte-identical.
 - **cert-manager is now auto-detected.** `tls.certManager.create` defaults to
   `true`; when the cert-manager API is present the chart issues RADSEC/gateway
   certificates through cert-manager, and when it is absent it transparently

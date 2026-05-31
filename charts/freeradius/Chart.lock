@@ -1,6 +1,6 @@
 dependencies:
 - name: st-common
-  repository: https://startechnica.github.io/apps
+  repository: oci://ghcr.io/startechnica/charts
   version: 0.1.21
 - name: mariadb
   repository: oci://registry-1.docker.io/bitnamicharts
@@ -11,5 +11,5 @@ dependencies:
 - name: redis
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 25.5.3
-digest: sha256:6549affaa6c3a3e8d284afbca027478c23f8d86d278dde94dd4c4034f0a60544
-generated: "2026-05-29T16:10:47.2346962+07:00"
+digest: sha256:f441ef33e937ebd5861af4c259376efb5d72d1098b6b6fc02da536ac455be043
+generated: "2026-05-31T11:06:27.766104+07:00"
