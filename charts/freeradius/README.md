@@ -426,6 +426,7 @@ to call `keycloak_authorize` from your own site config.
 When you don't supply them, the chart auto-generates several credentials into the chart-managed Secret (`<release>-freeradius`):
 
 - `sites-status-secret` — shared secret for the RADIUS `status` virtual server (probes + metrics exporter).
+- `clients-radsec-secret` — RADIUS shared secret for the RADSEC loopback `client 127.0.0.1` (only when `tls.enabled`; auto-generated when `sites.tls.radsecSecret` is empty).
 - `sites-tls-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled` AND `sites.tls.privateKeyPassword` is set).
 - `mods-eap-tls-privkey-password` — EAP private-key passphrase (only when `modules.eap.enabled` AND `modules.eap.tlsConfig.private_key_password` is set).
 - `mods-rest-password`, `database-password` — when the matching feature is enabled.

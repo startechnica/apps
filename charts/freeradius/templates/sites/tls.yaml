@@ -94,11 +94,11 @@ data:
 
     clients radsec {
     		client 127.0.0.1 {
-    				ipaddr = 127.0.0.1
-    				proto = tls
+    			ipaddr = 127.0.0.1
+    			proto = tls
 
-    				# secret = radsec
-    				secret = $ENV{FREERADIUS_CLIENTS_SECRET}
+    			# secret = radsec
+    			secret = $ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}
     		}
     }
 

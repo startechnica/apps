@@ -50,6 +50,18 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-tls-privkey-password") }}
     {{- end }}
 {{- end }}
+{{- if .Values.tls.enabled }}
+- name: FREERADIUS_CLIENTS_RADSEC_SECRET
+  valueFrom:
+    secretKeyRef:
+    {{- if .Values.auth.existingSecretPerPassword }}
+      name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.clientsRadsecSecret "context" $)) $ }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "clientsRadsecSecret") }}
+    {{- else }}
+      name: {{ $globalSecretName }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "clients-radsec-secret") }}
+    {{- end }}
+{{- end }}
 {{- if and .Values.modules.rest.enabled (ne .Values.modules.rest.auth "none") }}
 - name: FREERADIUS_MODS_REST_PASSWORD
   valueFrom:
