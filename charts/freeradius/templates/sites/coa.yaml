@@ -15,7 +15,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
-  coa: |-
+  coa: |
     listen {
     	type = {{ .Values.sites.coa.listen.type }}
     	ipaddr = {{ .Values.sites.coa.listen.ipaddr }}

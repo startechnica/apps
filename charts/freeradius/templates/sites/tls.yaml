@@ -19,7 +19,7 @@ data:
          Deployment. Listen port, cert/key/CA paths and cipher are rendered directly
          from .Values / TLS helpers; the private-key password and client secret stay
          as $ENV{} — injected by the Deployment via secretKeyRef, never baked in here. */}}
-  tls: |-
+  tls: |
     ######################################################################
     #
     #  RADIUS over TLS (radsec)

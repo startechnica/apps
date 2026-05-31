@@ -19,7 +19,7 @@ data:
          Deployment. Listen address/port are rendered directly from .Values; the
          shared secret stays as $ENV{} — injected by the Deployment via secretKeyRef
          (auto-generated when sites.status.secret is empty), never baked in here. */}}
-  status: |-
+  status: |
     ######################################################################
     #
     #	A virtual server to handle ONLY Status-Server packets.
