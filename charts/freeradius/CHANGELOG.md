@@ -11,8 +11,8 @@
     off the Keycloak `groups` claim (Group Membership client mapper).
     Group paths land in `&control:<groupAttribute>` (default `Class` —
     validator rejects when the role and group attributes collide and
-    both mappings are non-empty). A `groups_keycloak[_<name>]` policy
-    block fires on `ok` alongside the existing `roles_keycloak[_<name>]`.
+    both mappings are non-empty). A `keycloak[_<name>]_groups` policy
+    block fires on `ok` alongside the existing `keycloak[_<name>]_roles`.
   - `require` — list of JWT claim names that must be truthy after
     decode (or introspection). Catches "user authenticated but
     admin-disabled-since-issuance" via e.g. `require: [email_verified]`;
@@ -62,7 +62,7 @@
   `realm` / `clientId` / `clientSecret` / `tls` / `cache` /
   `roleMappings`). Bind each NAS to a backend with the new
   `clients.<x>.keycloak: <name>` field; the chart renders an
-  `if (Packet-Src-IP-Address == …) { authorize_keycloak_<name> }`
+  `if (Packet-Src-IP-Address == …) { keycloak_<name>_authorize }`
   dispatch chain into the shared `sites/default` and `sites/inner-tunnel`
   virtual servers. The previously singleton `keycloak.*` fields auto-
   synthesise an `instances.default` entry for backwards-compat (a
@@ -88,7 +88,7 @@
   pure logic — no env-var reads, no module-level config — so it's
   safely shared across instances inside the rlm_python3 process-global
   interpreter.
-- `cache cache_keycloak[_<name>]` rlm_cache instance per Keycloak
+- `cache keycloak[_<name>]_cache` rlm_cache instance per Keycloak
   instance whose `cache.enabled: true`, rendered into the shared
   `mods-enabled/cache` file. The cache key is hard-coded to
   `keycloak:<name>:%{User-Name}` (non-overridable) to prevent silent

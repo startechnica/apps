@@ -652,7 +652,7 @@ modules:
       config:
         options: '"--SERVER=memcached:11211"'
     ## Additional user-defined rlm_cache instances rendered alongside the base
-    ## `cache` instance (and the chart-managed `cache_tls` / `cache_keycloak`
+    ## `cache` instance (and the chart-managed `cache_tls` / `keycloak_cache`
     ## siblings). Each top-level key is a FreeRADIUS module instance name
     ## (used directly in unlang as `<name>`) with the same schema as the base:
     ## `driver`, `key`, `ttl`, `maxEntries` (default 0), `update` (required),
@@ -945,7 +945,7 @@ clients:
   ## @param clients.localhost.virtual_server Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
   ## @param clients.localhost.coa_server Name of a `home_server` (or `home_server_pool`) used to proxy **outbound** CoA-Request/Disconnect packets sent to this client. Leave empty unless you've defined a matching `home_server` block — this chart does NOT currently render any. Inbound CoA is handled separately by `sites.coa.enabled` (a `listen` block + virtual server, not a client directive).
   ## @param clients.localhost.require_message_authenticator Reject Access-Requests that arrive without a `Message-Authenticator` attribute. Mitigates the BlastRADIUS attack (CVE-2024-3596). Safe to enable when every NAS that hits this client entry is known to add Message-Authenticator (all modern radclients do).
-  ## @param clients.localhost.keycloak Bind this NAS to a named Keycloak backend defined under `keycloak.instances.<name>`. When set, the chart renders an `if (Packet-Src-IP-Address == <ipv4addr>) { authorize_keycloak_<name> }` arm into the dispatch chain in `sites/default` (and `sites/inner-tunnel`). Leave empty to fall through to the `default` instance (when `keycloak.wireDefaultSite: true`) or to `pap`. Not emitted into `clients.conf` — FR3 client blocks are schema-validated and reject unknown directives.
+  ## @param clients.localhost.keycloak Bind this NAS to a named Keycloak backend defined under `keycloak.instances.<name>`. When set, the chart renders an `if (Packet-Src-IP-Address == <ipv4addr>) { keycloak_<name>_authorize }` arm into the dispatch chain in `sites/default` (and `sites/inner-tunnel`). Leave empty to fall through to the `default` instance (when `keycloak.wireDefaultSite: true`) or to `pap`. Not emitted into `clients.conf` — FR3 client blocks are schema-validated and reject unknown directives.
   ## @param clients.localhost.limit.max_connections Maximum concurrent connections (TCP only)
   ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
   ## @param clients.localhost.limit.idle_timeout Idle timeout in seconds
@@ -1313,7 +1313,7 @@ modsConfig: {}
 ## reverse. The chart renders an if/elsif dispatch chain in the shared
 ## default virtual server, matching `Packet-Src-IP-Address` against each
 ## bound client's `ipv4addr` and calling the matching instance's
-## `authorize_keycloak_<name>` policy. A `default` instance (when present
+## `keycloak_<name>_authorize` policy. A `default` instance (when present
 ## with `wireDefaultSite: true`) is wired as the `else` branch — unmatched
 ## NAS fall through to it.
 ##
@@ -1342,7 +1342,7 @@ modsConfig: {}
 ## at your convenience.
 ##
 ## @param keycloak.enabled Render the Keycloak auth configs + Secrets and mount them into the pod. Acts as the master feature gate; renders nothing when `false`.
-## @param keycloak.wireDefaultSite Auto-wire the `default` instance's `authorize_keycloak` as the `else` branch of the dispatch chain in `sites/default` (catches NAS that aren't bound to a named instance via `clients.<x>.keycloak`). No-op when no `default` instance is configured.
+## @param keycloak.wireDefaultSite Auto-wire the `default` instance's `keycloak_authorize` as the `else` branch of the dispatch chain in `sites/default` (catches NAS that aren't bound to a named instance via `clients.<x>.keycloak`). No-op when no `default` instance is configured.
 ## @param keycloak.unmatchedReject When `true` AND no `default` instance is wired, the dispatch chain's `else` branch rejects unmatched NAS instead of falling through to `pap`. Off by default.
 ##
 ## --- Legacy top-level fields (DEPRECATED) -----------------------------
@@ -1365,7 +1365,7 @@ modsConfig: {}
 ## @param keycloak.tls.existingSecret [DEPRECATED — use `keycloak.instances.default.tls.existingSecret`] BYO Secret with CA bundle.
 ## @param keycloak.tls.existingSecretCaKey [DEPRECATED — use `keycloak.instances.default.tls.existingSecretCaKey`] Key inside `existingSecret`.
 ## @param keycloak.tls.insecure [DEPRECATED — use `keycloak.instances.default.tls.insecure`] Skip TLS verification (dev only).
-## @param keycloak.cache.enabled [DEPRECATED — use `keycloak.instances.default.cache.enabled`] Render a `cache_keycloak_default` rlm_cache instance and wire it into the policy.
+## @param keycloak.cache.enabled [DEPRECATED — use `keycloak.instances.default.cache.enabled`] Render a `keycloak_default_cache` rlm_cache instance and wire it into the policy.
 ## @param keycloak.cache.ttl [DEPRECATED — use `keycloak.instances.default.cache.ttl`] Cache TTL (seconds).
 ##
 ## Note: the deprecation shim does NOT mirror the newer per-instance keys
@@ -1380,8 +1380,8 @@ modsConfig: {}
 ## `^[a-z][a-z0-9_]*$`). The chart renders, per instance:
 ##   * one `keycloak_<name>` module block (`mods-enabled/keycloak_<name>`)
 ##     of type `lua` / `python3` / `rest` per `mode`
-##   * one `authorize_keycloak_<name>` policy + (lua/python) one
-##     `roles_keycloak_<name>` policy (`policy.d/keycloak_<name>`)
+##   * one `keycloak_<name>_authorize` policy + (lua/python) one
+##     `keycloak_<name>_roles` policy (`policy.d/keycloak_<name>`)
 ##   * (lua/python) one mapper-script file at
 ##     `/etc/freeradius/scripts/{keycloak_<name>.lua, keycloak_<name>.py}` —
 ##     a per-instance wrapper with config baked in by Helm at chart-render
@@ -1392,14 +1392,14 @@ modsConfig: {}
 ##   * (when TLS CA configured) one Opaque Secret
 ##     `<fullname>-keycloak-<name>-ca` mounted at
 ##     `/etc/freeradius/certs-keycloak-<name>/ca.crt`
-##   * (when `cache.enabled`) one `cache cache_keycloak_<name>` rlm_cache
+##   * (when `cache.enabled`) one `cache keycloak_<name>_cache` rlm_cache
 ##     block in `mods-enabled/cache`, Redis-backed, with the cache key
 ##     hard-coded to `keycloak:<name>:%{User-Name}` (non-overridable —
 ##     namespacing prevents cross-instance cache hits on common usernames)
 ##
 ## The implicit `default` instance keeps the legacy resource names for
 ## backwards compatibility: module instance `keycloak_lua` / `keycloak_python`
-## / `keycloak_rest`; policy `authorize_keycloak`; Secret `<fullname>-keycloak`
+## / `keycloak_rest`; policy `keycloak_authorize`; Secret `<fullname>-keycloak`
 ## with key `client-secret`; `_CLIENT_SECRET` env var unprefixed
 ## (`FREERADIUS_KEYCLOAK_CLIENT_SECRET`); CA mount `/etc/freeradius/certs-keycloak/`;
 ## script filenames `keycloak.lua` / `keycloak.py`.

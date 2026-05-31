@@ -9,7 +9,7 @@ chart manages concatenated into one FreeRADIUS module file. Sections rendered
 on demand:
   - `cache { }`                       — base       (modules.cache.enabled)
   - `cache cache_tls { }`             — EAP TLS    (sites.tlsCache.enabled)
-  - `cache cache_keycloak[_<name>]`   — Keycloak   (one per keycloak instance
+  - `cache keycloak[_<name>]_cache`   — Keycloak   (one per keycloak instance
                                                     whose `cache.enabled: true`)
   - `cache <name> { }`                — per-entry  (modules.cache.instances.<name>)
 
@@ -19,7 +19,7 @@ instance.
 
 BYO override: `modules.cache.existingConfigMap` skips this template entirely
 and the user provides the full module file themselves. Chart-managed
-`cache_tls` / `cache_keycloak[_<name>]` bodies interpolate chart values, so
+`cache_tls` / `keycloak[_<name>]_cache` bodies interpolate chart values, so
 combining BYO with `sites.tlsCache` or any keycloak instance's `cache` is
 not supported.
 

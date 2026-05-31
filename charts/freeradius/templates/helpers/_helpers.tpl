@@ -207,7 +207,7 @@ Templates parse it with `fromYaml`:
 Direction: NAS → instance. Each `clients.<x>.keycloak` references one of
 the resolved instance names. The chart special-cases the instance named
 `default` to keep legacy resource names (module instance `keycloak_lua`/
-`keycloak_python`, policy `authorize_keycloak`, Secret
+`keycloak_python`, policy `keycloak_authorize`, Secret
 `<fullname>-keycloak`, unprefixed env vars, etc.) so existing values
 files keep rendering identically.
 
@@ -287,9 +287,9 @@ values files; non-default instances suffix the name everywhere.
 
   envVarPrefix       FREERADIUS_KEYCLOAK_                / FREERADIUS_KEYCLOAK_<NAME>_
   moduleName         keycloak_lua|python|rest            / keycloak_<name>
-  policyName         authorize_keycloak                  / authorize_keycloak_<name>
-  rolesPolicyName    roles_keycloak                      / roles_keycloak_<name>
-  cacheName          cache_keycloak                      / cache_keycloak_<name>
+  policyName         keycloak_authorize                  / keycloak_<name>_authorize
+  rolesPolicyName    keycloak_roles                      / keycloak_<name>_roles
+  cacheName          keycloak_cache                      / keycloak_<name>_cache
   cacheKey           "keycloak:%{User-Name}"             / "keycloak:<name>:%{User-Name}"
                                                           (forced, non-overridable)
   modKey             keycloak                            / keycloak_<name>
@@ -314,20 +314,20 @@ values files; non-default instances suffix the name everywhere.
 {{- end -}}
 
 {{- define "freeradius.keycloak.policyName" -}}
-{{- if eq .name "default" -}}authorize_keycloak
-{{- else -}}authorize_keycloak_{{ .name }}
+{{- if eq .name "default" -}}keycloak_authorize
+{{- else -}}keycloak_{{ .name }}_authorize
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.keycloak.rolesPolicyName" -}}
-{{- if eq .name "default" -}}roles_keycloak
-{{- else -}}roles_keycloak_{{ .name }}
+{{- if eq .name "default" -}}keycloak_roles
+{{- else -}}keycloak_{{ .name }}_roles
 {{- end -}}
 {{- end -}}
 
 {{- define "freeradius.keycloak.groupsPolicyName" -}}
-{{- if eq .name "default" -}}groups_keycloak
-{{- else -}}groups_keycloak_{{ .name }}
+{{- if eq .name "default" -}}keycloak_groups
+{{- else -}}keycloak_{{ .name }}_groups
 {{- end -}}
 {{- end -}}
 
@@ -341,8 +341,8 @@ values files; non-default instances suffix the name everywhere.
 {{- end -}}
 
 {{- define "freeradius.keycloak.cacheName" -}}
-{{- if eq .name "default" -}}cache_keycloak
-{{- else -}}cache_keycloak_{{ .name }}
+{{- if eq .name "default" -}}keycloak_cache
+{{- else -}}keycloak_{{ .name }}_cache
 {{- end -}}
 {{- end -}}
 

@@ -10,16 +10,16 @@ when included from `policy.d/`, so these live in their own ConfigMaps
 separate from the module-instance files rendered by `keycloak.yaml`.
 
   default → `<fullname>-keycloak-policy`           key: `keycloak`
-            policy names: `authorize_keycloak`, `roles_keycloak`,
-                          `groups_keycloak`
+            policy names: `keycloak_authorize`, `keycloak_roles`,
+                          `keycloak_groups`
   <name>  → `<fullname>-keycloak-<name>-policy`    key: `keycloak_<name>`
-            policy names: `authorize_keycloak_<name>`,
-                          `roles_keycloak_<name>`,
-                          `groups_keycloak_<name>`
+            policy names: `keycloak_<name>_authorize`,
+                          `keycloak_<name>_roles`,
+                          `keycloak_<name>_groups`
 
 The policy wraps the per-instance module instance (`keycloak_lua` /
 `keycloak_python` for default, `keycloak_<name>` for named) with:
-  - optional cache-aside via the dedicated `cache_keycloak[_<name>]`
+  - optional cache-aside via the dedicated `keycloak[_<name>]_cache`
     rlm_cache instance (when `cache.enabled`),
   - optional cache-hit freshness check via `<modName>_validate`
     (when `refreshTokenCache: true`): copies the cached refresh_token
@@ -29,9 +29,9 @@ The policy wraps the per-instance module instance (`keycloak_lua` /
     invalidates the cache entry and rejects the request; network FAIL
     falls through gracefully, reusing the cached attrs.
   - `&control:Auth-Type := Accept` on success (so authenticate{} is bypassed),
-  - role → reply mapping via `roles_keycloak[_<name>]` when `roleMappings`
+  - role → reply mapping via `keycloak[_<name>]_roles` when `roleMappings`
     is non-empty,
-  - group → reply mapping via `groups_keycloak[_<name>]` when `groupMappings`
+  - group → reply mapping via `keycloak[_<name>]_groups` when `groupMappings`
     is non-empty.
 */}}
 
@@ -70,7 +70,7 @@ data:
 
     #  Entry point — call from a virtual server's authorize{} section. With
     #  multi-instance, the chart's dispatch chain in sites/default chooses
-    #  which `authorize_keycloak[_<name>]` to call based on NAS-IP-Address.
+    #  which `keycloak[_<name>]_authorize` to call based on NAS-IP-Address.
     {{ $polName }} {
         {{- if $cacheEnabled }}
         #  Cache lookup: skip the Keycloak roundtrip if &User-Name has a

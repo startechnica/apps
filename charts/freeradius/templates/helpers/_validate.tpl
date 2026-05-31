@@ -243,7 +243,7 @@ instance:
   - `roleMapper` must be client / realm,
   - `tls.caCert` and `tls.existingSecret` are mutually exclusive,
   - `cache.enabled: true` requires a Redis backend (the chart standardises
-    on Redis so the per-instance `cache_keycloak_<name>` shares state
+    on Redis so the per-instance `keycloak_<name>_cache` shares state
     across replicas),
   - `realm` must be non-empty (centralised here — used to be duplicated
     across keycloak.yaml / keycloak-mapper-{lua,python}.yaml's `fail`
@@ -307,7 +307,7 @@ freeradius: keycloak.instances.{{ $name }}.cache.enabled
     `keycloak.instances.{{ $name }}.cache.enabled: true` requires a Redis
     backend. Either enable the bundled subchart (`redis.enabled: true`)
     or point `modules.redis.server` at an external Redis. The chart
-    standardises the per-instance `cache_keycloak_{{ $name }}` on Redis so
+    standardises the per-instance `keycloak_cache_{{ $name }}` on Redis so
     state is shared across replicas.
 {{- end -}}
 {{- $roleAttr := default "Class" $cfg.roleAttribute -}}
@@ -381,7 +381,7 @@ Validation message: every non-empty `clients.<x>.keycloak` must reference
 an existing `keycloak.instances.<name>` entry, and the client must have a
 non-empty `ipv4addr` (the dispatch chain in `sites/default` matches on
 `Packet-Src-IP-Address`). Typo guard — a misspelled instance name in
-`clients.foo.keycloak: typo` would otherwise render `authorize_keycloak_typo`
+`clients.foo.keycloak: typo` would otherwise render `keycloak_typo_authorize`
 unlang that fails to load at runtime instead of at `helm install` time.
 */}}
 {{- define "freeradius.validate.keycloakClientBindings" -}}

@@ -81,7 +81,7 @@ data:
             {{- end }}
             {{- if $kcWireDefault }}
             else {
-                authorize_keycloak
+                keycloak_authorize
             }
             {{- else if .Values.keycloak.unmatchedReject }}
             else {
@@ -89,7 +89,7 @@ data:
             }
             {{- end }}
             {{- else if $kcWireDefault }}
-            authorize_keycloak
+            keycloak_authorize
             {{- end }}
             {{- end }}
         }

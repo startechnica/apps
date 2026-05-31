@@ -7,7 +7,7 @@ annotations:
     - kind: added
       description: "Multi-instance Keycloak — configure any number of backends under `keycloak.instances.<name>`; bind each NAS to one via `clients.<x>.keycloak: <name>`; chart renders an if/elsif `Packet-Src-IP-Address` dispatch chain in `sites/default` + `sites/inner-tunnel`."
     - kind: added
-      description: "Keycloak per-instance `groupMappings` — mirror of `roleMappings` keyed off the `groups` claim; renders a `groups_keycloak[_<name>]` policy alongside the existing roles policy."
+      description: "Keycloak per-instance `groupMappings` — mirror of `roleMappings` keyed off the `groups` claim; renders a `keycloak[_<name>]_groups` policy alongside the existing roles policy."
     - kind: added
       description: "Keycloak per-instance `require` — JWT-claim guard list; rejects early on falsy claim (e.g. `require: [email_verified]`)."
     - kind: added
@@ -23,7 +23,7 @@ annotations:
     - kind: added
       description: "Shared mapper-script library `keycloak_common.{py,lua}` rendered once per release; per-instance wrappers shrink from ~200 to ~25 lines and delegate over a config dict/table baked in at chart-render time."
     - kind: added
-      description: "`cache cache_keycloak[_<name>]` rlm_cache instance per Keycloak instance with `cache.enabled`, namespaced cache key `keycloak:<name>:%{User-Name}` (non-overridable) to prevent cross-instance hits on common usernames."
+      description: "`cache keycloak[_<name>]_cache` rlm_cache instance per Keycloak instance with `cache.enabled`, namespaced cache key `keycloak:<name>:%{User-Name}` (non-overridable) to prevent cross-instance hits on common usernames."
     - kind: added
       description: "Keycloak naming/resolution helpers: `freeradius.keycloak.{resolveInstances,envVarPrefix,moduleName,policyName,rolesPolicyName,groupsPolicyName,validateModuleName,cacheName,cacheKey,dispatchArms,clientSecretName,tls.*}`."
     - kind: added

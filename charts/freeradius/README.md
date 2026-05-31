@@ -386,7 +386,7 @@ Two backends are available via `keycloak.instances.<name>.mode`:
 
 Both modes do the same flow: ROPC password grant against the token endpoint,
 then JWT-decode the returned `access_token` to read the user's client roles,
-then expose them to the `authorize_keycloak_<name>` unlang policy which maps
+then expose them to the `keycloak_<name>_authorize` unlang policy which maps
 the first matching role to the reply attributes.
 
 ```yaml
@@ -419,7 +419,7 @@ JWT: `client` (`resource_access[clientId].roles`) or `realm`
 
 By default (`wireDefaultSite: true`) the `default` virtual server's authorize
 section is wired to the `default` instance automatically. Set it to `false`
-to call `authorize_keycloak` from your own site config.
+to call `keycloak_authorize` from your own site config.
 
 ### Auto-generated credentials
 
@@ -546,7 +546,7 @@ tls:
 The singleton `keycloak.*` block is replaced by `keycloak.instances.<name>`,
 with NAS-to-instance binding declared on the NAS side
 (`clients.<x>.keycloak: <name>`). The chart renders an
-`if (Packet-Src-IP-Address == …) { authorize_keycloak_<name> }` dispatch
+`if (Packet-Src-IP-Address == …) { keycloak_<name>_authorize }` dispatch
 chain into the shared `sites/default` and `sites/inner-tunnel` virtual
 servers. Existing single-Keycloak `values.yaml` keeps working — the chart
 synthesises `keycloak.instances.default` from the legacy top-level fields
@@ -612,8 +612,8 @@ Per-instance resources rendered for `<name>`:
 | Concern                | `default` instance (legacy name)           | Named instance                                  |
 | ---------------------- | ------------------------------------------ | ----------------------------------------------- |
 | Module instance        | `keycloak_lua` / `_python` / `_rest`       | `keycloak_<name>`                               |
-| Policy                 | `authorize_keycloak`                       | `authorize_keycloak_<name>`                     |
-| Cache instance         | `cache_keycloak`                           | `cache_keycloak_<name>`                         |
+| Policy                 | `keycloak_authorize`                       | `keycloak_<name>_authorize`                     |
+| Cache instance         | `keycloak_cache`                           | `keycloak_<name>_cache`                         |
 | Cache key (forced)     | `keycloak:%{User-Name}`                    | `keycloak:<name>:%{User-Name}`                  |
 | Mapper script path     | `/etc/freeradius/scripts/keycloak.{py,lua}`| `/etc/freeradius/scripts/keycloak_<name>.{py,lua}` |
 | ConfigMap (module)     | `<fullname>-keycloak`                      | `<fullname>-keycloak-<name>`                    |
@@ -626,7 +626,7 @@ Per-instance resources rendered for `<name>`:
 | Env-var prefix         | `FREERADIUS_KEYCLOAK_*`                    | `FREERADIUS_KEYCLOAK_<NAME>_*`                  |
 
 > **⚠️ One-time cache flush on upgrade.** Existing Redis-backed
-> `cache_keycloak` entries were keyed as `%{User-Name}`; the chart now
+> `keycloak_cache` entries were keyed as `%{User-Name}`; the chart now
 > uses the instance-namespaced `keycloak:<name>:%{User-Name}` (security:
 > prevents silent cross-instance hits on common usernames). After
 > upgrade, old entries are unreachable and naturally expire at `cache.ttl`.
