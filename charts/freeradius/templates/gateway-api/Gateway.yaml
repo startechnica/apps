@@ -17,7 +17,7 @@ Auto-derive `allowedRoutes.namespaces.from` for the chart-rendered listeners:
 apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersion" . }}
 kind: Gateway
 metadata:
-  name: {{ include "st-common.gateway.fullname" . }}
+  name: {{ include "freeradius.gateway.fullname" . }}
   namespace: {{ $gwNs | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}

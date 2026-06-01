@@ -485,7 +485,7 @@ Resolution order (first match wins):
   2. The chart-rendered ListenerSet — when `gateway.listenerSet.enabled`
      is true, `gateway.listenerSet.listeners` is non-empty, AND the cluster
      exposes a ListenerSet API.
-  3. The chart's Gateway, resolved via `st-common.gateway.fullname` /
+  3. The chart's Gateway, resolved via `freeradius.gateway.fullname` /
      `st-common.gateway.namespace` (which honor `gateway.existingGateway`).
 
 Args (dict):
@@ -507,9 +507,35 @@ Args (dict):
 {{- else }}
 - group: gateway.networking.k8s.io
   kind: Gateway
-  name: {{ include "st-common.gateway.fullname" $ctx }}
+  name: {{ include "freeradius.gateway.fullname" $ctx }}
   namespace: {{ include "st-common.gateway.namespace" $ctx }}
 {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Gateway resource name — chart-local override of `st-common.gateway.fullname`
+that appends `-gateway` to the chart-default name. This avoids a collision
+with the chart's Service and Deployment (both named via
+`st-common.names.fullname`). The collision matters in practice under
+Envoy Gateway, where the gateway-api controller materialises an Envoy
+proxy `Deployment` named after the Gateway and would otherwise overwrite
+the FreeRADIUS workload `Deployment` in the same namespace. Istio's
+gateway-api controller has the same shape, so the suffix is applied
+uniformly across both implementations.
+
+Resolution order (first match wins):
+  1. `gateway.existingGateway`   — BYO; user owns the name, no suffix.
+  2. `gateway.gateway.name`      — explicit user override, no suffix.
+  3. `<fullname>-gateway`        — chart default.
+*/}}
+{{- define "freeradius.gateway.fullname" -}}
+{{- if .Values.gateway.existingGateway -}}
+  {{- .Values.gateway.existingGateway -}}
+{{- else if .Values.gateway.gateway.name -}}
+  {{- .Values.gateway.gateway.name -}}
+{{- else -}}
+  {{- printf "%s-gateway" (include "st-common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 

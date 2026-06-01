@@ -2249,7 +2249,7 @@ gateway:
     ## @param gateway.gateway.create Create a Gateway API Gateway resource. When false the chart expects an existing Gateway to be referenced via `existingGateway` or per-route `parentRefs`.
     ##
     create: false
-    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to the chart fullname.
+    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to `<fullname>-gateway` (the `-gateway` suffix avoids a name collision with the chart's Service and Deployment — important under Envoy Gateway and Istio gateway-api, where the controller materialises an Envoy/Istio data-plane Deployment named after the Gateway in the same namespace).
     ##
     name: ""
     ## @param gateway.gateway.namespace Namespace for the Gateway resource. Defaults to the release namespace.

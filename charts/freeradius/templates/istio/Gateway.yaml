@@ -9,7 +9,7 @@ SPDX-License-Identifier: APACHE-2.0
 apiVersion: {{ include "st-common.capabilities.istioGateway.apiVersion" . }}
 kind: Gateway
 metadata:
-  name: {{ include "st-common.gateway.fullname" . }}
+  name: {{ include "freeradius.gateway.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius

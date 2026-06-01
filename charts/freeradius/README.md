@@ -264,6 +264,7 @@ pod's RADIUS / RADSEC ports:
 | `gateway.enabled`            | Master switch. Nothing under `templates/gateway-api/` or `templates/istio/` renders when this is `false` (the pod is reachable via its `Service` only). |
 | `gateway.implementation`     | Selects which CRD family the chart renders. `gateway-api` → Kubernetes Gateway API (`Gateway` + `UDPRoute` + `TLSRoute` + `ReferenceGrant`); `istio` → Istio networking CRDs (`Gateway` + `VirtualService`). UDPRoute support is uneven across GatewayClasses — see [Upgrading #6](#6-udproute--tlsroute-replace-httproute-style-attachment) for the matrix. |
 | `gateway.gateway.create`     | **gateway-api path only.** When `true`, the chart renders its own `Gateway` (`templates/gateway-api/Gateway.yaml`) with the default UDP `auth` / `acct` / `coa` + TLS `radsec` listeners. When `false`, no `Gateway` is rendered — routes still render and must attach to a `Gateway` you manage elsewhere (see "BYO Gateway" below). |
+| `gateway.gateway.name`       | Name of the chart-rendered `Gateway`. Defaults to **`<fullname>-gateway`** (the `-gateway` suffix avoids a name collision with the chart's `Service` and `Deployment`, both of which use `<fullname>` — under Envoy Gateway and Istio gateway-api the controller materialises a data-plane `Deployment` named after the `Gateway`, which would otherwise overwrite the FreeRADIUS workload). Override with an explicit value to drop the suffix. |
 | `gateway.infrastructure`     | **gateway-api path only.** Optional data-plane extension. `""` (default) leaves the Gateway with no `spec.infrastructure` block (uses GatewayClass defaults). `envoy` renders an `EnvoyProxy` CR (`gateway.envoyproxy.io/v1alpha1`) and adds a `spec.infrastructure.parametersRef` pointing at it on the chart's Gateway — pair with an Envoy Gateway-backed `gatewayClassName` (typically `eg`). Validator rejects `envoy` on the istio path. |
 | `gateway.gatewayClassName`   | Cluster-scoped GatewayClass that backs the Gateway. Default `istio`. Set to `eg` for Envoy Gateway, `cilium` for Cilium, etc. **Not auto-derived from `implementation` or `infrastructure`** — pick whichever GatewayClass your data plane provides. |
 
@@ -337,9 +338,9 @@ gateway:
 > 2. The chart-rendered `ListenerSet` — when `gateway.listenerSet.enabled`,
 >    its `listeners` is non-empty, AND the cluster exposes the
 >    `ListenerSet` API.
-> 3. The chart's Gateway (via `st-common.gateway.fullname` /
+> 3. The chart's Gateway (via `freeradius.gateway.fullname` /
 >    `st-common.gateway.namespace`), which honors `gateway.existingGateway`
->    when set.
+>    when set and otherwise defaults to `<fullname>-gateway`.
 
 The `ReferenceGrant` template fires automatically when the chart detects
 cross-namespace attachment is required (Gateway in `gateway-system`,
