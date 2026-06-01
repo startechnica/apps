@@ -141,7 +141,7 @@ configurations: |
   sysconfdir = /etc
   localstatedir = /var
   sbindir = ${exec_prefix}/sbin
-  logdir = /var/log/freeradius
+  logdir = /opt/startechnica/freeradius
   raddbdir = /etc/freeradius
   radacctdir = ${logdir}/radacct
 
@@ -151,7 +151,8 @@ configurations: |
   modconfdir = ${confdir}/mods-config
   certdir = ${confdir}/certs
   cadir   = ${confdir}/certs
-  run_dir = ${localstatedir}/run/${name}
+  # run_dir = ${localstatedir}/run/${name}
+  run_dir = /opt/startechnica/freeradius/run/${name}
 
   db_dir = ${raddbdir}
   libdir = /usr/lib/freeradius

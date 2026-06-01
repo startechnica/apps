@@ -529,6 +529,8 @@ spec:
               mountPath: /startechnica/freeradius/tmp
             - name: var-run-dir
               mountPath: /var/run/radiusd
+            - name: freeradius-base
+              mountPath: /opt/startechnica/freeradius
             {{- range .Values.extraModules }}
             - name: {{ .name }}
               mountPath: /etc/freeradius/mods-enabled/{{ .name }}
@@ -763,6 +765,8 @@ spec:
         - name: temp
           emptyDir: {}
         - name: var-run-dir
+          emptyDir: {}
+        - name: freeradius-base
           emptyDir: {}
         - name: data
           {{- if .Values.persistence.enabled }}
