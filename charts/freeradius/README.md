@@ -92,7 +92,7 @@ In addition to whatever you add via `extraEnvVars*`, the chart injects a small f
 
 A few things worth knowing:
 
-- **Auto-generation.** When the source value is left empty (`sites.status.secret: ""`, `sites.radsec.tls.private_key_password: ""`, `modules.eap.tlsConfig.private_key_password: ""`, etc.), the chart materialises a random value into the chart credentials Secret on install and preserves it across upgrades via Helm's `lookup`. See §Auto-generated credentials below for the rotation caveats around `helm template`-based workflows.
+- **Auto-generation.** When the source value is left empty (`sites.status.secret: ""`, `sites.radsec.tls.private_key_password: ""`, `modules.eap.tlsConfig.private_key_password: ""`, etc.), the chart materialises a random value into the chart credentials Secret on install and preserves it across upgrades via Helm's `lookup`. See [§Auto-generated credentials](#auto-generated-credentials) below for the rotation caveats around `helm template`-based workflows.
 - **Pin them via your own Secret.** `auth.existingSecret` mounts one BYO Secret holding every chart-managed credential key; `auth.existingSecretPerPassword` lets you point each credential at its own Secret (e.g. one managed by an external-secrets operator). The env var names above stay the same — only the backing Secret changes.
 - **Per-instance Keycloak prefix.** The `default` Keycloak instance uses the bare prefix `FREERADIUS_KEYCLOAK_`; every other instance uses `FREERADIUS_KEYCLOAK_<NAME>_` with the instance name upper-cased (e.g. `keycloak.instances.partner-realm.clientSecret` → `FREERADIUS_KEYCLOAK_PARTNER_REALM_CLIENT_SECRET`).
 - **Not in the table above.** Keycloak coordinates other than `CLIENT_SECRET` (URL / realm / clientId / scope / connectTimeout / roleMapper / ca_file / insecure / role-and-attribute mappings) are **baked into the wrapper ConfigMaps at chart-render time** — they are *not* runtime env vars. Update the values and re-apply to change them.
@@ -288,10 +288,11 @@ Each entry renders one `client <name> { … proto = tls … }` block inside the 
 
 Common follow-ups:
 
+- **Loopback shared secret (recommended to pin)**: set `sites.radsec.radsecSecret` to a stable value of your choice (FreeRADIUS treats the literal `"radsec"` as the default for `proto = tls`, so any non-empty value works). When left empty the chart auto-generates one into the credentials Secret (`clients-radsec-secret`) and injects it via `$ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}` — fine for a live `helm install` / `helm upgrade` (the value is recovered via `lookup` and preserved across releases), but in `helm template` / GitOps workflows it is **regenerated on every render** and rotates out from under the running pod's `home_server radsec` self-proxy. See [§Auto-generated credentials](#auto-generated-credentials) for the full caveat.
 - **Password-protected private key**: set `sites.radsec.tls.private_key_password`. The chart auto-generates the matching `sites-radsec-privkey-password` Secret entry and injects it via `$ENV{FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD}`.
 - **Cipher hardening**: set `sites.radsec.tls.cipher_list` (e.g. `HIGH:!aNULL:!MD5`). The chart applies the same list to both the radsec listener and the loopback `home_server radsec` so both peers negotiate consistently.
-- **Listener tuning**: `sites.radsec.listen.{ipaddr,type,virtual_server,proxy_protocol,check_client_connections}` — see the §Parameters table. `proxy_protocol: true` is the one to set if you front the RADSEC port with an L4 load balancer that prepends HAProxy PROXY headers.
-- **BYO certificate**: see §Auto-generated credentials below — `tls.certificatesSecret`, `tls.certManager.issuerRef`, and the `auth.existingSecret` patterns all apply identically to RADSEC.
+- **Listener tuning**: `sites.radsec.listen.{ipaddr,type,virtual_server,proxy_protocol,check_client_connections}` — see the [§Parameters](#parameters) table. `proxy_protocol: true` is the one to set if you front the RADSEC port with an L4 load balancer that prepends HAProxy PROXY headers.
+- **BYO certificate**: see [§Auto-generated credentials](#auto-generated-credentials) below — `tls.certificatesSecret`, `tls.certManager.issuerRef`, and the `auth.existingSecret` patterns all apply identically to RADSEC.
 
 ### Auto-generated credentials
 
@@ -315,6 +316,7 @@ sites:
   status:
     secret: "<your-status-secret>"
   radsec:
+    radsecSecret: "<your-loopback-shared-secret>"   # client 127.0.0.1 / home_server radsec
     tls:
       private_key_password: "<your-radsec-key-password>"
 
@@ -372,7 +374,7 @@ Find more information about how to deal with common errors related to Startechni
 ## Breaking Changes
 
 Concise inventory of every breaking change shipped in this chart, newest
-release first. Each entry links to the detailed migration in §Upgrading
+release first. Each entry links to the detailed migration in [§Upgrading](#upgrading)
 where applicable; entries without a link are same-release renames with no
 prior state to migrate from (the [Parameters](#parameters) table reflects
 the new shape).
