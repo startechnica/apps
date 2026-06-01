@@ -9,6 +9,7 @@
 .bzr/
 .bzrignore
 .claude/
+.debug/
 .hg/
 .hgignore
 .svn/
