@@ -26,9 +26,9 @@ data:
             # ipv6addr = *
             ipaddr = *
             port = {{ .Values.containerPorts.auth }}
-        #    interface = eth0
-        #    clients = per_socket_clients
-        #    recv_buff = 65536
+            # interface = eth0
+            # clients = per_socket_clients
+            # recv_buff = 65536
             limit {
                     max_connections = 16
                     lifetime = 0
@@ -37,12 +37,11 @@ data:
         }
 
         listen {
-            ipaddr = *
-        #    ipv6addr = ::
-            port = {{ .Values.containerPorts.acct }}
             type = acct
-        #    interface = eth0
-        #    clients = per_socket_clients
+            ipaddr = *
+            port = {{ .Values.containerPorts.acct }}
+            # interface = eth0
+            # clients = per_socket_clients
 
             limit {
         #        max_pps = 0
@@ -57,8 +56,8 @@ data:
             type = auth
             ipv6addr = ::    # any.  ::1 == localhost
             port = {{ .Values.containerPorts.auth }}
-        #    interface = eth0
-        #    clients = per_socket_clients
+            # interface = eth0
+            # clients = per_socket_clients
 
             limit {
                   max_connections = 16
@@ -68,11 +67,11 @@ data:
         }
 
         listen {
+            type = acct
             ipv6addr = ::
             port = {{ .Values.containerPorts.acct }}
-            type = acct
-        #    interface = eth0
-        #    clients = per_socket_clients
+            # interface = eth0
+            # clients = per_socket_clients
 
             limit {
         #        max_pps = 0
@@ -84,8 +83,7 @@ data:
 
         authorize {
             filter_username
-
-        #    filter_password
+            # filter_password
 
             preprocess
 
