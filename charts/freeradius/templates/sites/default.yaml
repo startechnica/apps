@@ -150,14 +150,18 @@ data:
             {{- $kcWireDefault := and $kcHasDefault .Values.keycloak.wireDefaultSite }}
             {{- if $kcArms.arms }}
             #  Keycloak multi-instance dispatch — pick the per-NAS instance by
-            #  matching `Packet-Src-IP-Address` against each `clients.<x>.ipv4addr`
-            #  whose `clients.<x>.keycloak: <instance>` is set. Each
+            #  matching `Packet-Src-IP-Address` (or `Packet-Src-IPv6-Address`)
+            #  against each `clients.<x>.{ipv4addr,ipv6addr}` whose
+            #  `clients.<x>.keycloak: <instance>` is set. Each
             #  `keycloak_<name>_authorize` policy wraps the matching module
             #  (`keycloak_<name>`) with cache-aside (when its `cache.enabled`)
             #  and — lua/python modes — role→reply mapping. Sets
             #  `Auth-Type := Accept` on a successful ROPC; runs before `pap`.
             {{- range $i, $arm := $kcArms.arms }}
-            {{ if $i }}elsif{{ else }}if{{ end }} (Packet-Src-IP-Address == {{ $arm.ipv4 | quote }}) {
+            {{- $cond := list -}}
+            {{- if $arm.ipv4 }}{{- $cond = append $cond (printf "Packet-Src-IP-Address == %s" ($arm.ipv4 | quote)) -}}{{- end -}}
+            {{- if $arm.ipv6 }}{{- $cond = append $cond (printf "Packet-Src-IPv6-Address == %s" ($arm.ipv6 | quote)) -}}{{- end -}}
+            {{ if $i }}elsif{{ else }}if{{ end }} ({{ join " || " $cond }}) {
                 {{ include "freeradius.keycloak.policyName" (dict "name" $arm.instance) }}
             }
             {{- end }}

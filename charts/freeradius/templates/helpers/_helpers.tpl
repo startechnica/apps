@@ -466,8 +466,8 @@ but does not preserve declaration order from values.yaml.
 {{- define "freeradius.keycloak.dispatchArms" -}}
 {{- $arms := list -}}
 {{- range $clientName, $client := .Values.clients -}}
-{{- if and (kindIs "map" $client) $client.keycloak $client.ipv4addr -}}
-{{- $arms = append $arms (dict "client" $clientName "ipv4" $client.ipv4addr "ipv6" (default "" $client.ipv6addr) "instance" $client.keycloak) -}}
+{{- if and (kindIs "map" $client) $client.keycloak (or $client.ipv4addr $client.ipv6addr) -}}
+{{- $arms = append $arms (dict "client" $clientName "ipv4" (default "" $client.ipv4addr) "ipv6" (default "" $client.ipv6addr) "instance" $client.keycloak) -}}
 {{- end -}}
 {{- end -}}
 {{- (dict "arms" $arms) | toYaml -}}
@@ -511,6 +511,55 @@ Args (dict):
   namespace: {{ include "st-common.gateway.namespace" $ctx }}
 {{- end -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Body of one `client { }` block in `clients.conf` — the directives that come
+AFTER the `ipaddr` / `ipv6addr` line. Shared so that a single values entry
+with both `ipv4addr` and `ipv6addr` can render two sibling blocks
+(`<name>` for v4, `<name>_v6` for v6) without duplicating the body. Caller
+passes the per-client map as `.`.
+*/}}
+{{- define "freeradius.clientBlockBody" -}}
+proto = {{ default "udp" .proto }}
+secret = {{ .secret | quote }}
+nas_type = {{ default "other" .nas_type }}
+virtual_server = {{ default "default" .virtual_server }}
+{{- if .coa_server }}
+coa_server = {{ .coa_server }}
+{{- end }}
+{{- if .require_message_authenticator }}
+require_message_authenticator = yes
+{{- end }}
+{{- if .limit }}
+limit {
+    max_connections = {{ default 16 .limit.max_connections }}
+    lifetime = {{ default 0 .limit.lifetime }}
+    idle_timeout = {{ default 30 .limit.idle_timeout }}
+}
+{{- end }}
+{{- end -}}
+
+{{/*
+Body of one `client { }` block inside the RADSEC `clients radsec { }` group
+(`sites/radsec.yaml`). Same dual-address splitting rationale as
+`freeradius.clientBlockBody`, but the RADSEC body has its own shape:
+`proto = tls` always (RADSEC is TCP+TLS), no `coa_server` / `limit{}`,
+and `secret` defaults to literal `"radsec"` (FreeRADIUS's `proto = tls`
+default). Caller passes the per-client map as `.`.
+*/}}
+{{- define "freeradius.radsecClientBlockBody" -}}
+proto = tls
+secret = {{ default "radsec" .secret | quote }}
+{{- if .require_message_authenticator }}
+require_message_authenticator = yes
+{{- end }}
+{{- if .nas_type }}
+nas_type = {{ .nas_type }}
+{{- end }}
+{{- if .virtual_server }}
+virtual_server = {{ .virtual_server }}
+{{- end }}
 {{- end -}}
 
 {{/*

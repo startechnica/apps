@@ -395,9 +395,10 @@ freeradius: extraEnvVars
 
 {{/*
 Validation message: every non-empty `clients.<x>.keycloak` must reference
-an existing `keycloak.instances.<name>` entry, and the client must have a
-non-empty `ipv4addr` (the dispatch chain in `sites/default` matches on
-`Packet-Src-IP-Address`). Typo guard — a misspelled instance name in
+an existing `keycloak.instances.<name>` entry, and the client must have at
+least one of `ipv4addr` / `ipv6addr` set (the dispatch chain in
+`sites/default` matches on `Packet-Src-IP-Address` and/or
+`Packet-Src-IPv6-Address`). Typo guard — a misspelled instance name in
 `clients.foo.keycloak: typo` would otherwise render `keycloak_typo_authorize`
 unlang that fails to load at runtime instead of at `helm install` time.
 */}}
@@ -411,12 +412,13 @@ freeradius: clients.{{ $clientName }}.keycloak
     `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` references
     an undefined instance — add it under `keycloak.instances.{{ $client.keycloak }}`
     or fix the typo. Defined instances: {{ join ", " (keys $resolved.instances) }}.
-{{- else if not $client.ipv4addr }}
+{{- else if and (not $client.ipv4addr) (not $client.ipv6addr) }}
 freeradius: clients.{{ $clientName }}.keycloak
-    `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` requires a
-    non-empty `clients.{{ $clientName }}.ipv4addr` — the dispatch chain in
-    `sites/default` matches on `Packet-Src-IP-Address` and has nothing to
-    bind against.
+    `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` requires
+    `clients.{{ $clientName }}.ipv4addr` and/or `.ipv6addr` to be non-empty
+    — the dispatch chain in `sites/default` matches on
+    `Packet-Src-IP-Address` / `Packet-Src-IPv6-Address` and has nothing
+    to bind against.
 {{- end -}}
 {{- end -}}
 {{- end -}}

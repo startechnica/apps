@@ -100,24 +100,27 @@ data:
             secret = $ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}
         }
 
+        {{- /* Same v4+v6 single-block bug as `clients.conf` — emit two sibling
+               blocks when both `ipaddr` (v4) and `ipv6addr` are set
+               (`<name>` and `<name>_v6`). See [freeradius.clientBlockBody]
+               in `_helpers.tpl` for the rationale (FreeRADIUS client blocks
+               hold one address each; the second silently overrides the first). */}}
         {{- range .Values.sites.radsec.clients }}
+        {{- $hasV4 := and .ipaddr (ne .ipaddr "") -}}
+        {{- $hasV6 := and .ipv6addr (ne .ipv6addr "") -}}
+        {{- $c := . }}
+        {{- if $hasV4 }}
         client {{ .name }} {
             ipaddr = {{ .ipaddr | quote }}
-            {{- if .ipv6addr }}
-            ipv6addr = {{ .ipv6addr | quote }}
-            {{- end }}
-            proto = tls
-            secret = {{ default "radsec" .secret | quote }}
-            {{- if .require_message_authenticator }}
-            require_message_authenticator = yes
-            {{- end }}
-            {{- if .nas_type }}
-            nas_type = {{ .nas_type }}
-            {{- end }}
-            {{- if .virtual_server }}
-            virtual_server = {{ .virtual_server }}
-            {{- end }}
+            {{- include "freeradius.radsecClientBlockBody" $c | nindent 12 }}
         }
+        {{- end }}
+        {{- if $hasV6 }}
+        client {{ if $hasV4 }}{{ printf "%s_v6" .name }}{{ else }}{{ .name }}{{ end }} {
+            ipv6addr = {{ .ipv6addr | quote }}
+            {{- include "freeradius.radsecClientBlockBody" $c | nindent 12 }}
+        }
+        {{- end }}
         {{- end }}
     }
 {{- end }}
