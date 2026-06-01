@@ -4,41 +4,42 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{/*
-Per-instance rlm_python3 wrapper scripts. Renders one ConfigMap per
+Single ConfigMap holding one rlm_python3 wrapper key per
 `modules.oidc.instances.<name>`. Per-instance config is baked in at
 chart-render time by Helm — only `client_secret` (sensitive) is read
-from env. Each wrapper delegates to `oidc_common.authorize / accounting /
-validate` (rendered separately by `oidc-py.yaml`).
+from env. Each wrapper delegates to `oidc.authorize / accounting /
+validate` (the shared library rendered separately by `oidc-py.yaml`).
 
-  default → `<fullname>-oidc-python`          key: `oidc.py`
-  <name>  → `<fullname>-oidc-<name>-python`   key: `oidc_<name>.py`
+  ConfigMap: `<fullname>-oidc-python`
+  Keys:
+    default → `oidc_default.py`
+    <name>  → `oidc_<name>.py`
 
-Both the per-instance wrapper and the shared library are mounted into
-`/etc/freeradius/scripts/`. `python_path = "/etc/freeradius/scripts"`
-so `import oidc_common` resolves to the shared file.
+The shared library (`oidc.py`) and the per-instance wrappers all land in
+`/etc/freeradius/scripts/` (via subPath mounts in the pod spec), and
+`python_path = "/etc/freeradius/scripts"` resolves `import oidc` to the
+shared file.
 */}}
 
 {{- if .Values.modules.oidc.enabled }}
 {{- $resolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
 {{- $fullname := include "st-common.names.fullname" . }}
-{{- range $name, $cfg := $resolved.instances }}
-{{- $cmName := ternary (printf "%s-oidc-python" $fullname) (printf "%s-oidc-%s-python" $fullname $name) (eq $name "default") }}
-{{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
-{{- $envPrefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) }}
-{{- $hasTls := include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $cmName }}
-  namespace: {{ include "st-common.names.namespace" $ | quote }}
-  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+  name: {{ printf "%s-oidc-python" $fullname }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
-    app.firmansyah.id/oidc-instance: {{ $name | quote }}
-  {{- if $.Values.commonAnnotations }}
-  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 data:
+{{- range $name, $cfg := $resolved.instances }}
+{{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
+{{- $envPrefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) }}
+{{- $hasTls := include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
   {{ $scriptKey }}: |-
     """
     Per-instance wrapper for OIDC instance `{{ $name }}`. Config is baked

@@ -73,7 +73,7 @@ tests:
           pattern: 'python3 oidc_authentik \{'
       - documentSelector:
           path: metadata.name
-          value: my-radius-freeradius-oidc-authentik-python
+          value: my-radius-freeradius-oidc-python
           skipEmptyTemplates: true
         exists:
           path: data["oidc_authentik.py"]

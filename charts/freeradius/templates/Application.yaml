@@ -575,8 +575,7 @@ spec:
               readOnly: true
             {{- end }}
             {{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
-            {{- $volScriptName := ternary "oidc-mapper-python" (printf "oidc-%s-python" $name) (eq $name "default") }}
-            - name: {{ $volScriptName }}
+            - name: oidc-python
               mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
               subPath: {{ $scriptKey }}
               readOnly: true
@@ -715,18 +714,19 @@ spec:
           secret:
             secretName: {{ include "freeradius.oidc.tls.secretName" (dict "name" $name "instance" $cfg "context" $) }}
         {{- end }}
-        {{- $volScriptName := ternary "oidc-mapper-python" (printf "oidc-%s-python" $name) (eq $name "default") }}
-        {{- $cmScriptName := ternary (printf "%s-oidc-python" $fullname) (printf "%s-oidc-%s-python" $fullname $name) (eq $name "default") }}
-        - name: {{ $volScriptName }}
-          configMap:
-            name: {{ $cmScriptName }}
         {{- end }}
         {{- end }}
-        {{- /* Shared oidc.py library volume — see matching mount above. */}}
+        {{- /* Shared OIDC volumes — one per release regardless of instance count:
+               `oidc-py` carries the shared library, `oidc-python` carries every
+               per-instance wrapper as separate keys; both are subPath-mounted
+               into /etc/freeradius/scripts/ alongside one another. */}}
         {{- if .Values.modules.oidc.enabled }}
         - name: oidc-py
           configMap:
             name: {{ printf "%s-oidc-py" (include "st-common.names.fullname" .) }}
+        - name: oidc-python
+          configMap:
+            name: {{ printf "%s-oidc-python" (include "st-common.names.fullname" .) }}
         {{- end }}
         - name: scripts
           configMap:
