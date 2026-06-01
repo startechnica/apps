@@ -512,3 +512,32 @@ Args (dict):
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+EnvoyProxy resource name. When the chart creates the EnvoyProxy
+(`gateway.envoyProxy.create: true`), empty `gateway.envoyProxy.name`
+defaults to the chart fullname. When BYO (`create: false`), the value
+flows through verbatim — the validator demands a non-empty name in that
+case, so we don't paper over a missing value here.
+Used by `templates/gateway-api/EnvoyProxy.yaml` (when rendering) and by
+the `spec.infrastructure.parametersRef` block on the chart's Gateway
+(both rendering and BYO).
+*/}}
+{{- define "freeradius.gateway.envoyProxy.name" -}}
+{{- if .Values.gateway.envoyProxy.create -}}
+{{- default (include "st-common.names.fullname" .) .Values.gateway.envoyProxy.name -}}
+{{- else -}}
+{{- .Values.gateway.envoyProxy.name -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether to render `templates/gateway-api/EnvoyProxy.yaml`. True only when
+`gateway.enabled`, `implementation: gateway-api`, `infrastructure: envoy`,
+AND `envoyProxy.create: true` (BYO leaves rendering to the operator).
+*/}}
+{{- define "freeradius.gateway.envoyProxy.create" -}}
+{{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") (eq .Values.gateway.infrastructure "envoy") .Values.gateway.envoyProxy.create -}}
+true
+{{- end -}}
+{{- end -}}

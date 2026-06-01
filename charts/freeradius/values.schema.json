@@ -2127,6 +2127,10 @@
         "implementation": {
           "type": "string"
         },
+        "infrastructure": {
+          "type": "string",
+          "description": "Optional Gateway data-plane infrastructure extension. Allowed values: \"\" (none) or \"envoy\" (renders an EnvoyProxy CR and attaches it to the chart's Gateway via spec.infrastructure.parametersRef). Only applicable when implementation: gateway-api."
+        },
         "gateway": {
           "type": "object",
           "properties": {
@@ -2137,6 +2141,18 @@
               "type": "string"
             },
             "namespace": {
+              "type": "string"
+            }
+          }
+        },
+        "envoyProxy": {
+          "type": "object",
+          "description": "EnvoyProxy ownership knobs, consumed when gateway.infrastructure: envoy. {create, name} mirrors gateway.gateway.*: create=true renders the chart's EnvoyProxy, create=false references an externally-managed one by name.",
+          "properties": {
+            "create": {
+              "type": "boolean"
+            },
+            "name": {
               "type": "string"
             }
           }

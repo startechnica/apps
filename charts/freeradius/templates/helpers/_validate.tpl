@@ -16,6 +16,7 @@ install path, so a `fail` here aborts the operation).
 */}}
 {{- define "freeradius.validate" -}}
 {{- $messages := list -}}
+{{- $messages = append $messages (include "freeradius.validate.gatewayInfrastructure" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.metrics" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.sql.backend" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.rest" .) -}}
@@ -29,6 +30,40 @@ install path, so a `fail` here aborts the operation).
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
 {{- printf "\nVALUES VALIDATION:\n%s" $message | fail -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation message: `gateway.infrastructure` value coherence.
+
+Rejects:
+  - unknown values (`gateway.infrastructure` not in {"", "envoy"}),
+  - `infrastructure: envoy` paired with `implementation: istio` — the istio
+    Gateway CRD has no `spec.infrastructure` field and Envoy Gateway does not
+    consume EnvoyProxy from an istio-managed Gateway.
+*/}}
+{{- define "freeradius.validate.gatewayInfrastructure" -}}
+{{- if .Values.gateway.enabled -}}
+{{- $infra := .Values.gateway.infrastructure | default "" -}}
+{{- $allowed := list "" "envoy" -}}
+{{- if not (has $infra $allowed) -}}
+freeradius: gateway.infrastructure
+    `gateway.infrastructure: {{ $infra }}` is not a recognised value. Allowed:
+    `""` (none — Gateway uses its GatewayClass defaults) or `envoy` (renders
+    an `EnvoyProxy` CR and attaches it via `spec.infrastructure.parametersRef`).
+{{- else if and (eq $infra "envoy") (ne .Values.gateway.implementation "gateway-api") -}}
+freeradius: gateway.infrastructure=envoy
+    `gateway.infrastructure: envoy` requires `gateway.implementation: gateway-api`
+    (currently `{{ .Values.gateway.implementation }}`). The istio Gateway CRD
+    has no `spec.infrastructure` field; switch to the gateway-api
+    implementation, or leave `gateway.infrastructure: ""`.
+{{- else if and (eq $infra "envoy") (not .Values.gateway.envoyProxy.create) (not .Values.gateway.envoyProxy.name) -}}
+freeradius: gateway.envoyProxy
+    `gateway.envoyProxy.create: false` requires `gateway.envoyProxy.name` to
+    reference the externally-managed EnvoyProxy in `gateway.gateway.namespace`.
+    Either set `name` to your existing EnvoyProxy's name, or flip
+    `gateway.envoyProxy.create: true` to let the chart render its own.
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

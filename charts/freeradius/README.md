@@ -254,6 +254,177 @@ By default (`wireDefaultSite: true`) the `default` virtual server's authorize
 section is wired to the `default` instance automatically. Set it to `false`
 to call `keycloak_authorize` from your own site config.
 
+### Routing via Gateway (`gateway-api` or `istio`)
+
+Three top-level knobs control whether and how a Gateway fronts the
+pod's RADIUS / RADSEC ports:
+
+| Knob | Effect |
+| --- | --- |
+| `gateway.enabled`            | Master switch. Nothing under `templates/gateway-api/` or `templates/istio/` renders when this is `false` (the pod is reachable via its `Service` only). |
+| `gateway.implementation`     | Selects which CRD family the chart renders. `gateway-api` → Kubernetes Gateway API (`Gateway` + `UDPRoute` + `TLSRoute` + `ReferenceGrant`); `istio` → Istio networking CRDs (`Gateway` + `VirtualService`). UDPRoute support is uneven across GatewayClasses — see [Upgrading #6](#6-udproute--tlsroute-replace-httproute-style-attachment) for the matrix. |
+| `gateway.gateway.create`     | **gateway-api path only.** When `true`, the chart renders its own `Gateway` (`templates/gateway-api/Gateway.yaml`) with the default UDP `auth` / `acct` / `coa` + TLS `radsec` listeners. When `false`, no `Gateway` is rendered — routes still render and must attach to a `Gateway` you manage elsewhere (see "BYO Gateway" below). |
+| `gateway.infrastructure`     | **gateway-api path only.** Optional data-plane extension. `""` (default) leaves the Gateway with no `spec.infrastructure` block (uses GatewayClass defaults). `envoy` renders an `EnvoyProxy` CR (`gateway.envoyproxy.io/v1alpha1`) and adds a `spec.infrastructure.parametersRef` pointing at it on the chart's Gateway — pair with an Envoy Gateway-backed `gatewayClassName` (typically `eg`). Validator rejects `envoy` on the istio path. |
+| `gateway.gatewayClassName`   | Cluster-scoped GatewayClass that backs the Gateway. Default `istio`. Set to `eg` for Envoy Gateway, `cilium` for Cilium, etc. **Not auto-derived from `implementation` or `infrastructure`** — pick whichever GatewayClass your data plane provides. |
+
+> **The istio path uses a different opt-out.** `gateway.gateway.create`
+> only gates the gateway-api `Gateway` template. The istio
+> `Gateway.yaml` instead checks `gateway.existingGateway` — set that to
+> the name of your existing Istio `Gateway` to skip rendering and have
+> the chart's `VirtualService` attach to yours.
+
+#### Pattern A — Chart owns the Gateway (default, greenfield)
+
+```yaml
+gateway:
+  enabled: true
+  implementation: gateway-api    # or: istio
+  gateway:
+    create: true                 # chart renders the Gateway itself
+  gatewayClassName: istio        # cluster GatewayClass that backs the Gateway
+  hostnames:
+    - radius.example.com         # listener hostname + seed for cert-manager Certificate
+```
+
+The chart renders `Gateway` + `UDPRoute` (auth/acct/coa) + `TLSRoute`
+(when `tls.enabled`) + `ReferenceGrant` (when needed for cross-namespace
+attachment).
+
+#### Pattern B — BYO Gateway; chart attaches routes only
+
+Use this when your platform team owns the cluster Gateway (one shared
+Gateway fronting many apps) and the chart should only contribute its
+routes:
+
+```yaml
+# gateway-api path
+gateway:
+  enabled: true
+  implementation: gateway-api
+  gateway:
+    create: false                # do NOT render the chart's Gateway
+  existingGateway: shared-edge   # name of the existing Gateway
+  # OR pin parentRefs per route, e.g. when routes need to target
+  # specific listeners on the shared Gateway:
+  udpRoute:
+    parentRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared-edge
+        namespace: gateway-system
+        sectionName: radius-auth          # optional listener selector
+  tlsRoute:
+    parentRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared-edge
+        namespace: gateway-system
+        sectionName: radsec
+```
+
+```yaml
+# istio path (no gateway.gateway.create — uses existingGateway directly)
+gateway:
+  enabled: true
+  implementation: istio
+  existingGateway: shared-edge   # skips Gateway rendering; VirtualService attaches here
+```
+
+> **Route `parentRefs` resolution order** (gateway-api path, per
+> `freeradius.gateway.routeParentRefs` in `_helpers.tpl`):
+> 1. Explicit per-route override (`gateway.udpRoute.parentRefs` /
+>    `gateway.tlsRoute.parentRefs`).
+> 2. The chart-rendered `ListenerSet` — when `gateway.listenerSet.enabled`,
+>    its `listeners` is non-empty, AND the cluster exposes the
+>    `ListenerSet` API.
+> 3. The chart's Gateway (via `st-common.gateway.fullname` /
+>    `st-common.gateway.namespace`), which honors `gateway.existingGateway`
+>    when set.
+
+The `ReferenceGrant` template fires automatically when the chart detects
+cross-namespace attachment is required (Gateway in `gateway-system`,
+routes in your app namespace).
+
+#### Pattern C — No Gateway at all (Service-only)
+
+```yaml
+gateway:
+  enabled: false
+```
+
+The pod is exposed via the chart's `Service` (`service.type:
+ClusterIP` / `LoadBalancer` / `NodePort` per your values). Use this when
+fronting RADIUS with an external L4 load balancer that handles the
+public IP, or for in-cluster-only RADIUS where the Service DNS name is
+enough.
+
+#### Pattern D — Envoy Gateway data-plane (`gateway.infrastructure: envoy`)
+
+Envoy Gateway *is* a Gateway API implementation, so this is built on
+top of Pattern A or B (`implementation: gateway-api`, plus the chart
+or your platform team's existing Gateway). Setting
+`gateway.infrastructure: envoy` does two things:
+
+1. Wires an `EnvoyProxy` reference into the chart's Gateway via
+   `spec.infrastructure.parametersRef` (only when the chart owns the
+   Gateway, i.e. `gateway.gateway.create: true`).
+2. Optionally renders an `EnvoyProxy` CR
+   ([gateway.envoyproxy.io/v1alpha1](https://gateway.envoyproxy.io/docs/api/extension_types/))
+   in the gateway namespace — gated by `gateway.envoyProxy.create`.
+
+`gateway.envoyProxy.{create, name}` mirrors `gateway.gateway.{create, name}`:
+
+| `envoyProxy.create` | Behaviour |
+| --- | --- |
+| `true` (default) | Chart renders its own EnvoyProxy with a bundled opinionated spec (`provider.type: Kubernetes` + 1 replica, plus JSON access-log telemetry to stdout — see [`templates/gateway-api/EnvoyProxy.yaml`](charts/freeradius/templates/gateway-api/EnvoyProxy.yaml)). `name` defaults to the chart fullname if empty. |
+| `false` | BYO — chart skips rendering. `name` is **required** (validator-enforced) and must reference an EnvoyProxy that exists in `gateway.gateway.namespace`. |
+
+The chart's Gateway always uses the resolved `name` for its
+`parametersRef`, so either path produces a working attachment.
+
+```yaml
+# Chart-managed EnvoyProxy (default)
+gateway:
+  enabled: true
+  implementation: gateway-api
+  infrastructure: envoy              # opt into the EnvoyProxy path
+  gatewayClassName: eg               # Envoy Gateway's GatewayClass
+  gateway:
+    create: true
+  hostnames:
+    - radius.example.com
+  envoyProxy:
+    create: true                     # default — chart renders EnvoyProxy
+    # name: ""                       # empty → chart fullname
+
+# BYO EnvoyProxy (managed externally — by a platform team, kustomize, GitOps, etc.)
+gateway:
+  enabled: true
+  implementation: gateway-api
+  infrastructure: envoy
+  gatewayClassName: eg
+  gateway:
+    create: true
+  envoyProxy:
+    create: false                    # chart does NOT render the EnvoyProxy
+    name: shared-envoy-proxy         # required — must exist in the gateway namespace
+```
+
+> **The chart's EnvoyProxy ships with a bundled spec** — Kubernetes
+> provider with 1 replica plus JSON access-log telemetry to stdout (see
+> [`templates/gateway-api/EnvoyProxy.yaml`](charts/freeradius/templates/gateway-api/EnvoyProxy.yaml)).
+> To tune anything beyond what the template exposes (replicas,
+> additional telemetry sinks, concurrency, bootstrap patches, etc.),
+> set `gateway.envoyProxy.create: false` and manage the EnvoyProxy CR
+> externally with whatever tool owns the Envoy Gateway install.
+
+> **Validator constraints**: `gateway.infrastructure: envoy` requires
+> `gateway.implementation: gateway-api` (the istio Gateway CRD has no
+> `spec.infrastructure` field). Unknown values for `infrastructure`
+> (anything other than `""` / `envoy`) are also rejected. And
+> `envoyProxy.create: false` without an `envoyProxy.name` fails the
+> render — BYO must name its target.
+
 ### Enabling RADSEC (TLS-encrypted RADIUS)
 
 Switch on the pod's TLS plumbing plus the radsec virtual server. The chart auto-issues a cert (via cert-manager when its API is present, otherwise a self-signed leaf via `genCA`), wires the loopback `home_server radsec` / `home_server_pool radsec` / `realm radsec` definitions, and ships a bundled `proxy.conf` mounted at `/etc/freeradius/proxy.conf` (with `realm LOCAL { }` commented out so the chart can own that name without a Duplicate realm error).
@@ -366,6 +537,85 @@ modules:
     tls:
       certificates_secret: my-rest-tls
 ```
+
+#### Extracting the CA bundle
+
+External peers that need to verify the chart's TLS leaves (RADSEC NAS
+peers verifying the FreeRADIUS server cert, SQL/REST clients connecting
+inbound, anything you want to slot into a host trust store) need the CA
+the chart signs with. **Where the CA lives depends on the issuance
+path** (the `freeradius.tls.useCertManager` helper picks one at render
+time):
+
+| Issuance path                          | Secret name                                  | Owner                       |
+| -------------------------------------- | -------------------------------------------- | --------------------------- |
+| Cert-manager auto-detected, no external issuer (default when the cert-manager API is present) | `<release>-freeradius-ca` (override via `tls.certManager.ca.secretName`) | cert-manager (`templates/Issuer.yaml` bootstrap chain) |
+| Cert-manager with `tls.certManager.issuerRef.name` set | (your issuer's own CA Secret — not chart-managed) | Your pre-existing Issuer / ClusterIssuer |
+| genCA fallback (cert-manager API absent) | `<release>-freeradius-tls-ca` (`freeradius.tls.ca.secretName` helper) | Chart (`templates/secrets/tls-ca.yaml`) |
+
+Each chart-managed CA Secret holds both `ca.crt` (the public certificate
+— safe to distribute) and `ca.key` (the private key — **never** leave
+the cluster). The same `ca.crt` is also copied into every per-leaf TLS
+Secret (`<release>-freeradius-radsec-tls`, `<release>-freeradius-sql-tls`,
+`<release>-freeradius-eap-tls`, `<release>-freeradius-rest-tls`,
+`<release>-<hostname>-tls`) under the same `ca.crt` key — extract from
+whichever Secret is most convenient.
+
+Extract the CA certificate as PEM:
+
+```bash
+# Cert-manager bootstrap path (default when cert-manager is installed)
+kubectl get secret <release>-freeradius-ca \
+  -n <namespace> \
+  -o jsonpath='{.data.ca\.crt}' | base64 -d > freeradius-ca.crt
+
+# genCA fallback path (cert-manager API absent)
+kubectl get secret <release>-freeradius-tls-ca \
+  -n <namespace> \
+  -o jsonpath='{.data.ca\.crt}' | base64 -d > freeradius-ca.crt
+```
+
+> **⚠️ Never extract `ca.key`.** Pulling the private key off-cluster
+> turns your chart-managed CA into a copy-paste credential. If you need
+> to sign new leaves with the same CA from outside the cluster, switch
+> the chart to a cert-manager `Issuer` / `ClusterIssuer` you own
+> (`tls.certManager.issuerRef.name`) — the issuer's private key stays
+> in cert-manager, and leaves are minted via Kubernetes API calls
+> instead.
+
+Common downstream usages:
+
+- **RADSEC NAS / WiFi controller / VPN concentrator** — import as a
+  trusted CA on the peer so its RADSEC client validates the FreeRADIUS
+  server certificate during the TLS handshake.
+- **Linux trust store** (testing from a workstation):
+
+  ```bash
+  sudo cp freeradius-ca.crt /usr/local/share/ca-certificates/freeradius-ca.crt
+  sudo update-ca-certificates       # Debian/Ubuntu
+  # or:  sudo update-ca-trust       # RHEL/Fedora (drop into /etc/pki/ca-trust/source/anchors/ first)
+  ```
+
+- **`radclient` over RADSEC**:
+
+  ```bash
+  radclient -x -P tcp -S <secret-file> <radsec-host>:2083 \
+    auth <radius-secret> \
+    --cacert freeradius-ca.crt
+  ```
+
+- **OpenSSL handshake test**:
+
+  ```bash
+  openssl s_client -connect <radsec-host>:2083 \
+    -CAfile freeradius-ca.crt -servername <radsec-host>
+  ```
+
+For programmatic re-extraction (e.g. wiring into a sync tool that
+distributes the CA to NAS peers automatically), pin the CA to a
+deterministic location by setting `tls.certManager.ca.secretName` (when
+cert-manager owns issuance) — the auto-rotation caveat above applies to
+the genCA fallback only.
 
 ## Troubleshooting
 
@@ -813,7 +1063,13 @@ modules:
 When using the Gateway API path, the chart now renders dedicated
 `UDPRoute` resources for the auth/acct/coa ports and a `TLSRoute` for
 RADSEC. UDPRoute support is uneven across GatewayClasses — Cilium and
-Envoy Gateway support it, Istio currently does not. On clusters without
+Envoy Gateway support it, Istio currently does not (`UDPRoute` is an
+Experimental-channel resource in Gateway API itself; the Istio gap is
+tracked upstream in [istio/istio#54163](https://github.com/istio/istio/issues/54163)).
+See the Gateway API [implementations matrix](https://gateway-api.sigs.k8s.io/implementations/)
+for the current conformance status of HTTPRoute / TLSRoute / GRPCRoute
+across implementations (UDPRoute is not part of the conformance
+profile, so check the implementation's own docs). On clusters without
 UDPRoute, fall back to `gateway.implementation: istio` (which uses
 plain UDP listeners) or disable `gateway.udpRoute.enabled`.
 

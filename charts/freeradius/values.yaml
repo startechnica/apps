@@ -2237,6 +2237,9 @@ gateway:
   ## @param gateway.implementation Gateway implementation to render. Allowed values: `gateway-api` or `istio`.
   ##
   implementation: gateway-api
+  ## @param gateway.infrastructure Optional Gateway data-plane infrastructure extension. When set, the chart renders the matching infrastructure CR and attaches it to its Gateway via `spec.infrastructure.parametersRef`. Only applicable when `implementation: gateway-api`. Allowed values: `""` (none — Gateway uses its GatewayClass defaults) or `envoy` (renders an `EnvoyProxy` resource under `gateway.envoyproxy.io/v1alpha1`; pair with an Envoy Gateway-backed `gatewayClassName` such as `eg`). `gatewayClassName` is independent — set it to whichever GatewayClass backs your Envoy Gateway install.
+  ##
+  infrastructure: envoy
 
   ## ---- Gateway resource -----------------------------------------------------
   ## Configuration for the Gateway resource itself (created here, or referenced
@@ -2252,6 +2255,24 @@ gateway:
     ## @param gateway.gateway.namespace Namespace for the Gateway resource. Defaults to the release namespace.
     ##
     namespace: ""
+
+  ## ---- EnvoyProxy (data-plane customization for Envoy Gateway) -------------
+  ## Consumed only when `gateway.infrastructure: envoy` AND
+  ## `implementation: gateway-api`. Same `{create, name}` shape as
+  ## `gateway.gateway.*`: `create: true` renders the chart's own EnvoyProxy
+  ## manifest in the gateway namespace; `create: false` is BYO and references
+  ## an externally-managed EnvoyProxy by `name`. Either way, the chart's
+  ## Gateway (when it owns one) wires `spec.infrastructure.parametersRef` to
+  ## the resolved name.
+  ##
+  envoyProxy:
+    ## @param gateway.envoyProxy.create Render the chart's EnvoyProxy manifest (`templates/gateway-api/EnvoyProxy.yaml`). When `true`, the chart owns the resource with a bundled opinionated spec (Kubernetes provider, 1 replica, JSON access-log telemetry to stdout); to tune the spec further than what the template exposes, switch to BYO (`create: false`) and manage the EnvoyProxy CR externally. When `false`, the chart skips rendering and uses `gateway.envoyProxy.name` for the Gateway's `parametersRef`.
+    ##
+    create: true
+    ## @param gateway.envoyProxy.name Name of the EnvoyProxy resource. When `create: true`, empty defaults to the chart fullname. When `create: false`, **required** — must reference an EnvoyProxy that exists in `gateway.gateway.namespace`.
+    ##
+    name: ""
+
   ## @param gateway.clusterDomain Cluster domain used by the VirtualService backend FQDN. Falls back to the top-level `clusterDomain` when empty.
   ##
   clusterDomain: ""
@@ -2261,9 +2282,9 @@ gateway:
   ## @param gateway.selector Gateway instance selector labels (Istio)
   ##
   selector: {}
-  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations)
+  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations). Default `istio` matches Istio's bundled gateway-api GatewayClass; set to `eg` for Envoy Gateway, `cilium` for Cilium, etc. Independent of `gateway.implementation` and `gateway.infrastructure` — the chart does not derive this from either knob.
   ##
-  gatewayClassName: istio
+  gatewayClassName: eg
   ## @param gateway.listeners Verbatim `listeners:` list rendered on the chart's Gateway. When non-empty, the chart skips its default UDP auth/acct/coa + TLS-passthrough listener generation.
   ##
   listeners: []
