@@ -125,7 +125,7 @@ spec:
         {{- end }}
         checksum/configmap-realms: {{ include (print $.Template.BasePath "/configmaps/realms.yaml") . | sha256sum }}
         {{- if .Values.modules.oidc.enabled }}
-        checksum/configmap-oidc-common-python: {{ include (print $.Template.BasePath "/modules/oidc/oidc-common-py.yaml") . | sha256sum }}
+        checksum/configmap-oidc-py: {{ include (print $.Template.BasePath "/modules/oidc/oidc-py.yaml") . | sha256sum }}
         {{- $oidcResolvedAnno := include "freeradius.oidc.resolveInstances" . | fromYaml }}
         {{- $oidcHasSecret := false -}}{{- $oidcHasTls := false -}}
         {{- range $name, $cfg := $oidcResolvedAnno.instances -}}

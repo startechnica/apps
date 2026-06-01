@@ -8,7 +8,7 @@ Per-instance rlm_python3 wrapper scripts. Renders one ConfigMap per
 `modules.oidc.instances.<name>`. Per-instance config is baked in at
 chart-render time by Helm — only `client_secret` (sensitive) is read
 from env. Each wrapper delegates to `oidc_common.authorize / accounting /
-validate` (rendered separately by `oidc-common-py.yaml`).
+validate` (rendered separately by `oidc-py.yaml`).
 
   default → `<fullname>-oidc-python`          key: `oidc.py`
   <name>  → `<fullname>-oidc-<name>-python`   key: `oidc_<name>.py`
