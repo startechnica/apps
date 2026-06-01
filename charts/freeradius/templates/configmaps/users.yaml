@@ -36,15 +36,15 @@ data:
     # made via `kubectl edit cm` will be reverted on next `helm upgrade`.
     {{- range $user := .Values.users }}
 
-    {{ $user.name }}	{{ default "Cleartext-Password" $user.passwordType }} := {{ $user.password | quote }}
+    {{ $user.name }}    {{ default "Cleartext-Password" $user.passwordType }} := {{ $user.password | quote }}
     {{- range $user.attributes -}}
     ,
-    	{{ . }}
+        {{ . }}
     {{- end }}
     {{- if $user.reply }}
     {{- $replyLast := sub (len $user.reply) 1 }}
     {{- range $i, $attr := $user.reply }}
-    	{{ $attr }}{{ if lt $i $replyLast }},{{ end }}
+        {{ $attr }}{{ if lt $i $replyLast }},{{ end }}
     {{- end }}
     {{- end }}
     {{- end }}
