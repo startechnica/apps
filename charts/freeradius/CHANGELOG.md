@@ -4,45 +4,105 @@
 
 ### Added
 
-- **Keycloak shared-library extensions** — five additive features on
-  top of the existing JWT/ROPC flow, all configured per-instance under
-  `keycloak.instances.<name>`:
-  - `groupMappings` / `groupAttribute` — mirror of `roleMappings` keyed
-    off the Keycloak `groups` claim (Group Membership client mapper).
-    Group paths land in `&control:<groupAttribute>` (default `Class` —
-    validator rejects when the role and group attributes collide and
-    both mappings are non-empty). A `keycloak[_<name>]_groups` policy
-    block fires on `ok` alongside the existing `keycloak[_<name>]_roles`.
-  - `require` — list of JWT claim names that must be truthy after
-    decode (or introspection). Catches "user authenticated but
-    admin-disabled-since-issuance" via e.g. `require: [email_verified]`;
-    rejects early before any reply attrs are populated.
+- **Generic OIDC authentication module (`modules.oidc.*`).** Replaces
+  the dedicated Keycloak module from 1.1.0 (which is now removed — see
+  `### Removed` below). Provider-agnostic: works against any OIDC
+  provider with an RFC 6749 token endpoint and (optionally) an RFC 7662
+  introspect endpoint — Keycloak, Authentik, Azure AD, Auth0, Okta,
+  etc. Configure any number of backends under
+  `modules.oidc.instances.<name>` with `tokenUrl` (required), optional
+  `introspectUrl`, OAuth2 client credentials (`clientId` +
+  `clientSecret` / `existingSecret`), TLS material (`tls.caCert` /
+  `tls.existingSecret` / `tls.insecure`), and claim-path config
+  (`rolesClaim`, `groupsClaim`, `roleAttribute`, `groupAttribute`).
+  NAS-to-backend binding via `clients.<x>.oidc: <name>` renders an
+  `if (Packet-Src-IP-Address == …) { oidc_<name>_authorize }` dispatch
+  chain into `sites/default` and `sites/inner-tunnel`.
+  `modules.oidc.unmatchedReject` — when `true` and no `default` instance
+  is wired, the dispatch chain's `else` branch rejects unmatched NAS
+  instead of falling through to `pap`.
+
+- **Per-instance OIDC features:**
+  - `roleMappings` / `groupMappings` — unlang reply-mapping policies
+    keyed off the claim path (`rolesClaim`, `groupsClaim`). Roles land
+    in `&control:<roleAttribute>` (default `Class`); groups in
+    `&control:<groupAttribute>` (default `Class` — validator rejects
+    when both attributes collide and both mappings are non-empty). The
+    chart emits `oidc[_<name>]_roles` and `oidc[_<name>]_groups` policy
+    blocks alongside the main authorize policy.
   - `attributeMappings` — generic `{claim, reply}` engine copying any
     top-level JWT claim verbatim to a reply attribute (e.g.
     `preferred_username` → `User-Name`, `sub` → `Class`). The chosen
     reply attrs are added to the cache `update {}` so they survive
     cache hits.
+  - `require` — list of JWT claim names that must be truthy after
+    decode (or introspection). Catches "user authenticated but
+    admin-disabled-since-issuance" via e.g.
+    `require: [email_verified]`; rejects early before any reply attrs
+    are populated.
   - `introspect` — switches the post-ROPC claim source from local
-    JWT-payload decode to RFC 7662 `/realms/<realm>/protocol/openid-connect/token/introspect`.
-    Catches token revocation, admin-disabled-since-issuance, and realm
-    key rotation. Validator rejects `introspect: true` without a client
-    secret (Keycloak introspect calls are HTTP-Basic-authenticated).
+    JWT-payload decode to RFC 7662 introspection at `introspectUrl`.
+    Catches token revocation, admin-disabled-since-issuance, and
+    provider key rotation. Validator rejects `introspect: true` without
+    a client secret (RFC 7662 calls are HTTP-Basic-authenticated).
   - `refreshTokenCache` — only meaningful with `cache.enabled`. The
-    ROPC response's `refresh_token` rides out in `&control:Tmp-String-9`
-    so the cache layer stores it; a second module instance
-    `keycloak_<name>_validate` (rlm_python3 / rlm_lua, same script,
-    `func_authorize = "validate"`) is rendered, and the policy calls it
-    on cache hit. The validator attempts `grant_type=refresh_token`
-    against Keycloak: HTTP 200 confirms the session is alive, 400/401
+    ROPC response's `refresh_token` rides out in
+    `&control:Tmp-String-9` so the cache layer stores it; a second
+    module instance `oidc[_<name>]_validate` (rlm_python3, same script,
+    `func_authorize = "validate"`) is rendered, and the policy calls
+    it on cache hit. The validator attempts `grant_type=refresh_token`
+    against the IdP: HTTP 200 confirms the session is alive, 400/401
     triggers cache-entry invalidation + reject, network FAIL falls
     through gracefully with the cached attrs intact.
-- `freeradius.keycloak.groupsPolicyName` / `validateModuleName` helpers
-  for the per-instance groups policy and the cache-hit validator
-  module-instance name (legacy default short form vs `*_<name>` suffix).
-- `freeradius.validate.keycloakInstances` now enforces the new schema:
-  group/role attribute collision, introspect-requires-secret,
-  refreshTokenCache-requires-cache, and well-formed
-  `attributeMappings` / `groupMappings` / `require` entries.
+
+- **Per-instance OIDC K8s resources:**
+  - One module ConfigMap (`<fullname>-oidc[-<name>]`) for
+    `mods-enabled/oidc[_<name>]` — the rlm_python3 module instance
+    block.
+  - One policy ConfigMap (`<fullname>-oidc[-<name>]-policy`) for
+    `policy.d/oidc[_<name>]` — wraps the module with optional rlm_cache
+    cache-aside and cache-hit refresh-token validate.
+  - One client-secret Secret per instance (skipped under
+    `existingSecret`); `client_secret` rides into the pod via
+    `FREERADIUS_OIDC[_<NAME>]_CLIENT_SECRET` env.
+  - One TLS CA Secret per instance (skipped under `tls.existingSecret`),
+    mounted at `/etc/freeradius/certs-oidc[-<name>]/ca.crt`.
+
+- **Shared OIDC python library + per-instance wrappers.** A single
+  `<fullname>-oidc-py` ConfigMap renders the shared `oidc.py`
+  library — pure logic, no env reads, no module-level config — so one
+  bug fix to the library propagates to every instance on the next
+  `helm upgrade`. A single `<fullname>-oidc-python` ConfigMap carries
+  the per-instance wrappers as separate `data` keys (`oidc_default.py`,
+  `oidc_<name>.py`, …); each wrapper imports `oidc` and delegates
+  `authorize(p)` / `accounting(p)` / `validate(p)` over a `_CONFIG`
+  dict baked in at chart-render time. Both ConfigMaps are mounted
+  under `/etc/freeradius/scripts/` via subPath mounts so `python_path`
+  resolves `import oidc` to the shared file.
+
+- `cache oidc[_<name>]_cache` rlm_cache instance per OIDC instance
+  whose `cache.enabled: true`, rendered into the shared
+  `mods-enabled/cache` file. The cache key is hard-coded to
+  `oidc:<name>:%{User-Name}` (non-overridable) to prevent silent
+  cross-instance cache hits on common usernames.
+
+- OIDC namespacing helpers
+  `freeradius.oidc.{resolveInstances, envVarPrefix, moduleName,
+  validateModuleName, policyName, rolesPolicyName, groupsPolicyName,
+  modKey, policyKey, scriptKey, cacheName, cacheKey, dispatchArms,
+  clientSecretName, tlsVolumeName, tls.{enabled, createSecret,
+  secretName, caKey, caFilePath}}` — single source of truth for the
+  legacy-default-vs-named naming split.
+
+- `freeradius.validate.oidcInstances` + `freeradius.validate.oidcClientBindings`
+  — per-instance schema validation (`tokenUrl` required;
+  `introspect: true` requires `introspectUrl` and a client secret;
+  `refreshTokenCache: true` requires `cache.enabled: true` and a Redis
+  backend; `roleMappings` requires `rolesClaim`; instance-name regex;
+  TLS `caCert`/`existingSecret` exclusivity; `extraEnvVars` must not
+  shadow the per-instance `FREERADIUS_OIDC[_<NAME>]_` prefix) plus a
+  typo guard on every `clients.<x>.oidc` reference.
+
 - **`values.schema.json`** — JSON Schema draft-07, type-only walk of
   `values.yaml` (matches the convention used by charts/adminer and
   charts/open-appsec-injector). Catches gross value-type mismatches at
@@ -52,59 +112,11 @@
   both the default and any user override validate. Regen helper at
   `charts/freeradius/.gen-values-schema.py`; excluded from the package
   via `.helmignore`.
+
 - **`.helmignore`** — first-class chart packaging excludes: standard
   VCS / IDE patterns plus this repo's build helpers (`.gen-*.py`,
   `ci/` render fixtures) and Claude-side artifacts (`.claude/`,
   `CLAUDE.md`).
-
-- **Multi-instance Keycloak.** Configure any number of Keycloak backends
-  under `keycloak.instances.<name>` (each with its own `mode` / `url` /
-  `realm` / `clientId` / `clientSecret` / `tls` / `cache` /
-  `roleMappings`). Bind each NAS to a backend with the new
-  `clients.<x>.keycloak: <name>` field; the chart renders an
-  `if (Packet-Src-IP-Address == …) { keycloak_<name>_authorize }`
-  dispatch chain into the shared `sites/default` and `sites/inner-tunnel`
-  virtual servers. The previously singleton `keycloak.*` fields auto-
-  synthesise an `instances.default` entry for backwards-compat (a
-  `NOTES.txt` deprecation notice fires).
-- `keycloak.unmatchedReject` — when `true` AND no `default` instance is
-  wired, the dispatch chain's `else` branch rejects unmatched NAS
-  instead of falling through to `pap`.
-- Per-instance K8s resources: one ConfigMap per instance for
-  `mods-enabled/keycloak[_<name>]`, `policy.d/keycloak[_<name>]`, and
-  (lua/python only) the mapper-script file. One Secret per instance for
-  `client-secret` and (when configured) the TLS CA bundle. Per-instance
-  TLS mount under `/etc/freeradius/certs-keycloak[-<name>]/ca.crt`.
-- Shared mapper-script library — `keycloak_common.{py,lua}` rendered
-  once per release in a dedicated ConfigMap
-  (`<fullname>-keycloak-{python,lua}-common`), mounted at
-  `/etc/freeradius/scripts/keycloak_common.{py,lua}`. The per-instance
-  ConfigMaps drop from ~200 lines each to ~25-line wrappers that
-  `import keycloak_common` (python) / `require("keycloak_common")`
-  (lua) and delegate `authorize(p)` / `accounting(p)` over a config
-  dict/table baked in at chart-render time. Dedupes the implementation
-  body across N instances; one bug fix to the library propagates to
-  every instance on the next `helm upgrade`. The library itself is
-  pure logic — no env-var reads, no module-level config — so it's
-  safely shared across instances inside the rlm_python3 process-global
-  interpreter.
-- `cache keycloak[_<name>]_cache` rlm_cache instance per Keycloak
-  instance whose `cache.enabled: true`, rendered into the shared
-  `mods-enabled/cache` file. The cache key is hard-coded to
-  `keycloak:<name>:%{User-Name}` (non-overridable) to prevent silent
-  cross-instance cache hits on common usernames.
-- `freeradius.keycloak.resolveInstances` / `envVarPrefix` / `moduleName`
-  / `policyName` / `rolesPolicyName` / `cacheName` / `cacheKey` /
-  `dispatchArms` / `clientSecretName` helpers, plus per-instance
-  `freeradius.keycloak.tls.*` helpers (now taking `(name, instance,
-  context)`). Single-source-of-truth for the legacy-default-vs-named
-  naming split.
-- `freeradius.validate.keycloakInstances` and
-  `freeradius.validate.keycloakClientBindings` — per-instance schema
-  validation (mode, roleMapper, TLS exclusivity, cache-requires-Redis,
-  instance-name regex, realm-non-empty, no `extraEnvVars` shadowing
-  the `FREERADIUS_KEYCLOAK_*` prefix) and a typo guard on every
-  `clients.<x>.keycloak` reference.
 
 - Bundled **Redis** subchart (Bitnami, `condition: redis.enabled`) as an
   optional backend for the redis/cache modules. When enabled, the modules
@@ -133,6 +145,10 @@
   knobs for the bootstrapped CA.
 - `freeradius.tls.useCertManager` helper — single source of truth for whether
   the chart issues TLS through cert-manager (vs. the in-template genCA path).
+- `templates/gateway-api/EnvoyProxy.yaml` — JSON access-log format on the
+  chart-managed EnvoyProxy CR: bytes received/sent, duration, client IP,
+  method/path, headers, response code/flags, upstream host. Renders by
+  default under `gateway.infrastructure: envoy`.
 
 ### Changed
 
@@ -232,57 +248,39 @@
   than a ConfigMap. The Deployment `envFrom` switches to `secretRef` for the
   chart-managed env vars (the `existingConfigmap` BYO path still uses
   `configMapRef`).
-- Renamed the Keycloak coordinate env vars injected by the Deployment from
-  `KC_*` → `FREERADIUS_KEYCLOAK_*` (`BASE_URL`, `REALM`, `CLIENT_ID`,
-  `CLIENT_SECRET`, `SCOPE`, `CONNECT_TIMEOUT`) so they share the chart's
-  `FREERADIUS_` env-var namespace. The lua/python mapper scripts and the rest
-  module's `$ENV{...}` reference are updated in lockstep. Internal rename — no
-  `values.yaml` changes; only observable when exec'ing into the pod or
-  overriding the mapper-script ConfigMaps / `keycloak.yaml` module template.
-- Keycloak mapper-script filenames renamed for the multi-instance
-  refactor: `keycloak-mapper.lua` → `keycloak.lua`,
-  `keycloak_mapper.py` → `keycloak.py` (default instance);
-  `keycloak_mapper_<name>.{py,lua}` → `keycloak_<name>.{py,lua}`
-  (named instances). The rendered `python3 keycloak_<name>` module's
-  `mod_authorize` directive updates to match (`"keycloak"` /
-  `"keycloak_<name>"`).
-- **Keycloak `rest` mode removed.** `python` mode is a strict superset
-  (same ROPC POST + JWT-decode for role extraction, both via bundled
-  modules — no custom image needed) so the rest variant added nothing.
-  `keycloak.instances.<name>.mode` is now `lua | python` only; the
-  legacy `keycloak.mode: rest` default switches to `python`. Setting
-  `mode: rest` explicitly fails validation with a migration message.
-  Dropped along with it: the `rest keycloak_<name> { … }` module body
-  in `mods-config/keycloak/keycloak.yaml`, the `$isRest` branch in
-  `keycloak-policy.yaml` (`okRcode` is always `(ok)`), and the
+
+### Removed (BREAKING — see Upgrading)
+
+- **Dedicated Keycloak module removed end-to-end.** The 1.1.0 top-level
+  `keycloak.*` block — `enabled`, `mode`, `url`, `realm`, `clientId`,
+  `clientSecret`, `scope`, `connectTimeout`, `roleAttribute`,
+  `roleMapper`, `denyWithoutRole`, `roleMappings`, `tls.*`, `cache.*` —
+  is gone. So are
+  `templates/modules/mods-config/keycloak/configmap-{lua,policy,rest}.yaml`,
+  every `freeradius.keycloak.*` helper, `freeradius.validate.keycloak*`
+  validators, the Keycloak coordinate env vars (`KC_*` /
+  `FREERADIUS_KEYCLOAK_*`) injected into the pod, the
+  `clients.<x>.keycloak` NAS binding, and the
   `Auth-Type REST { keycloak_rest }` wiring in `sites/inner-tunnel`.
-- **OIDC python wrappers consolidated into a single ConfigMap.** With
-  more than one `modules.oidc.instances.<name>` configured, the chart
-  previously rendered N separate `<fullname>-oidc[-<name>]-python`
-  ConfigMaps (one rlm_python3 wrapper per instance) and N matching pod
-  volumes. They are now collapsed into one shared ConfigMap
-  `<fullname>-oidc-python` whose `data` carries one key per instance
-  (`oidc_default.py`, `oidc_<name>.py`, …), mounted via N `subPath`
-  mounts off a single `oidc-python` pod volume. The wrapper Python
-  content is unchanged; only the K8s wrapper layer changes.
-  Single-instance releases see no observable difference (the
-  default-instance name was already `<fullname>-oidc-python`).
-  Multi-instance upgrades drop N old per-instance ConfigMaps and create
-  one new shared ConfigMap; the existing
-  `checksum/configmap-oidc-mapper-python` pod annotation rolls the
-  pod. See **Upgrading → OIDC python wrappers consolidated into a
-  single ConfigMap** in the README.
+  Migrate to the new generic `modules.oidc.*` module — same JWT/ROPC
+  flow against any OIDC provider, plus `groupMappings` /
+  `attributeMappings` / `require` / `introspect` / `refreshTokenCache`.
+  NAS binding is now `clients.<x>.oidc: <name>`. See
+  **Upgrading → Keycloak module removed; migrate to `modules.oidc.*`**
+  in the README.
+- **`lua` mapper-script mode removed.** The 1.1.0 chart accepted
+  `keycloak.mode: lua` via rlm_lua, but rlm_lua is not bundled in
+  `freeradius/freeradius-server:3.2.8` (the chart's default image), so
+  enabling it required a custom image. The new `modules.oidc.*` module
+  is rlm_python3-only — bundled in the stock image, no custom build
+  needed.
+- **`keycloak.mode: rest` removed.** `python` mode was a strict
+  superset (same ROPC POST + JWT-decode for role extraction, via the
+  bundled rlm_python3) so the rest variant added nothing but config
+  surface; gone along with the dedicated Keycloak module.
 
 ### Deprecated
 
-- Top-level `keycloak.mode`, `keycloak.url`, `keycloak.realm`,
-  `keycloak.clientId`, `keycloak.clientSecret`, `keycloak.scope`,
-  `keycloak.connectTimeout`, `keycloak.roleAttribute`, `keycloak.roleMapper`,
-  `keycloak.denyWithoutRole`, `keycloak.roleMappings`, `keycloak.tls.*`
-  and `keycloak.cache.*` — use `keycloak.instances.default.<field>`
-  instead. Existing values files continue to render via a shim that
-  synthesises `instances.default` from the legacy fields; the shim and
-  the legacy fields will be removed in the next major.
 - **TLS auto-generation toggles** `tls.autoGenerated`,
   `tls.certManager.create`, `modules.sql.tls.autoGenerated`, and
   `modules.eap.tlsConfig.autoGenerated` — all four still accepted in
@@ -331,7 +329,7 @@
   `st-common.capabilities.certmanager*` helpers return the string `"false"`
   (truthy in templates); the gates now test it explicitly via
   `freeradius.tls.useCertManager` / `ne … "false"`.
-- `templates/configmap/clients.yaml` no longer fails to render when the
+- `templates/configmaps/clients.yaml` no longer fails to render when the
   `clients` map carries non-client scalar keys (`includeFile`,
   `existingConfigMapName`) — it skips non-map entries via `kindIs "map"`
   instead of a hand-maintained `omit` list.
@@ -340,25 +338,6 @@
   in verbose debug mode by default.
 - Added a writable `emptyDir` at `/var/run/radiusd` so the daemon can write its
   pidfile under `readOnlyRootFilesystem: true`.
-- `templates/modules/oidc/oidc-policy.yaml` no longer emits invalid
-  multi-doc YAML for N>1 OIDC instances. A `{{- … -}}` whitespace-strip
-  on the last per-instance variable assignment consumed the newline
-  before the document separator, so iteration 2's `---` came out glued
-  to iteration 1's trailing `}` (`    }---apiVersion: v1`). `helm
-  template` was lenient enough to render it but strict downstream YAML
-  parsers (kustomize, server-side-apply, helm-unittest) saw a single
-  document with duplicate `apiVersion` / `kind` / `metadata` keys and
-  rejected the output. Fixed by dropping the trailing `-` so the
-  newline between iterations is preserved.
-- `templates/gateway-api/EnvoyProxy.yaml` no longer ships a duplicate
-  `start_time: "%START_TIME%"` JSON access-log key (lines 47 and 56
-  both defined it — copy-paste leftover from
-  `[freeradius] EnvoyProxy + sites/default: drop HTTP-only access-log
-  fields`). YAML's last-key-wins hid it during render, but Envoy
-  schema validation rejected the resulting EnvoyProxy CR, so the chart
-  could not be applied in its default `gateway.infrastructure: envoy`
-  path. Removed the duplicate line; the chart now renders cleanly under
-  the default infrastructure setting.
 
 ## 1.1.0 (2026-05-29)
 

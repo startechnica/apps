@@ -861,152 +861,100 @@ modules:
 > behaviour, supply the corresponding `*certificatesSecret` /
 > `*certificates_secret`.
 
-#### Keycloak is now multi-instance — NAS → instance binding via `clients.<x>.keycloak`
+#### Keycloak module removed; migrate to `modules.oidc.*` (BREAKING)
 
-The singleton `keycloak.*` block is replaced by `keycloak.instances.<name>`,
-with NAS-to-instance binding declared on the NAS side
-(`clients.<x>.keycloak: <name>`). The chart renders an
-`if (Packet-Src-IP-Address == …) { keycloak_<name>_authorize }` dispatch
-chain into the shared `sites/default` and `sites/inner-tunnel` virtual
-servers. Existing single-Keycloak `values.yaml` keeps working — the chart
-synthesises `keycloak.instances.default` from the legacy top-level fields
-and a `NOTES.txt` deprecation warning fires.
+The dedicated Keycloak module from 1.1.0 has been removed end-to-end and
+replaced by a generic OIDC module — same JWT/ROPC flow, but
+provider-agnostic (Keycloak, Authentik, Azure AD, Auth0, Okta, …).
+Configure each backend under `modules.oidc.instances.<name>`.
+NAS-to-backend binding moves from `clients.<x>.keycloak: <name>` to
+`clients.<x>.oidc: <name>`.
 
 ```yaml
-# Before (1.1.0) — singleton
+# Before (1.1.0) — singleton Keycloak
 keycloak:
   enabled: true
-  mode: rest
-  url: https://auth.example.com
+  mode: rest                                # rest | python | lua
+  url: https://auth.example.com             # provider URL
   realm: master
   clientId: freeradius
   clientSecret: "…"
+  roleMappings:
+    - role: network-admin
+      reply:
+        - 'Service-Type := Administrative-User'
   cache: { enabled: true, ttl: 300 }
 
-# After (Unreleased) — multi-instance, NAS → backend
-clients:
-  hotspot-a:
-    ipv4addr: "10.0.1.1"
-    secret: corp-secret
-    keycloak: nas1          # binds this NAS to the `nas1` Keycloak
-  hotspot-b:
-    ipv4addr: "10.0.2.1"
-    secret: branch-secret
-    keycloak: nas2          # binds this NAS to the `nas2` Keycloak
-  legacy:
-    ipv4addr: "10.0.9.1"
-    secret: legacy-secret   # no `keycloak:` → falls through to `default`
-
-keycloak:
-  enabled: true
-  wireDefaultSite: true     # auto-wire the `default` instance as the else branch
-  unmatchedReject: false    # else fallthrough to pap (vs reject)
-  instances:
-    default:                # fallback for unbound NAS (when wireDefaultSite)
-      mode: rest
-      url: https://auth.example.com
-      realm: master
-      clientId: freeradius
-      clientSecret: "…"
-    nas1:
-      mode: python
-      url: https://kc.corp.example.com
-      realm: corp
-      clientId: nas-corp
-      clientSecret: "…"
-      cache: { enabled: true, ttl: 300 }
-      roleMappings:
-        - role: network-admin
-          reply:
-            - 'Service-Type := Administrative-User'
-    nas2:
-      mode: rest
-      url: https://kc.branch.example.com
-      realm: branch
-      clientId: nas-branch
-      clientSecret: "…"
+# After (1.2.0) — generic OIDC, multi-instance
+modules:
+  oidc:
+    enabled: true
+    instances:
+      default:                              # fallback for unbound NAS
+        tokenUrl: https://auth.example.com/realms/master/protocol/openid-connect/token
+        clientId: freeradius
+        clientSecret: "…"
+        rolesClaim: realm_access.roles      # Keycloak's role-claim layout — now explicit
+        roleMappings:
+          - role: network-admin
+            reply:
+              - 'Service-Type := Administrative-User'
+        cache: { enabled: true, ttl: 300 }
 ```
 
-Per-instance resources rendered for `<name>`:
+Per-instance OIDC resources rendered for `<name>`:
 
-| Concern                | `default` instance (legacy name)           | Named instance                                  |
-| ---------------------- | ------------------------------------------ | ----------------------------------------------- |
-| Module instance        | `keycloak_lua` / `_python` / `_rest`       | `keycloak_<name>`                               |
-| Policy                 | `keycloak_authorize`                       | `keycloak_<name>_authorize`                     |
-| Cache instance         | `keycloak_cache`                           | `keycloak_<name>_cache`                         |
-| Cache key (forced)     | `keycloak:%{User-Name}`                    | `keycloak:<name>:%{User-Name}`                  |
-| Mapper script path     | `/etc/freeradius/scripts/keycloak.{py,lua}`| `/etc/freeradius/scripts/keycloak_<name>.{py,lua}` |
-| ConfigMap (module)     | `<fullname>-keycloak`                      | `<fullname>-keycloak-<name>`                    |
-| ConfigMap (policy)     | `<fullname>-keycloak-policy`               | `<fullname>-keycloak-<name>-policy`             |
-| ConfigMap (script lua) | `<fullname>-keycloak-lua`                  | `<fullname>-keycloak-<name>-lua`                |
-| ConfigMap (script py)  | `<fullname>-keycloak-python`               | `<fullname>-keycloak-<name>-python`             |
-| Client-secret Secret   | `<fullname>-keycloak`                      | `<fullname>-keycloak-<name>`                    |
-| TLS CA Secret          | `<fullname>-keycloak-ca`                   | `<fullname>-keycloak-<name>-ca`                 |
-| CA mount path          | `/etc/freeradius/certs-keycloak/`          | `/etc/freeradius/certs-keycloak-<name>/`        |
-| Env-var prefix         | `FREERADIUS_KEYCLOAK_*`                    | `FREERADIUS_KEYCLOAK_<NAME>_*`                  |
+| Concern              | `default` instance                  | Named instance                          |
+| -------------------- | ----------------------------------- | --------------------------------------- |
+| Module instance      | `oidc`                              | `oidc_<name>`                           |
+| Policy               | `oidc_authorize`                    | `oidc_<name>_authorize`                 |
+| Cache instance       | `oidc_cache`                        | `oidc_<name>_cache`                     |
+| Cache key (forced)   | `oidc:default:%{User-Name}`         | `oidc:<name>:%{User-Name}`              |
+| Wrapper script (key) | `oidc_default.py`                   | `oidc_<name>.py`                        |
+| ConfigMap (module)   | `<fullname>-oidc`                   | `<fullname>-oidc-<name>`                |
+| ConfigMap (policy)   | `<fullname>-oidc-policy`            | `<fullname>-oidc-<name>-policy`         |
+| ConfigMap (wrappers) | `<fullname>-oidc-python` (shared, one `data` key per instance)    |
+| ConfigMap (library)  | `<fullname>-oidc-py` (one per release, holds the shared `oidc.py`)|
+| Client-secret Secret | `<fullname>-oidc`                   | `<fullname>-oidc-<name>`                |
+| TLS CA Secret        | `<fullname>-oidc-ca`                | `<fullname>-oidc-<name>-ca`             |
+| CA mount path        | `/etc/freeradius/certs-oidc/`       | `/etc/freeradius/certs-oidc-<name>/`    |
+| Env-var prefix       | `FREERADIUS_OIDC_*`                 | `FREERADIUS_OIDC_<NAME>_*`              |
+
+Key migration points:
+
+- **`mode: rest | python | lua` is gone.** The OIDC module is
+  rlm_python3-only — `rlm_lua` is not bundled in
+  `freeradius/freeradius-server:3.2.8`, and the `rest` variant was a
+  strict subset of `python` that added nothing but config surface.
+- **`url` + `realm` → `tokenUrl` (and optional `introspectUrl`).** OIDC
+  is provider-agnostic, so the chart no longer constructs endpoints
+  from a Keycloak-specific URL/realm pair. Supply the full token
+  endpoint. For Keycloak: `<url>/realms/<realm>/protocol/openid-connect/token`.
+- **`rolesClaim` is now required if you use `roleMappings`.** Keycloak
+  exposes roles at `realm_access.roles` (the previous hard-coded
+  assumption); other providers use `roles`, `groups`,
+  `resource_access.<client>.roles`, etc. The chart can no longer guess.
+- **NAS binding: `clients.<x>.keycloak: <name>` → `clients.<x>.oidc: <name>`.**
+- **Env vars: `KC_*` and `FREERADIUS_KEYCLOAK_*` are gone.** The OIDC
+  module reads only `FREERADIUS_OIDC[_<NAME>]_CLIENT_SECRET` from env;
+  everything else is baked into the per-instance wrapper script at
+  chart-render time.
+
+> **⚠️ Migration is not automatic.** There is no shim that synthesises
+> `modules.oidc.instances.default` from the old top-level `keycloak.*`
+> block — the schemas differ enough (provider-agnostic endpoints,
+> required `rolesClaim`, no `mode` knob, rlm_python3-only) that a
+> values rewrite is the only safe path. Update `clients.<x>.keycloak`
+> → `clients.<x>.oidc`, rewrite `keycloak.*` as
+> `modules.oidc.instances.<name>.*`, and supply the full `tokenUrl`
+> plus `rolesClaim` (and optional `introspectUrl`).
 
 > **⚠️ One-time cache flush on upgrade.** Existing Redis-backed
-> `keycloak_cache` entries were keyed as `%{User-Name}`; the chart now
-> uses the instance-namespaced `keycloak:<name>:%{User-Name}` (security:
-> prevents silent cross-instance hits on common usernames). After
-> upgrade, old entries are unreachable and naturally expire at `cache.ttl`.
-> Flush sooner with `redis-cli FLUSHDB` against the chart's Redis if
-> stale entries matter.
-
-> **⚠️ Mapper-script filenames renamed.** `keycloak-mapper.lua` →
-> `keycloak.lua`, `keycloak_mapper.py` → `keycloak.py` (default
-> instance); `keycloak_<name>.{lua,py}` (named). Only affects users who
-> override the mapper-script ConfigMaps or reference the in-pod script
-> paths directly.
-
-#### Keycloak script env vars renamed to `FREERADIUS_KEYCLOAK_*`
-
-The env vars carrying Keycloak coordinates from the Deployment into the
-lua/python mapper scripts (and into the rest module's body via `$ENV{...}`)
-have moved into the chart's `FREERADIUS_` namespace:
-
-| Before                | After                                 |
-| --------------------- | ------------------------------------- |
-| `KC_BASE_URL`         | `FREERADIUS_KEYCLOAK_BASE_URL`        |
-| `KC_REALM`            | `FREERADIUS_KEYCLOAK_REALM`           |
-| `KC_CLIENT_ID`        | `FREERADIUS_KEYCLOAK_CLIENT_ID`       |
-| `KC_CLIENT_SECRET`    | `FREERADIUS_KEYCLOAK_CLIENT_SECRET`   |
-| `KC_SCOPE`            | `FREERADIUS_KEYCLOAK_SCOPE`           |
-| `KC_CONNECT_TIMEOUT`  | `FREERADIUS_KEYCLOAK_CONNECT_TIMEOUT` |
-
-No `values.yaml` changes are required — these names are internal to the chart's
-generated config. The rename is only observable if you `kubectl exec` into the
-pod to inspect env, or if you override the mapper-script ConfigMaps
-(`keycloak-conf-lua.yaml`, `keycloak-conf-py.yaml`) or the
-`keycloak.yaml` module template — in which case update any
-`os.environ.get("KC_…")` / `os.getenv("KC_…")` / `$ENV{KC_…}` references to the
-new prefix.
-
-#### OIDC python wrappers consolidated into a single ConfigMap
-
-When more than one `modules.oidc.instances.<name>` is configured, the
-chart previously rendered one ConfigMap per instance for the rlm_python3
-wrapper script — `<fullname>-oidc-python` for the `default` instance and
-`<fullname>-oidc-<name>-python` for each named instance — with a matching
-pod volume per ConfigMap and a `subPath` mount onto
-`/etc/freeradius/scripts/oidc_<name>.py`.
-
-These are now consolidated into a single shared ConfigMap
-`<fullname>-oidc-python` whose `data` carries one key per instance
-(`oidc_default.py`, `oidc_<name>.py`, …), and the Deployment mounts a
-single `oidc-python` volume with one `subPath` per instance onto the same
-in-pod paths. The wrapper Python content is byte-identical to before;
-only the K8s wrapper layer changes.
-
-- **Single-instance releases** see no observable difference — the
-  ConfigMap name (`<fullname>-oidc-python`) and the in-pod script path
-  (`/etc/freeradius/scripts/oidc_default.py`) were already what they are
-  now.
-- **Multi-instance releases** see N old per-instance ConfigMaps removed
-  and one new shared ConfigMap created on `helm upgrade`. The pod rolls
-  because the volume layout changed (via the existing
-  `checksum/configmap-oidc-mapper-python` pod annotation); no
-  `values.yaml` change is required.
+> `keycloak_cache` entries (keyed `keycloak:%{User-Name}` in 1.1.0) are
+> unreachable from the new `oidc_<name>_cache` module (keyed
+> `oidc:<name>:%{User-Name}`) and naturally expire at `cache.ttl`. Flush
+> sooner with `redis-cli FLUSHDB` against the chart's Redis if stale
+> entries matter.
 
 ### To 1.1.0 (breaking)
 
