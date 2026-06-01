@@ -185,10 +185,10 @@
                 }
               }
             },
-            "groupAttribute": {
+            "group_attribute": {
               "type": "string"
             },
-            "readClients": {
+            "read_clients": {
               "type": "boolean"
             },
             "readGroups": {
@@ -741,6 +741,111 @@
         }
       }
     },
+    "homeServers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "ipaddr": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "proto": {
+            "type": "string"
+          },
+          "response_window": {
+            "type": "integer"
+          },
+          "zombie_period": {
+            "type": "integer"
+          },
+          "revive_interval": {
+            "type": "integer"
+          },
+          "status_check": {
+            "type": "string"
+          },
+          "check_interval": {
+            "type": "integer"
+          },
+          "num_answers_to_alive": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "homeServerPools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "home_servers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "virtual_server": {
+            "type": "string"
+          },
+          "fallback": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "realms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "auth_pool": {
+            "type": "string"
+          },
+          "acct_pool": {
+            "type": "string"
+          },
+          "coa_pool": {
+            "type": "string"
+          },
+          "authhost": {
+            "type": "string"
+          },
+          "accthost": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "nostrip": {
+            "type": "boolean"
+          },
+          "virtual_server": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "sites": {
       "type": "object",
       "properties": {
@@ -825,14 +930,68 @@
             "existingConfigMap": {
               "type": "string"
             },
-            "cipher": {
-              "type": "string"
+            "listen": {
+              "type": "object",
+              "properties": {
+                "ipaddr": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "virtual_server": {
+                  "type": "string"
+                },
+                "proxy_protocol": {
+                  "type": "boolean"
+                },
+                "check_client_connections": {
+                  "type": "boolean"
+                }
+              }
             },
-            "privateKeyPassword": {
-              "type": "string"
+            "tls": {
+              "type": "object",
+              "properties": {
+                "cipher_list": {
+                  "type": "string"
+                },
+                "private_key_password": {
+                  "type": "string"
+                }
+              }
             },
             "radsecSecret": {
               "type": "string"
+            },
+            "clients": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "ipaddr": {
+                    "type": "string"
+                  },
+                  "ipv6addr": {
+                    "type": "string"
+                  },
+                  "secret": {
+                    "type": "string"
+                  },
+                  "require_message_authenticator": {
+                    "type": "boolean"
+                  },
+                  "nas_type": {
+                    "type": "string"
+                  },
+                  "virtual_server": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           }
         },

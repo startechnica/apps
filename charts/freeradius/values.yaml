@@ -194,6 +194,13 @@ configurations: |
 
   proxy_requests  = yes
   $INCLUDE proxy.conf
+  {{- if or .Values.homeServers .Values.tls.enabled }}
+  $INCLUDE /opt/startechnica/freeradius/home-servers.conf
+  {{- end }}
+  {{- if or .Values.homeServerPools .Values.tls.enabled }}
+  $INCLUDE /opt/startechnica/freeradius/home-server-pools.conf
+  {{- end }}
+  $INCLUDE /opt/startechnica/freeradius/realms.conf
   $INCLUDE {{ .Values.clients.includeFile }}
 
   thread pool {
@@ -303,12 +310,12 @@ modules:
       groupreply: radgroupreply
       postauth: radpostauth
       usergroup: radusergroup
-    ## @param modules.sql.groupAttribute The group attribute specific to this instance of rlm_sql
+    ## @param modules.sql.group_attribute The group attribute specific to this instance of rlm_sql (maps 1:1 to FreeRADIUS `group_attribute`)
     ##
-    groupAttribute: SQL-Group
-    ## @param modules.sql.readClients Read RADIUS clients from the database (`nas` table). Clients are only read on server startup.
+    group_attribute: SQL-Group
+    ## @param modules.sql.read_clients Read RADIUS clients from the database (`nas` table). Clients are only read on server startup. (Maps 1:1 to FreeRADIUS `read_clients`.)
     ##
-    readClients: true
+    read_clients: true
     ## @param modules.sql.readGroups Read the group tables (`groupcheck`/`groupreply`) during authorization. When `true`, group tables are read unless `Fall-Through = no` is set in the reply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
     ##
     readGroups: true
@@ -829,6 +836,69 @@ modules:
 policies:
   includeDir: policy.d
 
+## FreeRADIUS home_server definitions for proxy routing. Each entry renders a
+## `home_server <name> { ... }` block referenced by a `home_server_pool`.
+## Rendered into the `<fullname>-home-servers` ConfigMap, mounted at
+## `/opt/startechnica/freeradius/home-servers.conf` and `$INCLUDE`d from the
+## main configuration (absolute path) when this array is non-empty.
+## `homeServerPools` and `realms` render into their own sibling ConfigMaps
+## (`-home-server-pools` / `-realms`) under the same mount root and are
+## `$INCLUDE`d in dependency order (servers → pools → realms).
+##
+## @param homeServers [array] Inline home_server entries. Each entry: `name` is the home_server identifier (referenced by `homeServerPools[].homeServers`); `type` is `auth` / `acct` / `auth+acct` / `coa` (default `auth`); `ipaddr` / `port` address the remote (port default 1812); `secret` is the shared secret (use `$ENV{...}` to inject from the env, e.g. via `extraEnvVarsSecret`); `proto` is `udp` / `tcp` (default `udp`); the remaining fields (`response_window`, `zombie_period`, `revive_interval`, `status_check`, `check_interval`, `num_answers_to_alive`) map 1:1 to FreeRADIUS native `home_server { }` directives and are emitted only when set.
+## homeServers:
+##   - name: auth1
+##     type: auth
+##     ipaddr: 192.0.2.10
+##     port: 1812
+##     secret: $ENV{FREERADIUS_HOMESERVER_AUTH1_SECRET}
+##     proto: udp
+##     response_window: 20
+##     zombie_period: 40
+##     revive_interval: 120
+##     status_check: status-server
+##     check_interval: 30
+##     num_answers_to_alive: 3
+##
+homeServers: []
+
+## FreeRADIUS home_server_pool definitions. Each entry renders a
+## `home_server_pool <name> { ... }` block listing one or more `home_server`
+## members; realms reference pools via `realms[].authPool` / `acctPool`.
+##
+## @param homeServerPools [array] Inline home_server_pool entries. Each entry: `name` is the pool identifier referenced by realms; `type` is `fail-over` (default) / `load-balance` / `client-balance` / `client-port-balance` / `keyed-balance`; `home_servers` is the ordered list of `home_server` names belonging to this pool (each renders as one `home_server = <name>` line); `virtual_server` (optional, maps 1:1 to the FreeRADIUS `virtual_server` directive in `home_server_pool { }`) names a virtual server the proxied reply is processed through; `fallback` (optional) names a `home_server` used when every pool member is dead. Note: per-entry sub-fields use snake_case here for visual consistency with the rendered FreeRADIUS config; this is distinct from the top-level `.Values.homeServers` (camelCase, list of home_server *definitions*).
+## homeServerPools:
+##   - name: my_auth_failover
+##     type: fail-over
+##     home_servers:
+##       - auth1
+##       - auth2
+##     virtual_server: ""
+##     fallback: ""
+##
+homeServerPools: []
+
+## FreeRADIUS realm definitions for proxy routing. Each entry renders a
+## `realm <name> { ... }` block. Realms map an incoming request's User-Name
+## suffix to a `home_server_pool` (`authPool` / `acctPool`) or hand the
+## request to a local `virtualServer`. Leave empty to keep the upstream
+## `proxy.conf` realms unchanged.
+##
+## @param realms [array] Inline realm entries. Each entry: `name` is the realm string matched against the User-Name suffix (use `DEFAULT` for the fall-through realm, `NULL` for requests with no realm, `LOCAL` for the upstream-convention "handle locally, do not proxy" sentinel). All optional sub-fields below use snake_case mirroring FreeRADIUS native `realm { }` directive names; emit only the ones you need (mixing old-style and new-style is rejected by FreeRADIUS). Two routing modes: (a) **new-style proxy** via `auth_pool` / `acct_pool` / `coa_pool`, each referencing a `home_server_pool` name from `homeServerPools[]` (auth = Access-Request, acct = Accounting-Request, coa = Change-of-Authorization / Disconnect-Request); (b) **old-style proxy** via `authhost` / `accthost` / `secret` (FreeRADIUS 1.x/2.x compatibility — host:port pairs and the shared secret in-line). `virtual_server` handles the request locally instead of proxying (alternative to both modes). `nostrip: true` keeps the realm portion of User-Name when proxying (default strips). `realm LOCAL` is emitted by the chart unconditionally (the upstream definition in `files/proxy.conf` is commented out to avoid a "Duplicate realm" error). Supplying your own `name: LOCAL` entry below overrides the chart-managed one — useful for pointing LOCAL at a custom `virtual_server`. Wrapping charts can override `realms` freely without losing LOCAL.
+## realms:
+##   - name: example.com                  # new-style proxy via pool refs
+##     auth_pool: my_auth_failover
+##     acct_pool: my_acct_failover
+##     coa_pool: my_coa_pool
+##     nostrip: false
+##     virtual_server: ""
+##   - name: legacy.example.com           # old-style proxy
+##     authhost: radius.example.com:1600
+##     accthost: radius.example.com:1601
+##     secret: $ENV{FREERADIUS_REALM_LEGACY_SECRET}
+##
+realms: []
+
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
 ## the corresponding container port / Service port / NetworkPolicy entry.
@@ -894,17 +964,40 @@ sites:
   ## container/Service port.
   ##
   ## @param sites.radsec.enabled Enable the RADSEC virtual server
-  ## @param sites.radsec.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
-  ## @param sites.radsec.privateKeyPassword Password for the RADSEC private key when it is password-protected
+  ## @param sites.radsec.listen.ipaddr Bind address for the RADSEC `listen { }` block. `*` accepts on every pod interface; set to `0.0.0.0` / a specific IPv4 / `::` for IPv6 to constrain. Note: the port is *not* configurable here — it is shared with the Service and NetworkPolicy via `containerPorts.radsec`.
+  ## @param sites.radsec.listen.type FreeRADIUS listen-socket type. Default `auth+acct` handles both Access-Request and Accounting-Request packets on the same RADSEC connection — typical for a RADSEC-replacement-for-UDP setup. Use `auth` or `acct` to constrain.
+  ## @param sites.radsec.listen.virtual_server Virtual server that processes decrypted RADSEC requests. Default `default` routes to the same `server default { }` that handles UDP traffic — see [README.md](README.md) §RADSEC for the rationale. Override to send RADSEC requests through a separate processing pipeline (must reference an existing virtual server, e.g. via `extraSites` or `sites.<name>.enabled`).
+  ## @param sites.radsec.listen.proxy_protocol Emit `proxy_protocol = yes` so the listener parses HAProxy PROXY-protocol headers and uses the real client IP for RADIUS client lookup. Useful when fronting the RADSEC port with an L4 load balancer that adds PROXY headers. Default `false` (directive omitted, matches FreeRADIUS image default).
+  ## @param sites.radsec.listen.check_client_connections Emit `check_client_connections = yes` so FreeRADIUS validates the client connection (TCP/TLS handshake) up front and rejects unauthorised peers before parsing RADIUS packets. Default `false` (directive omitted, matches FreeRADIUS image default).
+  ## @param sites.radsec.tls.cipher_list TLS cipher suite passed to the RADSEC server's `tls { cipher_list = ... }` directive. `DEFAULT` keeps the upstream image's default list; set to an explicit OpenSSL cipher string to constrain (e.g. `HIGH:!aNULL:!MD5`). Also applied to the chart-managed `home_server radsec` loopback block in `home-servers.conf` so both peers negotiate consistently.
+  ## @param sites.radsec.tls.private_key_password Password for the RADSEC private key when it is password-protected. Renders the `tls { private_key_password = $ENV{...} }` line in both the radsec listener and the chart-managed `home_server radsec` loopback. Auto-generated into the chart credentials Secret (`sites-radsec-privkey-password`) when left empty; the env-var (`FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`) is wired only when this value is set.
   ## @param sites.radsec.radsecSecret RADIUS shared secret for the loopback `clients radsec { client 127.0.0.1 { secret = … } }` block in the RADSEC virtual server. Stored under `clients-radsec-secret` in the chart-managed credentials Secret and injected via `$ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}`. Auto-generated when empty; FreeRADIUS defaults the secret to literal `"radsec"` for `proto = tls` so any value works.
   ## @param sites.radsec.existingConfigMap Mount an existing ConfigMap (must contain a `radsec` key with the virtual-server config) at `sites-enabled/radsec` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.radsec.clients [array] Additional external RADSEC peers (NASes, WiFi controllers, switches, VPN concentrators) authorised to connect on port `containerPorts.radsec`. Each entry renders a `client <name> { ... }` block inside the existing `clients radsec { }` group; the chart-managed loopback `client 127.0.0.1` (used by `home_server radsec` for the self-proxy pattern) is always emitted alongside, so don't add `127.0.0.1` here. Each entry: `name` is the on-config identifier (DNS-1123 label); `ipaddr` is an IPv4 host or CIDR (`192.0.2.50` / `192.0.2.0/24`); `ipv6addr` optional IPv6 variant; `secret` is the RADIUS shared secret — FreeRADIUS defaults this to literal `"radsec"` for `proto = tls`, so an empty value works for vanilla RADSEC, set it when your NAS uses a real secret (use `$ENV{...}` to pull from `extraEnvVarsSecret`); `require_message_authenticator: true` enforces the BlastRADIUS mitigation per client; `nas_type` is a free-form NAS-Type tag (default `other`); `virtual_server` (optional) overrides the listener's default virtual server for this client. All field names mirror FreeRADIUS native `client { }` directive names.
   ##
   radsec:
     enabled: false
     existingConfigMap: ""
-    cipher: "DEFAULT"
-    privateKeyPassword: ""
     radsecSecret: ""
+    listen:
+      ipaddr: "*"
+      type: "auth+acct"
+      virtual_server: "default"
+      proxy_protocol: false
+      check_client_connections: false
+    tls:
+      cipher_list: "DEFAULT"
+      private_key_password: ""
+    ## clients:
+    ##   - name: ap-controller
+    ##     ipaddr: 192.0.2.50/32
+    ##     secret: $ENV{FREERADIUS_RADSEC_CLIENT_AP_SECRET}
+    ##     require_message_authenticator: true
+    ##     nas_type: cisco
+    ##     virtual_server: ""
+    ##     ipv6addr: ""
+    ##
+    clients: []
   ## `tls-cache` virtual server — backs EAP TLS session resumption with a
   ## shared Redis-backed rlm_cache instance, fixing the per-pod caveat
   ## documented on `modules.eap.tlsConfig.cache` above. Enabling renders:
@@ -976,7 +1069,7 @@ clients:
 ## =============================================================================
 
 auth:
-  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `privateKeyPassword` is set). Overrides chart-rendered Secret rendering.
+  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
   ##
   existingSecret: ""
   ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`).

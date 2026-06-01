@@ -38,7 +38,7 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
     {{- end }}
 {{- end }}
-{{- if and .Values.tls.enabled .Values.sites.radsec.privateKeyPassword }}
+{{- if and .Values.tls.enabled .Values.sites.radsec.tls.private_key_password }}
 - name: FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD
   valueFrom:
     secretKeyRef:

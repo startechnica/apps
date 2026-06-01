@@ -20,18 +20,19 @@ data:
 
     listen {
 
-        # ipaddr = $ENV{FREERADIUS_SITES_RADSEC_LISTEN}
-        ipaddr = *
+        ipaddr = {{ .Values.sites.radsec.listen.ipaddr }}
         port = {{ .Values.containerPorts.radsec }}
 
-        type = auth+acct
+        type = {{ .Values.sites.radsec.listen.type }}
         proto = tcp
-        virtual_server = default
+        virtual_server = {{ .Values.sites.radsec.listen.virtual_server }}
         clients = radsec
-
-        # proxy_protocol = no
-
-        # check_client_connections = yes
+        {{- if .Values.sites.radsec.listen.proxy_protocol }}
+        proxy_protocol = yes
+        {{- end }}
+        {{- if .Values.sites.radsec.listen.check_client_connections }}
+        check_client_connections = yes
+        {{- end }}
 
         limit {
             max_connections = 16
@@ -40,12 +41,12 @@ data:
         }
 
         tls {
-            {{- if .Values.sites.radsec.privateKeyPassword }}
+            {{- if .Values.sites.radsec.tls.private_key_password }}
             private_key_password = $ENV{FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD}
             {{- end }}
             private_key_file = {{ include "freeradius.tls.certKeyPath" . }}
 
-            #       allow_expired_crl = no
+            # allow_expired_crl = no
 
             certificate_file = {{ include "freeradius.tls.certPath" . }}
             ca_file = {{ include "freeradius.tls.caCertPath" . }}
@@ -56,16 +57,16 @@ data:
 
             fragment_size = 8192
 
-            #       include_length = yes
+            # include_length = yes
 
-            #       check_crl = yes
+            # check_crl = yes
             ca_path = ${cadir}
             ca_path_reload_interval = 3600
 
             # check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
             # check_cert_cn = %{User-Name}
             #
-            cipher_list = {{ default "DEFAULT" .Values.sites.radsec.cipher }}
+            cipher_list = {{ default "DEFAULT" .Values.sites.radsec.tls.cipher_list }}
             cipher_server_preference = no
 
             tls_min_version = "1.2"
@@ -75,15 +76,15 @@ data:
                 enable = no
                 lifetime = 24 # hours
 
-                #name = "TLS ${..ipaddr} ${..port} ${..proto}"
+                # name = "TLS ${..ipaddr} ${..port} ${..proto}"
 
-                #persist_dir = "${logdir}/tlscache"
+                # persist_dir = "${logdir}/tlscache"
             }
 
             require_client_cert = yes
 
             verify {
-                #               tmpdir = /tmp/radiusd
+                # tmpdir = /tmp/radiusd
                 # tmpdir = /startechnica/freeradius/tmp
 
                 # client = "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
@@ -98,56 +99,25 @@ data:
 
             secret = $ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}
         }
-    }
 
-    home_server radsec {
-        ipaddr = 127.0.0.1
-        port = {{ .Values.containerPorts.radsec }}
-
-        type = auth
-        secret = radsec
-        proto = tcp
-        status_check = none
-
-        tls {
-            # hostname = "example.com"
-
-            {{- if .Values.sites.radsec.privateKeyPassword }}
-            private_key_password = $ENV{FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD}
+        {{- range .Values.sites.radsec.clients }}
+        client {{ .name }} {
+            ipaddr = {{ .ipaddr | quote }}
+            {{- if .ipv6addr }}
+            ipv6addr = {{ .ipv6addr | quote }}
             {{- end }}
-            # private_key_file = ${certdir}/client.pem
-            private_key_file = {{ include "freeradius.tls.certKeyPath" . }}
-
-            # certificate_file = ${certdir}/client.pem
-            certificate_file = {{ include "freeradius.tls.certPath" . }}
-            ca_file = {{ include "freeradius.tls.caCertPath" . }}
-
-            # psk_query = "%{psksql:select hex(key) from psk_keys where keyid = '%{TLS-PSK-Identity}'}"
-
-            # dh_file = ${certdir}/dh
-            random_file = /dev/urandom
-
-            fragment_size = 8192
-
-            # include_length = yes
-
-            # check_crl = yes
-            ca_path = ${cadir}
-
-            # check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
-
-            # check_cert_cn = %{User-Name}
-            #
-            cipher_list = {{ default "DEFAULT" .Values.sites.radsec.cipher }}
+            proto = tls
+            secret = {{ default "radsec" .secret | quote }}
+            {{- if .require_message_authenticator }}
+            require_message_authenticator = yes
+            {{- end }}
+            {{- if .nas_type }}
+            nas_type = {{ .nas_type }}
+            {{- end }}
+            {{- if .virtual_server }}
+            virtual_server = {{ .virtual_server }}
+            {{- end }}
         }
-    }
-
-    home_server_pool radsec {
-        type = fail-over
-        home_server = radsec
-    }
-
-    realm radsec {
-        auth_pool = radsec
+        {{- end }}
     }
 {{- end }}

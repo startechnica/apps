@@ -1,0 +1,100 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if or .Values.homeServers .Values.tls.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-home-servers" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  home-servers.conf: |-
+    {{- /* `home_server radsec` is chart-managed so wrapping charts that
+           override .Values.homeServers don't accidentally drop it. A
+           user-supplied `name: radsec` entry in .Values.homeServers wins
+           (the static block below is skipped to avoid a Duplicate
+           home_server error). Gated on tls.enabled since the radsec
+           loopback only exists when the RADSEC virtual server is up. */}}
+    {{- $hasRadsec := false }}
+    {{- range .Values.homeServers }}
+    {{- if eq .name "radsec" }}{{- $hasRadsec = true }}{{- end }}
+    {{- end }}
+    {{- if and .Values.tls.enabled (not $hasRadsec) }}
+    home_server radsec {
+        ipaddr = 127.0.0.1
+        port = {{ .Values.containerPorts.radsec }}
+
+        type = auth
+        secret = $ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}
+        proto = tcp
+        status_check = none
+
+        tls {
+            # hostname = "example.com"
+
+            {{- if .Values.sites.radsec.tls.private_key_password }}
+            private_key_password = $ENV{FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD}
+            {{- end }}
+            private_key_file = {{ include "freeradius.tls.certKeyPath" . }}
+
+            # certificate_file = ${certdir}/client.pem
+            certificate_file = {{ include "freeradius.tls.certPath" . }}
+            ca_file = {{ include "freeradius.tls.caCertPath" . }}
+
+            # psk_query = "%{psksql:select hex(key) from psk_keys where keyid = '%{TLS-PSK-Identity}'}"
+
+            # dh_file = ${certdir}/dh
+            random_file = /dev/urandom
+
+            fragment_size = 8192
+
+            # include_length = yes
+
+            # check_crl = yes
+            ca_path = ${cadir}
+
+            # check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
+            # check_cert_cn = %{User-Name}
+
+            cipher_list = {{ default "DEFAULT" .Values.sites.radsec.tls.cipher_list }}
+        }
+    }
+    {{- end }}
+
+    {{- range .Values.homeServers }}
+    home_server {{ .name }} {
+        type = {{ default "auth" .type }}
+        ipaddr = {{ .ipaddr | quote }}
+        port = {{ default 1812 .port }}
+        secret = {{ .secret | quote }}
+        {{- if .proto }}
+        proto = {{ .proto }}
+        {{- end }}
+        {{- if .response_window }}
+        response_window = {{ .response_window }}
+        {{- end }}
+        {{- if .zombie_period }}
+        zombie_period = {{ .zombie_period }}
+        {{- end }}
+        {{- if .revive_interval }}
+        revive_interval = {{ .revive_interval }}
+        {{- end }}
+        {{- if .status_check }}
+        status_check = {{ .status_check }}
+        {{- end }}
+        {{- if .check_interval }}
+        check_interval = {{ .check_interval }}
+        {{- end }}
+        {{- if .num_answers_to_alive }}
+        num_answers_to_alive = {{ .num_answers_to_alive }}
+        {{- end }}
+    }
+    {{- end }}
+{{- end }}

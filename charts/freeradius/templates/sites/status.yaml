@@ -58,14 +58,13 @@ data:
             port = {{ .Values.containerPorts.status }}
         }
 
-      log {
-        auth          = no      # suppress "Auth: Login OK/incorrect" lines
-        auth_badpass  = no
-        auth_goodpass = no
-        stripped_names = no
-      }
+        log {
+            auth          = no      # suppress "Auth: Login OK/incorrect" lines
+            auth_badpass  = no
+            auth_goodpass = no
+            stripped_names = no
+        }
 
-        #
         #  We recommend that you list ONLY management clients here.
         #  i.e. NOT your NASes or Access Points, and for an ISP,
         #  DEFINITELY not any RADIUS servers that are proxying packets

@@ -88,6 +88,16 @@ spec:
         {{- if not .Values.clients.existingConfigMapName }}
         checksum/configmap-clients: {{ include (print $.Template.BasePath "/configmaps/clients.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Files.Get "files/proxy.conf" }}
+        checksum/configmap-proxy: {{ include (print $.Template.BasePath "/configmaps/proxy.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if or .Values.homeServers .Values.tls.enabled }}
+        checksum/configmap-home-servers: {{ include (print $.Template.BasePath "/configmaps/home-servers.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if or .Values.homeServerPools .Values.tls.enabled }}
+        checksum/configmap-home-server-pools: {{ include (print $.Template.BasePath "/configmaps/home-server-pools.yaml") . | sha256sum }}
+        {{- end }}
+        checksum/configmap-realms: {{ include (print $.Template.BasePath "/configmaps/realms.yaml") . | sha256sum }}
         {{- if .Values.keycloak.enabled }}
         {{- $kcResolvedAnno := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
         {{- $kcHasLua := false -}}{{- $kcHasPython := false -}}{{- $kcHasSecret := false -}}{{- $kcHasTls := false -}}
@@ -410,6 +420,28 @@ spec:
             - name: freeradius-clients
               mountPath: /etc/freeradius/clients.conf
               subPath: clients.conf
+              readOnly: true
+            {{- if .Files.Get "files/proxy.conf" }}
+            - name: freeradius-proxy
+              mountPath: /etc/freeradius/proxy.conf
+              subPath: proxy.conf
+              readOnly: true
+            {{- end }}
+            {{- if or .Values.homeServers .Values.tls.enabled }}
+            - name: freeradius-home-servers
+              mountPath: /opt/startechnica/freeradius/home-servers.conf
+              subPath: home-servers.conf
+              readOnly: true
+            {{- end }}
+            {{- if or .Values.homeServerPools .Values.tls.enabled }}
+            - name: freeradius-home-server-pools
+              mountPath: /opt/startechnica/freeradius/home-server-pools.conf
+              subPath: home-server-pools.conf
+              readOnly: true
+            {{- end }}
+            - name: freeradius-realms
+              mountPath: /opt/startechnica/freeradius/realms.conf
+              subPath: realms.conf
               readOnly: true
             {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
             - name: custom-init-scripts
@@ -758,6 +790,24 @@ spec:
         - name: freeradius-clients
           configMap:
             name: {{ default (printf "%s-clients" (include "st-common.names.fullname" .)) .Values.clients.existingConfigMapName }}
+        {{- if .Files.Get "files/proxy.conf" }}
+        - name: freeradius-proxy
+          configMap:
+            name: {{ printf "%s-proxy" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- if or .Values.homeServers .Values.tls.enabled }}
+        - name: freeradius-home-servers
+          configMap:
+            name: {{ printf "%s-home-servers" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- if or .Values.homeServerPools .Values.tls.enabled }}
+        - name: freeradius-home-server-pools
+          configMap:
+            name: {{ printf "%s-home-server-pools" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        - name: freeradius-realms
+          configMap:
+            name: {{ printf "%s-realms" (include "st-common.names.fullname" .) }}
         {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
         - name: custom-init-scripts
           configMap:

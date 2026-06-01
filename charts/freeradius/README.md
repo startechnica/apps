@@ -255,6 +255,19 @@ The command removes all the Kubernetes components associated with the chart and 
 | `modules.sql.tls.certKeyFilename`      |                                                     | `""`              |
 | `modules.sql.tls.certCAFilename`       |                                                     | `""`              |
 | `modules.sql.tls.existingTlsSecret`    |                                                     | `""`              |
+| `modules.sql.group_attribute`          | Group attribute specific to this instance of rlm_sql (maps 1:1 to FreeRADIUS `group_attribute`) | `SQL-Group` |
+| `modules.sql.read_clients`             | Read RADIUS clients from the `nas` table on startup (maps 1:1 to FreeRADIUS `read_clients`) | `true` |
+
+
+### Proxy / realm parameters
+
+Inline definitions of FreeRADIUS proxy targets (`home_server`), pools, and realms. Each top-level array is rendered into its own ConfigMap, mounted under `/opt/startechnica/freeradius/`, and `$INCLUDE`d from `radiusd.conf` in dependency order (`home-servers.conf` → `home-server-pools.conf` → `realms.conf`). The chart-managed `proxy.conf` (sourced from `files/proxy.conf` and mounted at `/etc/freeradius/proxy.conf`) replaces the image's bundled one with `realm LOCAL { }` commented out so the chart can own that name.
+
+| Name                                       | Description                                                                                                          | Value             |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `homeServers`                              | Inline `home_server` entries. Per-entry fields use snake_case mirroring FreeRADIUS native `home_server { }` directives (`name`, `type`, `ipaddr`, `port`, `secret`, `proto`, `response_window`, `zombie_period`, `revive_interval`, `status_check`, `check_interval`, `num_answers_to_alive`). See `values.yaml` for the full per-entry schema. | `[]` |
+| `homeServerPools`                          | Inline `home_server_pool` entries. Per-entry: `name`, `type`, `home_servers` (list of `home_server` name references), optional `virtual_server`, `fallback`. | `[]` |
+| `realms`                                   | Inline `realm` entries. Per-entry: `name`, new-style proxy via `auth_pool` / `acct_pool` / `coa_pool`, old-style proxy via `authhost` / `accthost` / `secret`, optional `nostrip` flag, optional local `virtual_server`. `realm LOCAL { }` is chart-managed (emitted unconditionally unless overridden by a user `name: LOCAL` entry); when `tls.enabled` the chart also emits `realm radsec { auth_pool = radsec }` plus the matching `home_server radsec` and `home_server_pool radsec` loopback definitions. | `[]` |
 
 
 ### Custom FreeRADIUS enabled sites parameters
@@ -273,10 +286,17 @@ The command removes all the Kubernetes components associated with the chart and 
 | `sites.status.existingConfigMap`      | BYO ConfigMap (key `status`) mounted at `sites-enabled/status`; skips chart rendering              | `""`      |
 | `sites.dhcp.enabled`                  | Enable the `dhcp` virtual server                                                                   | `false`   |
 | `sites.dhcp.existingConfigMap`        | BYO ConfigMap (key `dhcp`) mounted at `sites-enabled/dhcp`; skips chart rendering                  | `""`      |
-| `sites.radsec.enabled`                   | Enable the RADSEC virtual server                                                                   | `false`   |
-| `sites.radsec.cipher`                    | TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the image default)                   | `DEFAULT` |
-| `sites.radsec.privateKeyPassword`        | Password for the RADSEC private key when it is password-protected                                  | `""`      |
-| `sites.radsec.existingConfigMap`         | BYO ConfigMap (key `radsec`) mounted at `sites-enabled/radsec`; skips chart rendering                    | `""`      |
+| `sites.radsec.enabled`                       | Enable the RADSEC virtual server                                                                       | `false`     |
+| `sites.radsec.listen.ipaddr`                 | Bind address for the RADSEC `listen { }` block (`*` = all interfaces)                                  | `"*"`       |
+| `sites.radsec.listen.type`                   | Listen-socket packet type (`auth+acct` / `auth` / `acct`)                                              | `auth+acct` |
+| `sites.radsec.listen.virtual_server`         | Virtual server that processes decrypted RADSEC requests                                                | `default`   |
+| `sites.radsec.listen.proxy_protocol`         | Parse HAProxy PROXY-protocol headers (use the real client IP for client lookup)                        | `false`     |
+| `sites.radsec.listen.check_client_connections` | Validate the client TCP/TLS handshake up front and reject unauthorised peers before parsing RADIUS    | `false`     |
+| `sites.radsec.tls.cipher_list`               | OpenSSL cipher string for the radsec listener `tls { cipher_list = ... }` and the chart-managed `home_server radsec` loopback (`DEFAULT` keeps the image default) | `DEFAULT` |
+| `sites.radsec.tls.private_key_password`      | Password for the RADSEC private key when it is password-protected. Auto-generated into the chart credentials Secret (`sites-radsec-privkey-password`) when left empty; the env-var (`FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`) is wired only when this value is set. | `""` |
+| `sites.radsec.radsecSecret`                  | RADIUS shared secret for the chart-managed loopback `client 127.0.0.1` (auto-generated when empty)     | `""`        |
+| `sites.radsec.clients`                       | Additional external RADSEC peers (NASes, WiFi controllers, switches) authorised to connect on port `containerPorts.radsec`. Each entry renders a `client <name> { }` block inside the existing `clients radsec { }` group alongside the chart-managed loopback. Per-entry fields use snake_case (`name`, `ipaddr`, `ipv6addr`, `secret`, `require_message_authenticator`, `nas_type`, `virtual_server`). | `[]` |
+| `sites.radsec.existingConfigMap`             | BYO ConfigMap (key `radsec`) mounted at `sites-enabled/radsec`; skips chart rendering                  | `""`        |
 
 
 ### Keycloak integration parameters
@@ -427,7 +447,7 @@ When you don't supply them, the chart auto-generates several credentials into th
 
 - `sites-status-secret` — shared secret for the RADIUS `status` virtual server (probes + metrics exporter).
 - `clients-radsec-secret` — RADIUS shared secret for the RADSEC loopback `client 127.0.0.1` (only when `tls.enabled`; auto-generated when `sites.radsec.radsecSecret` is empty).
-- `sites-radsec-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled` AND `sites.radsec.privateKeyPassword` is set).
+- `sites-radsec-privkey-password` — RADSEC private-key passphrase (only when `tls.enabled` AND `sites.radsec.tls.private_key_password` is set).
 - `mods-eap-tls-privkey-password` — EAP private-key passphrase (only when `modules.eap.enabled` AND `modules.eap.tlsConfig.private_key_password` is set).
 - `mods-rest-password`, `database-password` — when the matching feature is enabled.
 
@@ -442,8 +462,9 @@ To make these deterministic, pin them explicitly instead of relying on auto-gene
 sites:
   status:
     secret: "<your-status-secret>"
-  tls:
-    privateKeyPassword: "<your-radsec-key-password>"
+  radsec:
+    tls:
+      private_key_password: "<your-radsec-key-password>"
 
 # Option B — bring your own Secret for everything
 auth:
