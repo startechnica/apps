@@ -6,8 +6,8 @@ SPDX-License-Identifier: APACHE-2.0
 {{- /*
 Self-signed CA chain bootstrapped via cert-manager, rendered only when the chart
 issues via cert-manager (`freeradius.tls.useCertManager` — the cert-manager API
-is present and `tls.certManager.create` is true) AND no external `issuerRef.name`
-is supplied (see `freeradius.tls.certManager.bootstrapCA`). Provides:
+is present on the cluster) AND no external `issuerRef.name` is supplied
+(see `freeradius.tls.certManager.bootstrapCA`). Provides:
   1. a self-signed `Issuer` that bootstraps trust,
   2. a CA `Certificate` (`isCA: true`) signed by (1), and
   3. a CA `Issuer` consuming (2)'s Secret — referenced by the leaf
