@@ -256,6 +256,22 @@
   in `mods-config/keycloak/keycloak.yaml`, the `$isRest` branch in
   `keycloak-policy.yaml` (`okRcode` is always `(ok)`), and the
   `Auth-Type REST { keycloak_rest }` wiring in `sites/inner-tunnel`.
+- **OIDC python wrappers consolidated into a single ConfigMap.** With
+  more than one `modules.oidc.instances.<name>` configured, the chart
+  previously rendered N separate `<fullname>-oidc[-<name>]-python`
+  ConfigMaps (one rlm_python3 wrapper per instance) and N matching pod
+  volumes. They are now collapsed into one shared ConfigMap
+  `<fullname>-oidc-python` whose `data` carries one key per instance
+  (`oidc_default.py`, `oidc_<name>.py`, …), mounted via N `subPath`
+  mounts off a single `oidc-python` pod volume. The wrapper Python
+  content is unchanged; only the K8s wrapper layer changes.
+  Single-instance releases see no observable difference (the
+  default-instance name was already `<fullname>-oidc-python`).
+  Multi-instance upgrades drop N old per-instance ConfigMaps and create
+  one new shared ConfigMap; the existing
+  `checksum/configmap-oidc-mapper-python` pod annotation rolls the
+  pod. See **Upgrading → OIDC python wrappers consolidated into a
+  single ConfigMap** in the README.
 
 ### Deprecated
 
@@ -324,6 +340,25 @@
   in verbose debug mode by default.
 - Added a writable `emptyDir` at `/var/run/radiusd` so the daemon can write its
   pidfile under `readOnlyRootFilesystem: true`.
+- `templates/modules/oidc/oidc-policy.yaml` no longer emits invalid
+  multi-doc YAML for N>1 OIDC instances. A `{{- … -}}` whitespace-strip
+  on the last per-instance variable assignment consumed the newline
+  before the document separator, so iteration 2's `---` came out glued
+  to iteration 1's trailing `}` (`    }---apiVersion: v1`). `helm
+  template` was lenient enough to render it but strict downstream YAML
+  parsers (kustomize, server-side-apply, helm-unittest) saw a single
+  document with duplicate `apiVersion` / `kind` / `metadata` keys and
+  rejected the output. Fixed by dropping the trailing `-` so the
+  newline between iterations is preserved.
+- `templates/gateway-api/EnvoyProxy.yaml` no longer ships a duplicate
+  `start_time: "%START_TIME%"` JSON access-log key (lines 47 and 56
+  both defined it — copy-paste leftover from
+  `[freeradius] EnvoyProxy + sites/default: drop HTTP-only access-log
+  fields`). YAML's last-key-wins hid it during render, but Envoy
+  schema validation rejected the resulting EnvoyProxy CR, so the chart
+  could not be applied in its default `gateway.infrastructure: envoy`
+  path. Removed the duplicate line; the chart now renders cleanly under
+  the default infrastructure setting.
 
 ## 1.1.0 (2026-05-29)
 

@@ -76,6 +76,12 @@ annotations:
       description: "`image.debug` (previously documented but unwired) now gates the container args between `-f` (normal) and `-fxx` (debug), so FreeRADIUS no longer starts in verbose debug mode by default."
     - kind: fixed
       description: "Added a writable `emptyDir` at `/var/run/radiusd` so the daemon can write its pidfile under `readOnlyRootFilesystem: true`."
+    - kind: changed
+      description: "OIDC python wrappers consolidated into a single `<fullname>-oidc-python` ConfigMap with one data key per instance (`oidc_default.py`, `oidc_<name>.py`, …); the per-instance `<fullname>-oidc-<name>-python` ConfigMaps and matching pod volumes are gone, replaced by N subPath mounts off the one shared `oidc-python` volume. Wrapper Python unchanged. Multi-instance upgrades drop N old ConfigMaps and create one new shared one."
+    - kind: fixed
+      description: "`templates/modules/oidc/oidc-policy.yaml` no longer produces invalid multi-doc YAML with N>1 OIDC instances — a `{{- … -}}` whitespace-strip on the last per-instance variable assignment glued the document separator (`---`) to the previous iteration's trailing `}`, so strict downstream YAML parsers saw a single document with duplicate top-level keys and rejected the output."
+    - kind: fixed
+      description: "`templates/gateway-api/EnvoyProxy.yaml` no longer ships a duplicate `start_time` JSON access-log key (lines 47 and 56) — copy-paste leftover that Envoy schema validation rejects. The chart now renders cleanly in the default `gateway.infrastructure: envoy` path; existing tests dropped their `gateway.infrastructure: \"\"` workaround."
 apiVersion: v2
 appVersion: 3.2.8
 dependencies:

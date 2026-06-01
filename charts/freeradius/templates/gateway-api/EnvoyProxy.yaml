@@ -53,7 +53,6 @@ spec:
               request_id: "%REQ(X-REQUEST-ID)%"
               response_code: "%RESPONSE_CODE%"
               response_flags: "%RESPONSE_FLAGS%"
-              start_time: "%START_TIME%"
               upstream_host: "%UPSTREAM_HOST%"
             type: JSON
           sinks:

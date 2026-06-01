@@ -187,3 +187,317 @@ tests:
           content:
             name: oidc
           any: true
+
+  ###
+  ### Option A invariants — N instances share ONE wrapper ConfigMap and ONE pod
+  ### volume. Regression net for the per-instance → unified collapse.
+  ###
+
+  - it: N instances render ONE shared wrapper ConfigMap with N data keys
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.azure.tokenUrl: https://login.microsoftonline.com/x/oauth2/v2.0/token
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-oidc-python
+      - exists:
+          path: data["oidc_default.py"]
+      - exists:
+          path: data["oidc_azure.py"]
+
+  - it: N instances share ONE `oidc-python` pod volume and each gets a subPath mount
+    templates:
+      - templates/Application.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.azure.tokenUrl: https://login.microsoftonline.com/x/oauth2/v2.0/token
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: oidc-python
+            configMap:
+              name: my-radius-freeradius-oidc-python
+          any: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: oidc-python
+            mountPath: /etc/freeradius/scripts/oidc_default.py
+            subPath: oidc_default.py
+            readOnly: true
+          any: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: oidc-python
+            mountPath: /etc/freeradius/scripts/oidc_azure.py
+            subPath: oidc_azure.py
+            readOnly: true
+          any: true
+
+  ###
+  ### refreshTokenCache end-to-end — second python3 module instance, wrapper
+  ### config bit, and policy cache-hit elsif must all light up together.
+  ###
+
+  - it: refreshTokenCache=true renders the cache-hit `<modName>_validate` python3 instance
+    templates:
+      - templates/modules/oidc/oidc.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.redis.server: redis.example.com
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.clientSecret: s3cr3t
+      modules.oidc.instances.default.refreshTokenCache: true
+      modules.oidc.instances.default.cache.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["oidc"]
+          pattern: 'python3 oidc \{'
+      - matchRegex:
+          path: data["oidc"]
+          pattern: 'python3 oidc_validate \{'
+      - matchRegex:
+          path: data["oidc"]
+          pattern: 'func_authorize\s+=\s+"validate"'
+
+  - it: 'refreshTokenCache=true bakes `"refresh_token_cache": True` into the wrapper'
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.redis.server: redis.example.com
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.clientSecret: s3cr3t
+      modules.oidc.instances.default.refreshTokenCache: true
+      modules.oidc.instances.default.cache.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"refresh_token_cache":\s+True'
+
+  - it: refreshTokenCache=true wires the cache-hit validate `elsif (ok)` into the policy
+    templates:
+      - templates/modules/oidc/oidc-policy.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.redis.server: redis.example.com
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.clientSecret: s3cr3t
+      modules.oidc.instances.default.refreshTokenCache: true
+      modules.oidc.instances.default.cache.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["oidc"]
+          pattern: 'elsif \(ok\)'
+      - matchRegex:
+          path: data["oidc"]
+          pattern: 'oidc_validate'
+      - matchRegex:
+          path: data["oidc"]
+          pattern: 'OIDC session revoked'
+
+  ###
+  ### Bake-in coverage — until now only `tokenUrl` was asserted to land in the
+  ### wrapper _CONFIG. The other ~18 baked fields had no regression net.
+  ###
+
+  - it: 'introspect=true bakes both introspect_url and `"introspect": True` into the wrapper'
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.introspectUrl: https://idp.example.com/introspect
+      modules.oidc.instances.default.clientSecret: s3cr3t
+      modules.oidc.instances.default.introspect: true
+    asserts:
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"introspect_url":\s+"https://idp\.example\.com/introspect"'
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"introspect":\s+True'
+
+  - it: 'tls.insecure=true bakes `"insecure": True` and `"ca_file": None` into the wrapper'
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.tls.insecure: true
+    asserts:
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"insecure":\s+True'
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"ca_file":\s+None'
+
+  - it: tls.caCert (default instance) bakes the mounted CA file path into ca_file
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.tls.caCert: |
+        -----BEGIN CERTIFICATE-----
+        FAKE
+        -----END CERTIFICATE-----
+    asserts:
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"ca_file":\s+"/etc/freeradius/certs-oidc/ca\.crt"'
+
+  - it: tls.caCert (named instance) bakes the per-instance CA mount path into ca_file
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.authentik.tokenUrl: https://auth.example.com/token
+      modules.oidc.instances.authentik.tls.caCert: |
+        -----BEGIN CERTIFICATE-----
+        FAKE
+        -----END CERTIFICATE-----
+    asserts:
+      - matchRegex:
+          path: data["oidc_authentik.py"]
+          pattern: '"ca_file":\s+"/etc/freeradius/certs-oidc-authentik/ca\.crt"'
+
+  - it: groupMappings, attributeMappings and require are JSON-serialised into _CONFIG
+    templates:
+      - templates/modules/oidc/oidc-conf-py.yaml
+    values:
+      - ./values/oidc-mappings.yaml
+    asserts:
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"group_mappings":\s+\[\{"group":"admin"'
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"attribute_mappings":\s+\[\{"claim":"email","reply":"Email-Address"\}\]'
+      - matchRegex:
+          path: data["oidc_default.py"]
+          pattern: '"required":\s+\["email_verified"\]'
+
+  ###
+  ### Secret↔wrapper env contract — the pod must inject the env var that the
+  ### wrapper reads, sourced from the Secret the chart actually rendered.
+  ###
+
+  - it: pod injects FREERADIUS_OIDC_CLIENT_SECRET for the default instance
+    templates:
+      - templates/Application.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.clientSecret: s3cr3t
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FREERADIUS_OIDC_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-radius-freeradius-oidc
+                key: client-secret
+          any: true
+
+  - it: pod injects FREERADIUS_OIDC_<NAME>_CLIENT_SECRET for named instances
+    templates:
+      - templates/Application.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.authentik.tokenUrl: https://auth.example.com/token
+      modules.oidc.instances.authentik.clientSecret: s3cr3t
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FREERADIUS_OIDC_AUTHENTIK_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-radius-freeradius-oidc-authentik
+                key: client-secret
+          any: true
+
+  ###
+  ### BYO paths — existingConfigMap and tls.existingSecret skip the
+  ### chart-rendered resource and the Deployment wires the BYO name.
+  ###
+
+  - it: existingConfigMap on an instance skips the chart-rendered module ConfigMap
+    templates:
+      - templates/modules/oidc/oidc.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.existingConfigMap: my-byo-oidc-mod
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: tls.existingSecret skips the chart-rendered CA Secret
+    templates:
+      - templates/modules/oidc/secret-tls.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.tls.existingSecret: my-byo-oidc-tls
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: tls.existingSecret wires the BYO secret name into the pod's TLS volume
+    templates:
+      - templates/Application.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+      modules.oidc.instances.default.tls.existingSecret: my-byo-oidc-tls
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: oidc-tls
+            secret:
+              secretName: my-byo-oidc-tls
+          any: true
+
+  ###
+  ### Negative renders — gates that previously had only positive coverage.
+  ###
+
+  - it: TLS CA Secret is absent when neither caCert nor existingSecret is set
+    templates:
+      - templates/modules/oidc/secret-tls.yaml
+    set:
+      modules.oidc.enabled: true
+      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
+    asserts:
+      - hasDocuments:
+          count: 0

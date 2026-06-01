@@ -26,9 +26,6 @@ tests:
     set:
       gateway.enabled: true
       gateway.gateway.create: true
-      # Skip the EnvoyProxy resource — it ships a duplicate `start_time`
-      # access-log key (gateway-api/EnvoyProxy.yaml:47,56) that fails YAML parse.
-      gateway.infrastructure: ""
     asserts:
       - isKind:
           of: Gateway
@@ -66,7 +63,6 @@ tests:
     set:
       gateway.enabled: true
       gateway.gateway.create: true
-      gateway.infrastructure: ""
       sites.coa.enabled: true
     asserts:
       - contains:
@@ -83,7 +79,6 @@ tests:
     set:
       gateway.enabled: true
       gateway.gateway.create: true
-      gateway.infrastructure: ""
       tls.enabled: true
     asserts:
       - contains:
@@ -102,7 +97,6 @@ tests:
     set:
       gateway.enabled: true
       gateway.gateway.create: true
-      gateway.infrastructure: ""
       gateway.tls.enabled: true
     asserts:
       - contains:
@@ -127,7 +121,6 @@ tests:
       gateway.enabled: true
       gateway.udpRoute.enabled: true
       gateway.gateway.create: true
-      gateway.infrastructure: ""
       sites.coa.enabled: true
     asserts:
       - hasDocuments:
@@ -147,3 +140,210 @@ tests:
       - isKind:
           of: UDPRoute
         documentIndex: 0
+
+  ###
+  ### TLSRoute — backs the RADSEC TLS Passthrough listener. Should appear
+  ### only when the pod terminates TLS (`tls.enabled`); for gateway-side
+  ### terminate (`gateway.tls.enabled` only) there is no Route to wire.
+  ###
+
+  - it: TLSRoute renders when tls.enabled and targets the radsec service port
+    templates:
+      - templates/gateway-api/TLSRoute.yaml
+    set:
+      gateway.enabled: true
+      tls.enabled: true
+    asserts:
+      - isKind:
+          of: TLSRoute
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius
+      - contains:
+          path: spec.rules[0].backendRefs
+          content:
+            group: ""
+            kind: Service
+            name: my-radius-freeradius
+            namespace: "radius"
+            port: 2083
+            weight: 1
+          any: true
+
+  - it: TLSRoute is absent when only gateway.tls.enabled (terminate-at-gateway)
+    templates:
+      - templates/gateway-api/TLSRoute.yaml
+    set:
+      gateway.enabled: true
+      gateway.tls.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### ReferenceGrant — required when routes live in a different namespace
+  ### than the Gateway. Default grant covers UDPRoute + TLSRoute → Service.
+  ###
+
+  - it: ReferenceGrant renders with default from/to when referenceGrant.enabled
+    templates:
+      - templates/gateway-api/ReferenceGrant.yaml
+    set:
+      gateway.enabled: true
+      gateway.referenceGrant.enabled: true
+    asserts:
+      - isKind:
+          of: ReferenceGrant
+      - contains:
+          path: spec.from
+          content:
+            group: gateway.networking.k8s.io
+            kind: UDPRoute
+          any: true
+      - contains:
+          path: spec.from
+          content:
+            group: gateway.networking.k8s.io
+            kind: TLSRoute
+          any: true
+      - contains:
+          path: spec.to
+          content:
+            group: ""
+            kind: Service
+            name: my-radius-freeradius
+          any: true
+
+  - it: ReferenceGrant is absent by default (referenceGrant.enabled=false)
+    templates:
+      - templates/gateway-api/ReferenceGrant.yaml
+    set:
+      gateway.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### EnvoyProxy — chart-managed CR consumed by the Gateway via
+  ### parametersRef. Renders only when `envoyProxy.create: true` (default
+  ### in the envoy infrastructure path); BYO mode is `create: false`.
+  ###
+
+  - it: EnvoyProxy renders by default when gateway.enabled (envoyProxy.create=true)
+    templates:
+      - templates/gateway-api/EnvoyProxy.yaml
+    set:
+      gateway.enabled: true
+    asserts:
+      - isKind:
+          of: EnvoyProxy
+      - equal:
+          path: apiVersion
+          value: gateway.envoyproxy.io/v1alpha1
+
+  - it: EnvoyProxy is absent in BYO mode (envoyProxy.create=false)
+    templates:
+      - templates/gateway-api/EnvoyProxy.yaml
+    set:
+      gateway.enabled: true
+      gateway.envoyProxy.create: false
+      gateway.envoyProxy.name: my-byo-envoyproxy
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### ListenerSet — extension Gateway API CR for declaring additional
+  ### listeners. Kind name varies by apiVersion: `ListenerSet` for v1,
+  ### `XListenerSet` for v1alpha1 (the "experimental" channel).
+  ###
+
+  - it: ListenerSet uses kind `XListenerSet` under the x-k8s.io v1alpha1 experimental apiVersion
+    templates:
+      - templates/gateway-api/ListenerSet.yaml
+    capabilities:
+      apiVersions:
+        - gateway.networking.x-k8s.io/v1alpha1/XListenerSet
+    set:
+      gateway.enabled: true
+      gateway.listenerSet.enabled: true
+      gateway.listenerSet.listeners:
+        - name: extra
+          port: 1234
+          protocol: UDP
+    asserts:
+      - isKind:
+          of: XListenerSet
+      - equal:
+          path: apiVersion
+          value: gateway.networking.x-k8s.io/v1alpha1
+      - contains:
+          path: spec.listeners
+          content:
+            name: extra
+            port: 1234
+            protocol: UDP
+          any: true
+
+  - it: ListenerSet is absent when no listeners are configured
+    templates:
+      - templates/gateway-api/ListenerSet.yaml
+    set:
+      gateway.enabled: true
+      gateway.listenerSet.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### Hostname propagation — `gateway.hostnames` should flow through to
+  ### both the Gateway and its TLSRoute as the same list.
+  ###
+
+  - it: gateway.hostnames flows through to Gateway listener and TLSRoute spec
+    templates:
+      - templates/gateway-api/Gateway.yaml
+      - templates/gateway-api/TLSRoute.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      tls.enabled: true
+      gateway.hostnames:
+        - radius.example.com
+    asserts:
+      - documentSelector:
+          path: kind
+          value: Gateway
+          skipEmptyTemplates: true
+        contains:
+          path: spec.listeners
+          content:
+            name: radsec
+            hostname: radius.example.com
+          any: true
+      - documentSelector:
+          path: kind
+          value: TLSRoute
+          skipEmptyTemplates: true
+        contains:
+          path: spec.hostnames
+          content: radius.example.com
+          any: true
+
+  ###
+  ### Cross-implementation isolation — when implementation is gateway-api,
+  ### the istio resources must NOT render. (Reverse direction lives in the
+  ### Istio test suite.)
+  ###
+
+  - it: implementation=gateway-api does not render any istio resources
+    templates:
+      - templates/istio/Gateway.yaml
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: gateway-api
+      tls.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0

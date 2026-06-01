@@ -1,0 +1,15 @@
+modules:
+  oidc:
+    enabled: true
+    instances:
+      default:
+        tokenUrl: https://idp.example.com/token
+        groupMappings:
+          - group: admin
+            reply:
+              - 'Service-Type := Administrative-User'
+        attributeMappings:
+          - claim: email
+            reply: Email-Address
+        require:
+          - email_verified

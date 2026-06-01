@@ -47,7 +47,7 @@ The policy wraps the per-instance module instance (`oidc` /
 {{- $polKey := include "freeradius.oidc.policyKey" (dict "name" $name) -}}
 {{- $cmName := ternary (printf "%s-oidc-policy" $fullname) (printf "%s-oidc-%s-policy" $fullname $name) (eq $name "default") -}}
 {{- $cacheEnabled := and $cfg.cache $cfg.cache.enabled -}}
-{{- $refreshValidate := and $cacheEnabled $cfg.refreshTokenCache -}}
+{{- $refreshValidate := and $cacheEnabled $cfg.refreshTokenCache }}
 ---
 apiVersion: v1
 kind: ConfigMap

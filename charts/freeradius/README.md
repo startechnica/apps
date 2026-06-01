@@ -982,6 +982,32 @@ pod to inspect env, or if you override the mapper-script ConfigMaps
 `os.environ.get("KC_…")` / `os.getenv("KC_…")` / `$ENV{KC_…}` references to the
 new prefix.
 
+#### OIDC python wrappers consolidated into a single ConfigMap
+
+When more than one `modules.oidc.instances.<name>` is configured, the
+chart previously rendered one ConfigMap per instance for the rlm_python3
+wrapper script — `<fullname>-oidc-python` for the `default` instance and
+`<fullname>-oidc-<name>-python` for each named instance — with a matching
+pod volume per ConfigMap and a `subPath` mount onto
+`/etc/freeradius/scripts/oidc_<name>.py`.
+
+These are now consolidated into a single shared ConfigMap
+`<fullname>-oidc-python` whose `data` carries one key per instance
+(`oidc_default.py`, `oidc_<name>.py`, …), and the Deployment mounts a
+single `oidc-python` volume with one `subPath` per instance onto the same
+in-pod paths. The wrapper Python content is byte-identical to before;
+only the K8s wrapper layer changes.
+
+- **Single-instance releases** see no observable difference — the
+  ConfigMap name (`<fullname>-oidc-python`) and the in-pod script path
+  (`/etc/freeradius/scripts/oidc_default.py`) were already what they are
+  now.
+- **Multi-instance releases** see N old per-instance ConfigMaps removed
+  and one new shared ConfigMap created on `helm upgrade`. The pod rolls
+  because the volume layout changed (via the existing
+  `checksum/configmap-oidc-mapper-python` pod annotation); no
+  `values.yaml` change is required.
+
 ### To 1.1.0 (breaking)
 
 This is a major release. Most users with existing `values.yaml` overrides
