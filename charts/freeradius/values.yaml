@@ -855,14 +855,13 @@ sites:
     existingConfigMap: ""
   ## @param sites.coa.enabled Enable the `coa` virtual server (Change-of-Authorization, UDP port `containerPorts.coa`).
   ## @param sites.coa.existingConfigMap Mount an existing ConfigMap (must contain a `coa` key with the virtual-server config) at `sites-enabled/coa` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.coa.listen.ipaddr Bind address for the CoA listener. Wildcard `*` accepts CoA traffic on every pod interface; set to `0.0.0.0` / a specific IPv4 / `::` for IPv6 to constrain.
   ##
   coa:
     enabled: false
     existingConfigMap: ""
     listen:
-      type: coa
       ipaddr: "*"
-      virtual_server: coa
   ## RADIUS `status` virtual server, used by the chart's liveness/readiness
   ## probes (`radclient status` over loopback) AND by the standalone metrics
   ## exporter Deployment (`metrics.enabled`) which talks to it over the

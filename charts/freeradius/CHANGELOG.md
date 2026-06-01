@@ -136,6 +136,16 @@
 
 ### Changed
 
+- **`sites/coa.yaml` refactored to listen-inside-server pattern.** Aligned
+  with the modern FreeRADIUS 3.x convention used by `default`,
+  `inner-tunnel`, `status`, `dhcp` (the upstream `sites-available/coa`
+  is the lone holdout still using listen-outside; we don't follow it).
+  Now renders as `server coa { listen { type = coa ... } recv-coa{} send-coa{} }`.
+  Two over-flexible knobs dropped from values: `sites.coa.listen.type`
+  (only `coa` is ever valid) and `sites.coa.listen.virtual_server` (the
+  server name must match the on-disk filename `sites-enabled/coa`).
+  `sites.coa.listen.ipaddr` remains. Migration: drop the two keys from
+  any values file overriding them.
 - **RADSEC site renamed `tls` → `radsec`** end-to-end. The chart's stock
   RADSEC virtual server (file, ConfigMap data key, FreeRADIUS-internal
   block names) now uses the protocol's actual name everywhere — the old

@@ -781,13 +781,7 @@
             "listen": {
               "type": "object",
               "properties": {
-                "type": {
-                  "type": "string"
-                },
                 "ipaddr": {
-                  "type": "string"
-                },
-                "virtual_server": {
                   "type": "string"
                 }
               }

@@ -45,6 +45,8 @@ annotations:
     - kind: added
       description: "`.helmignore` — excludes the schema regen helper (`.gen-*.py`), `ci/` render fixtures, and Claude-side artifacts (`.claude/`, `CLAUDE.md`) from the packaged chart."
     - kind: changed
+      description: "`sites/coa.yaml` refactored to listen-inside-server (modern FR 3.x style matching `default`/`inner-tunnel`/`status`/`dhcp`). Drops over-flexible knobs `sites.coa.listen.type` (only `coa` is valid) and `sites.coa.listen.virtual_server` (must match `sites-enabled/coa`); `sites.coa.listen.ipaddr` kept."
+    - kind: changed
       description: "**BREAKING** — RADSEC site renamed `tls` → `radsec` end-to-end: `templates/sites/tls.yaml` → `templates/sites/radsec.yaml`, ConfigMap `<r>-sites-tls` → `<r>-sites-radsec`, data key + mount path `tls` → `radsec`, FreeRADIUS-internal `home_server tls` / `home_server_pool tls` / `realm tls` blocks renamed; `sites.tls.*` values → `sites.radsec.*`; Secret key `sites-tls-privkey-password` → `sites-radsec-privkey-password`; env `FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD` → `FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`; BYO key `sitesTlsPrivKeyPassword` → `sitesRadsecPrivKeyPassword`. Top-level `tls.*` (cert material switch) untouched; `sites.tlsCache` (EAP session-cache site) untouched."
     - kind: changed
       description: "`st-common` dependency moved from the GitHub Pages HTTP repo to the GHCR OCI registry (`oci://ghcr.io/startechnica/charts`) — aligns with the chart's own publish path and removes the Pages-index round-trip."
