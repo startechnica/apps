@@ -2168,6 +2168,10 @@ gateway:
     ##
     name: ""
 
+  ## @param gateway.proxyProtocol End-to-end PROXY-protocol v1 wiring for RADSEC. When `true` AND `gateway.implementation: gateway-api` AND `gateway.infrastructure: envoy` AND `tls.enabled: true`, the chart (1) renders an Envoy Gateway `BackendTrafficPolicy` (`gateway.envoyproxy.io/v1alpha1`) targeting the FreeRADIUS Service's `tls-radsec` port with `proxyProtocol.version: V1` (Envoy prepends PROXY v1 to every TCP connection to the pod), and (2) forces `proxy_protocol = yes` on the RADSEC `listen { }` block so FreeRADIUS parses the header and uses the real client IP for `Packet-Src-IP-Address` / `clients.conf` lookup. v1 is pinned because FreeRADIUS 3.2.x only parses v1 on its TCP listeners (v2 is undocumented in the receive path). UDP auth/acct/coa is untouched — PROXY protocol only applies to TCP, and FreeRADIUS UDP listeners can't parse it regardless. (To wire PROXY-protocol parsing without Envoy Gateway — e.g. behind HAProxy — set `sites.radsec.listen.proxy_protocol: true` independently.)
+  ##
+  proxyProtocol: false
+
   ## @param gateway.clusterDomain Cluster domain used by the VirtualService backend FQDN. Falls back to the top-level `clusterDomain` when empty.
   ##
   clusterDomain: ""

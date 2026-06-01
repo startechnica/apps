@@ -27,7 +27,10 @@ data:
         proto = tcp
         virtual_server = {{ .Values.sites.radsec.listen.virtual_server }}
         clients = radsec
-        {{- if .Values.sites.radsec.listen.proxy_protocol }}
+        {{- /* `gateway.proxyProtocol: true` ALSO forces this directive on,
+               since it renders an Envoy BackendTrafficPolicy that prepends
+               PROXY v1 — accepting PROXY here is mandatory or RADSEC breaks. */}}
+        {{- if or .Values.sites.radsec.listen.proxy_protocol .Values.gateway.proxyProtocol }}
         proxy_protocol = yes
         {{- end }}
         {{- if .Values.sites.radsec.listen.check_client_connections }}

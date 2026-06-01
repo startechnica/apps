@@ -149,6 +149,37 @@
   chart-managed EnvoyProxy CR: bytes received/sent, duration, client IP,
   method/path, headers, response code/flags, upstream host. Renders by
   default under `gateway.infrastructure: envoy`.
+- **End-to-end PROXY protocol v1 for RADSEC** — new `gateway.proxyProtocol`
+  flag. When `true` (and `gateway.implementation: gateway-api` +
+  `gateway.infrastructure: envoy` + `tls.enabled: true`), the chart wires
+  PROXY v1 from the Envoy data plane into the RADSEC `listen { }` block in
+  one shot:
+  - Renders `templates/gateway-api/BackendTrafficPolicy.yaml` — an Envoy
+    Gateway `BackendTrafficPolicy` (`gateway.envoyproxy.io/v1alpha1`)
+    scoped to the FreeRADIUS Service's `tls-radsec` port via
+    `targetRefs[].sectionName`, with `proxyProtocol.version: V1`. Envoy
+    prepends a PROXY v1 header to every TCP connection it opens to the
+    pod. Other Service ports (UDP auth/acct/coa, optional `udp-status`)
+    are not in scope.
+  - Forces `proxy_protocol = yes` on the RADSEC `listen { }` block via an
+    `or` with the existing `sites.radsec.listen.proxy_protocol` knob — so
+    FreeRADIUS parses the PROXY header and replaces
+    `Packet-Src-IP-Address` with the real client IP. `clients.conf`
+    matching, accounting logs, and policy all see the real source.
+
+  v1 is pinned because FreeRADIUS 3.2.x parses v1 only on its TCP
+  listeners (v2 is undocumented in the receive path); the flag has no
+  effect on UDP auth/acct/coa, which can't accept PROXY headers
+  regardless. The standalone `sites.radsec.listen.proxy_protocol` knob
+  remains available for non-Envoy front-ends (HAProxy, AWS NLB
+  direct-to-pod, …).
+- `freeradius.validate.gatewayProxyProtocol` — hard-fails
+  `gateway.proxyProtocol: true` paired with `gateway.implementation: istio`,
+  `gateway.infrastructure: ""`, or `tls.enabled: false`. Each combination
+  would render a CR that can't function (BTP needs Envoy Gateway as the
+  data plane; FR-side parsing needs the RADSEC TCP listener), so the
+  validator catches it at `helm install` / `helm template` instead of at
+  apply time.
 
 ### Changed
 
@@ -248,6 +279,16 @@
   than a ConfigMap. The Deployment `envFrom` switches to `secretRef` for the
   chart-managed env vars (the `existingConfigmap` BYO path still uses
   `configMapRef`).
+- **Routes attach to specific Gateway listeners via `sectionName`.** The
+  chart-rendered UDPRoute (`auth`/`acct`/`coa`) and TLSRoute (`radsec`)
+  now emit `spec.parentRefs[].sectionName` matching the listener name in
+  the chart's Gateway, so each route attaches to one specific listener
+  rather than all compatible listeners on the parent Gateway. Threaded
+  through `freeradius.gateway.routeParentRefs` (new optional `sectionName`
+  argument) — routes whose `parentRefs` are overridden via
+  `gateway.{udpRoute,tlsRoute}.parentRefs` pass through verbatim and are
+  unaffected. Same for the ListenerSet attachment path
+  (`gateway.listenerSet.enabled`), where listener names are user-defined.
 
 ### Removed (BREAKING — see Upgrading)
 

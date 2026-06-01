@@ -9,6 +9,7 @@ capabilities:
     - gateway.networking.k8s.io/v1/UDPRoute
     - gateway.networking.k8s.io/v1/TLSRoute
     - gateway.networking.k8s.io/v1/ReferenceGrant
+    - gateway.envoyproxy.io/v1alpha1/BackendTrafficPolicy
 tests:
   - it: nothing is rendered by default (gateway disabled)
     templates:
@@ -16,6 +17,7 @@ tests:
       - templates/gateway-api/UDPRoute.yaml
       - templates/gateway-api/TLSRoute.yaml
       - templates/gateway-api/ReferenceGrant.yaml
+      - templates/gateway-api/BackendTrafficPolicy.yaml
     asserts:
       - hasDocuments:
           count: 0
@@ -140,6 +142,21 @@ tests:
       - isKind:
           of: UDPRoute
         documentIndex: 0
+      # Each UDPRoute attaches to its specific Gateway listener via
+      # `parentRefs[].sectionName` — `auth` / `acct` / `coa` — matching
+      # the listener names emitted in Gateway.yaml.
+      - equal:
+          path: spec.parentRefs[0].sectionName
+          value: auth
+        documentIndex: 0
+      - equal:
+          path: spec.parentRefs[0].sectionName
+          value: acct
+        documentIndex: 1
+      - equal:
+          path: spec.parentRefs[0].sectionName
+          value: coa
+        documentIndex: 2
 
   ###
   ### TLSRoute — backs the RADSEC TLS Passthrough listener. Should appear
@@ -169,6 +186,11 @@ tests:
             port: 2083
             weight: 1
           any: true
+      # Attaches to the Gateway's `radsec` listener specifically via
+      # `parentRefs[].sectionName` (matches the listener name in Gateway.yaml).
+      - equal:
+          path: spec.parentRefs[0].sectionName
+          value: radsec
 
   - it: TLSRoute is absent when only gateway.tls.enabled (terminate-at-gateway)
     templates:
@@ -251,6 +273,98 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  ###
+  ### BackendTrafficPolicy — Envoy Gateway-specific CR that prepends a PROXY
+  ### v1 header to TCP connections going to the FreeRADIUS Service's
+  ### `tls-radsec` port. Paired with the RADSEC listen block's
+  ### `proxy_protocol = yes` (also gated by `gateway.proxyProtocol`) so the
+  ### real client IP arrives end-to-end.
+  ###
+
+  - it: BackendTrafficPolicy is absent when proxyProtocol=false (default)
+    templates:
+      - templates/gateway-api/BackendTrafficPolicy.yaml
+    set:
+      gateway.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: BackendTrafficPolicy renders PROXY v1 scoped to the radsec Service port
+    templates:
+      - templates/gateway-api/BackendTrafficPolicy.yaml
+    set:
+      gateway.enabled: true
+      tls.enabled: true
+      gateway.proxyProtocol: true
+    asserts:
+      - isKind:
+          of: BackendTrafficPolicy
+      - equal:
+          path: apiVersion
+          value: gateway.envoyproxy.io/v1alpha1
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-proxy-protocol
+      - equal:
+          path: spec.proxyProtocol.version
+          value: V1
+      - contains:
+          path: spec.targetRefs
+          content:
+            group: ""
+            kind: Service
+            name: my-radius-freeradius
+            sectionName: tls-radsec
+          any: true
+
+  - it: gateway.proxyProtocol=true forces `proxy_protocol = yes` on the RADSEC listen block
+    templates:
+      - templates/sites/radsec.yaml
+    set:
+      gateway.enabled: true
+      tls.enabled: true
+      gateway.proxyProtocol: true
+    asserts:
+      - matchRegex:
+          path: data.radsec
+          pattern: 'proxy_protocol\s*=\s*yes'
+
+  - it: validation rejects gateway.proxyProtocol=true when tls.enabled is false
+    templates:
+      - templates/NOTES.txt
+    set:
+      gateway.enabled: true
+      gateway.proxyProtocol: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'requires .tls\.enabled: true.'
+
+  - it: validation rejects gateway.proxyProtocol=true with implementation=istio
+    templates:
+      - templates/NOTES.txt
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      gateway.infrastructure: ""
+      tls.enabled: true
+      gateway.proxyProtocol: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'requires .gateway\.implementation: gateway-api.'
+
+  - it: validation rejects gateway.proxyProtocol=true with infrastructure not envoy
+    templates:
+      - templates/NOTES.txt
+    set:
+      gateway.enabled: true
+      gateway.infrastructure: ""
+      tls.enabled: true
+      gateway.proxyProtocol: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'requires .gateway\.infrastructure: envoy.'
 
   ###
   ### ListenerSet — extension Gateway API CR for declaring additional

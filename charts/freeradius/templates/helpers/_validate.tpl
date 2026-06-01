@@ -17,6 +17,7 @@ install path, so a `fail` here aborts the operation).
 {{- define "freeradius.validate" -}}
 {{- $messages := list -}}
 {{- $messages = append $messages (include "freeradius.validate.gatewayInfrastructure" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.gatewayProxyProtocol" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.metrics" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.sql.backend" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.rest" .) -}}
@@ -25,7 +26,6 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.tlsCache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcInstances" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
@@ -64,6 +64,45 @@ freeradius: gateway.envoyProxy
     reference the externally-managed EnvoyProxy in `gateway.gateway.namespace`.
     Either set `name` to your existing EnvoyProxy's name, or flip
     `gateway.envoyProxy.create: true` to let the chart render its own.
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation message: `gateway.proxyProtocol` preconditions.
+
+The flag renders an Envoy Gateway `BackendTrafficPolicy` that prepends PROXY
+v1 to TCP connections destined for the FreeRADIUS Service, AND forces
+`proxy_protocol = yes` on the RADSEC `listen { }` block so FreeRADIUS parses
+it. Both pieces are Envoy Gateway + RADSEC-specific:
+
+  - BackendTrafficPolicy is `gateway.envoyproxy.io/v1alpha1` — only renders
+    under the gateway-api implementation backed by Envoy Gateway.
+  - PROXY-protocol parsing in FreeRADIUS 3.2.x is TCP-only (the RADSEC listen
+    block). UDP auth/acct/coa can't accept PROXY headers — enabling the flag
+    without RADSEC enabled would render a BTP for a port that doesn't exist
+    on the upstream Service.
+*/}}
+{{- define "freeradius.validate.gatewayProxyProtocol" -}}
+{{- if and .Values.gateway.enabled .Values.gateway.proxyProtocol -}}
+{{- if ne .Values.gateway.implementation "gateway-api" -}}
+freeradius: gateway.proxyProtocol
+    `gateway.proxyProtocol: true` requires `gateway.implementation: gateway-api`
+    (currently `{{ .Values.gateway.implementation }}`). The chart wires PROXY
+    protocol through an Envoy Gateway `BackendTrafficPolicy`, which has no
+    equivalent under the istio implementation.
+{{- else if ne (.Values.gateway.infrastructure | default "") "envoy" -}}
+freeradius: gateway.proxyProtocol
+    `gateway.proxyProtocol: true` requires `gateway.infrastructure: envoy`
+    (currently `{{ .Values.gateway.infrastructure | default "" | quote }}`).
+    `BackendTrafficPolicy` is an Envoy Gateway-specific CR.
+{{- else if not .Values.tls.enabled -}}
+freeradius: gateway.proxyProtocol
+    `gateway.proxyProtocol: true` requires `tls.enabled: true`. The flag wires
+    PROXY protocol end-to-end into the RADSEC `listen { }` block (the only
+    TCP listener the chart renders); FreeRADIUS 3.2.x cannot parse PROXY
+    headers on UDP RADIUS sockets, so the flag has nowhere meaningful to
+    apply when RADSEC is off.
 {{- end -}}
 {{- end -}}
 {{- end -}}

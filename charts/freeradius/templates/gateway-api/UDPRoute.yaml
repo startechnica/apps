@@ -8,7 +8,7 @@ SPDX-License-Identifier: APACHE-2.0
 {{- if not (eq $apiVersion "false") -}}
 {{- $svcName := include "st-common.names.fullname" . -}}
 {{- $svcNs := include "st-common.names.namespace" . -}}
-{{- $parentRefs := include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.udpRoute.parentRefs "context" $) -}}
+{{- $override := .Values.gateway.udpRoute.parentRefs -}}
 apiVersion: {{ $apiVersion }}
 kind: UDPRoute
 metadata:
@@ -19,7 +19,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- $parentRefs | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" $override "sectionName" "auth" "context" $) | nindent 4 }}
   rules:
     - backendRefs:
         - group: ""
@@ -39,7 +39,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- $parentRefs | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" $override "sectionName" "acct" "context" $) | nindent 4 }}
   rules:
     - backendRefs:
         - group: ""
@@ -60,7 +60,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- $parentRefs | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" $override "sectionName" "coa" "context" $) | nindent 4 }}
   rules:
     - backendRefs:
         - group: ""

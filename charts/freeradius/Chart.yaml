@@ -33,6 +33,12 @@ annotations:
     - kind: added
       description: "`templates/gateway-api/EnvoyProxy.yaml` — JSON access-log format on the chart-managed EnvoyProxy CR: bytes received/sent, duration, client IP, method/path, headers, response code/flags, upstream host. Renders by default under `gateway.infrastructure: envoy`."
     - kind: added
+      description: "`gateway.proxyProtocol` — end-to-end PROXY-protocol v1 wiring for RADSEC. When `true` (AND `gateway.implementation: gateway-api` AND `gateway.infrastructure: envoy` AND `tls.enabled: true`) the chart renders an Envoy Gateway `BackendTrafficPolicy` (`gateway.envoyproxy.io/v1alpha1`) scoped to the FreeRADIUS Service's `tls-radsec` port (`proxyProtocol.version: V1`), and forces `proxy_protocol = yes` on the RADSEC `listen { }` block so FreeRADIUS sets `Packet-Src-IP-Address` to the real client IP. v1 is pinned because FreeRADIUS 3.2.x parses v1 only; UDP auth/acct/coa is untouched (PROXY protocol is TCP-only)."
+    - kind: added
+      description: "`freeradius.validate.gatewayProxyProtocol` — hard-fails `gateway.proxyProtocol: true` paired with `gateway.implementation: istio`, `gateway.infrastructure: \"\"`, or `tls.enabled: false`. Each combination would render a CR that can't function (BTP needs Envoy Gateway; FR-side parsing needs the RADSEC TCP listener)."
+    - kind: changed
+      description: "Chart-rendered UDPRoute (auth/acct/coa) and TLSRoute (radsec) `parentRefs` now include `sectionName` matching the corresponding Gateway listener name, so each route attaches to one specific listener instead of all compatible listeners on the parent Gateway. Routes whose `parentRefs` are overridden via `gateway.{udpRoute,tlsRoute}.parentRefs` are passed through verbatim and unaffected."
+    - kind: added
       description: "`values.schema.json` — type-only JSON Schema draft-07 ships with the chart so `helm install/template/lint` catches gross value-type mismatches at submit time."
     - kind: added
       description: "`.helmignore` — excludes the schema regen helper (`.gen-*.py`), `ci/` render fixtures, and Claude-side artifacts (`.claude/`, `CLAUDE.md`) from the packaged chart."

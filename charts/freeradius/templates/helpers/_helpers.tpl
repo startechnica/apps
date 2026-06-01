@@ -438,6 +438,9 @@ Args (dict):
   kind: Gateway
   name: {{ include "freeradius.gateway.fullname" $ctx }}
   namespace: {{ include "st-common.gateway.namespace" $ctx }}
+  {{- if .sectionName }}
+  sectionName: {{ .sectionName }}
+  {{- end }}
 {{- end -}}
 {{- end -}}
 {{- end -}}

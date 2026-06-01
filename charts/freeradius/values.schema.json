@@ -2126,6 +2126,9 @@
             }
           }
         },
+        "proxyProtocol": {
+          "type": "boolean"
+        },
         "clusterDomain": {
           "type": "string"
         },

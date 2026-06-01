@@ -279,6 +279,7 @@ tests:
       - templates/gateway-api/ReferenceGrant.yaml
       - templates/gateway-api/EnvoyProxy.yaml
       - templates/gateway-api/ListenerSet.yaml
+      - templates/gateway-api/BackendTrafficPolicy.yaml
     set:
       gateway.enabled: true
       gateway.implementation: istio

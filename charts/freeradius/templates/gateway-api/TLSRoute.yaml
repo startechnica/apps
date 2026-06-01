@@ -16,7 +16,7 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.tlsRoute.parentRefs "context" $) | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.tlsRoute.parentRefs "sectionName" "radsec" "context" $) | nindent 4 }}
   {{- if .Values.gateway.hostnames }}
   hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
   {{- end }}
