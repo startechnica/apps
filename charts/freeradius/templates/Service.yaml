@@ -10,16 +10,11 @@ metadata:
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
-  {{- if or .Values.service.annotations .Values.commonAnnotations (and .Values.metrics.enabled .Values.metrics.service.annotations) }}
+  {{- if or (and .Values.metrics.enabled .Values.metrics.service.annotations) .Values.service.annotations .Values.commonAnnotations }}
   annotations:
-    {{- if .Values.commonAnnotations }}
-      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .Values.service.annotations }}
-      {{- include "st-common.tplvalues.render" (dict "value" .Values.service.annotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if and .Values.metrics.enabled .Values.metrics.service.annotations }}
-      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.service.annotations "context" $) | nindent 4 }}
+    {{- if or .Values.service.annotations .Values.commonAnnotations (and .Values.metrics.enabled .Values.metrics.service.annotations) }}
+    {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.service.annotations .Values.metrics.service.annotations .Values.commonAnnotations ) "context" . ) }}
+    {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 spec:

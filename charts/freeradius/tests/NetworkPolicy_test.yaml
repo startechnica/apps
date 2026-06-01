@@ -1,0 +1,101 @@
+suite: NetworkPolicy (egress narrowing, redis egress, metrics→status ingress)
+release:
+  name: my-radius
+  namespace: radius
+templates:
+  - templates/NetworkPolicy.yaml
+tests:
+  - it: opens egress fully by default (allowExternalEgress=true)
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.egress
+          value:
+            - {}
+
+  - it: narrows egress to DNS only when allowExternalEgress is false
+    set:
+      networkPolicy.allowExternalEgress: false
+    asserts:
+      - lengthEqual:
+          path: spec.egress
+          count: 1
+      - equal:
+          path: spec.egress[0].ports[0]
+          value:
+            port: 53
+            protocol: UDP
+
+  - it: appends a Redis egress rule when rlm_redis is enabled
+    set:
+      networkPolicy.allowExternalEgress: false
+      modules.redis.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.egress
+          count: 2
+      - equal:
+          path: spec.egress[1].ports[0]
+          value:
+            port: 6379
+            protocol: TCP
+
+  - it: appends a Redis egress rule when the cache module uses the redis driver
+    set:
+      networkPolicy.allowExternalEgress: false
+      modules.cache.enabled: true
+      modules.cache.driver: redis
+    asserts:
+      - lengthEqual:
+          path: spec.egress
+          count: 2
+      - equal:
+          path: spec.egress[1].ports[0]
+          value:
+            port: 6379
+            protocol: TCP
+
+  - it: ingress contains only auth+acct ports by default
+    asserts:
+      - lengthEqual:
+          path: spec.ingress[0].ports
+          count: 2
+      - contains:
+          path: spec.ingress[0].ports
+          content:
+            port: 1812
+            protocol: UDP
+      - contains:
+          path: spec.ingress[0].ports
+          content:
+            port: 1813
+            protocol: UDP
+
+  - it: opens RADSEC port on ingress when tls is enabled
+    set:
+      tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.ingress[0].ports
+          content:
+            port: 2083
+            protocol: TCP
+
+  - it: adds the metrics→status ingress rule when metrics + status are enabled
+    set:
+      metrics.enabled: true
+    asserts:
+      - contains:
+          path: spec.ingress
+          content:
+            ports:
+              - port: 18121
+                protocol: UDP
+            from:
+              - podSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: freeradius
+                    app.kubernetes.io/instance: my-radius
+                    app.kubernetes.io/component: metrics
+          any: true

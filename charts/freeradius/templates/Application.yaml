@@ -3,8 +3,21 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
-kind: Deployment
+{{- /* `.Values.kind` is accepted case-insensitively (`Deployment` / `deployment`,
+       `StatefulSet` / `statefulset`) and normalised here to its canonical
+       PascalCase spelling for the `kind:` field and apiVersion lookup. */}}
+{{- $kindRaw := .Values.kind | default "Deployment" }}
+{{- $kindMap := dict "deployment" "Deployment" "statefulset" "StatefulSet" }}
+{{- $kind := index $kindMap (lower (toString $kindRaw)) }}
+{{- if not $kind }}
+{{- fail (printf "freeradius: .Values.kind must be one of [Deployment, StatefulSet] (case-insensitive), got %q" $kindRaw) }}
+{{- end }}
+{{- /* StatefulSet manages its own PVCs via volumeClaimTemplates when
+       persistence is enabled and no existing claim is BYO'd; in that mode the
+       `data` entry under spec.volumes is omitted (the template provides it). */}}
+{{- $useVCT := and (eq $kind "StatefulSet") .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+apiVersion: {{ ternary (include "st-common.capabilities.statefulset.apiVersion" .) (include "st-common.capabilities.deployment.apiVersion" .) (eq $kind "StatefulSet") }}
+kind: {{ $kind }}
 metadata:
   name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
@@ -27,8 +40,18 @@ spec:
   selector:
     matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
       app.kubernetes.io/component: freeradius
+  {{- if eq $kind "StatefulSet" }}
+  serviceName: {{ include "freeradius.headlessServiceName" . }}
+  {{- if .Values.podManagementPolicy }}
+  podManagementPolicy: {{ .Values.podManagementPolicy }}
+  {{- end }}
+  {{- if .Values.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- else }}
   {{- if .Values.updateStrategy }}
   strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
   {{- end }}
   template:
     metadata:
@@ -103,31 +126,39 @@ spec:
         checksum/configmap-realms: {{ include (print $.Template.BasePath "/configmaps/realms.yaml") . | sha256sum }}
         {{- if .Values.keycloak.enabled }}
         {{- $kcResolvedAnno := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
-        {{- $kcHasLua := false -}}{{- $kcHasPython := false -}}{{- $kcHasSecret := false -}}{{- $kcHasTls := false -}}
+        {{- $kcHasSecret := false -}}{{- $kcHasTls := false -}}
         {{- range $name, $cfg := $kcResolvedAnno.instances -}}
-        {{- if eq $cfg.mode "lua" }}{{- $kcHasLua = true }}{{- end -}}
-        {{- if eq $cfg.mode "python" }}{{- $kcHasPython = true }}{{- end -}}
         {{- if and $cfg.clientSecret (not $cfg.existingSecret) }}{{- $kcHasSecret = true }}{{- end -}}
         {{- if include "freeradius.keycloak.tls.createSecret" (dict "instance" $cfg) }}{{- $kcHasTls = true }}{{- end -}}
         {{- end }}
         checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak.yaml") . | sha256sum }}
         checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-policy.yaml") . | sha256sum }}
-        {{- if $kcHasLua }}
-        {{- /* keycloak_common.lua is pure static logic (no env reads,
-               no per-instance config baked in) — changes only on chart
-               upgrade, which restarts pods via the chart-version checksum
-               elsewhere. The per-instance wrapper checksum still flips on
-               instance-name / roleAttribute / env-prefix changes. */}}
-        checksum/configmap-keycloak-mapper-lua: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-conf-lua.yaml") . | sha256sum }}
-        {{- end }}
-        {{- if $kcHasPython }}
         checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-conf-py.yaml") . | sha256sum }}
-        {{- end }}
         {{- if $kcHasSecret }}
         checksum/secret-keycloak: {{ include (print $.Template.BasePath "/modules/keycloak/secret.yaml") . | sha256sum }}
         {{- end }}
         {{- if $kcHasTls }}
         checksum/secret-keycloak-tls: {{ include (print $.Template.BasePath "/modules/keycloak/secret-tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- end }}
+        {{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
+        checksum/configmap-oidc-common-python: {{ include (print $.Template.BasePath "/modules/oidc/oidc-common-py.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.modules.oidc.enabled }}
+        {{- $oidcResolvedAnno := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+        {{- $oidcHasSecret := false -}}{{- $oidcHasTls := false -}}
+        {{- range $name, $cfg := $oidcResolvedAnno.instances -}}
+        {{- if and $cfg.clientSecret (not $cfg.existingSecret) }}{{- $oidcHasSecret = true }}{{- end -}}
+        {{- if include "freeradius.oidc.tls.createSecret" (dict "instance" $cfg) }}{{- $oidcHasTls = true }}{{- end -}}
+        {{- end }}
+        checksum/configmap-oidc: {{ include (print $.Template.BasePath "/modules/oidc/oidc.yaml") . | sha256sum }}
+        checksum/configmap-oidc-policy: {{ include (print $.Template.BasePath "/modules/oidc/oidc-policy.yaml") . | sha256sum }}
+        checksum/configmap-oidc-mapper-python: {{ include (print $.Template.BasePath "/modules/oidc/oidc-conf-py.yaml") . | sha256sum }}
+        {{- if $oidcHasSecret }}
+        checksum/secret-oidc: {{ include (print $.Template.BasePath "/modules/oidc/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $oidcHasTls }}
+        checksum/secret-oidc-tls: {{ include (print $.Template.BasePath "/modules/oidc/secret-tls.yaml") . | sha256sum }}
         {{- end }}
         {{- end }}
         {{- if not .Values.auth.existingSecret }}
@@ -333,6 +364,19 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "freeradius.keycloak.clientSecretName" (dict "name" $name "instance" $cfg "context" $) }}
+                  key: client-secret
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.modules.oidc.enabled }}
+            {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+            {{- range $name, $cfg := $oidcResolved.instances }}
+            {{- if $cfg.clientSecret }}
+            {{- $envPrefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) }}
+            - name: {{ $envPrefix }}CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "freeradius.oidc.clientSecretName" (dict "name" $name "instance" $cfg "context" $) }}
                   key: client-secret
             {{- end }}
             {{- end }}
@@ -563,15 +607,7 @@ spec:
               mountPath: {{ ternary "/etc/freeradius/certs-keycloak" (printf "/etc/freeradius/certs-keycloak-%s" $name) (eq $name "default") }}
               readOnly: true
             {{- end }}
-            {{- if eq $cfg.mode "lua" }}
-            {{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
-            {{- $volScriptName := ternary "keycloak-mapper-lua" (printf "keycloak-%s-lua" $name) (eq $name "default") }}
-            - name: {{ $volScriptName }}
-              mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
-              subPath: {{ $scriptKey }}
-              readOnly: true
-            {{- else if eq $cfg.mode "python" }}
-            {{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
+            {{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name) }}
             {{- $volScriptName := ternary "keycloak-mapper-python" (printf "keycloak-%s-python" $name) (eq $name "default") }}
             - name: {{ $volScriptName }}
               mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
@@ -579,26 +615,41 @@ spec:
               readOnly: true
             {{- end }}
             {{- end }}
-            {{- /* Shared keycloak_common.{lua,py} libraries — one mount each
-                   regardless of instance count. The per-instance wrappers
-                   above `require` / `import` from this. */}}
-            {{- $kcHasLua := false }}{{- $kcHasPython := false }}
-            {{- range $name, $cfg := $kcResolved.instances -}}
-            {{- if eq $cfg.mode "lua" }}{{- $kcHasLua = true }}{{- end -}}
-            {{- if eq $cfg.mode "python" }}{{- $kcHasPython = true }}{{- end -}}
-            {{- end }}
-            {{- if $kcHasLua }}
-            - name: keycloak-lua-common
-              mountPath: /etc/freeradius/scripts/keycloak_common.lua
-              subPath: keycloak_common.lua
+            {{- if .Values.modules.oidc.enabled }}
+            {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+            {{- range $name, $cfg := $oidcResolved.instances }}
+            {{- $modKey := include "freeradius.oidc.modKey" (dict "name" $name) }}
+            {{- $polKey := include "freeradius.oidc.policyKey" (dict "name" $name) }}
+            {{- $volModName := ternary "oidc" (printf "oidc-%s" $name) (eq $name "default") }}
+            {{- $volPolName := ternary "oidc-policy" (printf "oidc-%s-policy" $name) (eq $name "default") }}
+            - name: {{ $volModName }}
+              mountPath: /etc/freeradius/mods-enabled/{{ $modKey }}
+              subPath: {{ $modKey }}
+              readOnly: true
+            - name: {{ $volPolName }}
+              mountPath: /etc/freeradius/policy.d/{{ $polKey }}
+              subPath: {{ $polKey }}
+              readOnly: true
+            {{- if include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
+            - name: {{ include "freeradius.oidc.tlsVolumeName" (dict "name" $name) }}
+              mountPath: {{ ternary "/etc/freeradius/certs-oidc" (printf "/etc/freeradius/certs-oidc-%s" $name) (eq $name "default") }}
               readOnly: true
             {{- end }}
-            {{- if $kcHasPython }}
-            - name: keycloak-python-common
-              mountPath: /etc/freeradius/scripts/keycloak_common.py
-              subPath: keycloak_common.py
+            {{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
+            {{- $volScriptName := ternary "oidc-mapper-python" (printf "oidc-%s-python" $name) (eq $name "default") }}
+            - name: {{ $volScriptName }}
+              mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
+              subPath: {{ $scriptKey }}
               readOnly: true
             {{- end }}
+            {{- end }}
+            {{- /* Shared oidc.py library — one mount whenever any OIDC-style
+                   backend (Keycloak or modules.oidc) is enabled. */}}
+            {{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
+            - name: oidc-py
+              mountPath: /etc/freeradius/scripts/oidc.py
+              subPath: oidc.py
+              readOnly: true
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
@@ -726,13 +777,6 @@ spec:
           secret:
             secretName: {{ include "freeradius.keycloak.tls.secretName" (dict "name" $name "instance" $cfg "context" $) }}
         {{- end }}
-        {{- if eq $cfg.mode "lua" }}
-        {{- $volScriptName := ternary "keycloak-mapper-lua" (printf "keycloak-%s-lua" $name) (eq $name "default") }}
-        {{- $cmScriptName := ternary (printf "%s-keycloak-lua" $fullname) (printf "%s-keycloak-%s-lua" $fullname $name) (eq $name "default") }}
-        - name: {{ $volScriptName }}
-          configMap:
-            name: {{ $cmScriptName }}
-        {{- else if eq $cfg.mode "python" }}
         {{- $volScriptName := ternary "keycloak-mapper-python" (printf "keycloak-%s-python" $name) (eq $name "default") }}
         {{- $cmScriptName := ternary (printf "%s-keycloak-python" $fullname) (printf "%s-keycloak-%s-python" $fullname $name) (eq $name "default") }}
         - name: {{ $volScriptName }}
@@ -740,24 +784,37 @@ spec:
             name: {{ $cmScriptName }}
         {{- end }}
         {{- end }}
-        {{- /* Shared keycloak_common.{lua,py} library volumes — one each
-               regardless of instance count. The per-instance wrappers
-               above `require` / `import` from this. */}}
-        {{- $kcHasLua := false }}{{- $kcHasPython := false }}
-        {{- range $name, $cfg := $kcResolved.instances -}}
-        {{- if eq $cfg.mode "lua" }}{{- $kcHasLua = true }}{{- end -}}
-        {{- if eq $cfg.mode "python" }}{{- $kcHasPython = true }}{{- end -}}
-        {{- end }}
-        {{- if $kcHasLua }}
-        - name: keycloak-lua-common
+        {{- if .Values.modules.oidc.enabled }}
+        {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+        {{- $fullname := include "st-common.names.fullname" . }}
+        {{- range $name, $cfg := $oidcResolved.instances }}
+        {{- $volModName := ternary "oidc" (printf "oidc-%s" $name) (eq $name "default") }}
+        {{- $volPolName := ternary "oidc-policy" (printf "oidc-%s-policy" $name) (eq $name "default") }}
+        {{- $cmModName := ternary (printf "%s-oidc" $fullname) (printf "%s-oidc-%s" $fullname $name) (eq $name "default") }}
+        {{- $cmPolName := ternary (printf "%s-oidc-policy" $fullname) (printf "%s-oidc-%s-policy" $fullname $name) (eq $name "default") }}
+        - name: {{ $volModName }}
           configMap:
-            name: {{ printf "%s-keycloak-lua-common" $fullname }}
-        {{- end }}
-        {{- if $kcHasPython }}
-        - name: keycloak-python-common
+            name: {{ default $cmModName $cfg.existingConfigMap }}
+        - name: {{ $volPolName }}
           configMap:
-            name: {{ printf "%s-keycloak-python-common" $fullname }}
+            name: {{ $cmPolName }}
+        {{- if include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
+        - name: {{ include "freeradius.oidc.tlsVolumeName" (dict "name" $name) }}
+          secret:
+            secretName: {{ include "freeradius.oidc.tls.secretName" (dict "name" $name "instance" $cfg "context" $) }}
         {{- end }}
+        {{- $volScriptName := ternary "oidc-mapper-python" (printf "oidc-%s-python" $name) (eq $name "default") }}
+        {{- $cmScriptName := ternary (printf "%s-oidc-python" $fullname) (printf "%s-oidc-%s-python" $fullname $name) (eq $name "default") }}
+        - name: {{ $volScriptName }}
+          configMap:
+            name: {{ $cmScriptName }}
+        {{- end }}
+        {{- end }}
+        {{- /* Shared oidc.py library volume — see matching mount above. */}}
+        {{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
+        - name: oidc-py
+          configMap:
+            name: {{ printf "%s-oidc-py" (include "st-common.names.fullname" .) }}
         {{- end }}
         - name: scripts
           configMap:
@@ -768,6 +825,7 @@ spec:
           emptyDir: {}
         - name: freeradius-base
           emptyDir: {}
+        {{- if not $useVCT }}
         - name: data
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
@@ -775,6 +833,7 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
@@ -839,3 +898,34 @@ spec:
         {{- if .Values.extraVolumes }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
+  {{- if $useVCT }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 10 }}
+          app.kubernetes.io/component: freeradius
+        {{- if or .Values.persistence.annotations .Values.commonAnnotations }}
+        annotations:
+          {{- if .Values.commonAnnotations }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 10 }}
+          {{- end }}
+          {{- if .Values.persistence.annotations }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.persistence.annotations "context" $) | nindent 10 }}
+          {{- end }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- range .Values.persistence.accessModes }}
+          - {{ . | quote }}
+          {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}
+        {{- include "st-common.storage.class" (dict "persistence" .Values.persistence "global" .Values.global) | nindent 8 }}
+        {{- if .Values.persistence.selector }}
+        selector: {{- include "st-common.tplvalues.render" (dict "value" .Values.persistence.selector "context" $) | nindent 10 }}
+        {{- end }}
+        {{- if .Values.persistence.dataSource }}
+        dataSource: {{- include "st-common.tplvalues.render" (dict "value" .Values.persistence.dataSource "context" $) | nindent 10 }}
+        {{- end }}
+  {{- end }}

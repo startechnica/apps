@@ -26,6 +26,8 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.keycloakInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.keycloakClientBindings" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.oidcInstances" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -277,7 +279,6 @@ instance:
 {{- define "freeradius.validate.keycloakInstances" -}}
 {{- if .Values.keycloak.enabled -}}
 {{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
-{{- $modeAllowed := list "lua" "python" -}}
 {{- $roleMapperAllowed := list "client" "realm" -}}
 {{- $nameRe := "^[a-z][a-z0-9_]*$" -}}
 {{- $hasRedis := or .Values.redis.enabled .Values.modules.redis.server -}}
@@ -292,11 +293,11 @@ freeradius: keycloak.instances.{{ $name }}
     K8s resource names. Use lowercase letters, digits, and underscores;
     start with a letter.
 {{- end -}}
-{{- if not (has $cfg.mode $modeAllowed) }}
+{{- if hasKey $cfg "mode" }}
 freeradius: keycloak.instances.{{ $name }}.mode
-    `keycloak.instances.{{ $name }}.mode: {{ $cfg.mode }}` is not a recognised value.
-    Allowed: `lua` (rlm_lua — custom image required, see [[reference_freeradius_3_2_8_bundled_modules]])
-    or `python` (rlm_python3 — bundled).
+    `keycloak.instances.{{ $name }}.mode` is no longer accepted — Lua mode was
+    removed (rlm_lua is not bundled in the default image) and `rlm_python3` is
+    the only backend. Remove the `mode:` key from your values file.
 {{- end -}}
 {{- if not $cfg.realm }}
 freeradius: keycloak.instances.{{ $name }}.realm
@@ -420,6 +421,153 @@ freeradius: clients.{{ $clientName }}.keycloak
     `Packet-Src-IP-Address` / `Packet-Src-IPv6-Address` and has nothing
     to bind against.
 {{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation messages for `modules.oidc.instances.<name>`. Mirrors the
+Keycloak validator but drops Keycloak-specific knobs (realm, roleMapper,
+mode) and adds OIDC-specific ones (tokenUrl required, introspect requires
+introspectUrl, rolesClaim required when roleMappings present).
+*/}}
+{{- define "freeradius.validate.oidcInstances" -}}
+{{- if .Values.modules.oidc.enabled -}}
+{{- $resolved := include "freeradius.oidc.resolveInstances" . | fromYaml -}}
+{{- $nameRe := "^[a-z][a-z0-9_]*$" -}}
+{{- $hasRedis := or .Values.redis.enabled .Values.modules.redis.server -}}
+{{- $extraEnvNames := list -}}
+{{- range $e := .Values.extraEnvVars -}}{{- $extraEnvNames = append $extraEnvNames $e.name -}}{{- end -}}
+{{- range $name, $cfg := $resolved.instances }}
+{{- if not (regexMatch $nameRe $name) }}
+freeradius: modules.oidc.instances.{{ $name }}
+    Instance name `{{ $name }}` must match `^[a-z][a-z0-9_]*$` — the name is
+    used as a Python module filename (`oidc_<name>.py`, imported via
+    `import oidc_<name>`, which forbids hyphens) and as a suffix on K8s
+    resource names. Use lowercase letters, digits, and underscores; start
+    with a letter.
+{{- end -}}
+{{- if not $cfg.tokenUrl }}
+freeradius: modules.oidc.instances.{{ $name }}.tokenUrl
+    `modules.oidc.instances.{{ $name }}.tokenUrl` is required — the chart
+    has no way to derive a token endpoint for a generic OIDC provider.
+    Set it to the IdP's RFC 6749 token endpoint (e.g.
+    `https://auth.example.com/application/o/freeradius/token/` for
+    Authentik; `https://<tenant>/oauth2/v2.0/token` for Azure AD).
+{{- end -}}
+{{- if and $cfg.introspect (not $cfg.introspectUrl) }}
+freeradius: modules.oidc.instances.{{ $name }}.introspectUrl
+    `modules.oidc.instances.{{ $name }}.introspect: true` requires
+    `introspectUrl` — the chart cannot derive an introspect endpoint for a
+    generic OIDC provider. Set it to the IdP's RFC 7662 introspect endpoint.
+{{- end -}}
+{{- if and $cfg.tls $cfg.tls.caCert $cfg.tls.existingSecret }}
+freeradius: modules.oidc.instances.{{ $name }}.tls
+    `modules.oidc.instances.{{ $name }}.tls.caCert` and
+    `modules.oidc.instances.{{ $name }}.tls.existingSecret` are mutually
+    exclusive — set one or the other.
+{{- end -}}
+{{- if and $cfg.cache $cfg.cache.enabled (not $hasRedis) }}
+freeradius: modules.oidc.instances.{{ $name }}.cache.enabled
+    `modules.oidc.instances.{{ $name }}.cache.enabled: true` requires a
+    Redis backend. Either enable the bundled subchart (`redis.enabled: true`)
+    or point `modules.redis.server` at an external Redis.
+{{- end -}}
+{{- $roleAttr := default "Class" $cfg.roleAttribute -}}
+{{- $groupAttr := default "Class" $cfg.groupAttribute -}}
+{{- if and $cfg.roleMappings $cfg.groupMappings (eq $roleAttr $groupAttr) }}
+freeradius: modules.oidc.instances.{{ $name }}.groupAttribute
+    `modules.oidc.instances.{{ $name }}` defines both `roleMappings` and
+    `groupMappings` but `roleAttribute` and `groupAttribute` resolve to
+    the same control attribute (`{{ $roleAttr }}`). Set `groupAttribute`
+    to a different attribute.
+{{- end -}}
+{{- if and $cfg.roleMappings (not $cfg.rolesClaim) }}
+freeradius: modules.oidc.instances.{{ $name }}.rolesClaim
+    `modules.oidc.instances.{{ $name }}.roleMappings` is non-empty but
+    `rolesClaim` is unset — the chart has no way to know which JWT/
+    introspect claim holds the role list for a generic OIDC provider.
+    Set it to the dotted claim path (e.g. `roles`, `realm_access.roles`,
+    `resource_access.<id>.roles`, `groups`).
+{{- end -}}
+{{- range $i, $m := default list $cfg.roleMappings }}
+{{- if not $m.role }}
+freeradius: modules.oidc.instances.{{ $name }}.roleMappings[{{ $i }}].role
+    Each `roleMappings` entry must set `role` (the value the chart compares
+    against `&control:{{ $roleAttr }}[*]`).
+{{- end -}}
+{{- end -}}
+{{- range $i, $m := default list $cfg.groupMappings }}
+{{- if not $m.group }}
+freeradius: modules.oidc.instances.{{ $name }}.groupMappings[{{ $i }}].group
+    Each `groupMappings` entry must set `group`.
+{{- end -}}
+{{- end -}}
+{{- range $i, $m := default list $cfg.attributeMappings }}
+{{- if or (not $m.claim) (not $m.reply) }}
+freeradius: modules.oidc.instances.{{ $name }}.attributeMappings[{{ $i }}]
+    Each `attributeMappings` entry must set both `claim` and `reply`.
+{{- end -}}
+{{- end -}}
+{{- range $i, $r := default list $cfg.require }}
+{{- if not $r }}
+freeradius: modules.oidc.instances.{{ $name }}.require[{{ $i }}]
+    Each `require` entry must be a non-empty claim name.
+{{- end -}}
+{{- end -}}
+{{- if and $cfg.introspect (not $cfg.clientSecret) (not $cfg.existingSecret) }}
+freeradius: modules.oidc.instances.{{ $name }}.introspect
+    `modules.oidc.instances.{{ $name }}.introspect: true` requires a
+    client secret — RFC 7662 introspection is HTTP-Basic-authenticated.
+    Set `clientSecret` (inline) or `existingSecret` (BYO).
+{{- end -}}
+{{- if and $cfg.refreshTokenCache (or (not $cfg.cache) (not $cfg.cache.enabled)) }}
+freeradius: modules.oidc.instances.{{ $name }}.refreshTokenCache
+    `modules.oidc.instances.{{ $name }}.refreshTokenCache: true` requires
+    `cache.enabled: true` — the refresh flow runs on cache HIT.
+{{- end -}}
+{{- $prefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) -}}
+{{- range $envName := $extraEnvNames -}}
+{{- if hasPrefix $prefix $envName }}
+freeradius: extraEnvVars
+    `extraEnvVars` contains `{{ $envName }}`, which shadows the chart-emitted
+    prefix `{{ $prefix }}*` for `modules.oidc.instances.{{ $name }}`.
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation: every non-empty `clients.<x>.oidc` references an existing
+`modules.oidc.instances.<name>`; the client has an `ipv4addr` / `ipv6addr`;
+AND no client sets BOTH `keycloak` and `oidc` (would create ambiguous
+dispatch).
+*/}}
+{{- define "freeradius.validate.oidcClientBindings" -}}
+{{- if .Values.modules.oidc.enabled -}}
+{{- $resolved := include "freeradius.oidc.resolveInstances" . | fromYaml -}}
+{{- range $clientName, $client := .Values.clients -}}
+{{- if and (kindIs "map" $client) $client.oidc -}}
+{{- if not (hasKey $resolved.instances $client.oidc) }}
+freeradius: clients.{{ $clientName }}.oidc
+    `clients.{{ $clientName }}.oidc: {{ $client.oidc }}` references an
+    undefined instance — add it under `modules.oidc.instances.{{ $client.oidc }}`
+    or fix the typo. Defined instances: {{ join ", " (keys $resolved.instances) }}.
+{{- else if and (not $client.ipv4addr) (not $client.ipv6addr) }}
+freeradius: clients.{{ $clientName }}.oidc
+    `clients.{{ $clientName }}.oidc: {{ $client.oidc }}` requires
+    `clients.{{ $clientName }}.ipv4addr` and/or `.ipv6addr` to be non-empty.
+{{- end -}}
+{{- end -}}
+{{- if and (kindIs "map" $client) $client.oidc $client.keycloak }}
+freeradius: clients.{{ $clientName }}
+    `clients.{{ $clientName }}` sets BOTH `keycloak: {{ $client.keycloak }}`
+    and `oidc: {{ $client.oidc }}` — pick one. The dispatch chain in
+    `sites/default` evaluates Keycloak and OIDC arms sequentially; binding
+    a NAS to both backends is a configuration mistake (silent override or
+    double authentication, neither what you want).
 {{- end -}}
 {{- end -}}
 {{- end -}}

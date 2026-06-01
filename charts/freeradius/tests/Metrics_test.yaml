@@ -1,0 +1,77 @@
+suite: Metrics (exporter Deployment / Service / ServiceMonitor / PrometheusRule)
+release:
+  name: my-radius
+  namespace: radius
+# Inject Prometheus Operator CRDs so capability lookups don't return "false".
+capabilities:
+  apiVersions:
+    - monitoring.coreos.com/v1/PrometheusRule
+tests:
+  - it: nothing renders when metrics.enabled is false (default)
+    templates:
+      - templates/metrics/Deployment.yaml
+      - templates/metrics/Service.yaml
+      - templates/metrics/ServiceMonitor.yaml
+      - templates/metrics/PrometheusRule.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: exporter Deployment renders when metrics.enabled
+    templates:
+      - templates/metrics/Deployment.yaml
+    set:
+      metrics.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-metrics
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: metrics
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: metrics
+
+  - it: exporter Service renders when metrics.enabled
+    templates:
+      - templates/metrics/Service.yaml
+    set:
+      metrics.enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-metrics
+
+  - it: ServiceMonitor is gated by metrics.serviceMonitor.enabled
+    templates:
+      - templates/metrics/ServiceMonitor.yaml
+    set:
+      metrics.enabled: true
+      metrics.serviceMonitor.enabled: true
+    asserts:
+      - isKind:
+          of: ServiceMonitor
+
+  - it: ServiceMonitor does not render when only metrics.enabled is on
+    templates:
+      - templates/metrics/ServiceMonitor.yaml
+    set:
+      metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: PrometheusRule is gated by metrics.prometheusRule.enabled
+    templates:
+      - templates/metrics/PrometheusRule.yaml
+    set:
+      metrics.enabled: true
+      metrics.prometheusRule.enabled: true
+    asserts:
+      - isKind:
+          of: PrometheusRule

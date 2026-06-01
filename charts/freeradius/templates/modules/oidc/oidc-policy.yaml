@@ -1,0 +1,158 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Per-instance ConfigMaps holding the unlang policy wrapper for each
+configured OIDC backend. FreeRADIUS only parses `policy { }` blocks when
+included from `policy.d/`, so these live in their own ConfigMaps separate
+from the module-instance files rendered by `oidc.yaml`.
+
+  default → `<fullname>-oidc-policy`           key: `oidc`
+            policy names: `oidc_authorize`, `oidc_roles`, `oidc_groups`
+  <name>  → `<fullname>-oidc-<name>-policy`    key: `oidc_<name>`
+            policy names: `oidc_<name>_authorize`,
+                          `oidc_<name>_roles`,
+                          `oidc_<name>_groups`
+
+The policy wraps the per-instance module instance (`oidc` /
+`oidc_<name>`) with:
+  - optional cache-aside via the dedicated `oidc[_<name>]_cache` rlm_cache
+    instance (when `cache.enabled`),
+  - optional cache-hit freshness check via `<modName>_validate` (when
+    `refreshTokenCache: true`): copies the cached refresh_token out of
+    &control: and into &request: (rlm_python3 only exposes the request
+    list to the script), calls the IdP's /token endpoint with
+    `grant_type=refresh_token`. Refresh REJECT (session revoked)
+    invalidates the cache entry and rejects the request; network FAIL
+    falls through gracefully, reusing the cached attrs.
+  - `&control:Auth-Type := Accept` on success (so authenticate{} is bypassed),
+  - role → reply mapping via `oidc[_<name>]_roles` when `roleMappings`
+    is non-empty,
+  - group → reply mapping via `oidc[_<name>]_groups` when `groupMappings`
+    is non-empty.
+*/}}
+
+{{- if .Values.modules.oidc.enabled }}
+{{- $resolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- range $name, $cfg := $resolved.instances }}
+{{- $modName := include "freeradius.oidc.moduleName" (dict "name" $name) -}}
+{{- $validateModName := include "freeradius.oidc.validateModuleName" (dict "name" $name) -}}
+{{- $polName := include "freeradius.oidc.policyName" (dict "name" $name) -}}
+{{- $rolesPolName := include "freeradius.oidc.rolesPolicyName" (dict "name" $name) -}}
+{{- $groupsPolName := include "freeradius.oidc.groupsPolicyName" (dict "name" $name) -}}
+{{- $cacheName := include "freeradius.oidc.cacheName" (dict "name" $name) -}}
+{{- $polKey := include "freeradius.oidc.policyKey" (dict "name" $name) -}}
+{{- $cmName := ternary (printf "%s-oidc-policy" $fullname) (printf "%s-oidc-%s-policy" $fullname $name) (eq $name "default") -}}
+{{- $cacheEnabled := and $cfg.cache $cfg.cache.enabled -}}
+{{- $refreshValidate := and $cacheEnabled $cfg.refreshTokenCache -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $cmName }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+    app.firmansyah.id/oidc-instance: {{ $name | quote }}
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{ $polKey }}: |
+    #  Entry point — call from a virtual server's authorize{} section.
+    {{ $polName }} {
+        {{- if $cacheEnabled }}
+        #  Cache lookup: skip the IdP roundtrip if &User-Name has a recent
+        #  successful result cached. Keyed on `oidc:{{ $name }}:%{User-Name}`
+        #  — instance-namespaced to prevent cross-instance cache hits.
+        {{ $cacheName }}
+
+        if (notfound) {
+            {{ $modName }}
+            if (ok) {
+                {{ $cacheName }}
+            }
+        }
+        {{- if $refreshValidate }}
+        elsif (ok) {
+            #  Cache hit — confirm the IdP session is still alive by
+            #  refreshing the cached token. rlm_python3 only sees the
+            #  request list, so move the token there first.
+            update request {
+                Tmp-String-9 := &control:Tmp-String-9
+            }
+            {{ $validateModName }}
+            if (reject) {
+                update control {
+                    &Cache-TTL := 0
+                }
+                {{ $cacheName }}
+                update reply {
+                    &Reply-Message := "OIDC session revoked"
+                }
+                reject
+            }
+            ok
+        }
+        {{- end }}
+        {{- else }}
+        #  {{ $modName }}: ROPC + JWT claims -> &control:{{ $cfg.roleAttribute }} (+ rcode).
+        {{ $modName }}
+        {{- end }}
+        if (ok) {
+            update control {
+                &Auth-Type := Accept
+            }
+            {{- if $cfg.roleMappings }}
+            {{ $rolesPolName }}
+            {{- end }}
+            {{- if $cfg.groupMappings }}
+            {{ $groupsPolName }}
+            {{- end }}
+        }
+    }
+
+    {{- if $cfg.roleMappings }}
+    #  Map roles read from `{{ $cfg.rolesClaim }}` (&control:{{ $cfg.roleAttribute }})
+    #  to RADIUS reply attributes. First match wins.
+    {{ $rolesPolName }} {
+    {{- range $i, $m := $cfg.roleMappings }}
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $cfg.roleAttribute }}[*] == "{{ $m.role }}") {
+            update reply {
+            {{- range $line := $m.reply }}
+                {{ $line }}
+            {{- end }}
+            }
+        }
+    {{- end }}
+    {{- if $cfg.denyWithoutRole }}
+        else {
+            update reply {
+                Reply-Message := "Access denied: no valid OIDC role"
+            }
+            reject
+        }
+    {{- end }}
+    }
+    {{- end }}
+
+    {{- if $cfg.groupMappings }}
+    #  Map groups read from `{{ default "groups" $cfg.groupsClaim }}` (&control:{{ default "Class" $cfg.groupAttribute }})
+    #  to RADIUS reply attributes. First match wins.
+    {{ $groupsPolName }} {
+    {{- range $i, $m := $cfg.groupMappings }}
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ default "Class" $cfg.groupAttribute }}[*] == "{{ $m.group }}") {
+            update reply {
+            {{- range $line := $m.reply }}
+                {{ $line }}
+            {{- end }}
+            }
+        }
+    {{- end }}
+    }
+    {{- end }}
+{{- end }}
+{{- end }}

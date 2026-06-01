@@ -166,16 +166,16 @@ configurations: |
   }
 
   log {
-    destination = files
-    colourise = yes
-    file = ${logdir}/radius.log
-    syslog_facility = daemon
-    stripped_names = no
-    auth = no
-    auth_badpass = no
-    auth_goodpass = no
+      destination = files
+      colourise = yes
+      file = ${logdir}/radius.log
+      syslog_facility = daemon
+      stripped_names = no
+      auth = no
+      auth_badpass = no
+      auth_goodpass = no
 
-    msg_denied = "You are already logged in - access denied"
+      msg_denied = "You are already logged in - access denied"
   }
 
   checkrad = ${sbindir}/checkrad
@@ -184,13 +184,13 @@ configurations: |
   }
 
   security {
-    allow_core_dumps = no
-    max_attributes = 200
-    reject_delay = 1
-    status_server = yes
-    require_message_authenticator = auto
-    limit_proxy_state = auto
-    allow_vulnerable_openssl = no
+      allow_core_dumps = no
+      max_attributes = 200
+      reject_delay = 1
+      status_server = yes
+      require_message_authenticator = auto
+      limit_proxy_state = auto
+      allow_vulnerable_openssl = no
   }
 
   proxy_requests  = yes
@@ -205,23 +205,23 @@ configurations: |
   $INCLUDE {{ .Values.clients.includeFile }}
 
   thread pool {
-    start_servers = 5
-    max_servers = 32
-    min_spare_servers = 3
-    max_spare_servers = 10
-    max_requests_per_server = 0
-    auto_limit_acct = no
+      start_servers = 5
+      max_servers = 32
+      min_spare_servers = 3
+      max_spare_servers = 10
+      max_requests_per_server = 0
+      auto_limit_acct = no
   }
 
   modules {
-    $INCLUDE {{ .Values.modules.includeDir }}/
+      $INCLUDE {{ .Values.modules.includeDir }}/
   }
 
   instantiate {
   }
 
   policy {
-    $INCLUDE {{ .Values.policies.includeDir }}/
+      $INCLUDE {{ .Values.policies.includeDir }}/
   }
 
   $INCLUDE {{ .Values.sites.includeDir }}/
@@ -832,6 +832,83 @@ modules:
     ## @param modules.ldap.existingConfigMap Mount an existing ConfigMap (must contain an `ldap` key with the module config) at `mods-enabled/ldap` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
+
+  ## Generic OIDC / OAuth 2.0 authentication backend. RFC 6749 password
+  ## grant (ROPC) plus optional RFC 7662 introspection. Works against any
+  ## OIDC provider that exposes a token endpoint (Authentik, Auth0,
+  ## Azure AD, Okta, generic Keycloak, …) — the per-instance wrapper
+  ## bakes the resolved endpoints into the Python module at chart-render
+  ## time, so the runtime library has no provider-specific code.
+  ##
+  ## Shape mirrors `keycloak.*` (multi-instance, dispatch via
+  ## `clients.<x>.oidc: <instance-name>`, optional rlm_cache, optional
+  ## refresh-token freshness check) but drops Keycloak-specific knobs:
+  ##   - `realm` — replaced by explicit `tokenUrl` / `introspectUrl`
+  ##   - `roleMapper: client|realm` — replaced by explicit `rolesClaim`
+  ##                                  (dotted path into the claims)
+  ##   - `mode` — Python-only (rlm_python3 is bundled in the image;
+  ##              rlm_lua is not)
+  ##
+  ## @param modules.oidc.enabled Render the OIDC auth configs + Secrets and mount them into the pod. Acts as the master feature gate; renders nothing when `false`.
+  ## @param modules.oidc.wireDefaultSite Auto-wire the `default` instance's `oidc_authorize` as the `else` branch of the dispatch chain in `sites/default` (catches NAS that aren't bound to a named instance via `clients.<x>.oidc`). No-op when no `default` instance is configured.
+  ## @param modules.oidc.unmatchedReject When `true` AND no `default` instance is wired, the dispatch chain's `else` branch rejects unmatched NAS instead of falling through to `pap`. Off by default.
+  ## @param modules.oidc.instances [object] Named OIDC backends. Map key = FreeRADIUS module instance name (matching `^[a-z][a-z0-9_]*$`); value = backend config dict. Bind a NAS to one with `clients.<x>.oidc: <instance-name>`. A `clients.<x>` entry that sets BOTH `keycloak` AND `oidc` fails validation at render time.
+  ##
+  ## Per-instance keys (rendered into the Python wrapper at chart-render time):
+  ##   tokenUrl              str — RFC 6749 token endpoint (REQUIRED)
+  ##   introspectUrl         str — RFC 7662 introspect endpoint (REQUIRED when `introspect: true`)
+  ##   clientId              str — OAuth client_id
+  ##   clientSecret          str — confidential-client secret (Secret-backed; or use `existingSecret`)
+  ##   existingSecret        str — BYO Secret holding key `client-secret`
+  ##   scope                 str — space-separated OAuth scope (e.g. "openid profile email")
+  ##   connectTimeout        str — connect timeout in seconds
+  ##   roleAttribute         str — control attribute populated per role (default `Class`)
+  ##   rolesClaim            str — dotted path into JWT/introspect claims that yields a role list
+  ##                                (e.g. `roles`, `realm_access.roles`, `resource_access.<id>.roles`)
+  ##   denyWithoutRole       bool — reject when no role matches `roleMappings`
+  ##   roleMappings          list — ordered `[{role, reply: [...]}]` (first match wins)
+  ##   groupAttribute        str — control attribute populated per group (default `Class`)
+  ##   groupsClaim           str — dotted path that yields a group list (default `groups`)
+  ##   groupMappings         list — ordered `[{group, reply: [...]}]` (first match wins)
+  ##   attributeMappings     list — generic `[{claim, reply}]` claim→reply copy
+  ##   require               list — JWT claim names that must be truthy (e.g. `[email_verified]`)
+  ##   introspect            bool — use RFC 7662 introspect over local JWT decode (catches revocation)
+  ##   refreshTokenCache     bool — cache refresh_token + run a freshness check on cache hit
+  ##   cache.enabled         bool — render a `oidc_<name>_cache` rlm_cache instance
+  ##   cache.ttl             int — cache TTL in seconds
+  ##   tls.caCert            str — inline PEM CA bundle (for verifying the IdP cert)
+  ##   tls.existingSecret    str — BYO Secret containing the CA bundle
+  ##   tls.existingSecretCaKey str — key within `existingSecret` holding the bundle
+  ##   tls.insecure          bool — skip TLS verification (dev only)
+  ##   existingConfigMap     str — BYO module ConfigMap (skips chart-rendered one)
+  ##
+  ## instances:
+  ##   default:
+  ##     tokenUrl: "https://idp.example.com/oauth/token"
+  ##     clientId: freeradius
+  ##     clientSecret: ""
+  ##   authentik:
+  ##     tokenUrl: "https://auth.example.com/application/o/freeradius/token/"
+  ##     introspectUrl: "https://auth.example.com/application/o/introspect/"
+  ##     clientId: freeradius
+  ##     clientSecret: "..."
+  ##     scope: "openid profile email"
+  ##     rolesClaim: groups       # Authentik puts group membership in `groups`
+  ##     require: [email_verified]
+  ##     introspect: true
+  ##     cache:
+  ##       enabled: true
+  ##       ttl: 300
+  ##     roleMappings:
+  ##       - role: network-admin
+  ##         reply: ['Service-Type := Administrative-User']
+  ##
+  oidc:
+    enabled: false
+    wireDefaultSite: true
+    unmatchedReject: false
+    instances: {}
+
 ## FreeRADIUS policy definitions (the `policy { }` block in radiusd.conf).
 ##
 ## @param policies.includeDir Directory the `policy { }` block includes policies from. A relative path resolves against the config dir (`/etc/freeradius`), so the default reads the image's bundled `policy.d` (filter, eap, …) plus any chart-mounted policies (e.g. Keycloak's `policy.d/keycloak`). The directory must exist in the container — point it at an absolute path only if you mount your own populated `policy.d`.
@@ -1134,6 +1211,9 @@ auth:
 ## Pod-level scheduling and security live in the next two sections.
 ## =============================================================================
 
+## @param kind Workload kind rendered by `templates/Application.yaml`. Allowed (case-insensitive): `Deployment` / `deployment`, `StatefulSet` / `statefulset` — normalised internally to canonical PascalCase. `Deployment` keeps the existing semantics (shared PVC mounted from `templates/PersistentVolumeClaim.yaml`); `StatefulSet` gives stable pod identity, requires `serviceName` wiring on the Service, and switches persistence to per-replica `volumeClaimTemplates` rendered from `persistence.*` (the standalone `PersistentVolumeClaim.yaml` is then skipped).
+##
+kind: Deployment
 ## @param replicaCount Number of FreeRADIUS pods. Ignored when `horizontalPodAutoscaler.enabled` is true.
 ##
 replicaCount: 1
@@ -1484,7 +1564,6 @@ modsConfig: {}
 ## the values below. Prefer `keycloak.instances.default: { … }` in new
 ## values files. The shim will be removed in the next major.
 ##
-## @param keycloak.mode [DEPRECATED — use `keycloak.instances.default.mode`] Auth backend: `lua` / `python`.
 ## @param keycloak.url [DEPRECATED — use `keycloak.instances.default.url`] Base URL of the Keycloak server.
 ## @param keycloak.realm [DEPRECATED — use `keycloak.instances.default.realm`] Keycloak realm holding the users.
 ## @param keycloak.clientId [DEPRECATED — use `keycloak.instances.default.clientId`] OIDC client_id with Direct Access Grants enabled.
@@ -1531,12 +1610,11 @@ modsConfig: {}
 ##     hard-coded to `keycloak:<name>:%{User-Name}` (non-overridable —
 ##     namespacing prevents cross-instance cache hits on common usernames)
 ##
-## The implicit `default` instance keeps the legacy resource names for
-## backwards compatibility: module instance `keycloak_lua` / `keycloak_python`
-## / `keycloak_rest`; policy `keycloak_authorize`; Secret `<fullname>-keycloak`
+## The implicit `default` instance uses the bare resource names: module
+## instance `keycloak`; policy `keycloak_authorize`; Secret `<fullname>-keycloak`
 ## with key `client-secret`; `_CLIENT_SECRET` env var unprefixed
 ## (`FREERADIUS_KEYCLOAK_CLIENT_SECRET`); CA mount `/etc/freeradius/certs-keycloak/`;
-## script filenames `keycloak.lua` / `keycloak.py`.
+## script filename `keycloak.py`.
 ##
 ## Per-instance extras (also available on the legacy top-level when
 ## migrated to `keycloak.instances.default`):
@@ -1572,8 +1650,8 @@ modsConfig: {}
 ##
 ##   refreshTokenCache — only meaningful when `cache.enabled`. Stores the
 ##     `refresh_token` in `&control:Tmp-String-9` and renders a second
-##     module instance `keycloak_<name>_validate` (rlm_python3 / rlm_lua
-##     with `func_authorize = "validate"`). The policy calls it on cache
+##     module instance `keycloak_<name>_validate` (rlm_python3 with
+##     `func_authorize = "validate"`). The policy calls it on cache
 ##     hit: it attempts `grant_type=refresh_token` against Keycloak; if
 ##     Keycloak rejects (user disabled, password changed, session
 ##     revoked) the cache entry is invalidated and the request is
@@ -1583,13 +1661,11 @@ modsConfig: {}
 ## @param keycloak.instances [object] Named Keycloak backends. Map key = FreeRADIUS module instance name (matching `^[a-z][a-z0-9_]*$`); value = backend config dict (mirrors the legacy top-level keys). Bind a NAS to one with `clients.<name>.keycloak: <instance-name>`. The `default` instance, when present, is also the auto-wired fallback (see `wireDefaultSite`).
 ## instances:
 ##   default:
-##     mode: python
 ##     url: https://auth.example.com
 ##     realm: "master"
 ##     clientId: freeradius
 ##     clientSecret: ""
 ##   nas1:
-##     mode: python
 ##     url: https://kc.corp.example.com
 ##     realm: corp
 ##     clientId: nas-corp
@@ -1616,7 +1692,6 @@ modsConfig: {}
 ##     introspect: true
 ##     refreshTokenCache: true
 ##   nas2:
-##     mode: lua
 ##     url: https://kc.branch.example.com
 ##     realm: branch
 ##     clientId: nas-branch
@@ -1630,7 +1705,6 @@ keycloak:
   ## (empty `realm`) to disable the implicit-default shim. Setting any of
   ## these auto-creates `keycloak.instances.default` at render time.
   ##
-  mode: python
   url: https://auth.example.com
   realm: ""
   clientId: freeradius
@@ -2089,6 +2163,22 @@ service:
   ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
   ##
   sessionAffinityConfig: {}
+  ## Sibling headless (`clusterIP: None`) Service. Rendered automatically when
+  ## `kind: StatefulSet` and skipped when `kind: Deployment` — a StatefulSet
+  ## needs it for stable per-pod DNS (`<fullname>-0.<headless>.<ns>.svc.cluster.local`),
+  ## a Deployment has no use for one. The chart's main Service still handles
+  ## client traffic (auth/acct/coa/radsec/status); this one only backs the
+  ## StatefulSet's `serviceName` and per-pod A records. Same selector and same
+  ## UDP/TCP ports as the main Service, mirrored from `containerPorts.*`, so
+  ## proxy realm fail-over targeting a specific pod works.
+  ##
+  headless:
+    ## @param service.headless.nameSuffix Suffix appended to `<fullname>` to form the headless Service name (final name: `<fullname>-<suffix>`).
+    ##
+    nameSuffix: "headless"
+    ## @param service.headless.publishNotReadyAddresses Include not-yet-ready pods in the headless DNS records. Helpful when downstream callers want to reach a specific ordinal during startup; safe for StatefulSet identity but not for load-balanced traffic.
+    ##
+    publishNotReadyAddresses: false
 
 ## Pod disruption budget configuration
 ##

@@ -5,19 +5,20 @@ SPDX-License-Identifier: APACHE-2.0
 
 {{/*
 Per-instance rlm_python3 wrapper scripts. Renders one ConfigMap per
-`keycloak.instances.<name>` whose `mode` is `python`. Per-instance
-config is baked in at chart-render time by Helm — only `client_secret`
-(sensitive) is read from env, sourced from the per-instance
-`<fullname>-keycloak[-<name>]` Secret via the Deployment. Each wrapper
-delegates `authorize(p)` / `accounting(p)` / `validate(p)` to
-`keycloak_common` (rendered separately by `keycloak-common-py.yaml`).
+`keycloak.instances.<name>`. Per-instance config is baked in at chart-
+render time by Helm — only `client_secret` (sensitive) is read from env,
+sourced from the per-instance `<fullname>-keycloak[-<name>]` Secret via
+the Deployment. Each wrapper delegates to the generic `oidc_common`
+library (rendered by `modules/oidc/oidc-common-py.yaml`) — Keycloak's
+realm-based URL derivation and `roleMapper` (client / realm) translation
+are resolved at render time and baked into `_CONFIG`.
 
-  default + python → `<fullname>-keycloak-python`          key: `keycloak.py`
-  <name>  + python → `<fullname>-keycloak-<name>-python`   key: `keycloak_<name>.py`
+  default  → `<fullname>-keycloak-python`          key: `keycloak.py`
+  <name>   → `<fullname>-keycloak-<name>-python`   key: `keycloak_<name>.py`
 
 Both the per-instance wrapper and the shared library are mounted into
 `/etc/freeradius/scripts/`. `rlm_python3 python_path = "/etc/freeradius/scripts"`
-so `import keycloak_common` resolves to the shared file.
+so `import oidc_common` resolves to the shared file.
 
 rlm_python3 is bundled in the default `freeradius/freeradius-server:3.2.8`
 image — no image rebuild needed.
@@ -32,11 +33,14 @@ dicts containing only those) — no `json.loads(...)` round-trip needed.
 {{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
 {{- $fullname := include "st-common.names.fullname" . }}
 {{- range $name, $cfg := $resolved.instances }}
-{{- if eq $cfg.mode "python" }}
 {{- $cmName := ternary (printf "%s-keycloak-python" $fullname) (printf "%s-keycloak-%s-python" $fullname $name) (eq $name "default") }}
-{{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name "mode" $cfg.mode) }}
+{{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name) }}
 {{- $envPrefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) }}
 {{- $hasTls := include "freeradius.keycloak.tls.enabled" (dict "instance" $cfg) }}
+{{- $clientId := default "freeradius" $cfg.clientId }}
+{{- $roleMapper := default "client" $cfg.roleMapper }}
+{{- $kcBase := printf "%s/realms/%s/protocol/openid-connect" $cfg.url $cfg.realm }}
+{{- $rolesPath := ternary "realm_access.roles" (printf "resource_access.%s.roles" $clientId) (eq $roleMapper "realm") }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -55,24 +59,30 @@ data:
     Per-instance wrapper for Keycloak instance `{{ $name }}`. Config is
     baked in by Helm at chart-render time; only `client_secret` (sensitive)
     comes from the per-instance Secret via env (`{{ $envPrefix }}CLIENT_SECRET`).
+
+    Keycloak's realm-based URL derivation and `roleMapper` (client/realm)
+    are resolved here at render time — the generic `oidc_common` library
+    just sees plain `token_url` / `introspect_url` / `roles_claim_path`.
     """
 
     import os
-    import keycloak_common
+    import oidc
 
     _CONFIG = {
         "instance":            "{{ $name }}",
-        "role_attribute":      "{{ default "Class" $cfg.roleAttribute }}",
-        "base_url":            "{{ $cfg.url }}",
-        "realm":               "{{ $cfg.realm }}",
-        "client_id":           "{{ default "freeradius" $cfg.clientId }}",
+        "log_prefix":          "keycloak",
+        "token_url":           "{{ $kcBase }}/token",
+        "introspect_url":      "{{ $kcBase }}/token/introspect",
+        "client_id":           "{{ $clientId }}",
         "client_secret":       os.environ.get("{{ $envPrefix }}CLIENT_SECRET"),
         "scope":               "{{ default "" $cfg.scope }}",
-        "role_mapper":         "{{ default "client" $cfg.roleMapper }}",
         "ca_file":             {{ if $hasTls }}"{{ include "freeradius.keycloak.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}None{{ end }},
         "insecure":            {{ ternary "True" "False" $cfg.tls.insecure }},
         "timeout":             {{ default "4.0" $cfg.connectTimeout }},
+        "role_attribute":      "{{ default "Class" $cfg.roleAttribute }}",
+        "roles_claim_path":    "{{ $rolesPath }}",
         "group_attribute":     "{{ default "Class" $cfg.groupAttribute }}",
+        "groups_claim_path":   "groups",
         "group_mappings":      {{ $cfg.groupMappings | default list | toJson }},
         "attribute_mappings":  {{ $cfg.attributeMappings | default list | toJson }},
         "required":            {{ $cfg.require | default list | toJson }},
@@ -82,15 +92,14 @@ data:
 
 
     def authorize(p):
-        return keycloak_common.authorize(p, _CONFIG)
+        return oidc.authorize(p, _CONFIG)
 
 
     def accounting(p):
-        return keycloak_common.accounting(p)
+        return oidc.accounting(p)
 
 
     def validate(p):
-        return keycloak_common.validate(p, _CONFIG)
-{{- end }}
+        return oidc.validate(p, _CONFIG)
 {{- end }}
 {{- end }}

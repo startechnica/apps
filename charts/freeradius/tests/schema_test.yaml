@@ -1,0 +1,24 @@
+suite: values.schema.json (type guards)
+# These tests render an arbitrary template so Helm runs schema validation; the
+# specific template choice doesn't matter — schema errors fail the whole render.
+templates:
+  - templates/ServiceAccount.yaml
+release:
+  name: my-radius
+tests:
+  - it: passes with default values
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: rejects a non-boolean for tls.enabled
+    set:
+      tls.enabled: "yes"
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a non-integer replicaCount
+    set:
+      replicaCount: "two"
+    asserts:
+      - failedTemplate: {}

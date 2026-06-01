@@ -1,0 +1,45 @@
+suite: PersistentVolumeClaim (Deployment-only)
+templates:
+  - templates/PersistentVolumeClaim.yaml
+release:
+  name: my-radius
+  namespace: radius
+tests:
+  - it: is not rendered by default (persistence disabled)
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is rendered for Deployment + persistence enabled + no existingClaim
+    set:
+      persistence.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius
+      - equal:
+          path: spec.resources.requests.storage
+          value: 8Gi
+      - contains:
+          path: spec.accessModes
+          content: ReadWriteOnce
+
+  - it: is NOT rendered when StatefulSet owns the PVC via volumeClaimTemplates
+    set:
+      kind: StatefulSet
+      persistence.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is NOT rendered when an existingClaim is supplied
+    set:
+      persistence.enabled: true
+      persistence.existingClaim: my-byo-pvc
+    asserts:
+      - hasDocuments:
+          count: 0

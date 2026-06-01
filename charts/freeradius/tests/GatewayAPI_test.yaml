@@ -1,0 +1,149 @@
+suite: Gateway API (Gateway / UDPRoute / TLSRoute / ReferenceGrant)
+release:
+  name: my-radius
+  namespace: radius
+# Inject the Gateway API CRDs so the chart's capability lookups don't return "false".
+capabilities:
+  apiVersions:
+    - gateway.networking.k8s.io/v1/Gateway
+    - gateway.networking.k8s.io/v1/UDPRoute
+    - gateway.networking.k8s.io/v1/TLSRoute
+    - gateway.networking.k8s.io/v1/ReferenceGrant
+tests:
+  - it: nothing is rendered by default (gateway disabled)
+    templates:
+      - templates/gateway-api/Gateway.yaml
+      - templates/gateway-api/UDPRoute.yaml
+      - templates/gateway-api/TLSRoute.yaml
+      - templates/gateway-api/ReferenceGrant.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Gateway renders auth+acct UDP listeners by default
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      # Skip the EnvoyProxy resource — it ships a duplicate `start_time`
+      # access-log key (gateway-api/EnvoyProxy.yaml:47,56) that fails YAML parse.
+      gateway.infrastructure: ""
+    asserts:
+      - isKind:
+          of: Gateway
+      - equal:
+          path: spec.gatewayClassName
+          value: eg
+      - contains:
+          path: spec.listeners
+          content:
+            name: auth
+            port: 1812
+            protocol: UDP
+          any: true
+      - contains:
+          path: spec.listeners
+          content:
+            name: acct
+            port: 1813
+            protocol: UDP
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: coa
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: radsec
+          any: true
+
+  - it: Gateway adds a coa UDP listener when sites.coa.enabled
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      gateway.infrastructure: ""
+      sites.coa.enabled: true
+    asserts:
+      - contains:
+          path: spec.listeners
+          content:
+            name: coa
+            port: 3799
+            protocol: UDP
+          any: true
+
+  - it: Gateway adds a RADSEC TLS Passthrough listener when tls.enabled
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      gateway.infrastructure: ""
+      tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.listeners
+          content:
+            name: radsec
+            port: 2083
+            protocol: TLS
+            tls:
+              mode: Passthrough
+          any: true
+
+  - it: Gateway uses TLS Terminate when only gateway.tls.enabled (no in-pod radsec)
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      gateway.infrastructure: ""
+      gateway.tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.listeners
+          content:
+            name: radsec
+            port: 2083
+            protocol: TLS
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: radsec
+            tls:
+              mode: Passthrough
+          any: true
+
+  - it: UDPRoute renders one route per UDP listener (auth, acct, +coa)
+    templates:
+      - templates/gateway-api/UDPRoute.yaml
+    set:
+      gateway.enabled: true
+      gateway.udpRoute.enabled: true
+      gateway.gateway.create: true
+      gateway.infrastructure: ""
+      sites.coa.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 3
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-auth
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-acct
+        documentIndex: 1
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-coa
+        documentIndex: 2
+      - isKind:
+          of: UDPRoute
+        documentIndex: 0

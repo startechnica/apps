@@ -1,0 +1,103 @@
+suite: Keycloak (Python-only, post-Lua-removal)
+release:
+  name: my-radius
+  namespace: radius
+tests:
+  - it: keycloak.yaml is empty when keycloak.enabled is false
+    templates:
+      - templates/modules/keycloak/keycloak.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: per-instance python wrapper imports the shared `oidc` library with keycloak log_prefix
+    templates:
+      - templates/modules/keycloak/keycloak-conf-py.yaml
+    set:
+      keycloak.enabled: true
+      keycloak.realm: master
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-keycloak-python
+      - matchRegex:
+          path: data["keycloak.py"]
+          pattern: 'import oidc\b'
+      - matchRegex:
+          path: data["keycloak.py"]
+          pattern: '"log_prefix":\s+"keycloak"'
+      - matchRegex:
+          path: data["keycloak.py"]
+          pattern: '"token_url":\s+"https://auth\.example\.com/realms/master/protocol/openid-connect/token"'
+      - matchRegex:
+          path: data["keycloak.py"]
+          pattern: '"introspect_url":\s+"https://auth\.example\.com/realms/master/protocol/openid-connect/token/introspect"'
+
+  - it: roleMapper=client (default) bakes resource_access.<clientId>.roles into roles_claim_path
+    templates:
+      - templates/modules/keycloak/keycloak-conf-py.yaml
+    set:
+      keycloak.enabled: true
+      keycloak.realm: master
+    asserts:
+      - matchRegex:
+          path: data["keycloak.py"]
+          pattern: '"roles_claim_path":\s+"resource_access\.freeradius\.roles"'
+
+  - it: roleMapper=realm bakes realm_access.roles into roles_claim_path
+    templates:
+      - templates/modules/keycloak/keycloak-conf-py.yaml
+    set:
+      keycloak.enabled: true
+      keycloak.realm: master
+      keycloak.roleMapper: realm
+    asserts:
+      - matchRegex:
+          path: data["keycloak.py"]
+          pattern: '"roles_claim_path":\s+"realm_access\.roles"'
+
+  - it: keycloak module ConfigMap renders the python3 rlm_python3 block
+    templates:
+      - templates/modules/keycloak/keycloak.yaml
+    set:
+      keycloak.enabled: true
+      keycloak.realm: master
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-keycloak
+      - matchRegex:
+          path: data["keycloak"]
+          pattern: 'python3 keycloak \{'
+
+  - it: shared oidc.py library ConfigMap renders once when keycloak is enabled
+    templates:
+      - templates/modules/oidc/oidc-common-py.yaml
+    set:
+      keycloak.enabled: true
+      keycloak.realm: master
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius-oidc-py
+      - matchRegex:
+          path: data["oidc.py"]
+          pattern: 'def authorize\(p, cfg\):'
+
+  - it: validation rejects a legacy `mode:` key in instances
+    templates:
+      - templates/NOTES.txt
+    set:
+      keycloak.enabled: true
+      keycloak.instances.default.url: https://auth.example.com
+      keycloak.instances.default.realm: master
+      keycloak.instances.default.mode: python
+    asserts:
+      - failedTemplate:
+          errorPattern: 'mode. is no longer accepted'

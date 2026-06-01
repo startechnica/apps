@@ -1,0 +1,87 @@
+suite: Service (port publication gates)
+release:
+  name: my-radius
+  namespace: radius
+templates:
+  - templates/Service.yaml
+tests:
+  - it: publishes only auth, acct, status by default (coa+radsec off)
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - contains:
+          path: spec.ports
+          content:
+            name: udp-auth
+            port: 1812
+            protocol: UDP
+            targetPort: 1812
+            nodePort: null
+      - contains:
+          path: spec.ports
+          content:
+            name: udp-acct
+            port: 1813
+            protocol: UDP
+            targetPort: 1813
+            nodePort: null
+      - contains:
+          path: spec.ports
+          content:
+            name: udp-status
+            port: 18121
+            protocol: UDP
+            targetPort: 18121
+            nodePort: null
+      - notContains:
+          path: spec.ports
+          content:
+            name: udp-coa
+          any: true
+      - notContains:
+          path: spec.ports
+          content:
+            name: tls-radsec
+          any: true
+      - lengthEqual:
+          path: spec.ports
+          count: 3
+
+  - it: adds udp-coa when sites.coa is enabled
+    set:
+      sites.coa.enabled: true
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: udp-coa
+            port: 3799
+            protocol: UDP
+            targetPort: 3799
+            nodePort: null
+
+  - it: adds tls-radsec when tls is enabled
+    set:
+      tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: tls-radsec
+            port: 2083
+            protocol: TCP
+            targetPort: 2083
+            nodePort: null
+
+  - it: drops udp-status when sites.status is disabled
+    set:
+      sites.status.enabled: false
+    asserts:
+      - notContains:
+          path: spec.ports
+          content:
+            name: udp-status
+          any: true

@@ -734,6 +734,23 @@
               "type": "string"
             }
           }
+        },
+        "oidc": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "wireDefaultSite": {
+              "type": "boolean"
+            },
+            "unmatchedReject": {
+              "type": "boolean"
+            },
+            "instances": {
+              "type": "object"
+            }
+          }
         }
       }
     },
@@ -1477,9 +1494,6 @@
         },
         "unmatchedReject": {
           "type": "boolean"
-        },
-        "mode": {
-          "type": "string"
         },
         "url": {
           "type": "string"
