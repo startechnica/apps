@@ -20,21 +20,21 @@ data:
 
     server coa {
 
-    	listen {
-    		type = coa
-    		ipaddr = {{ .Values.sites.coa.listen.ipaddr }}
-    		port = {{ .Values.containerPorts.coa }}
-    	}
+        listen {
+            type = coa
+            ipaddr = {{ .Values.sites.coa.listen.ipaddr }}
+            port = {{ .Values.containerPorts.coa }}
+        }
 
-    	# Processed for *both* CoA-Request and Disconnect-Request packets.
-    	recv-coa {
-    		suffix
-    		ok
-    	}
+        # Processed for *both* CoA-Request and Disconnect-Request packets.
+        recv-coa {
+            suffix
+            ok
+        }
 
-    	# Processed for *both* CoA-Request and Disconnect-Request packets.
-    	send-coa {
-    		ok
-    	}
+        # Processed for *both* CoA-Request and Disconnect-Request packets.
+        send-coa {
+            ok
+        }
     }
 {{- end }}

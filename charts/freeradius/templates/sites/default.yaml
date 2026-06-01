@@ -20,406 +20,406 @@ data:
 
     server default {
 
-    	listen {
-    		type = auth
-    		# ipv4addr = *
-    		# ipv6addr = *
-    		ipaddr = *
-    		port = {{ .Values.containerPorts.auth }}
-    	#	interface = eth0
-    	#	clients = per_socket_clients
-    	#	recv_buff = 65536
-    		limit {
-    				max_connections = 16
-    				lifetime = 0
-    				idle_timeout = 900
-    		}
-    	}
-
-    	listen {
-    		ipaddr = *
-    	#	ipv6addr = ::
-    		port = {{ .Values.containerPorts.acct }}
-    		type = acct
-    	#	interface = eth0
-    	#	clients = per_socket_clients
-
-    		limit {
-    	#		max_pps = 0
-    	#		idle_timeout = 0
-    	#		lifetime = 0
-    	#		max_connections = 0
-    		}
-    	}
-
-    	# IPv6 versions of the above
-    	listen {
-    		type = auth
-    		ipv6addr = ::	# any.  ::1 == localhost
-    		port = {{ .Values.containerPorts.auth }}
-    	#	interface = eth0
-    	#	clients = per_socket_clients
-
-    		limit {
-    		      max_connections = 16
-    		      lifetime = 0
-    		      idle_timeout = 30
-    		}
-    	}
-
-    	listen {
-    		ipv6addr = ::
-    		port = {{ .Values.containerPorts.acct }}
-    		type = acct
-    	#	interface = eth0
-    	#	clients = per_socket_clients
-
-    		limit {
-    	#		max_pps = 0
-    	#		idle_timeout = 0
-    	#		lifetime = 0
-    	#		max_connections = 0
-    		}
-    	}
-
-    	authorize {
-    		filter_username
-
-    	#	filter_password
-
-    		preprocess
-
-    	#	operator-name
-
-    	#	cui
-
-    	#	auth_log
-
-    		chap
-
-    		mschap
-
-    		digest
-
-    	#	rewrite_called_station_id
-    	#	dpsk
-
-    	#	wimax
-
-    	#	IPASS
-
-    		suffix
-    	#	ntdomain
-
-    		{{- if .Values.modules.eap.enabled }}
-    		eap {
-    			ok = return
-    	#		updated = return
-    		}
-    		{{- end }}
-
-    	#	unix
-
-    		files
-
-    		{{- if .Values.modules.sql.enabled }}
-    		-sql
-    		{{- end }}
-
-    	#	smbpasswd
-
-    		{{- if .Values.modules.ldap.enabled }}
-    		-ldap
-    		{{- end }}
-
-    	#	if ((ok || updated) && User-Password && !control:Auth-Type) {
-    	#		update control {
-    	#			&Auth-Type := ldap
-    	#		}
-    	#	}
-
-    	#	daily
-
-    		expiration
-    		logintime
-
-    		{{- if .Values.keycloak.enabled }}
-    		{{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
-    		{{- $kcArms := (include "freeradius.keycloak.dispatchArms" .) | fromYaml }}
-    		{{- $kcHasDefault := hasKey $kcResolved.instances "default" }}
-    		{{- $kcWireDefault := and $kcHasDefault .Values.keycloak.wireDefaultSite }}
-    		{{- if $kcArms.arms }}
-    		#  Keycloak multi-instance dispatch — pick the per-NAS instance by
-    		#  matching `Packet-Src-IP-Address` against each `clients.<x>.ipv4addr`
-    		#  whose `clients.<x>.keycloak: <instance>` is set. Each
-    		#  `keycloak_<name>_authorize` policy wraps the matching module
-    		#  (`keycloak_<name>`) with cache-aside (when its `cache.enabled`)
-    		#  and — lua/python modes — role→reply mapping. Sets
-    		#  `Auth-Type := Accept` on a successful ROPC; runs before `pap`.
-    		{{- range $i, $arm := $kcArms.arms }}
-    		{{ if $i }}elsif{{ else }}if{{ end }} (Packet-Src-IP-Address == {{ $arm.ipv4 | quote }}) {
-    			{{ include "freeradius.keycloak.policyName" (dict "name" $arm.instance) }}
-    		}
-    		{{- end }}
-    		{{- if $kcWireDefault }}
-    		else {
-    			#  Default instance — catches NAS without an explicit
-    			#  `clients.<x>.keycloak` binding (wireDefaultSite: true).
-    			keycloak_authorize
-    		}
-    		{{- else if .Values.keycloak.unmatchedReject }}
-    		else {
-    			#  No matching instance and no default fallback — reject
-    			#  (`keycloak.unmatchedReject: true`).
-    			reject
-    		}
-    		{{- end }}
-    		{{- else if $kcWireDefault }}
-    		#  Keycloak: only the default instance is wired (no `clients.*` has
-    		#  a `keycloak:` binding). Calls `keycloak_authorize` directly.
-    		keycloak_authorize
-    		{{- end }}
-    		{{- end }}
-    		pap
-
-    	#	Autz-Type Status-Server {
-    	#
-    	#	}
-
-    		Autz-Type New-TLS-Connection {
-    				ok
-    		}
-    	}
-
-
-    	authenticate {
-    		{{- if .Values.modules.pap.enabled }}
-    		Auth-Type PAP {
-    			pap
-    		}
-    		{{- end }}
-
-    	#	dpsk
-
-    		Auth-Type CHAP {
-    			chap
-    		}
-
-    		Auth-Type MS-CHAP {
-    			mschap
-    		}
-
-    		mschap
-
-    		digest
-
-    		{{- if .Values.modules.pam.enabled }}
-    		pam
-    		{{- end }}
-
-    	#	Auth-Type LDAP {
-    	#		ldap
-    	#	}
-
-    		{{- if .Values.modules.eap.enabled }}
-    		eap
-    		{{- end }}
-
-    	#	Auth-Type eap {
-    	#		eap {
-    	#			handled = 1
-    	#		}
-    	#		if (handled && (Response-Packet-Type == Access-Challenge)) {
-    	#			attr_filter.access_challenge.post-auth
-    	#			handled  # override the "updated" code from attr_filter
-    	#		}
-    	#	}
-    	}
-
-
-    	preacct {
-    		preprocess
-
-    	#	acct_counters64
-
-    	#	update request {
-    	#	  	&FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
-    	#	}
-
-    		acct_unique
-
-    	#	IPASS
-    		suffix
-    	#	ntdomain
-
-    		files
-    	}
-
-    	accounting {
-    	#	cui
-
-    		detail
-    	#	daily
-
-    	#	unix
-
-    	#	radutmp
-    	#	sradutmp
-
-    	#	sqlippool
-
-    		{{- if .Values.modules.sql.enabled }}
-    		-sql
-    		{{- end }}
-
-    	#	if (noop) {
-    	#		ok
-    	#	}
-
-    	#	pgsql-voip
-
-    		exec
-
-    		attr_filter.accounting_response
-
-    	#	Acct-Type Status-Server {
-    	#
-    	#	}
-    	}
-
-
-    	session {
-    	#	radutmp
-
-    		{{- if .Values.modules.sql.enabled }}
-    		sql
-    		{{- end }}
-    	}
-
-
-    	post-auth {
-    	#	if (!&reply:State) {
-    	#		update reply {
-    	#			State := "0x%{randstr:16h}"
-    	#		}
-    	#	}
-
-    	#	verify_tls_client_common_name
-
-    	#	if (&EAP-Message && !&Stripped-User-Name && &TLS-Client-Cert-Serial) {
-    	#		update request {
-    	#			&Stripped-User-Name := "%{%{TLS-Client-Cert-Subject-Alt-Name-Email}:-%{%{TLS-Client-Cert-Common-Name}:-%{TLS-Client-Cert-Serial}}}"
-    	#		}
-    	#
-    	#		update reply {
-    	#			Class += "%{md5:%{Calling-Station-Id}%{Called-Station-Id}%{TLS-Client-Cert-Subject-Alt-Name-Email}%{TLS-Client-Cert-Common-Name}%{TLS-Client-Cert-Serial}%{NAS-IPv6-Address}%{NAS-IP-Address}%{NAS-Identifier}%{NAS-Port}}"
-    	#		}
-    	#
-    	#	}
-
-    		if (session-state:User-Name && reply:User-Name && request:User-Name && (reply:User-Name == request:User-Name)) {
-    			update reply {
-    				&User-Name !* ANY
-    			}
-    		}
-    		update {
-    			&reply: += &session-state:
-    		}
-
-    	#	sqlippool
-
-    	#	cui
-
-    	#	sql_session_start
-
-    	#	reply_log
-
-    		{{- if .Values.modules.sql.enabled }}
-    		-sql
-    		{{- end }}
-
-    	#	ldap
-
-    		exec
-
-    	#	wimax
-
-    	#	update reply {
-    	#	       Reply-Message += "%{TLS-Cert-Serial}"
-    	#	       Reply-Message += "%{TLS-Cert-Expiration}"
-    	#	       Reply-Message += "%{TLS-Cert-Subject}"
-    	#	       Reply-Message += "%{TLS-Cert-Issuer}"
-    	#	       Reply-Message += "%{TLS-Cert-Common-Name}"
-    	#	       Reply-Message += "%{TLS-Cert-Subject-Alt-Name-Email}"
-    	#
-    	#	       Reply-Message += "%{TLS-Client-Cert-Serial}"
-    	#	       Reply-Message += "%{TLS-Client-Cert-Expiration}"
-    	#	       Reply-Message += "%{TLS-Client-Cert-Subject}"
-    	#	       Reply-Message += "%{TLS-Client-Cert-Issuer}"
-    	#	       Reply-Message += "%{TLS-Client-Cert-Common-Name}"
-    	#	       Reply-Message += "%{TLS-Client-Cert-Subject-Alt-Name-Email}"
-    	#	}
-
-    	#	insert_acct_class
-
-    	#	if (&reply:EAP-Session-Id) {
-    	#		update reply {
-    	#			EAP-Key-Name := &reply:EAP-Session-Id
-    	#		}
-    	#	}
-
-    		remove_reply_message_if_eap
-
-    		Post-Auth-Type REJECT {
-    			{{- if .Values.modules.sql.enabled }}
-    			-sql
-    			{{- end }}
-    			attr_filter.access_reject
-
-    			{{- if .Values.modules.eap.enabled }}
-    			eap
-    			{{- end }}
-
-    			remove_reply_message_if_eap
-    		}
-
-    		Post-Auth-Type Challenge {
-    	#		remove_reply_message_if_eap
-    	#		attr_filter.access_challenge.post-auth
-    		}
-
-    		Post-Auth-Type Client-Lost {
-    	#		%{debug_attr:&session-state:TLS-Session-Information[*]}
-    	#		%{debug_attr:&session-state:TLS-Session-Information[n]}
-    	#		%{debug_attr:&session-state:Module-Failure-Message}
-    		}
-
-    		if (EAP-Key-Name && &reply:EAP-Session-Id) {
-    			update reply {
-    				&EAP-Key-Name := &reply:EAP-Session-Id
-    			}
-    		}
-    	}
-
-    	pre-proxy {
-    	#	proxy_rate_limit
-    	#	operator-name
-    	#	cui
-    	#	files
-    	#	attr_filter.pre-proxy
-    	#	pre_proxy_log
-    	}
-
-    	post-proxy {
-    	#	post_proxy_log
-    	#	attr_filter.post-proxy
-    	#	eap
-    	#	proxy_rate_limit
-
-    	#	Post-Proxy-Type Fail-Accounting {
-    	#		detail.example.com
-    	#		acct_response
-    	#	}
-    	}
+        listen {
+            type = auth
+            # ipv4addr = *
+            # ipv6addr = *
+            ipaddr = *
+            port = {{ .Values.containerPorts.auth }}
+        #    interface = eth0
+        #    clients = per_socket_clients
+        #    recv_buff = 65536
+            limit {
+                    max_connections = 16
+                    lifetime = 0
+                    idle_timeout = 900
+            }
+        }
+
+        listen {
+            ipaddr = *
+        #    ipv6addr = ::
+            port = {{ .Values.containerPorts.acct }}
+            type = acct
+        #    interface = eth0
+        #    clients = per_socket_clients
+
+            limit {
+        #        max_pps = 0
+        #        idle_timeout = 0
+        #        lifetime = 0
+        #        max_connections = 0
+            }
+        }
+
+        # IPv6 versions of the above
+        listen {
+            type = auth
+            ipv6addr = ::    # any.  ::1 == localhost
+            port = {{ .Values.containerPorts.auth }}
+        #    interface = eth0
+        #    clients = per_socket_clients
+
+            limit {
+                  max_connections = 16
+                  lifetime = 0
+                  idle_timeout = 30
+            }
+        }
+
+        listen {
+            ipv6addr = ::
+            port = {{ .Values.containerPorts.acct }}
+            type = acct
+        #    interface = eth0
+        #    clients = per_socket_clients
+
+            limit {
+        #        max_pps = 0
+        #        idle_timeout = 0
+        #        lifetime = 0
+        #        max_connections = 0
+            }
+        }
+
+        authorize {
+            filter_username
+
+        #    filter_password
+
+            preprocess
+
+        #    operator-name
+
+        #    cui
+
+        #    auth_log
+
+            chap
+
+            mschap
+
+            digest
+
+        #    rewrite_called_station_id
+        #    dpsk
+
+        #    wimax
+
+        #    IPASS
+
+            suffix
+        #    ntdomain
+
+            {{- if .Values.modules.eap.enabled }}
+            eap {
+                ok = return
+        #        updated = return
+            }
+            {{- end }}
+
+        #    unix
+
+            files
+
+            {{- if .Values.modules.sql.enabled }}
+            -sql
+            {{- end }}
+
+        #    smbpasswd
+
+            {{- if .Values.modules.ldap.enabled }}
+            -ldap
+            {{- end }}
+
+        #    if ((ok || updated) && User-Password && !control:Auth-Type) {
+        #        update control {
+        #            &Auth-Type := ldap
+        #        }
+        #    }
+
+        #    daily
+
+            expiration
+            logintime
+
+            {{- if .Values.keycloak.enabled }}
+            {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
+            {{- $kcArms := (include "freeradius.keycloak.dispatchArms" .) | fromYaml }}
+            {{- $kcHasDefault := hasKey $kcResolved.instances "default" }}
+            {{- $kcWireDefault := and $kcHasDefault .Values.keycloak.wireDefaultSite }}
+            {{- if $kcArms.arms }}
+            #  Keycloak multi-instance dispatch — pick the per-NAS instance by
+            #  matching `Packet-Src-IP-Address` against each `clients.<x>.ipv4addr`
+            #  whose `clients.<x>.keycloak: <instance>` is set. Each
+            #  `keycloak_<name>_authorize` policy wraps the matching module
+            #  (`keycloak_<name>`) with cache-aside (when its `cache.enabled`)
+            #  and — lua/python modes — role→reply mapping. Sets
+            #  `Auth-Type := Accept` on a successful ROPC; runs before `pap`.
+            {{- range $i, $arm := $kcArms.arms }}
+            {{ if $i }}elsif{{ else }}if{{ end }} (Packet-Src-IP-Address == {{ $arm.ipv4 | quote }}) {
+                {{ include "freeradius.keycloak.policyName" (dict "name" $arm.instance) }}
+            }
+            {{- end }}
+            {{- if $kcWireDefault }}
+            else {
+                #  Default instance — catches NAS without an explicit
+                #  `clients.<x>.keycloak` binding (wireDefaultSite: true).
+                keycloak_authorize
+            }
+            {{- else if .Values.keycloak.unmatchedReject }}
+            else {
+                #  No matching instance and no default fallback — reject
+                #  (`keycloak.unmatchedReject: true`).
+                reject
+            }
+            {{- end }}
+            {{- else if $kcWireDefault }}
+            #  Keycloak: only the default instance is wired (no `clients.*` has
+            #  a `keycloak:` binding). Calls `keycloak_authorize` directly.
+            keycloak_authorize
+            {{- end }}
+            {{- end }}
+            pap
+
+        #    Autz-Type Status-Server {
+        #
+        #    }
+
+            Autz-Type New-TLS-Connection {
+                    ok
+            }
+        }
+
+
+        authenticate {
+            {{- if .Values.modules.pap.enabled }}
+            Auth-Type PAP {
+                pap
+            }
+            {{- end }}
+
+        #    dpsk
+
+            Auth-Type CHAP {
+                chap
+            }
+
+            Auth-Type MS-CHAP {
+                mschap
+            }
+
+            mschap
+
+            digest
+
+            {{- if .Values.modules.pam.enabled }}
+            pam
+            {{- end }}
+
+        #    Auth-Type LDAP {
+        #        ldap
+        #    }
+
+            {{- if .Values.modules.eap.enabled }}
+            eap
+            {{- end }}
+
+        #    Auth-Type eap {
+        #        eap {
+        #            handled = 1
+        #        }
+        #        if (handled && (Response-Packet-Type == Access-Challenge)) {
+        #            attr_filter.access_challenge.post-auth
+        #            handled  # override the "updated" code from attr_filter
+        #        }
+        #    }
+        }
+
+
+        preacct {
+            preprocess
+
+        #    acct_counters64
+
+        #    update request {
+        #          &FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
+        #    }
+
+            acct_unique
+
+        #    IPASS
+            suffix
+        #    ntdomain
+
+            files
+        }
+
+        accounting {
+        #    cui
+
+            detail
+        #    daily
+
+        #    unix
+
+        #    radutmp
+        #    sradutmp
+
+        #    sqlippool
+
+            {{- if .Values.modules.sql.enabled }}
+            -sql
+            {{- end }}
+
+        #    if (noop) {
+        #        ok
+        #    }
+
+        #    pgsql-voip
+
+            exec
+
+            attr_filter.accounting_response
+
+        #    Acct-Type Status-Server {
+        #
+        #    }
+        }
+
+
+        session {
+        #    radutmp
+
+            {{- if .Values.modules.sql.enabled }}
+            sql
+            {{- end }}
+        }
+
+
+        post-auth {
+        #    if (!&reply:State) {
+        #        update reply {
+        #            State := "0x%{randstr:16h}"
+        #        }
+        #    }
+
+        #    verify_tls_client_common_name
+
+        #    if (&EAP-Message && !&Stripped-User-Name && &TLS-Client-Cert-Serial) {
+        #        update request {
+        #            &Stripped-User-Name := "%{%{TLS-Client-Cert-Subject-Alt-Name-Email}:-%{%{TLS-Client-Cert-Common-Name}:-%{TLS-Client-Cert-Serial}}}"
+        #        }
+        #
+        #        update reply {
+        #            Class += "%{md5:%{Calling-Station-Id}%{Called-Station-Id}%{TLS-Client-Cert-Subject-Alt-Name-Email}%{TLS-Client-Cert-Common-Name}%{TLS-Client-Cert-Serial}%{NAS-IPv6-Address}%{NAS-IP-Address}%{NAS-Identifier}%{NAS-Port}}"
+        #        }
+        #
+        #    }
+
+            if (session-state:User-Name && reply:User-Name && request:User-Name && (reply:User-Name == request:User-Name)) {
+                update reply {
+                    &User-Name !* ANY
+                }
+            }
+            update {
+                &reply: += &session-state:
+            }
+
+        #    sqlippool
+
+        #    cui
+
+        #    sql_session_start
+
+        #    reply_log
+
+            {{- if .Values.modules.sql.enabled }}
+            -sql
+            {{- end }}
+
+        #    ldap
+
+            exec
+
+        #    wimax
+
+        #    update reply {
+        #           Reply-Message += "%{TLS-Cert-Serial}"
+        #           Reply-Message += "%{TLS-Cert-Expiration}"
+        #           Reply-Message += "%{TLS-Cert-Subject}"
+        #           Reply-Message += "%{TLS-Cert-Issuer}"
+        #           Reply-Message += "%{TLS-Cert-Common-Name}"
+        #           Reply-Message += "%{TLS-Cert-Subject-Alt-Name-Email}"
+        #
+        #           Reply-Message += "%{TLS-Client-Cert-Serial}"
+        #           Reply-Message += "%{TLS-Client-Cert-Expiration}"
+        #           Reply-Message += "%{TLS-Client-Cert-Subject}"
+        #           Reply-Message += "%{TLS-Client-Cert-Issuer}"
+        #           Reply-Message += "%{TLS-Client-Cert-Common-Name}"
+        #           Reply-Message += "%{TLS-Client-Cert-Subject-Alt-Name-Email}"
+        #    }
+
+        #    insert_acct_class
+
+        #    if (&reply:EAP-Session-Id) {
+        #        update reply {
+        #            EAP-Key-Name := &reply:EAP-Session-Id
+        #        }
+        #    }
+
+            remove_reply_message_if_eap
+
+            Post-Auth-Type REJECT {
+                {{- if .Values.modules.sql.enabled }}
+                -sql
+                {{- end }}
+                attr_filter.access_reject
+
+                {{- if .Values.modules.eap.enabled }}
+                eap
+                {{- end }}
+
+                remove_reply_message_if_eap
+            }
+
+            Post-Auth-Type Challenge {
+        #        remove_reply_message_if_eap
+        #        attr_filter.access_challenge.post-auth
+            }
+
+            Post-Auth-Type Client-Lost {
+        #        %{debug_attr:&session-state:TLS-Session-Information[*]}
+        #        %{debug_attr:&session-state:TLS-Session-Information[n]}
+        #        %{debug_attr:&session-state:Module-Failure-Message}
+            }
+
+            if (EAP-Key-Name && &reply:EAP-Session-Id) {
+                update reply {
+                    &EAP-Key-Name := &reply:EAP-Session-Id
+                }
+            }
+        }
+
+        pre-proxy {
+        #    proxy_rate_limit
+        #    operator-name
+        #    cui
+        #    files
+        #    attr_filter.pre-proxy
+        #    pre_proxy_log
+        }
+
+        post-proxy {
+        #    post_proxy_log
+        #    attr_filter.post-proxy
+        #    eap
+        #    proxy_rate_limit
+
+        #    Post-Proxy-Type Fail-Accounting {
+        #        detail.example.com
+        #        acct_response
+        #    }
+        }
     }
 {{- end }}

@@ -22,204 +22,204 @@ data:
     server dhcp {
 
     listen {
-    	type = dhcp
-    	ipaddr = 0.0.0.0
-    	src_ipaddr = 127.0.0.1
-    	port = 6700
-    #	interface = lo0
-    	broadcast = no
+        type = dhcp
+        ipaddr = 0.0.0.0
+        src_ipaddr = 127.0.0.1
+        port = 6700
+    #    interface = lo0
+        broadcast = no
 
-    	performance {
-    		skip_duplicate_checks = no
-    	}
+        performance {
+            skip_duplicate_checks = no
+        }
     }
 
     dhcp DHCP-Discover {
 
-    	update control {
-    		&DHCP-DHCP-Server-Identifier = 192.0.2.2
-    	}
+        update control {
+            &DHCP-DHCP-Server-Identifier = 192.0.2.2
+        }
 
-    	dhcp_common
+        dhcp_common
 
-    	#dhcp_group_membership
+        #dhcp_group_membership
 
-    	#dhcp_override_network
+        #dhcp_override_network
 
-    	#dhcp_network
+        #dhcp_network
 
-    	#mac2ip
+        #mac2ip
 
-    	#update control {
-    	#	&Pool-Name := "local"
-    	#}
-    	#dhcp_sqlippool
+        #update control {
+        #    &Pool-Name := "local"
+        #}
+        #dhcp_sqlippool
 
-    	#if (notfound) {
-    	# ...
-    	#}
+        #if (notfound) {
+        # ...
+        #}
 
-    	#dhcp_subnet
+        #dhcp_subnet
 
-    	#dhcp_group_options
+        #dhcp_group_options
 
-    	#dhcp_hosts
+        #dhcp_hosts
 
-    	#dhcp_policy_sql
+        #dhcp_policy_sql
 
-    	#update reply {
-    	#       DHCP-Message-Type = DHCP-Offer
-    	#}
-    	#ok
+        #update reply {
+        #       DHCP-Message-Type = DHCP-Offer
+        #}
+        #ok
     }
 
     dhcp DHCP-Request {
 
-    	update control {
-    		&DHCP-DHCP-Server-Identifier = 192.0.2.2
-    	}
+        update control {
+            &DHCP-DHCP-Server-Identifier = 192.0.2.2
+        }
 
-    	if (&request:DHCP-DHCP-Server-Identifier && \
-    	    &request:DHCP-DHCP-Server-Identifier != &control:DHCP-DHCP-Server-Identifier) {
-    		do_not_respond
-    	}
+        if (&request:DHCP-DHCP-Server-Identifier && \
+            &request:DHCP-DHCP-Server-Identifier != &control:DHCP-DHCP-Server-Identifier) {
+            do_not_respond
+        }
 
-    	#update reply {
-    	#       &DHCP-Message-Type = DHCP-Ack
-    	#}
+        #update reply {
+        #       &DHCP-Message-Type = DHCP-Ack
+        #}
 
-    	dhcp_common
+        dhcp_common
 
-    	#dhcp_group_membership
+        #dhcp_group_membership
 
-    	#dhcp_override_network
+        #dhcp_override_network
 
-    	#dhcp_network
+        #dhcp_network
 
-    	#mac2ip
+        #mac2ip
 
-    #	update control {
-    #		&Pool-Name := "local"
-    #	}
-    #	dhcp_sqlippool_request
+    #    update control {
+    #        &Pool-Name := "local"
+    #    }
+    #    dhcp_sqlippool_request
 
-    	#if (notfound) {
-    	# ...
-    	#}
+        #if (notfound) {
+        # ...
+        #}
 
-    	#dhcp_subnet
+        #dhcp_subnet
 
-    	#dhcp_group_options
+        #dhcp_group_options
 
-    	#dhcp_hosts
+        #dhcp_hosts
 
-    	#dhcp_policy_sql
+        #dhcp_policy_sql
 
-    	#ok
+        #ok
     }
 
     dhcp DHCP-Decline {
 
-    	#dhcp_group_membership
+        #dhcp_group_membership
 
-    	#dhcp_override_network
+        #dhcp_override_network
 
-    	#dhcp_network
+        #dhcp_network
 
-    	#dhcp_policy_sql
+        #dhcp_policy_sql
 
-    #	update control {
-    #		&Pool-Name := "local"
-    #	}
-    #	dhcp_sqlippool_decline
+    #    update control {
+    #        &Pool-Name := "local"
+    #    }
+    #    dhcp_sqlippool_decline
 
-    	update reply {
-    	       &DHCP-Message-Type = DHCP-Do-Not-Respond
-    	}
-    	reject
+        update reply {
+               &DHCP-Message-Type = DHCP-Do-Not-Respond
+        }
+        reject
     }
 
     dhcp DHCP-Inform {
-    	dhcp_common
+        dhcp_common
 
-    	#dhcp_group_membership
+        #dhcp_group_membership
 
-    	#dhcp_override_network
+        #dhcp_override_network
 
-    	#dhcp_network
+        #dhcp_network
 
-    	#dhcp_subnet
+        #dhcp_subnet
 
-    	#dhcp_group_options
+        #dhcp_group_options
 
-    	#dhcp_hosts
+        #dhcp_hosts
 
-    	#dhcp_policy_sql
+        #dhcp_policy_sql
 
-    	ok
+        ok
     }
 
     # For Windows 7 boxes
     #dhcp DHCP-Inform {
-    #	update reply {
-    #		Packet-Dst-Port = 67
-    #		DHCP-Message-Type = DHCP-ACK
-    #		DHCP-DHCP-Server-Identifier = "%{Packet-Dst-IP-Address}"
-    #		DHCP-Site-specific-28 = 0x0a00
-    #	}
-    #	ok
+    #    update reply {
+    #        Packet-Dst-Port = 67
+    #        DHCP-Message-Type = DHCP-ACK
+    #        DHCP-DHCP-Server-Identifier = "%{Packet-Dst-IP-Address}"
+    #        DHCP-Site-specific-28 = 0x0a00
+    #    }
+    #    ok
     #}
 
     dhcp DHCP-Release {
 
-    	#dhcp_group_membership
+        #dhcp_group_membership
 
-    	#dhcp_override_network
+        #dhcp_override_network
 
-    	#dhcp_network
+        #dhcp_network
 
-    #	update control {
-    #		&Pool-Name := "local"
-    #	}
-    #	dhcp_sqlippool_release
+    #    update control {
+    #        &Pool-Name := "local"
+    #    }
+    #    dhcp_sqlippool_release
 
-    	update reply {
-    	       &DHCP-Message-Type = DHCP-Do-Not-Respond
-    	}
-    	reject
+        update reply {
+               &DHCP-Message-Type = DHCP-Do-Not-Respond
+        }
+        reject
     }
 
 
     dhcp DHCP-Lease-Query {
-    	if (&DHCP-Client-Hardware-Address) {
-    		# look up MAC in database
-    	}
-    	elsif (&DHCP-Your-IP-Address) {
-    		# look up IP in database
-    	}
-    	elsif (&DHCP-Client-Identifier) {
-    		# look up identifier in database
-    	}
-    	else {
-    		update reply {
-    			&DHCP-Message-Type = DHCP-Lease-Unknown
-    		}
+        if (&DHCP-Client-Hardware-Address) {
+            # look up MAC in database
+        }
+        elsif (&DHCP-Your-IP-Address) {
+            # look up IP in database
+        }
+        elsif (&DHCP-Client-Identifier) {
+            # look up identifier in database
+        }
+        else {
+            update reply {
+                &DHCP-Message-Type = DHCP-Lease-Unknown
+            }
 
-    		ok
-    		return
-    	}
+            ok
+            return
+        }
 
-    	if (notfound) {
-    		update reply {
-    			&DHCP-Message-Type = DHCP-Lease-Unknown
-    		}
-    		ok
-    		return
-    	}
+        if (notfound) {
+            update reply {
+                &DHCP-Message-Type = DHCP-Lease-Unknown
+            }
+            ok
+            return
+        }
 
-    	update reply {
-    		&DHCP-Message-Type = DHCP-Lease-Unassigned
-    	}
+        update reply {
+            &DHCP-Message-Type = DHCP-Lease-Unassigned
+        }
 
     }
 
@@ -227,8 +227,8 @@ data:
 
     # passwd mac2ip module — example, see mods-available/mac2ip
     #passwd mac2ip {
-    #	filename = ${confdir}/mac2ip
-    #	format = "*DHCP-Client-Hardware-Address:=DHCP-Your-IP-Address"
-    #	delimiter = ","
+    #    filename = ${confdir}/mac2ip
+    #    format = "*DHCP-Client-Hardware-Address:=DHCP-Your-IP-Address"
+    #    delimiter = ","
     #}
 {{- end }}

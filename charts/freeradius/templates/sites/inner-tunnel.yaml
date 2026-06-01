@@ -18,8 +18,8 @@ data:
   inner-tunnel: |-
     ######################################################################
     #
-    #	This is a virtual server that handles *only* inner tunnel
-    #	requests for EAP-TTLS and PEAP types.
+    #    This is a virtual server that handles *only* inner tunnel
+    #    requests for EAP-TTLS and PEAP types.
     #
     ######################################################################
 
@@ -33,13 +33,13 @@ data:
 
         authorize {
             filter_username
-        #	filter_inner_identity
+        #    filter_inner_identity
             chap
             mschap
-        #	unix
-        #	IPASS
+        #    unix
+        #    IPASS
             suffix
-        #	ntdomain
+        #    ntdomain
 
             update control {
                 &Proxy-To-Realm := LOCAL
@@ -55,11 +55,11 @@ data:
             {{ if .Values.modules.sql.enabled }}
             -sql
             {{- end }}
-        #	smbpasswd
+        #    smbpasswd
             {{ if .Values.modules.ldap.enabled }}
             -ldap
             {{- end }}
-        #	daily
+        #    daily
             expiration
             logintime
             pap
@@ -109,34 +109,34 @@ data:
             }
 
             mschap
-        #	pam
+        #    pam
 
-            #	Auth-Type LDAP {
-            #		ldap
-            #	}
+            #    Auth-Type LDAP {
+            #        ldap
+            #    }
 
             eap
         }
 
         session {
             radutmp
-        #	sql
+        #    sql
         }
 
         #  Post-Authentication
         post-auth {
         #   cui-inner
 
-        #	update outer.session-state {
-        #	       User-Name := &User-Name
-        #	}
+        #    update outer.session-state {
+        #           User-Name := &User-Name
+        #    }
 
-        #	reply_log
+        #    reply_log
             -sql
-        #	ldap
-        #	moonshot_host_tid
-        #	moonshot_realm_tid
-        #	moonshot_coi_tid
+        #    ldap
+        #    moonshot_host_tid
+        #    moonshot_realm_tid
+        #    moonshot_coi_tid
 
             if (0) {
                 update reply {
@@ -166,14 +166,14 @@ data:
         }
 
         pre-proxy {
-        #	files
-        #	attr_filter.pre-proxy
-        #	pre_proxy_log
+        #    files
+        #    attr_filter.pre-proxy
+        #    pre_proxy_log
         }
 
         post-proxy {
-        #	post_proxy_log
-        #	attr_filter.post-proxy
+        #    post_proxy_log
+        #    attr_filter.post-proxy
             eap
         }
 
