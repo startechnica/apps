@@ -44,10 +44,10 @@ data:
             # clients = per_socket_clients
 
             limit {
-        #        max_pps = 0
-        #        idle_timeout = 0
-        #        lifetime = 0
-        #        max_connections = 0
+                # max_pps = 0
+                # idle_timeout = 0
+                # lifetime = 0
+                # max_connections = 0
             }
         }
 
@@ -60,9 +60,9 @@ data:
             # clients = per_socket_clients
 
             limit {
-                  max_connections = 16
-                  lifetime = 0
-                  idle_timeout = 30
+                max_connections = 16
+                lifetime = 0
+                idle_timeout = 30
             }
         }
 
@@ -74,10 +74,10 @@ data:
             # clients = per_socket_clients
 
             limit {
-        #        max_pps = 0
-        #        idle_timeout = 0
-        #        lifetime = 0
-        #        max_connections = 0
+                # max_pps = 0
+                # idle_timeout = 0
+                # lifetime = 0
+                # max_connections = 0
             }
         }
 

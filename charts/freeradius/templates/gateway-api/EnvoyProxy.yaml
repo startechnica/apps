@@ -55,10 +55,6 @@ spec:
               response_flags: "%RESPONSE_FLAGS%"
               start_time: "%START_TIME%"
               upstream_host: "%UPSTREAM_HOST%"
-              user_agent: "%REQ(USER-AGENT)%"
-              x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
-              x_auth_user: "%REQ(:X-AUTHENTICATED-USER)%"
-              x_remote_user: "%REQ(X-REMOTE-USER)%"
             type: JSON
           sinks:
             - type: File
