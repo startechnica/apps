@@ -60,7 +60,9 @@ jobs:
           version: latest
 
       - name: Install helm-unittest plugin
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version 1.1.0
+        # `--verify=false` because helm-unittest releases aren't signed and
+        # newer Helm refuses unverifiable plugin sources by default.
+        run: helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest --version 1.1.0
 
       # Subchart .tgz files under `charts/<chart>/charts/` are gitignored, so
       # the deps must be materialized from Chart.lock before unittest can render
