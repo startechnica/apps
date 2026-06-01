@@ -202,6 +202,53 @@ adds the `%{redis:...}` xlat); the cache reuses the connection settings under
 To point the cache at an **external** Redis instead, leave `redis.enabled: false`
 and set the connection under `modules.redis` (e.g. `modules.redis.server`).
 
+### Adding users (`files` backend)
+
+For small/static user sets — dev, test, lab — declare users directly in
+values via the top-level `users:` array. The chart renders them into a
+ConfigMap and mounts it at `/etc/freeradius/mods-config/files/authorize`
+(via `subPath`), where the upstream image's bundled `mods-enabled/files`
+symlink already loads them. No need to flip `modules.files.enabled` —
+the `default` virtual server's `authorize {}` block already calls `files`
+unconditionally.
+
+```yaml
+users:
+  - name: alice
+    password: wonderland                     # → Cleartext-Password (default)
+    reply:
+      - 'Filter-Id := "staff"'
+      - 'Framed-IP-Address := "10.0.0.42"'
+  - name: bob
+    password: '$1$abc123$Q2YS.Cb6yYTzS6e9YQyXq.'
+    passwordType: Crypt-Password             # any FR check-attribute name
+  - name: charlie
+    password: secret
+    attributes:                              # extra check attrs (raw FR syntax)
+      - 'NAS-IP-Address == 192.0.2.1'
+    reply:
+      - 'Service-Type := Framed-User'
+```
+
+The array is processed in declaration order — FreeRADIUS's `files`
+module evaluates the file top-to-bottom with `Fall-Through = no` default
+semantics, so order matters when two entries could match.
+
+> **⚠️ Plaintext in a ConfigMap.** Passwords supplied here are baked
+> into `<release>-freeradius-users` and visible to anyone with read
+> access to the namespace. For dev/test that's fine; for sensitive
+> credentials prefer **(a)** the SQL backend (`modules.sql.enabled:
+> true` + a bundled subchart), where passwords live in a real Secret
+> and CRUD goes through SQL; or **(b)** pre-create your own `authorize`
+> file as a Secret and inject it via `extraVolumes` /
+> `extraVolumeMounts` (chart's `users: []` stays empty).
+
+For production multi-user setups with mutations through the day, the
+SQL path is preferred — see the bundled MariaDB / PostgreSQL subchart
+under `mariadb.enabled` / `postgresql.enabled`, and the standard
+`radcheck` / `radreply` / `radusergroup` schema is auto-loaded by the
+chart's `db-bootstrap` initContainer.
+
 ### Keycloak (OIDC) authentication
 
 FreeRADIUS can authenticate users against a Keycloak realm using the OAuth2

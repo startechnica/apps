@@ -1072,6 +1072,37 @@
         }
       }
     },
+    "users": {
+      "type": "array",
+      "description": "RADIUS users for the `files` module, in declaration order. Each entry needs name + password; optional passwordType / attributes / reply.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "passwordType": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reply": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["name", "password"]
+      }
+    },
     "auth": {
       "type": "object",
       "properties": {

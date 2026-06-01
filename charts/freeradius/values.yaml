@@ -1062,6 +1062,43 @@ clients:
       idle_timeout: 30
 
 
+## RADIUS users for the `files` module. When non-empty, the chart renders
+## `/etc/freeradius/mods-config/files/authorize` from these entries
+## (`templates/configmaps/users.yaml`) and mounts it via `subPath` so the
+## upstream image's existing `mods-enabled/files` symlink picks it up
+## automatically (no need to set `modules.files.enabled`). The `default`
+## virtual server already calls `files` unconditionally in `authorize {}`.
+##
+## File-based user storage is fine for small / static / dev deployments;
+## for production multi-user setups with mutations through the day, switch to
+## `modules.sql.enabled: true` (durable, queryable, no pod restart on change).
+##
+## Password hygiene note: values supplied here are baked into a ConfigMap
+## (not a Secret) and visible to anyone with read access to the namespace.
+## For dev/test that's usually fine; for anything sensitive, use the SQL
+## backend with a secret-keyed password Secret, or pre-create your own
+## `authorize` file and inject it via `extraVolumes` / `extraVolumeMounts`.
+##
+## @param users [array] RADIUS users to render into the `files` module's `authorize` file, in order (FreeRADIUS evaluates the file top-to-bottom with `Fall-Through = no` default semantics, so order matters when two entries could match). Each entry: `name` is REQUIRED (the username — used verbatim, FreeRADIUS accepts any non-whitespace string including `DEFAULT`); `password` is REQUIRED (cleartext when `passwordType` is the default, or the pre-hashed/encoded value matching `passwordType`); `passwordType` (FreeRADIUS check-attribute name — `Cleartext-Password` default, also `Crypt-Password`, `MD5-Password`, `SSHA-Password`, `NT-Password`, etc.); `attributes` (optional list of additional check attributes in raw FreeRADIUS map syntax, e.g. `["NAS-IP-Address == 192.0.2.1"]`); `reply` (optional list of reply attributes in raw map syntax, e.g. `['Filter-Id := "staff"']`). Array shape (vs the map shape used by `clients`) mirrors the other inline-FreeRADIUS-config primitives in this chart (`homeServers[]`, `homeServerPools[]`, `realms[]`, `sites.radsec.clients[]`) and preserves the declaration order that FreeRADIUS's first-match semantics depend on.
+## users:
+##   - name: alice
+##     password: wonderland
+##     reply:
+##       - 'Filter-Id := "staff"'
+##       - 'Framed-IP-Address := "10.0.0.42"'
+##   - name: bob
+##     password: '$1$abc123$Q2YS.Cb6yYTzS6e9YQyXq.'
+##     passwordType: Crypt-Password
+##   - name: charlie
+##     password: secret
+##     attributes:
+##       - 'NAS-IP-Address == 192.0.2.1'
+##     reply:
+##       - 'Service-Type := Framed-User'
+##
+users: []
+
+
 ## =============================================================================
 ## @section FreeRADIUS Authentication parameters
 ## -----------------------------------------------------------------------------
