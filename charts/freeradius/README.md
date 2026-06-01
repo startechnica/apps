@@ -16,8 +16,7 @@ FreeRADIUS is a modular, high performance free RADIUS suite developed and distri
 ## TL;DR
 
 ```console
-helm repo add startechnica https://startechnica.github.io/apps
-helm install my-release startechnica/freeradius
+helm install my-release oci://ghcr.io/startechnica/charts/freeradius
 ```
 
 ## Prerequisites
@@ -30,11 +29,11 @@ helm install my-release startechnica/freeradius
 To install the chart with the release name `my-release` on `my-release` namespace:
 
 ```console
-helm repo add startechnica https://startechnica.github.io/apps
-helm install my-release startechnica/freeradius --namespace my-release --create-namespace
+helm install my-release oci://ghcr.io/startechnica/charts/freeradius \
+  --namespace my-release --create-namespace
 ```
 
-These commands deploy FreeRADIUS on the Kubernetes cluster in the default configuration.
+The chart is published as an OCI artifact in GHCR, so no `helm repo add` is needed — Helm 3.10+ resolves the `oci://` URL directly. The command deploys FreeRADIUS on the Kubernetes cluster in the default configuration.
 
 > **Tip**: List all releases using `helm list -A`
 
@@ -52,23 +51,100 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Adding extra environment variables
 
-In case you want to add extra environment variables (useful for advanced operations like custom init scripts), you can use the `extraEnvVars` property.
+In case you want to add extra environment variables (useful for advanced operations like custom init scripts), you can use the `extraEnvVars` property. Each entry is a standard Kubernetes `EnvVar`, so `valueFrom` works too.
 
 ```yaml
 extraEnvVars:
   - name: LOG_LEVEL
     value: error
+  - name: TZ
+    value: "Europe/Amsterdam"
+  - name: NODE_NAME             # downwardAPI example
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
 ```
 
-Alternatively, you can use a ConfigMap or a Secret with the environment variables. To do so, use the `extraEnvVarsCM` or the `extraEnvVarsSecret` values.
+For larger sets of variables (or when the values live in a ConfigMap / Secret you already manage), point at them with `extraEnvVarsCM` / `extraEnvVarsSecret`. Every key from those resources is injected verbatim via `envFrom`.
+
+```yaml
+extraEnvVarsCM: my-freeradius-env       # ConfigMap with key=value pairs
+extraEnvVarsSecret: my-freeradius-creds # Secret with key=value pairs (base64)
+```
+
+The three properties stack — `extraEnvVars` entries land first (so they can override anything from the ConfigMap/Secret with the same name), followed by `envFrom` for the ConfigMap, then the Secret.
 
 ### Setting Pod's affinity
 
-This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod's affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
+This chart allows you to set your custom affinity using the `affinity` parameter, or to lean on the bundled presets (`podAntiAffinityPreset` / `podAffinityPreset` / `nodeAffinityPreset.type` — each accepts `soft` or `hard`). The presets render a sensible default; setting `affinity` overrides them entirely. Find more information about Pod's affinity in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
+
+```yaml
+# Option A — bundled presets (simplest)
+podAntiAffinityPreset: hard              # spread replicas across nodes; default is "soft"
+nodeAffinityPreset:
+  type: soft
+  key: workload-class
+  values: [radius]
+
+# Option B — explicit affinity passthrough (overrides every preset above)
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/os
+              operator: In
+              values: [linux]
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: my-release
+              app.kubernetes.io/name: freeradius
+          topologyKey: topology.kubernetes.io/zone
+```
 
 ### Deploying extra resources
 
-There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
+There are cases where you may want to deploy extra objects alongside the chart — a `ConfigMap` holding sideband config, a `NetworkPolicy` covering a CIDR that the chart's policies don't, a `ServiceMonitor` with custom relabelings, an external-secrets `ExternalSecret`, etc. The `extraDeploy` parameter takes a list of arbitrary manifests; each one is rendered through `tpl` so `{{ .Release.Name }}` / `{{ .Release.Namespace }}` work as you'd expect.
+
+```yaml
+extraDeploy:
+  # Custom ConfigMap mounted into the pod via extraVolumes / extraVolumeMounts
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: "{{ .Release.Name }}-freeradius-extra-clients"
+      namespace: "{{ .Release.Namespace }}"
+    data:
+      extra-clients.conf: |
+        client edge-router {
+            ipaddr = 198.51.100.0/24
+            secret = $ENV{FREERADIUS_EDGE_ROUTER_SECRET}
+        }
+
+  # NetworkPolicy that opens RADSEC to a specific peer CIDR the bundled policy doesn't cover
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: "{{ .Release.Name }}-freeradius-radsec-extra"
+      namespace: "{{ .Release.Namespace }}"
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: "{{ .Release.Name }}"
+          app.kubernetes.io/name: freeradius
+      policyTypes: [Ingress]
+      ingress:
+        - from:
+            - ipBlock:
+                cidr: 203.0.113.0/24
+          ports:
+            - protocol: TCP
+              port: 2083
+```
 
 ### Redis-backed cache
 
@@ -985,7 +1061,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install my-release \
   --set imagePullPolicy=Always \
-  startechnica/freeradius
+  oci://ghcr.io/startechnica/charts/freeradius
 ```
 
 The above command sets the `imagePullPolicy` to `Always`.
@@ -993,7 +1069,7 @@ The above command sets the `imagePullPolicy` to `Always`.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release startechnica/freeradius -f values.yaml
+helm install my-release oci://ghcr.io/startechnica/charts/freeradius -f values.yaml
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
