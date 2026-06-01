@@ -7,21 +7,18 @@ SPDX-License-Identifier: APACHE-2.0
 Single ConfigMap, single key (`cache`), holding every rlm_cache instance the
 chart manages concatenated into one FreeRADIUS module file. Sections rendered
 on demand:
-  - `cache { }`                       — base       (modules.cache.enabled)
-  - `cache cache_tls { }`             — EAP TLS    (sites.tlsCache.enabled)
-  - `cache keycloak[_<name>]_cache`   — Keycloak   (one per keycloak instance
-                                                    whose `cache.enabled: true`)
-  - `cache <name> { }`                — per-entry  (modules.cache.instances.<name>)
+  - `cache { }`                  — base       (modules.cache.enabled)
+  - `cache cache_tls { }`        — EAP TLS    (sites.tlsCache.enabled)
+  - `cache oidc[_<name>]_cache`  — OIDC       (one per modules.oidc instance
+                                               whose `cache.enabled: true`)
+  - `cache <name> { }`           — per-entry  (modules.cache.instances.<name>)
 
 The Deployment mounts this as one file at `mods-enabled/cache`; rlm_cache
 parses every `cache <name>` block in the file and registers each as its own
 instance.
 
 BYO override: `modules.cache.existingConfigMap` skips this template entirely
-and the user provides the full module file themselves. Chart-managed
-`cache_tls` / `keycloak[_<name>]_cache` bodies interpolate chart values, so
-combining BYO with `sites.tlsCache` or any keycloak instance's `cache` is
-not supported.
+and the user provides the full module file themselves.
 
 The `redis { }` sub-block is intentionally inlined per instance — no shared
 helper, because the indirection hurts readability more than the duplication.
@@ -29,18 +26,18 @@ helper, because the indirection hurts readability more than the duplication.
 {{- if not .Values.modules.cache.existingConfigMap -}}
 {{- $base := .Values.modules.cache.enabled -}}
 {{- $tls := .Values.sites.tlsCache.enabled -}}
-{{- $resolvedKc := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
-{{- $kcInstances := dict -}}
-{{- if .Values.keycloak.enabled -}}
-{{- range $name, $cfg := $resolvedKc.instances -}}
+{{- $oidcInstances := dict -}}
+{{- if .Values.modules.oidc.enabled -}}
+{{- $resolvedOidc := include "freeradius.oidc.resolveInstances" . | fromYaml -}}
+{{- range $name, $cfg := $resolvedOidc.instances -}}
 {{- if and $cfg.cache $cfg.cache.enabled -}}
-{{- $_ := set $kcInstances $name $cfg -}}
+{{- $_ := set $oidcInstances $name $cfg -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
-{{- $kc := not (empty $kcInstances) -}}
+{{- $oidc := not (empty $oidcInstances) -}}
 {{- $inst := not (empty .Values.modules.cache.instances) -}}
-{{- if or $base $tls $kc $inst }}
+{{- if or $base $tls $oidc $inst }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -115,32 +112,24 @@ data:
         }
     }
     {{- end }}
-    {{- if $kc }}
-    {{- range $name, $cfg := $kcInstances }}
-    {{- $cacheName := include "freeradius.keycloak.cacheName" (dict "name" $name) }}
-    {{- $cacheKey := include "freeradius.keycloak.cacheKey" (dict "name" $name) }}
+    {{- if $oidc }}
+    {{- range $name, $cfg := $oidcInstances }}
+    {{- $cacheName := include "freeradius.oidc.cacheName" (dict "name" $name) }}
+    {{- $cacheKey := include "freeradius.oidc.cacheKey" (dict "name" $name) }}
     {{- $roleAttr := default "Class" $cfg.roleAttribute }}
     {{- $groupAttr := default "Class" $cfg.groupAttribute }}
     {{- $emitGroupAttr := and $cfg.groupMappings (ne $roleAttr $groupAttr) }}
     {{- $replyAttrs := dict }}
     {{- range $m := default list $cfg.attributeMappings }}{{- $_ := set $replyAttrs $m.reply true }}{{- end }}
 
-    # rlm_cache instance dedicated to Keycloak auth results for instance
+    # rlm_cache instance dedicated to OIDC auth results for instance
     # `{{ $name }}`. Keyed on `{{ $cacheKey }}` — instance-namespaced to
-    # prevent cross-instance cache hits on common usernames (a corp user
-    # `alice` cache hit must not return roles to a branch user `alice`).
-    # Caches the attributes the mapper script populated (role list, plus
-    # any of: group list, attribute-mapping reply attrs, refresh_token
-    # when refreshTokenCache is set) so subsequent
-    # `{{ include "freeradius.keycloak.policyName" (dict "name" $name) }}` calls within TTL skip
-    # the ROPC + JWT-decode roundtrip to Keycloak. Role/group->reply
-    # mapping (`{{ include "freeradius.keycloak.rolesPolicyName" (dict "name" $name) }}` /
-    # `{{ include "freeradius.keycloak.groupsPolicyName" (dict "name" $name) }}`) still runs
-    # on every request, regenerating reply attrs from the cached lists.
-    # Always Redis-backed — freeradius.validate.keycloakInstances hard-fails
-    # if no Redis is configured for an instance with cache.enabled (cross-pod
-    # sharing is the point; per-pod caches still help but the chart
-    # standardises on Redis for predictability).
+    # prevent cross-instance cache hits on common usernames. Caches the
+    # attributes the mapper script populated so subsequent
+    # `{{ include "freeradius.oidc.policyName" (dict "name" $name) }}` calls within TTL skip
+    # the ROPC + claim-decode roundtrip to the IdP. Always Redis-backed —
+    # `freeradius.validate.oidcInstances` hard-fails if no Redis is
+    # configured.
     cache {{ $cacheName }} {
         driver = "rlm_cache_redis"
         key = {{ $cacheKey }}

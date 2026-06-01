@@ -102,7 +102,7 @@ spec:
         {{- if and .Values.modules.redis.enabled (not .Values.modules.redis.existingConfigMap) }}
         checksum/configmap-mods-redis: {{ include (print $.Template.BasePath "/modules/redis.yaml") . | sha256sum }}
         {{- end }}
-        {{- if and (not .Values.modules.cache.existingConfigMap) (or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.keycloak.cache.enabled .Values.modules.cache.instances) }}
+        {{- if and (not .Values.modules.cache.existingConfigMap) (or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.modules.cache.instances) }}
         checksum/configmap-mods-cache: {{ include (print $.Template.BasePath "/modules/cache.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.modsConfig }}
@@ -124,27 +124,8 @@ spec:
         checksum/configmap-home-server-pools: {{ include (print $.Template.BasePath "/configmaps/home-server-pools.yaml") . | sha256sum }}
         {{- end }}
         checksum/configmap-realms: {{ include (print $.Template.BasePath "/configmaps/realms.yaml") . | sha256sum }}
-        {{- if .Values.keycloak.enabled }}
-        {{- $kcResolvedAnno := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
-        {{- $kcHasSecret := false -}}{{- $kcHasTls := false -}}
-        {{- range $name, $cfg := $kcResolvedAnno.instances -}}
-        {{- if and $cfg.clientSecret (not $cfg.existingSecret) }}{{- $kcHasSecret = true }}{{- end -}}
-        {{- if include "freeradius.keycloak.tls.createSecret" (dict "instance" $cfg) }}{{- $kcHasTls = true }}{{- end -}}
-        {{- end }}
-        checksum/configmap-keycloak: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak.yaml") . | sha256sum }}
-        checksum/configmap-keycloak-policy: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-policy.yaml") . | sha256sum }}
-        checksum/configmap-keycloak-mapper-python: {{ include (print $.Template.BasePath "/modules/keycloak/keycloak-conf-py.yaml") . | sha256sum }}
-        {{- if $kcHasSecret }}
-        checksum/secret-keycloak: {{ include (print $.Template.BasePath "/modules/keycloak/secret.yaml") . | sha256sum }}
-        {{- end }}
-        {{- if $kcHasTls }}
-        checksum/secret-keycloak-tls: {{ include (print $.Template.BasePath "/modules/keycloak/secret-tls.yaml") . | sha256sum }}
-        {{- end }}
-        {{- end }}
-        {{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
-        checksum/configmap-oidc-common-python: {{ include (print $.Template.BasePath "/modules/oidc/oidc-common-py.yaml") . | sha256sum }}
-        {{- end }}
         {{- if .Values.modules.oidc.enabled }}
+        checksum/configmap-oidc-common-python: {{ include (print $.Template.BasePath "/modules/oidc/oidc-common-py.yaml") . | sha256sum }}
         {{- $oidcResolvedAnno := include "freeradius.oidc.resolveInstances" . | fromYaml }}
         {{- $oidcHasSecret := false -}}{{- $oidcHasTls := false -}}
         {{- range $name, $cfg := $oidcResolvedAnno.instances -}}
@@ -349,26 +330,12 @@ spec:
           {{- end }}
           env:
             {{- include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
-            {{- if .Values.keycloak.enabled }}
-            {{- /* Per-instance `<prefix>CLIENT_SECRET` only. URL / realm /
-                   clientId / scope / connectTimeout / roleMapper / ca_file /
-                   insecure are baked into the wrapper ConfigMaps at
-                   chart-render time; the client_secret is the only
-                   sensitive value, so it stays in a Secret and rides in
-                   via env. */}}
-            {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
-            {{- range $name, $cfg := $kcResolved.instances }}
-            {{- if $cfg.clientSecret }}
-            {{- $envPrefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) }}
-            - name: {{ $envPrefix }}CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "freeradius.keycloak.clientSecretName" (dict "name" $name "instance" $cfg "context" $) }}
-                  key: client-secret
-            {{- end }}
-            {{- end }}
-            {{- end }}
             {{- if .Values.modules.oidc.enabled }}
+            {{- /* Per-instance `<prefix>CLIENT_SECRET` only. Endpoints, claim
+                   paths, mappings etc. are baked into the per-instance Python
+                   wrapper at chart-render time; the client_secret is the only
+                   sensitive value, so it stays in a Secret and rides in via
+                   env. */}}
             {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
             {{- range $name, $cfg := $oidcResolved.instances }}
             {{- if $cfg.clientSecret }}
@@ -535,7 +502,7 @@ spec:
               mountPath: /etc/freeradius/mods-enabled/redis
               subPath: redis
             {{- end }}
-            {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.keycloak.cache.enabled .Values.modules.cache.instances }}
+            {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.modules.cache.instances }}
             - name: freeradius-mods-cache
               mountPath: /etc/freeradius/mods-enabled/cache
               subPath: cache
@@ -587,34 +554,6 @@ spec:
               readOnly: true
             {{- end }}
             {{- end }}
-            {{- if .Values.keycloak.enabled }}
-            {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
-            {{- range $name, $cfg := $kcResolved.instances }}
-            {{- $modKey := include "freeradius.keycloak.modKey" (dict "name" $name) }}
-            {{- $polKey := include "freeradius.keycloak.policyKey" (dict "name" $name) }}
-            {{- $volModName := ternary "keycloak" (printf "keycloak-%s" $name) (eq $name "default") }}
-            {{- $volPolName := ternary "keycloak-policy" (printf "keycloak-%s-policy" $name) (eq $name "default") }}
-            - name: {{ $volModName }}
-              mountPath: /etc/freeradius/mods-enabled/{{ $modKey }}
-              subPath: {{ $modKey }}
-              readOnly: true
-            - name: {{ $volPolName }}
-              mountPath: /etc/freeradius/policy.d/{{ $polKey }}
-              subPath: {{ $polKey }}
-              readOnly: true
-            {{- if include "freeradius.keycloak.tls.enabled" (dict "instance" $cfg) }}
-            - name: {{ include "freeradius.keycloak.tlsVolumeName" (dict "name" $name) }}
-              mountPath: {{ ternary "/etc/freeradius/certs-keycloak" (printf "/etc/freeradius/certs-keycloak-%s" $name) (eq $name "default") }}
-              readOnly: true
-            {{- end }}
-            {{- $scriptKey := include "freeradius.keycloak.scriptKey" (dict "name" $name) }}
-            {{- $volScriptName := ternary "keycloak-mapper-python" (printf "keycloak-%s-python" $name) (eq $name "default") }}
-            - name: {{ $volScriptName }}
-              mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
-              subPath: {{ $scriptKey }}
-              readOnly: true
-            {{- end }}
-            {{- end }}
             {{- if .Values.modules.oidc.enabled }}
             {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
             {{- range $name, $cfg := $oidcResolved.instances }}
@@ -643,9 +582,8 @@ spec:
               readOnly: true
             {{- end }}
             {{- end }}
-            {{- /* Shared oidc.py library — one mount whenever any OIDC-style
-                   backend (Keycloak or modules.oidc) is enabled. */}}
-            {{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
+            {{- /* Shared oidc.py library — one mount whenever modules.oidc is enabled. */}}
+            {{- if .Values.modules.oidc.enabled }}
             - name: oidc-py
               mountPath: /etc/freeradius/scripts/oidc.py
               subPath: oidc.py
@@ -693,7 +631,7 @@ spec:
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "redis" "context" $) }}
         {{- end }}
-        {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.keycloak.cache.enabled .Values.modules.cache.instances }}
+        {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.modules.cache.instances }}
         - name: freeradius-mods-cache
           configMap:
             name: {{ include "freeradius.module.configMapName" (dict "module" "cache" "context" $) }}
@@ -758,32 +696,6 @@ spec:
             name: {{ printf "%s-mods-config-%s" (include "st-common.names.fullname" $) $subdir }}
         {{- end }}
         {{- end }}
-        {{- if .Values.keycloak.enabled }}
-        {{- $kcResolved := include "freeradius.keycloak.resolveInstances" . | fromYaml }}
-        {{- $fullname := include "st-common.names.fullname" . }}
-        {{- range $name, $cfg := $kcResolved.instances }}
-        {{- $volModName := ternary "keycloak" (printf "keycloak-%s" $name) (eq $name "default") }}
-        {{- $volPolName := ternary "keycloak-policy" (printf "keycloak-%s-policy" $name) (eq $name "default") }}
-        {{- $cmModName := ternary (printf "%s-keycloak" $fullname) (printf "%s-keycloak-%s" $fullname $name) (eq $name "default") }}
-        {{- $cmPolName := ternary (printf "%s-keycloak-policy" $fullname) (printf "%s-keycloak-%s-policy" $fullname $name) (eq $name "default") }}
-        - name: {{ $volModName }}
-          configMap:
-            name: {{ default $cmModName $cfg.existingConfigMap }}
-        - name: {{ $volPolName }}
-          configMap:
-            name: {{ $cmPolName }}
-        {{- if include "freeradius.keycloak.tls.enabled" (dict "instance" $cfg) }}
-        - name: {{ include "freeradius.keycloak.tlsVolumeName" (dict "name" $name) }}
-          secret:
-            secretName: {{ include "freeradius.keycloak.tls.secretName" (dict "name" $name "instance" $cfg "context" $) }}
-        {{- end }}
-        {{- $volScriptName := ternary "keycloak-mapper-python" (printf "keycloak-%s-python" $name) (eq $name "default") }}
-        {{- $cmScriptName := ternary (printf "%s-keycloak-python" $fullname) (printf "%s-keycloak-%s-python" $fullname $name) (eq $name "default") }}
-        - name: {{ $volScriptName }}
-          configMap:
-            name: {{ $cmScriptName }}
-        {{- end }}
-        {{- end }}
         {{- if .Values.modules.oidc.enabled }}
         {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
         {{- $fullname := include "st-common.names.fullname" . }}
@@ -811,7 +723,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- /* Shared oidc.py library volume — see matching mount above. */}}
-        {{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
+        {{- if .Values.modules.oidc.enabled }}
         - name: oidc-py
           configMap:
             name: {{ printf "%s-oidc-py" (include "st-common.names.fullname" .) }}

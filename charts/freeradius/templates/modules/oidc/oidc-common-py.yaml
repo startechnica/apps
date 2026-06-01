@@ -16,12 +16,9 @@ provider that exposes a token endpoint and (optionally) an introspect
 endpoint — Keycloak, Authentik, Auth0, Azure AD, Okta, etc. Per-instance
 wrappers bake in the resolved endpoints + claim paths at chart-render
 time, so this library has no provider-specific code.
-
-Rendered whenever `keycloak.enabled: true` OR `modules.oidc.enabled: true`
-(both backends import it).
 */}}
 
-{{- if or .Values.keycloak.enabled .Values.modules.oidc.enabled }}
+{{- if .Values.modules.oidc.enabled }}
 ---
 apiVersion: v1
 kind: ConfigMap

@@ -1068,7 +1068,7 @@
             "require_message_authenticator": {
               "type": "boolean"
             },
-            "keycloak": {
+            "oidc": {
               "type": "string"
             },
             "limit": {
@@ -1482,82 +1482,6 @@
     "modsConfig": {
       "type": "object",
       "properties": {}
-    },
-    "keycloak": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "wireDefaultSite": {
-          "type": "boolean"
-        },
-        "unmatchedReject": {
-          "type": "boolean"
-        },
-        "url": {
-          "type": "string"
-        },
-        "realm": {
-          "type": "string"
-        },
-        "clientId": {
-          "type": "string"
-        },
-        "clientSecret": {
-          "type": "string"
-        },
-        "scope": {
-          "type": "string"
-        },
-        "connectTimeout": {
-          "type": "string"
-        },
-        "roleAttribute": {
-          "type": "string"
-        },
-        "roleMapper": {
-          "type": "string"
-        },
-        "denyWithoutRole": {
-          "type": "boolean"
-        },
-        "cache": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "ttl": {
-              "type": "integer"
-            }
-          }
-        },
-        "tls": {
-          "type": "object",
-          "properties": {
-            "caCert": {
-              "type": "string"
-            },
-            "existingSecret": {
-              "type": "string"
-            },
-            "existingSecretCaKey": {
-              "type": "string"
-            },
-            "insecure": {
-              "type": "boolean"
-            }
-          }
-        },
-        "roleMappings": {
-          "type": "array"
-        },
-        "instances": {
-          "type": "object",
-          "properties": {}
-        }
-      }
     },
     "initContainers": {
       "type": "array"

@@ -24,9 +24,8 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.cache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.tlsCache" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.keycloakInstances" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.keycloakClientBindings" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcInstances" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
@@ -254,183 +253,16 @@ freeradius: modules.cache.instances.{{ $name }}.update
 {{- end -}}
 
 {{/*
-Per-instance Keycloak validation. Iterates the effective instances map
-(legacy top-level fields go through the deprecation shim in
-`freeradius.keycloak.resolveInstances` before we see them). For each
-instance:
-  - `mode` must be one of lua / python,
-  - `roleMapper` must be client / realm,
+Validation messages for `modules.oidc.instances.<name>`. Per instance:
+  - name must match `^[a-z][a-z0-9_]*$` (Python module + DNS-1123 safe),
+  - `tokenUrl` is required,
+  - `introspect: true` requires `introspectUrl` and a client_secret,
   - `tls.caCert` and `tls.existingSecret` are mutually exclusive,
-  - `cache.enabled: true` requires a Redis backend (the chart standardises
-    on Redis so the per-instance `keycloak_<name>_cache` shares state
-    across replicas),
-  - `realm` must be non-empty (centralised here — used to be duplicated
-    across keycloak.yaml / keycloak-mapper-{lua,python}.yaml's `fail`
-    calls; we now want all per-instance failures to surface at once),
-  - instance name matches `^[a-z][a-z0-9_]*$` — required because the name
-    is used as a Python module filename (`keycloak_<name>.py`, which is
-    imported via `import keycloak_<name>`, forbidding hyphens) and as
-    part of K8s resource names (DNS-1123 subdomain — lowercase + digits
-    + dashes; we use the stricter Python-module rule which is also a
-    valid DNS subdomain segment),
-  - `extraEnvVars` must not shadow the per-instance env-var prefix the
-    chart will emit (silent override bugs).
-*/}}
-{{- define "freeradius.validate.keycloakInstances" -}}
-{{- if .Values.keycloak.enabled -}}
-{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
-{{- $roleMapperAllowed := list "client" "realm" -}}
-{{- $nameRe := "^[a-z][a-z0-9_]*$" -}}
-{{- $hasRedis := or .Values.redis.enabled .Values.modules.redis.server -}}
-{{- $extraEnvNames := list -}}
-{{- range $e := .Values.extraEnvVars -}}{{- $extraEnvNames = append $extraEnvNames $e.name -}}{{- end -}}
-{{- range $name, $cfg := $resolved.instances }}
-{{- if not (regexMatch $nameRe $name) }}
-freeradius: keycloak.instances.{{ $name }}
-    Instance name `{{ $name }}` must match `^[a-z][a-z0-9_]*$` — the name is
-    used as a Python module filename (`keycloak_<name>.py`, imported via
-    `import keycloak_<name>`, which forbids hyphens) and as a suffix on
-    K8s resource names. Use lowercase letters, digits, and underscores;
-    start with a letter.
-{{- end -}}
-{{- if hasKey $cfg "mode" }}
-freeradius: keycloak.instances.{{ $name }}.mode
-    `keycloak.instances.{{ $name }}.mode` is no longer accepted — Lua mode was
-    removed (rlm_lua is not bundled in the default image) and `rlm_python3` is
-    the only backend. Remove the `mode:` key from your values file.
-{{- end -}}
-{{- if not $cfg.realm }}
-freeradius: keycloak.instances.{{ $name }}.realm
-    `keycloak.instances.{{ $name }}.realm` is required — the OIDC token
-    endpoint URL ends with `/realms/<realm>/protocol/openid-connect/token`
-    and FreeRADIUS has no sensible default. Set it to the realm holding
-    the users this instance authenticates.
-{{- end -}}
-{{- if not (has $cfg.roleMapper $roleMapperAllowed) }}
-freeradius: keycloak.instances.{{ $name }}.roleMapper
-    `keycloak.instances.{{ $name }}.roleMapper: {{ $cfg.roleMapper }}` is not a
-    recognised value. Allowed: `client` (resource_access[clientId].roles)
-    or `realm` (realm_access.roles).
-{{- end -}}
-{{- if and $cfg.tls $cfg.tls.caCert $cfg.tls.existingSecret }}
-freeradius: keycloak.instances.{{ $name }}.tls
-    `keycloak.instances.{{ $name }}.tls.caCert` and
-    `keycloak.instances.{{ $name }}.tls.existingSecret` are mutually
-    exclusive — set one or the other. Use `caCert` for an inline PEM
-    rendered into a chart-managed Secret, or `existingSecret` to
-    reference a Secret you manage outside this chart.
-{{- end -}}
-{{- if and $cfg.cache $cfg.cache.enabled (not $hasRedis) }}
-freeradius: keycloak.instances.{{ $name }}.cache.enabled
-    `keycloak.instances.{{ $name }}.cache.enabled: true` requires a Redis
-    backend. Either enable the bundled subchart (`redis.enabled: true`)
-    or point `modules.redis.server` at an external Redis. The chart
-    standardises the per-instance `keycloak_cache_{{ $name }}` on Redis so
-    state is shared across replicas.
-{{- end -}}
-{{- $roleAttr := default "Class" $cfg.roleAttribute -}}
-{{- $groupAttr := default "Class" $cfg.groupAttribute -}}
-{{- if and $cfg.roleMappings $cfg.groupMappings (eq $roleAttr $groupAttr) }}
-freeradius: keycloak.instances.{{ $name }}.groupAttribute
-    `keycloak.instances.{{ $name }}` defines both `roleMappings` and
-    `groupMappings` but `roleAttribute` and `groupAttribute` resolve to
-    the same control attribute (`{{ $roleAttr }}`). Roles and groups would
-    accumulate in the same `&control:{{ $roleAttr }}[*]` list, and a
-    Keycloak role name colliding with a Keycloak group name would
-    falsely match either policy. Set `groupAttribute` to a different
-    attribute (e.g. `Filter-Id`, `Tunnel-Private-Group-Id`) or fold the
-    case into `attributeMappings`.
-{{- end -}}
-{{- range $i, $m := default list $cfg.groupMappings }}
-{{- if not $m.group }}
-freeradius: keycloak.instances.{{ $name }}.groupMappings[{{ $i }}].group
-    Each `groupMappings` entry must set `group`. Use the Keycloak Group
-    Membership client mapper output verbatim (full path, e.g.
-    `/branch-a` or `/branch-a/hotspot`).
-{{- end -}}
-{{- end -}}
-{{- range $i, $m := default list $cfg.attributeMappings }}
-{{- if or (not $m.claim) (not $m.reply) }}
-freeradius: keycloak.instances.{{ $name }}.attributeMappings[{{ $i }}]
-    Each `attributeMappings` entry must set both `claim` (the JWT claim
-    name, top-level only — dotted paths are NOT supported) and `reply`
-    (the FreeRADIUS reply-attribute name to populate).
-{{- end -}}
-{{- end -}}
-{{- range $i, $r := default list $cfg.require }}
-{{- if not $r }}
-freeradius: keycloak.instances.{{ $name }}.require[{{ $i }}]
-    Each `require` entry must be a non-empty JWT claim name (top-level
-    only). Truthy values pass; everything else rejects the request.
-{{- end -}}
-{{- end -}}
-{{- if and $cfg.introspect (not $cfg.clientSecret) (not $cfg.existingSecret) }}
-freeradius: keycloak.instances.{{ $name }}.introspect
-    `keycloak.instances.{{ $name }}.introspect: true` requires a client
-    secret — RFC 7662 introspection is HTTP-Basic-authenticated and
-    Keycloak rejects unauthenticated introspect calls (401). Set
-    `keycloak.instances.{{ $name }}.clientSecret` (inline, chart-managed
-    Secret) or `keycloak.instances.{{ $name }}.existingSecret` (BYO).
-{{- end -}}
-{{- if and $cfg.refreshTokenCache (or (not $cfg.cache) (not $cfg.cache.enabled)) }}
-freeradius: keycloak.instances.{{ $name }}.refreshTokenCache
-    `keycloak.instances.{{ $name }}.refreshTokenCache: true` requires
-    `keycloak.instances.{{ $name }}.cache.enabled: true` — the refresh
-    flow runs on cache HIT (validates the cached refresh_token against
-    Keycloak), and with the cache disabled there is no hit path to
-    extend.
-{{- end -}}
-{{- $prefix := include "freeradius.keycloak.envVarPrefix" (dict "name" $name) -}}
-{{- range $envName := $extraEnvNames -}}
-{{- if hasPrefix $prefix $envName }}
-freeradius: extraEnvVars
-    `extraEnvVars` contains `{{ $envName }}`, which shadows the chart-emitted
-    prefix `{{ $prefix }}*` for `keycloak.instances.{{ $name }}`. Pick a
-    non-`FREERADIUS_KEYCLOAK_*` name to avoid silently overriding the
-    chart's own injection.
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Validation message: every non-empty `clients.<x>.keycloak` must reference
-an existing `keycloak.instances.<name>` entry, and the client must have at
-least one of `ipv4addr` / `ipv6addr` set (the dispatch chain in
-`sites/default` matches on `Packet-Src-IP-Address` and/or
-`Packet-Src-IPv6-Address`). Typo guard — a misspelled instance name in
-`clients.foo.keycloak: typo` would otherwise render `keycloak_typo_authorize`
-unlang that fails to load at runtime instead of at `helm install` time.
-*/}}
-{{- define "freeradius.validate.keycloakClientBindings" -}}
-{{- if .Values.keycloak.enabled -}}
-{{- $resolved := include "freeradius.keycloak.resolveInstances" . | fromYaml -}}
-{{- range $clientName, $client := .Values.clients -}}
-{{- if and (kindIs "map" $client) $client.keycloak -}}
-{{- if not (hasKey $resolved.instances $client.keycloak) }}
-freeradius: clients.{{ $clientName }}.keycloak
-    `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` references
-    an undefined instance — add it under `keycloak.instances.{{ $client.keycloak }}`
-    or fix the typo. Defined instances: {{ join ", " (keys $resolved.instances) }}.
-{{- else if and (not $client.ipv4addr) (not $client.ipv6addr) }}
-freeradius: clients.{{ $clientName }}.keycloak
-    `clients.{{ $clientName }}.keycloak: {{ $client.keycloak }}` requires
-    `clients.{{ $clientName }}.ipv4addr` and/or `.ipv6addr` to be non-empty
-    — the dispatch chain in `sites/default` matches on
-    `Packet-Src-IP-Address` / `Packet-Src-IPv6-Address` and has nothing
-    to bind against.
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Validation messages for `modules.oidc.instances.<name>`. Mirrors the
-Keycloak validator but drops Keycloak-specific knobs (realm, roleMapper,
-mode) and adds OIDC-specific ones (tokenUrl required, introspect requires
-introspectUrl, rolesClaim required when roleMappings present).
+  - `cache.enabled: true` requires a Redis backend,
+  - `roleMappings` requires `rolesClaim` (the chart needs to know which
+    claim path holds the role list — there is no provider-agnostic default),
+  - `refreshTokenCache: true` requires `cache.enabled: true`,
+  - `extraEnvVars` must not shadow the per-instance env-var prefix.
 */}}
 {{- define "freeradius.validate.oidcInstances" -}}
 {{- if .Values.modules.oidc.enabled -}}
@@ -541,9 +373,8 @@ freeradius: extraEnvVars
 
 {{/*
 Validation: every non-empty `clients.<x>.oidc` references an existing
-`modules.oidc.instances.<name>`; the client has an `ipv4addr` / `ipv6addr`;
-AND no client sets BOTH `keycloak` and `oidc` (would create ambiguous
-dispatch).
+`modules.oidc.instances.<name>` and the client has an `ipv4addr` /
+`ipv6addr`.
 */}}
 {{- define "freeradius.validate.oidcClientBindings" -}}
 {{- if .Values.modules.oidc.enabled -}}
@@ -560,14 +391,6 @@ freeradius: clients.{{ $clientName }}.oidc
     `clients.{{ $clientName }}.oidc: {{ $client.oidc }}` requires
     `clients.{{ $clientName }}.ipv4addr` and/or `.ipv6addr` to be non-empty.
 {{- end -}}
-{{- end -}}
-{{- if and (kindIs "map" $client) $client.oidc $client.keycloak }}
-freeradius: clients.{{ $clientName }}
-    `clients.{{ $clientName }}` sets BOTH `keycloak: {{ $client.keycloak }}`
-    and `oidc: {{ $client.oidc }}` — pick one. The dispatch chain in
-    `sites/default` evaluates Keycloak and OIDC arms sequentially; binding
-    a NAS to both backends is a configuration mistake (silent override or
-    double authentication, neither what you want).
 {{- end -}}
 {{- end -}}
 {{- end -}}

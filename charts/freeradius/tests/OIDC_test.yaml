@@ -146,22 +146,6 @@ tests:
       - failedTemplate:
           errorPattern: 'introspect: true. requires'
 
-  - it: validation rejects a client bound to BOTH keycloak and oidc
-    templates:
-      - templates/NOTES.txt
-    set:
-      keycloak.enabled: true
-      keycloak.realm: master
-      modules.oidc.enabled: true
-      modules.oidc.instances.default.tokenUrl: https://idp.example.com/token
-      clients.nas-a.ipv4addr: 10.0.0.1
-      clients.nas-a.secret: s
-      clients.nas-a.keycloak: default
-      clients.nas-a.oidc: default
-    asserts:
-      - failedTemplate:
-          errorPattern: 'sets BOTH .keycloak'
-
   - it: validation rejects roleMappings without rolesClaim
     templates:
       - templates/NOTES.txt
