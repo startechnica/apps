@@ -832,32 +832,6 @@
         }
       }
     },
-    "realmPool": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "name": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "port": {
-          "type": ["string", "integer"]
-        },
-        "proto": {
-          "type": "string"
-        },
-        "secret": {
-          "type": "string"
-        },
-        "virtualServer": {
-          "type": "string"
-        }
-      }
-    },
     "realms": {
       "type": "array",
       "items": {

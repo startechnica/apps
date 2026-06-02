@@ -27,7 +27,6 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
-{{- $messages = append $messages (include "freeradius.validate.realmPool" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -457,43 +456,3 @@ freeradius: modules.cache.update
 {{- end -}}
 {{- end -}}
 
-{{/*
-Validation message: realmPool — auto-generated peer pool sanity checks.
-
-Rejects:
-  - `realmPool.enabled: true` with `kind != StatefulSet` (the auto-gen
-    relies on per-pod stable DNS, which only StatefulSet provides),
-  - `realmPool.enabled: true` with `replicaCount < 2` (a single-replica
-    peer pool is a no-op that still costs configuration surface — fail
-    loudly so the misconfig is fixed instead of silently shipping an empty
-    pool).
-
-The shared secret is sourced from `$ENV{FREERADIUS_REALMPOOL_SECRET}` at
-runtime; the chart auto-generates and persists it in the credentials
-Secret (`realmpool-secret` key), or honours a user-supplied
-`realmPool.secret` value if set — so neither path needs validation here.
-
-Soft-no-ops (no message): `realmPool.enabled: false`, or
-`realmPool` absent — both correctly render nothing.
-*/}}
-{{- define "freeradius.validate.realmPool" -}}
-{{- if and (hasKey .Values "realmPool") .Values.realmPool.enabled -}}
-{{- $replicas := int (.Values.replicaCount | default 1) -}}
-{{- if not (include "freeradius.isStatefulSet" .) -}}
-freeradius: realmPool.enabled
-    `realmPool.enabled: true` requires `kind: StatefulSet` (currently
-    `{{ .Values.kind | default "Deployment" }}`). The auto-generated peer
-    `home_server` entries point at the per-pod DNS names backed by the
-    headless Service — Deployments and DaemonSets don't expose those
-    (Deployment pods are named `<name>-<random>` and DaemonSet pods only
-    get the headless Service when you BYO one), so the rendered entries
-    wouldn't resolve. Either switch to `kind: StatefulSet` or set
-    `realmPool.enabled: false`.
-{{- else if lt $replicas 2 -}}
-freeradius: realmPool.enabled
-    `realmPool.enabled: true` requires `replicaCount >= 2` (currently
-    `{{ $replicas }}`). A peer pool with one member is a no-op; bump
-    `replicaCount` or set `realmPool.enabled: false`.
-{{- end -}}
-{{- end -}}
-{{- end -}}

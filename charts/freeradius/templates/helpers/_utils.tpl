@@ -32,20 +32,6 @@ Usage:
 {{- end -}}
 {{- end -}}
 
-{{/*
-Convert a string to snake_case-safe form for FreeRADIUS identifiers — replaces
-every hyphen with an underscore. Used where Helm-side names (DNS-1123, hyphen-
-separated) need to land in FreeRADIUS config as legal identifiers — e.g. for
-the realmPool auto-generated `home_server` / `home_server_pool` names where
-the upstream proxy.conf convention is snake_case.
-Usage:
-{{ include "freeradius.utils.snakeCase" "my-cluster-name" }}    -> my_cluster_name
-{{ include "freeradius.utils.snakeCase" .Values.realmPool.name }}
-*/}}
-{{- define "freeradius.utils.snakeCase" -}}
-{{- . | toString | replace "-" "_" -}}
-{{- end -}}
-
 {{- define "freeradius.tplvalues.renderConfig" -}}
 {{- $out := "" -}}
 {{- range $key, $val := .value -}}

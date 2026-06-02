@@ -3,9 +3,7 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- $rpReplicas := int (.Values.replicaCount | default 1) -}}
-{{- $rpEnabled := and (hasKey .Values "realmPool") .Values.realmPool.enabled (include "freeradius.isStatefulSet" .) (gt $rpReplicas 1) -}}
-{{- if or .Values.homeServerPools .Values.tls.enabled $rpEnabled }}
+{{- if or .Values.homeServerPools .Values.tls.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -49,43 +47,5 @@ data:
         fallback = {{ .fallback }}
         {{- end }}
     }
-    {{- end }}
-
-    {{- /* Auto-generated peer pools — TWO pools, one for auth and one for acct,
-           each listing the corresponding `_auth` / `_acct` home_server entries
-           emitted by home-servers.yaml. Same snake_case naming pattern. Each
-           pool is skipped if a user-supplied pool of the same name exists
-           (conflict-avoidance mirrors `radsec` above). Gated by $rpEnabled at
-           file scope. */}}
-    {{- if $rpEnabled }}
-    {{- $rp := .Values.realmPool }}
-    {{- $rpSnakeName := include "freeradius.utils.snakeCase" $rp.name }}
-    {{- $rpAuthPool := printf "%s_auth" $rpSnakeName }}
-    {{- $rpAcctPool := printf "%s_acct" $rpSnakeName }}
-    {{- $rpUserPools := list }}
-    {{- range .Values.homeServerPools }}{{- $rpUserPools = append $rpUserPools .name }}{{- end }}
-    {{- if not (has $rpAuthPool $rpUserPools) }}
-    home_server_pool {{ $rpAuthPool }} {
-        type = {{ default "load-balance" $rp.type }}
-        {{- range $i := until $rpReplicas }}
-        home_server = {{ $rpSnakeName }}_{{ $i }}_auth
-        {{- end }}
-        {{- if $rp.virtualServer }}
-        virtual_server = {{ $rp.virtualServer }}
-        {{- end }}
-    }
-    {{- end }}
-
-    {{- if not (has $rpAcctPool $rpUserPools) }}
-    home_server_pool {{ $rpAcctPool }} {
-        type = {{ default "load-balance" $rp.type }}
-        {{- range $i := until $rpReplicas }}
-        home_server = {{ $rpSnakeName }}_{{ $i }}_acct
-        {{- end }}
-        {{- if $rp.virtualServer }}
-        virtual_server = {{ $rp.virtualServer }}
-        {{- end }}
-    }
-    {{- end }}
     {{- end }}
 {{- end }}

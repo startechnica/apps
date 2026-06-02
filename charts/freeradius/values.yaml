@@ -954,46 +954,6 @@ homeServers: []
 ##
 homeServerPools: []
 
-## Auto-generated peer pool — when the workload is a StatefulSet, generate one
-## `home_server` entry per replica (pointing at the StatefulSet's stable per-pod
-## DNS via the headless Service the chart already renders) plus a wrapping
-## `home_server_pool` listing all of them. Additive: rendered AFTER
-## `.Values.homeServers[]` and `.Values.homeServerPools[]`, and any user-
-## supplied entry whose `name` matches an auto-generated one wins (the chart
-## skips that auto-gen entry, mirroring how the `radsec` home_server / pool are
-## chart-managed-with-override). No-op when `kind != StatefulSet` or
-## `replicaCount < 2` — both make peer-proxy meaningless.
-##
-## Per-pod DNS template (resolved at FreeRADIUS startup, see proxy.conf caveat):
-##   <fullname>-<ord>.<headlessSvcName>.<namespace>.svc.cluster.local
-##
-## The peer pods must accept Access-Request from each other — that is, the
-## chart's `clients{}` block must cover the peer pod IPs (typically already
-## true via `clients.localhost.ipv4addr: 0.0.0.0/0`) AND share the same secret
-## the realm pool uses. The shared secret is exposed in-container as
-## `$ENV{FREERADIUS_REALMPOOL_SECRET}` — point the matching `clients{}` entry
-## at the same expansion (`clients.<x>.secret: "$ENV{FREERADIUS_REALMPOOL_SECRET}"`).
-## The chart auto-generates the secret value into the credentials Secret
-## under key `realmpool-secret` on first install and persists it across
-## upgrades; set `realmPool.secret` to pin a literal instead.
-##
-## @param realmPool.enabled Gate for auto-generation. No-op outside `kind: StatefulSet` even when `true`.
-## @param realmPool.name Pool name (also the home_server name prefix — entries are `<name>-<ord>`).
-## @param realmPool.type FreeRADIUS pool type. Recommended values: `load-balance`, `fail-over`, `client-balance`, `keyed-balance`.
-## @param realmPool.port UDP port the peer pods listen on. Default: empty -> falls back to `containerPorts.auth` (1812).
-## @param realmPool.proto Wire protocol (`udp` is the only supported value today; the chart's RADIUS auth listeners are UDP).
-## @param realmPool.secret Shared secret consumed by the auto-generated home_server entries via `$ENV{FREERADIUS_REALMPOOL_SECRET}`. Leave empty to let the chart generate and persist a random 32-char value in the credentials Secret (`realmpool-secret` key) — recovered on subsequent renders. Setting a literal pins that value instead.
-## @param realmPool.virtualServer Optional `virtual_server` directive emitted into the auto-generated pool — names a virtual server the proxied reply is processed through.
-##
-realmPool:
-  enabled: false
-  name: cluster
-  type: load-balance
-  port: ""
-  proto: udp
-  secret: ""
-  virtualServer: ""
-
 ## FreeRADIUS realm definitions for proxy routing. Each entry renders a
 ## `realm <name> { ... }` block. Realms map an incoming request's User-Name
 ## suffix to a `home_server_pool` (`authPool` / `acctPool`) or hand the
@@ -1223,10 +1183,10 @@ users: []
 ## =============================================================================
 
 auth:
-  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, `realmpool-secret` when `realmPool.enabled`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
+  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
   ##
   existingSecret: ""
-  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`). Recognised keys: `databasePassword`, `mariadbPassword`, `sitesStatusSecret`, `metricsSecret`, `sitesRadsecPrivKeyPassword`, `clientsRadsecSecret`, `modsRestPassword`, `modsEapTlsPrivKeyPassword`, `realmpoolSecret`.
+  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`). Recognised keys: `databasePassword`, `mariadbPassword`, `sitesStatusSecret`, `metricsSecret`, `sitesRadsecPrivKeyPassword`, `clientsRadsecSecret`, `modsRestPassword`, `modsEapTlsPrivKeyPassword`.
   ## e.g:
   ## existingSecretPerPassword:
   ##   keyMapping:
@@ -1251,7 +1211,7 @@ auth:
 ## Pod-level scheduling and security live in the next two sections.
 ## =============================================================================
 
-## @param kind Workload kind rendered by `templates/Application.yaml`. Allowed (case-insensitive): `Deployment` / `deployment`, `StatefulSet` / `statefulset`, `DaemonSet` / `daemonset` — normalised internally to canonical PascalCase. `Deployment` keeps the existing semantics (shared PVC mounted from `templates/PersistentVolumeClaim.yaml`); `StatefulSet` gives stable pod identity, wires the headless Service via `serviceName`, and switches persistence to per-replica `volumeClaimTemplates` rendered from `persistence.*` (the standalone `PersistentVolumeClaim.yaml` is then skipped); `DaemonSet` schedules one pod per node — `replicaCount` is ignored, `horizontalPodAutoscaler` is silently skipped (no scale subresource), and persistence still mounts the shared `PersistentVolumeClaim.yaml` (requires `RWX` for multi-node pods, or use `existingClaim` / `emptyDir`). `realmPool.enabled: true` requires `StatefulSet` (per-pod stable DNS); the validator rejects it on Deployment/DaemonSet.
+## @param kind Workload kind rendered by `templates/Application.yaml`. Allowed (case-insensitive): `Deployment` / `deployment`, `StatefulSet` / `statefulset`, `DaemonSet` / `daemonset` — normalised internally to canonical PascalCase. `Deployment` keeps the existing semantics (shared PVC mounted from `templates/PersistentVolumeClaim.yaml`); `StatefulSet` gives stable pod identity, wires the headless Service via `serviceName`, and switches persistence to per-replica `volumeClaimTemplates` rendered from `persistence.*` (the standalone `PersistentVolumeClaim.yaml` is then skipped); `DaemonSet` schedules one pod per node — `replicaCount` is ignored, `horizontalPodAutoscaler` is silently skipped (no scale subresource), and persistence still mounts the shared `PersistentVolumeClaim.yaml` (requires `RWX` for multi-node pods, or use `existingClaim` / `emptyDir`).
 ##
 kind: Deployment
 ## @param replicaCount Number of FreeRADIUS pods. Ignored when `horizontalPodAutoscaler.enabled` is true.
