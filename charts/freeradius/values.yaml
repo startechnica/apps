@@ -954,6 +954,42 @@ homeServers: []
 ##
 homeServerPools: []
 
+## Auto-generated peer pool — when the workload is a StatefulSet, generate one
+## `home_server` entry per replica (pointing at the StatefulSet's stable per-pod
+## DNS via the headless Service the chart already renders) plus a wrapping
+## `home_server_pool` listing all of them. Additive: rendered AFTER
+## `.Values.homeServers[]` and `.Values.homeServerPools[]`, and any user-
+## supplied entry whose `name` matches an auto-generated one wins (the chart
+## skips that auto-gen entry, mirroring how the `radsec` home_server / pool are
+## chart-managed-with-override). No-op when `kind != StatefulSet` or
+## `replicaCount < 2` — both make peer-proxy meaningless.
+##
+## Per-pod DNS template (resolved at FreeRADIUS startup, see proxy.conf caveat):
+##   <fullname>-<ord>.<headlessSvcName>.<namespace>.svc.cluster.local
+##
+## The peer pods must accept Access-Request from each other — that is, the
+## chart's `clients{}` block must cover the peer pod IPs (typically already
+## true via `clients.localhost.ipv4addr: 0.0.0.0/0`) AND share the same secret
+## the realm pool uses. Set `realmPool.secret` to whatever the matching
+## `clients.<x>.secret` is, or inject both via the same `$ENV{...}` reference.
+##
+## @param realmPool.enabled Gate for auto-generation. No-op outside `kind: StatefulSet` even when `true`.
+## @param realmPool.name Pool name (also the home_server name prefix — entries are `<name>-<ord>`).
+## @param realmPool.type FreeRADIUS pool type. Recommended values: `load-balance`, `fail-over`, `client-balance`, `keyed-balance`.
+## @param realmPool.port UDP port the peer pods listen on. Default: empty -> falls back to `containerPorts.auth` (1812).
+## @param realmPool.proto Wire protocol (`udp` is the only supported value today; the chart's RADIUS auth listeners are UDP).
+## @param realmPool.secret Shared secret used by both the home_server entry and the matching `clients{}` block on each peer. Required when `realmPool.enabled: true`. Use `$ENV{FREERADIUS_...}` to inject from a Secret via `extraEnvVarsSecret`.
+## @param realmPool.virtualServer Optional `virtual_server` directive emitted into the auto-generated pool — names a virtual server the proxied reply is processed through.
+##
+realmPool:
+  enabled: false
+  name: cluster
+  type: load-balance
+  port: ""
+  proto: udp
+  secret: ""
+  virtualServer: ""
+
 ## FreeRADIUS realm definitions for proxy routing. Each entry renders a
 ## `realm <name> { ... }` block. Realms map an incoming request's User-Name
 ## suffix to a `home_server_pool` (`authPool` / `acctPool`) or hand the
@@ -1045,7 +1081,7 @@ sites:
   ## @param sites.radsec.listen.virtual_server Virtual server that processes decrypted RADSEC requests. Default `default` routes to the same `server default { }` that handles UDP traffic — see [README.md](README.md) §RADSEC for the rationale. Override to send RADSEC requests through a separate processing pipeline (must reference an existing virtual server, e.g. via `extraSites` or `sites.<name>.enabled`).
   ## @param sites.radsec.listen.proxy_protocol Emit `proxy_protocol = yes` so the listener parses HAProxy PROXY-protocol headers and uses the real client IP for RADIUS client lookup. Useful when fronting the RADSEC port with an L4 load balancer that adds PROXY headers. Default `false` (directive omitted, matches FreeRADIUS image default).
   ## @param sites.radsec.listen.check_client_connections Emit `check_client_connections = yes` so FreeRADIUS validates the client connection (TCP/TLS handshake) up front and rejects unauthorised peers before parsing RADIUS packets. Default `false` (directive omitted, matches FreeRADIUS image default).
-  ## @param sites.radsec.tls.cipher_list TLS cipher suite passed to the RADSEC server's `tls { cipher_list = ... }` directive. `DEFAULT` keeps the upstream image's default list; set to an explicit OpenSSL cipher string to constrain (e.g. `HIGH:!aNULL:!MD5`). Also applied to the chart-managed `home_server radsec` loopback block in `home-servers.conf` so both peers negotiate consistently.
+  ## @param sites.radsec.tls.cipher_list [array] OpenSSL cipher tokens passed to the RADSEC server's `tls { cipher_list = ... }` directive. The chart joins the entries with `:` (OpenSSL cipher-list separator) and applies the same value to the chart-managed `home_server radsec` loopback block in `home-servers.conf` so both peers negotiate consistently. The single-item list `["DEFAULT"]` keeps the upstream image's default list; set to explicit tokens to constrain (e.g. `["HIGH", "!aNULL", "!MD5"]` → `HIGH:!aNULL:!MD5`). Empty list `[]` also falls back to `DEFAULT`.
   ## @param sites.radsec.tls.private_key_password Password for the RADSEC private key when it is password-protected. Renders the `tls { private_key_password = $ENV{...} }` line in both the radsec listener and the chart-managed `home_server radsec` loopback. Auto-generated into the chart credentials Secret (`sites-radsec-privkey-password`) when left empty; the env-var (`FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`) is wired only when this value is set.
   ## @param sites.radsec.radsecSecret RADIUS shared secret for the loopback `clients radsec { client 127.0.0.1 { secret = … } }` block in the RADSEC virtual server. Stored under `clients-radsec-secret` in the chart-managed credentials Secret and injected via `$ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}`. Auto-generated when empty; FreeRADIUS defaults the secret to literal `"radsec"` for `proto = tls` so any value works.
   ## @param sites.radsec.existingConfigMap Mount an existing ConfigMap (must contain a `radsec` key with the virtual-server config) at `sites-enabled/radsec` instead of the chart-rendered one; the chart then skips rendering its own.
@@ -1062,7 +1098,8 @@ sites:
       proxy_protocol: false
       check_client_connections: false
     tls:
-      cipher_list: "DEFAULT"
+      cipher_list:
+        - "DEFAULT"
       private_key_password: ""
     ## clients:
     ##   - name: ap-controller
@@ -1185,16 +1222,19 @@ auth:
   ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
   ##
   existingSecret: ""
-  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`).
+  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`). Recognised keys: `databasePassword`, `mariadbPassword`, `sitesStatusSecret`, `metricsSecret`, `sitesRadsecPrivKeyPassword`, `clientsRadsecSecret`, `modsRestPassword`, `modsEapTlsPrivKeyPassword`.
   ## e.g:
   ## existingSecretPerPassword:
   ##   keyMapping:
   ##     databasePassword: password
   ##     sitesStatusSecret: status-secret
+  ##     metricsSecret: exporter-secret
   ##   databasePassword:
   ##     name: freeradius.pocwatt-freeradius-cluster.credentials
   ##   sitesStatusSecret:
   ##     name: freeradius-status
+  ##   metricsSecret:
+  ##     name: freeradius-exporter
   ##
   existingSecretPerPassword: {}
 
@@ -1434,7 +1474,7 @@ livenessProbe:
     command:
       - sh
       - /scripts/healthcheck.sh
-  initialDelaySeconds: 120
+  initialDelaySeconds: 20
   periodSeconds: 60
   timeoutSeconds: 2
   failureThreshold: 3
@@ -1452,7 +1492,7 @@ readinessProbe:
     command:
       - sh
       - /scripts/healthcheck.sh
-  initialDelaySeconds: 30
+  initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -1578,6 +1618,9 @@ metrics:
   ## @param metrics.enabled Render the standalone `bvantagelimited/freeradius_exporter` Deployment and Service. Requires `sites.status.enabled: true`.
   ##
   enabled: false
+  ## @param metrics.secret Shared secret authenticating the exporter Deployment's RADIUS Status-Server queries. Used by the metrics exporter (`RADIUS_PASSWORD`) AND by the `client exporter { }` block in the status virtual server (`$ENV{FREERADIUS_EXPORTER_SECRET}`). Separate from `sites.status.secret` — independent rotation, independent blast radius. When empty, the chart auto-generates a 16-char random value and persists it in the chart credentials Secret (`<fullname>`) under key `exporter-secret`; user-supplied values take precedence and are honoured on every render.
+  ##
+  secret: ""
   ## @param metrics.replicaCount Number of exporter pods.
   ##
   replicaCount: 1

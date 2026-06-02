@@ -27,6 +27,7 @@ install path, so a `fail` here aborts the operation).
 {{- $messages = append $messages (include "freeradius.validate.cacheInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcInstances" .) -}}
 {{- $messages = append $messages (include "freeradius.validate.oidcClientBindings" .) -}}
+{{- $messages = append $messages (include "freeradius.validate.realmPool" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 {{- if $message -}}
@@ -452,6 +453,49 @@ freeradius: modules.cache.update
     rlm_cache refuses to load without at least one map ("Must have an 'update'
     section in order to cache anything"). Set `modules.cache.update` to one or
     more FreeRADIUS maps, e.g. `&reply: += &reply:`.
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validation message: realmPool — auto-generated peer pool sanity checks.
+
+Rejects:
+  - `realmPool.enabled: true` with `kind != StatefulSet` (the auto-gen
+    relies on per-pod stable DNS, which only StatefulSet provides),
+  - `realmPool.enabled: true` with `replicaCount < 2` (a single-replica
+    peer pool is a no-op that still costs configuration surface — fail
+    loudly so the misconfig is fixed instead of silently shipping an empty
+    pool),
+  - `realmPool.enabled: true` with an empty `realmPool.secret` (the
+    home_server entries need a secret; the chart can't synthesize one).
+
+Soft-no-ops (no message): `realmPool.enabled: false`, or
+`realmPool` absent — both correctly render nothing.
+*/}}
+{{- define "freeradius.validate.realmPool" -}}
+{{- if and (hasKey .Values "realmPool") .Values.realmPool.enabled -}}
+{{- $kind := lower (toString (.Values.kind | default "Deployment")) -}}
+{{- $replicas := int (.Values.replicaCount | default 1) -}}
+{{- if ne $kind "statefulset" -}}
+freeradius: realmPool.enabled
+    `realmPool.enabled: true` requires `kind: StatefulSet` (currently
+    `{{ .Values.kind | default "Deployment" }}`). The auto-generated peer
+    `home_server` entries point at the per-pod DNS names backed by the
+    headless Service — Deployments don't expose those, so the rendered
+    entries wouldn't resolve. Either switch to `kind: StatefulSet` or set
+    `realmPool.enabled: false`.
+{{- else if lt $replicas 2 -}}
+freeradius: realmPool.enabled
+    `realmPool.enabled: true` requires `replicaCount >= 2` (currently
+    `{{ $replicas }}`). A peer pool with one member is a no-op; bump
+    `replicaCount` or set `realmPool.enabled: false`.
+{{- else if not (trim (.Values.realmPool.secret | default "")) -}}
+freeradius: realmPool.secret
+    `realmPool.enabled: true` requires a non-empty `realmPool.secret`.
+    Each auto-generated `home_server` needs a shared secret matching the
+    `clients{}` block that accepts requests on the peer pods — set it to a
+    literal or to `$ENV{FREERADIUS_...}` injected via `extraEnvVarsSecret`.
 {{- end -}}
 {{- end -}}
 {{- end -}}

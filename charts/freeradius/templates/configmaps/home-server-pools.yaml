@@ -3,7 +3,10 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if or .Values.homeServerPools .Values.tls.enabled }}
+{{- $rpKind := lower (toString (.Values.kind | default "Deployment")) -}}
+{{- $rpReplicas := int (.Values.replicaCount | default 1) -}}
+{{- $rpEnabled := and (hasKey .Values "realmPool") .Values.realmPool.enabled (eq $rpKind "statefulset") (gt $rpReplicas 1) -}}
+{{- if or .Values.homeServerPools .Values.tls.enabled $rpEnabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -43,5 +46,27 @@ data:
         fallback = {{ .fallback }}
         {{- end }}
     }
+    {{- end }}
+
+    {{- /* Auto-generated peer pool. Skipped when a user-supplied pool with the
+           same name is present (same conflict-avoidance pattern as `radsec`
+           above). Gated by $rpEnabled at file scope. */}}
+    {{- if $rpEnabled }}
+    {{- $rp := .Values.realmPool }}
+    {{- $rpHasUser := false }}
+    {{- range .Values.homeServerPools }}
+    {{- if eq .name $rp.name }}{{- $rpHasUser = true }}{{- end }}
+    {{- end }}
+    {{- if not $rpHasUser }}
+    home_server_pool {{ $rp.name }} {
+        type = {{ default "load-balance" $rp.type }}
+        {{- range $i := until $rpReplicas }}
+        home_server = {{ $rp.name }}-{{ $i }}
+        {{- end }}
+        {{- if $rp.virtualServer }}
+        virtual_server = {{ $rp.virtualServer }}
+        {{- end }}
+    }
+    {{- end }}
     {{- end }}
 {{- end }}

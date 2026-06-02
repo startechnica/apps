@@ -69,7 +69,7 @@ data:
             # check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
             # check_cert_cn = %{User-Name}
             #
-            cipher_list = {{ default "DEFAULT" .Values.sites.radsec.tls.cipher_list }}
+            cipher_list = {{ include "freeradius.utils.joinOrDefault" (dict "list" .Values.sites.radsec.tls.cipher_list "sep" ":" "default" "DEFAULT") }}
             cipher_server_preference = no
 
             tls_min_version = "1.2"

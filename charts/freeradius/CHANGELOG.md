@@ -181,6 +181,29 @@
   validator catches it at `helm install` / `helm template` instead of at
   apply time.
 
+- **`realmPool` — auto-generated peer home_server pool for StatefulSet
+  deployments.** Opt-in via `realmPool.enabled: true`. When the workload
+  is a StatefulSet with `replicaCount > 1`, the chart renders one
+  `home_server <realmPool.name>-<ord>` per replica pointing at the
+  stable per-pod DNS name backed by the headless Service the chart already
+  emits — `<fullname>-<ord>.<headless-svc>.<ns>.svc.cluster.local` —
+  plus a wrapping `home_server_pool <realmPool.name>` listing all of
+  them. Additive: rendered after the user-supplied `.Values.homeServers[]`
+  / `.Values.homeServerPools[]` arrays, and any same-named user entry wins
+  (mirrors the existing `radsec` chart-managed-with-override pattern).
+  Knobs: `realmPool.{enabled, name, type, port, proto, secret,
+  virtualServer}` — defaults are `name: cluster`, `type: load-balance`,
+  `proto: udp`, `port: ""` (falls back to `containerPorts.auth`). The
+  secret is required and must match the `clients{}` block that accepts
+  the peer-pod source IPs (typically the existing `clients.localhost`
+  wildcard with `ipv4addr: 0.0.0.0/0` covers it).
+- `freeradius.validate.realmPool` — hard-fails
+  `realmPool.enabled: true` paired with `kind != StatefulSet`
+  (per-pod DNS requires StatefulSet), `replicaCount < 2` (one-member
+  pool is a no-op), or an empty `realmPool.secret`. Validator catches
+  the misconfig at `helm template` time instead of letting it ship an
+  empty / unresolvable pool.
+
 ### Changed
 
 - **`oidc.py` is more verbose for diagnostics.** No change to the runtime

@@ -74,13 +74,26 @@ data:
         #  globally defined (i.e. all of them) will be able to query
         #  these statistics.
         #
-        #  Do you really want your partners seeing the internal details
-        #  of what your RADIUS server is doing?
-        #
         client probe {
             ipaddr = 127.0.0.1
             secret = $ENV{FREERADIUS_SITES_STATUS_SECRET}
         }
+        {{- if .Values.metrics.enabled }}
+        #
+        #  Metrics exporter Deployment runs in a separate pod, so the source
+        #  address is whatever the cluster's pod CIDR assigns — not knowable
+        #  at chart-render time. Accept any IPv4 here; the NetworkPolicy gates
+        #  the status port to pods carrying the `component: metrics` label
+        #  (see templates/NetworkPolicy.yaml), and the shared secret is the
+        #  second layer. When the virtual server lists clients explicitly, FR
+        #  ignores the global clients.conf entries for this listener, so the
+        #  loopback `probe` above wouldn't otherwise let the exporter through.
+        #
+        client exporter {
+            ipaddr = 0.0.0.0/0
+            secret = $ENV{FREERADIUS_EXPORTER_SECRET}
+        }
+        {{- end }}
 
         #  Simple authorize section.  The "Autz-Type Status-Server"
         #  section will work here, too.  See "raddb/sites-available/default".

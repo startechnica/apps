@@ -3,7 +3,10 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if or .Values.homeServers .Values.tls.enabled }}
+{{- $rpKind := lower (toString (.Values.kind | default "Deployment")) -}}
+{{- $rpReplicas := int (.Values.replicaCount | default 1) -}}
+{{- $rpEnabled := and (hasKey .Values "realmPool") .Values.realmPool.enabled (eq $rpKind "statefulset") (gt $rpReplicas 1) -}}
+{{- if or .Values.homeServers .Values.tls.enabled $rpEnabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -63,7 +66,7 @@ data:
             # check_cert_issuer = "/C=GB/ST=Berkshire/L=Newbury/O=My Company Ltd"
             # check_cert_cn = %{User-Name}
 
-            cipher_list = {{ default "DEFAULT" .Values.sites.radsec.tls.cipher_list }}
+            cipher_list = {{ include "freeradius.utils.joinOrDefault" (dict "list" .Values.sites.radsec.tls.cipher_list "sep" ":" "default" "DEFAULT") }}
         }
     }
     {{- end }}
@@ -96,5 +99,33 @@ data:
         num_answers_to_alive = {{ .num_answers_to_alive }}
         {{- end }}
     }
+    {{- end }}
+
+    {{- /* Auto-generated peer home_server entries — one per StatefulSet replica,
+           pointing at the stable per-pod DNS name backed by the headless Service.
+           Additive: any user-supplied entry whose `name` matches `<realmPool.name>-<ord>`
+           wins and skips the auto-gen for that ordinal (same conflict-avoidance pattern
+           the `radsec` block uses above). Gated by $rpEnabled at file scope, so this
+           section is unreachable outside `kind: StatefulSet` AND `replicaCount > 1`. */}}
+    {{- if $rpEnabled }}
+    {{- $rp := .Values.realmPool }}
+    {{- $rpFullname := include "st-common.names.fullname" . }}
+    {{- $rpHeadless := include "freeradius.headlessServiceName" . }}
+    {{- $rpNs := include "st-common.names.namespace" . }}
+    {{- $rpPort := default .Values.containerPorts.auth (toString $rp.port | trim) }}
+    {{- $rpUserNames := list }}
+    {{- range .Values.homeServers }}{{- $rpUserNames = append $rpUserNames .name }}{{- end }}
+    {{- range $i := until $rpReplicas }}
+    {{- $rpName := printf "%s-%d" $rp.name $i }}
+    {{- if not (has $rpName $rpUserNames) }}
+    home_server {{ $rpName }} {
+        type = auth
+        ipaddr = "{{ $rpFullname }}-{{ $i }}.{{ $rpHeadless }}.{{ $rpNs }}.svc.cluster.local"
+        port = {{ $rpPort }}
+        secret = {{ $rp.secret | quote }}
+        proto = {{ default "udp" $rp.proto }}
+    }
+    {{- end }}
+    {{- end }}
     {{- end }}
 {{- end }}

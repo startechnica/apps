@@ -37,6 +37,22 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       name: {{ $globalSecretName }}
       key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "sites-status-secret") }}
     {{- end }}
+{{- /* Exporter client in sites/status uses a distinct secret from the loopback
+       `probe` client — independent rotation, independent blast radius. Auto-
+       generated into the chart credentials Secret under `exporter-secret`
+       (see templates/secrets/credentials.yaml). */}}
+{{- if .Values.metrics.enabled }}
+- name: FREERADIUS_EXPORTER_SECRET
+  valueFrom:
+    secretKeyRef:
+    {{- if .Values.auth.existingSecretPerPassword }}
+      name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.metricsSecret "context" $)) $ }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "metricsSecret") }}
+    {{- else }}
+      name: {{ $globalSecretName }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "exporter-secret") }}
+    {{- end }}
+{{- end }}
 {{- end }}
 {{- if and .Values.tls.enabled .Values.sites.radsec.tls.private_key_password }}
 - name: FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD
