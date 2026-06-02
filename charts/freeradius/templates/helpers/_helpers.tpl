@@ -35,6 +35,23 @@ true
 {{- end -}}
 
 {{/*
+Whether `.Values.kind` resolves to DaemonSet (case-insensitive, defaults to
+Deployment when unset). Returns the literal string "true" — truthy in
+template `if` — when DaemonSet, and the empty string (falsy) otherwise.
+Same shape as `freeradius.isStatefulSet`; useful for gates that need to
+match "non-Deployment" workloads (StatefulSet OR DaemonSet) via
+`or (include "freeradius.isStatefulSet" .) (include "freeradius.isDaemonSet" .)`.
+Usage:
+  {{- if include "freeradius.isDaemonSet" . }}               # render if DS
+  {{- if not (include "freeradius.isDaemonSet" .) }}         # render if NOT DS
+*/}}
+{{- define "freeradius.isDaemonSet" -}}
+{{- if eq (lower (toString (.Values.kind | default "Deployment"))) "daemonset" -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Render the FreeRADIUS Service ports list — used by both the main load-balanced
 Service.yaml and the per-pod Service-perPod.yaml so the port shape stays in
 lockstep. When `suppressNodePorts: true` is passed (the per-pod path), every

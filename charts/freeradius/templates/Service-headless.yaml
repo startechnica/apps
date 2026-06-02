@@ -3,10 +3,13 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- /* Rendered only when the workload is a StatefulSet — a Deployment has no
-       use for a headless sibling. Match `.Values.kind` case-insensitively,
-       mirroring Application.yaml. */}}
-{{- if include "freeradius.isStatefulSet" . }}
+{{- /* Rendered for StatefulSet AND DaemonSet — both want DNS-based pod
+       discovery (one A record per pod IP) on top of whatever ClusterIP
+       routing exists. StatefulSet additionally requires the headless
+       Service for its `serviceName:` per-pod stable DNS. Deployment skips
+       this — workload-wide load-balanced ClusterIP is enough. Match
+       `.Values.kind` case-insensitively, mirroring Application.yaml. */}}
+{{- if or (include "freeradius.isStatefulSet" .) (include "freeradius.isDaemonSet" .) }}
 apiVersion: v1
 kind: Service
 metadata:
