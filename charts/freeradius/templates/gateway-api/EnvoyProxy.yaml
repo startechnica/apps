@@ -38,21 +38,12 @@ spec:
       settings:
         - format:
             json:
-              authority: "%REQ(:AUTHORITY)%"
-              # basic_auth_user: "%BASIC_AUTH_USER%"
               bytes_received: "%BYTES_RECEIVED%"
               bytes_sent: "%BYTES_SENT%"
               client_ip: "%DOWNSTREAM_REMOTE_ADDRESS%"
               duration: "%DURATION%"
               start_time: "%START_TIME%"
-              method: "%REQ(X-ENVOY-ORIGINAL-METHOD?:METHOD)%"
-              path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
               protocol: "%PROTOCOL%"
-              proxy_user: "%REQ(X-PROXY-USER)%"
-              d_remote_user: "%REQ(REMOTE-USER)%"
-              request_id: "%REQ(X-REQUEST-ID)%"
-              response_code: "%RESPONSE_CODE%"
-              response_flags: "%RESPONSE_FLAGS%"
               upstream_host: "%UPSTREAM_HOST%"
             type: JSON
           sinks:
