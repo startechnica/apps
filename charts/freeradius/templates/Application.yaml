@@ -35,13 +35,8 @@ metadata:
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
   {{- if or .Values.deploymentAnnotations .Values.commonAnnotations }}
-  annotations:
-    {{- if .Values.commonAnnotations }}
-      {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .Values.deploymentAnnotations }}
-      {{- include "st-common.tplvalues.render" (dict "value" .Values.deploymentAnnotations "context" $) | nindent 4 }}
-    {{- end }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
   {{- /* DaemonSet has no `replicas` (one pod per scheduled node); Deployment and
