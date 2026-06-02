@@ -104,6 +104,38 @@
     "architecture": {
       "type": "string"
     },
+    "logging": {
+      "type": "object",
+      "properties": {
+        "destination": {
+          "type": "string"
+        },
+        "colourise": {
+          "type": "boolean"
+        },
+        "file": {
+          "type": "string"
+        },
+        "syslog_facility": {
+          "type": "string"
+        },
+        "stripped_names": {
+          "type": "boolean"
+        },
+        "auth": {
+          "type": "boolean"
+        },
+        "auth_badpass": {
+          "type": "boolean"
+        },
+        "auth_goodpass": {
+          "type": "boolean"
+        },
+        "msg_denied": {
+          "type": "string"
+        }
+      }
+    },
     "configurations": {
       "type": "string"
     },

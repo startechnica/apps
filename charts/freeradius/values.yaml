@@ -133,100 +133,36 @@ image:
 ##
 architecture: standalone
 
-## @param configurations Inline FreeRADIUS configuration (rendered into a ConfigMap and mounted as `/etc/freeradius/radiusd.conf`). Leave empty to use the upstream image defaults.
+## FreeRADIUS `log { }` directives surfaced as values. Renders into the
+## chart-managed `radiusd.conf` (`templates/configmaps/configuration.yaml`)
+## when neither `configurations` nor `configurationsConfigMap` overrides it.
+## Field names mirror FreeRADIUS native directive names (snake_case).
+## Booleans below render as FreeRADIUS-native `yes` / `no`.
 ##
-configurations: |
-  prefix = /usr
-  exec_prefix = /usr
-  sysconfdir = /etc
-  localstatedir = /var
-  sbindir = ${exec_prefix}/sbin
-  logdir = /opt/startechnica/freeradius
-  raddbdir = /etc/freeradius
-  radacctdir = ${logdir}/radacct
+## @param logging.destination Where log lines go: `files` (write to `logging.file`), `syslog` (use `logging.syslog_facility`), `stdout`, or `stderr`. The `-X` debug flag overrides this to stdout at runtime regardless.
+## @param logging.colourise Highlight WARN / ERROR lines on stderr / stdout. No-op when output is not a TTY.
+## @param logging.file Log file path when `destination: files`. Defaults to `${logdir}/radius.log` (interpolated by FreeRADIUS at startup using the `logdir` from radiusd.conf, not by Helm).
+## @param logging.syslog_facility Syslog facility used when `destination: syslog`. Allowed values are OS-dependent; `daemon` is the conventional default.
+## @param logging.stripped_names When `false` (default), log the raw `User-Name` attribute; when `true`, log the stripped form. The chart default matches FreeRADIUS's upstream default.
+## @param logging.auth Log every Access-Accept / Access-Reject result.
+## @param logging.auth_badpass Log the offered password when authentication is rejected. Requires `auth: true`. Off by default — secrets in logs are a footgun.
+## @param logging.auth_goodpass Log the offered password when authentication succeeds. Requires `auth: true`. Off by default — secrets in logs are a footgun.
+## @param logging.msg_denied Reply message returned when the user exceeds the Simultaneous-Use limit. Rendered as a quoted string.
+##
+logging:
+  destination: files
+  colourise: true
+  file: ${logdir}/radius.log
+  syslog_facility: daemon
+  stripped_names: false
+  auth: false
+  auth_badpass: false
+  auth_goodpass: false
+  msg_denied: "You are already logged in - access denied"
 
-  name = radiusd
+configurations: ""
 
-  confdir = ${raddbdir}
-  modconfdir = ${confdir}/mods-config
-  certdir = ${confdir}/certs
-  cadir   = ${confdir}/certs
-  # run_dir = ${localstatedir}/run/${name}
-  run_dir = /opt/startechnica/freeradius/run/${name}
-
-  db_dir = ${raddbdir}
-  libdir = /usr/lib/freeradius
-  pidfile = ${run_dir}/${name}.pid
-  max_request_time = 30
-  cleanup_delay = 5
-  max_requests = 16384
-  hostname_lookups = no
-
-  unlang {
-  }
-
-  log {
-      destination = files
-      colourise = yes
-      file = ${logdir}/radius.log
-      syslog_facility = daemon
-      stripped_names = no
-      auth = no
-      auth_badpass = no
-      auth_goodpass = no
-
-      msg_denied = "You are already logged in - access denied"
-  }
-
-  checkrad = ${sbindir}/checkrad
-
-  ENV {
-  }
-
-  security {
-      allow_core_dumps = no
-      max_attributes = 200
-      reject_delay = 1
-      status_server = yes
-      require_message_authenticator = auto
-      limit_proxy_state = auto
-      allow_vulnerable_openssl = no
-  }
-
-  proxy_requests  = yes
-  $INCLUDE proxy.conf
-  {{- if or .Values.homeServers .Values.tls.enabled }}
-  $INCLUDE /opt/startechnica/freeradius/home-servers.conf
-  {{- end }}
-  {{- if or .Values.homeServerPools .Values.tls.enabled }}
-  $INCLUDE /opt/startechnica/freeradius/home-server-pools.conf
-  {{- end }}
-  $INCLUDE /opt/startechnica/freeradius/realms.conf
-  $INCLUDE {{ .Values.clients.includeFile }}
-
-  thread pool {
-      start_servers = 5
-      max_servers = 32
-      min_spare_servers = 3
-      max_spare_servers = 10
-      max_requests_per_server = 0
-      auto_limit_acct = no
-  }
-
-  modules {
-      $INCLUDE {{ .Values.modules.includeDir }}/
-  }
-
-  instantiate {
-  }
-
-  policy {
-      $INCLUDE {{ .Values.policies.includeDir }}/
-  }
-
-  $INCLUDE {{ .Values.sites.includeDir }}/
-
-## @param configurationsConfigMap Name of an externally-managed ConfigMap supplying FreeRADIUS configuration (Note: Overrides `configurations`). The value is evaluated as a template.
+## @param configurationsConfigMap Name of an externally-managed ConfigMap supplying FreeRADIUS configuration (must contain a `radiusd.conf` key). When set, the chart skips rendering its own `<fullname>-configurations` ConfigMap; the Deployment mounts this resource at `/etc/freeradius/radiusd.conf` instead. The value is evaluated as a template.
 ##
 configurationsConfigMap: ""
 ## @param existingConfigmap Name of an existing ConfigMap supplying the chart's standard env-vars (in place of the chart-rendered `<fullname>-envvars`). When set, the chart skips its own envvars ConfigMap and the Deployment's `envFrom` references this resource.

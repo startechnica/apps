@@ -4,14 +4,16 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{/*
-Chart-rendered FreeRADIUS `radiusd.conf` ConfigMap. Materialised when the user
-supplies inline configuration via `.Values.configurations` OR when an opt-in
-`files/radiusd.conf` is bundled with the chart. Skipped when the user is
-bringing their own ConfigMap via `.Values.configurationsConfigMap` — that path
-short-circuits via the `freeradius.configurationCM` helper, so the Deployment's
-volume points at the user-supplied resource and this template renders nothing.
+Chart-managed FreeRADIUS `radiusd.conf` ConfigMap. The body is inlined here
+rather than supplied via `.Values.configurations` or `files/radiusd.conf`,
+so the radiusd.conf shape is fully owned by the chart. Conditional
+`$INCLUDE` lines and tpl directives below are evaluated against the chart
+context. Skipped entirely when `.Values.configurationsConfigMap` is set —
+in that case the Deployment's volume points at the user-supplied resource
+via the `freeradius.configurationCM` helper, and this template renders
+nothing.
 */}}
-{{- if and (or .Values.configurations (.Files.Glob "files/radiusd.conf")) (not .Values.configurationsConfigMap) }}
+{{- if not (or .Values.configurationsConfigMap .Values.configurations) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -27,6 +29,96 @@ data:
     {{- if .Values.configurations }}
     {{- include "st-common.tplvalues.render" (dict "value" .Values.configurations "context" $) | nindent 4 }}
     {{- else }}
-    {{- .Files.Get "files/radiusd.conf" | nindent 4 }}
+    prefix = /usr
+    exec_prefix = /usr
+    sysconfdir = /etc
+    localstatedir = /var
+    sbindir = ${exec_prefix}/sbin
+    logdir = /opt/startechnica/freeradius
+    raddbdir = /etc/freeradius
+    radacctdir = ${logdir}/radacct
+
+    name = radiusd
+
+    confdir = ${raddbdir}
+    modconfdir = ${confdir}/mods-config
+    certdir = ${confdir}/certs
+    cadir   = ${confdir}/certs
+    # run_dir = ${localstatedir}/run/${name}
+    run_dir = /opt/startechnica/freeradius/run/${name}
+
+    db_dir = ${raddbdir}
+    libdir = /usr/lib/freeradius
+    pidfile = ${run_dir}/${name}.pid
+    max_request_time = 30
+    cleanup_delay = 5
+    max_requests = 16384
+    hostname_lookups = no
+
+    unlang {
+    }
+
+    log {
+        destination = {{ .Values.logging.destination }}
+        colourise = {{ ternary "yes" "no" .Values.logging.colourise }}
+        file = {{ .Values.logging.file }}
+        syslog_facility = {{ .Values.logging.syslog_facility }}
+        stripped_names = {{ ternary "yes" "no" .Values.logging.stripped_names }}
+        auth = {{ ternary "yes" "no" .Values.logging.auth }}
+        auth_badpass = {{ ternary "yes" "no" .Values.logging.auth_badpass }}
+        auth_goodpass = {{ ternary "yes" "no" .Values.logging.auth_goodpass }}
+
+        msg_denied = {{ .Values.logging.msg_denied | quote }}
+    }
+
+    checkrad = ${sbindir}/checkrad
+
+    ENV {
+    }
+
+    security {
+        allow_core_dumps = no
+        max_attributes = 200
+        reject_delay = 1
+        status_server = yes
+        require_message_authenticator = auto
+        limit_proxy_state = auto
+        allow_vulnerable_openssl = no
+    }
+
+    proxy_requests  = yes
+    $INCLUDE proxy.conf
+    {{- $cdiHomeServer := and .Values.createDefaultInstance.homeServer (include "freeradius.isStatefulSet" .) }}
+    {{- $cdiHomeServerPool := and .Values.createDefaultInstance.homeServerPool (include "freeradius.isStatefulSet" .) }}
+    {{- if or .Values.homeServers .Values.tls.enabled $cdiHomeServer }}
+    $INCLUDE /opt/startechnica/freeradius/home-servers.conf
+    {{- end }}
+    {{- if or .Values.homeServerPools .Values.tls.enabled $cdiHomeServerPool }}
+    $INCLUDE /opt/startechnica/freeradius/home-server-pools.conf
+    {{- end }}
+    $INCLUDE /opt/startechnica/freeradius/realms.conf
+    $INCLUDE {{ .Values.clients.includeFile }}
+
+    thread pool {
+        start_servers = 5
+        max_servers = 32
+        min_spare_servers = 3
+        max_spare_servers = 10
+        max_requests_per_server = 0
+        auto_limit_acct = no
+    }
+
+    modules {
+        $INCLUDE {{ .Values.modules.includeDir }}/
+    }
+
+    instantiate {
+    }
+
+    policy {
+        $INCLUDE {{ .Values.policies.includeDir }}/
+    }
+
+    $INCLUDE {{ .Values.sites.includeDir }}/
     {{- end }}
 {{- end }}

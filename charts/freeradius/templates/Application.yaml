@@ -445,11 +445,9 @@ spec:
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
-            {{- if or (.Files.Glob "files/radiusd.conf") .Values.configurations .Values.configurationsConfigMap }}
             - name: freeradius-config
               mountPath: /etc/freeradius/radiusd.conf
               subPath: radiusd.conf
-            {{- end }}
             - name: freeradius-clients
               mountPath: /etc/freeradius/clients.conf
               subPath: clients.conf
@@ -785,11 +783,9 @@ spec:
           secret:
             secretName: {{ include "freeradius.eap.tlsConfig.secretName" . }}
         {{- end }}
-        {{- if or (.Files.Glob "files/radiusd.conf") .Values.configurations .Values.configurationsConfigMap }}
         - name: freeradius-config
           configMap:
             name: {{ include "freeradius.configurationCM" . }}
-        {{- end }}
         - name: freeradius-clients
           configMap:
             name: {{ default (printf "%s-clients" (include "st-common.names.fullname" .)) .Values.clients.existingConfigMapName }}
