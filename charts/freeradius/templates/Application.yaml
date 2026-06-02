@@ -4,19 +4,30 @@ SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{- /* `.Values.kind` is accepted case-insensitively (`Deployment` / `deployment`,
-       `StatefulSet` / `statefulset`) and normalised here to its canonical
-       PascalCase spelling for the `kind:` field and apiVersion lookup. */}}
+       `StatefulSet` / `statefulset`, `DaemonSet` / `daemonset`) and normalised
+       here to its canonical PascalCase spelling for the `kind:` field and
+       apiVersion lookup. */}}
 {{- $kindRaw := .Values.kind | default "Deployment" }}
-{{- $kindMap := dict "deployment" "Deployment" "statefulset" "StatefulSet" }}
+{{- $kindMap := dict "deployment" "Deployment" "statefulset" "StatefulSet" "daemonset" "DaemonSet" }}
 {{- $kind := index $kindMap (lower (toString $kindRaw)) }}
 {{- if not $kind }}
-{{- fail (printf "freeradius: .Values.kind must be one of [Deployment, StatefulSet] (case-insensitive), got %q" $kindRaw) }}
+{{- fail (printf "freeradius: .Values.kind must be one of [Deployment, StatefulSet, DaemonSet] (case-insensitive), got %q" $kindRaw) }}
 {{- end }}
 {{- /* StatefulSet manages its own PVCs via volumeClaimTemplates when
        persistence is enabled and no existing claim is BYO'd; in that mode the
-       `data` entry under spec.volumes is omitted (the template provides it). */}}
+       `data` entry under spec.volumes is omitted (the template provides it).
+       DaemonSet has no equivalent — a shared PVC across all node pods only
+       works on RWX storage; users on RWO should either disable persistence
+       or BYO a per-node hostPath (validator not enforced — operator's call). */}}
 {{- $useVCT := and (eq $kind "StatefulSet") .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
-apiVersion: {{ ternary (include "st-common.capabilities.statefulset.apiVersion" .) (include "st-common.capabilities.deployment.apiVersion" .) (eq $kind "StatefulSet") }}
+{{- /* apiVersion lookup keyed off `$kind`. All three share `apps/v1` on
+       1.14+, but route through the per-kind helpers so a future kube-version
+       split lands in one place. */}}
+{{- $apiVersion := "" }}
+{{- if eq $kind "StatefulSet" }}{{- $apiVersion = include "st-common.capabilities.statefulset.apiVersion" . }}
+{{- else if eq $kind "DaemonSet" }}{{- $apiVersion = include "st-common.capabilities.daemonset.apiVersion" . }}
+{{- else }}{{- $apiVersion = include "st-common.capabilities.deployment.apiVersion" . }}{{- end }}
+apiVersion: {{ $apiVersion }}
 kind: {{ $kind }}
 metadata:
   name: {{ include "st-common.names.fullname" . }}
@@ -33,7 +44,9 @@ metadata:
     {{- end }}
   {{- end }}
 spec:
-  {{- if not .Values.horizontalPodAutoscaler.enabled }}
+  {{- /* DaemonSet has no `replicas` (one pod per scheduled node); Deployment and
+         StatefulSet honour `replicaCount` unless the HPA is taking over. */}}
+  {{- if and (ne $kind "DaemonSet") (not .Values.horizontalPodAutoscaler.enabled) }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
@@ -45,6 +58,12 @@ spec:
   {{- if .Values.podManagementPolicy }}
   podManagementPolicy: {{ .Values.podManagementPolicy }}
   {{- end }}
+  {{- if .Values.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- else if eq $kind "DaemonSet" }}
+  {{- /* DaemonSet shares the `updateStrategy:` field name with StatefulSet
+         (rollingUpdate vs OnDelete). No serviceName / replicas / podManagement. */}}
   {{- if .Values.updateStrategy }}
   updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
   {{- end }}

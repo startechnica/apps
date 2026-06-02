@@ -482,8 +482,10 @@ freeradius: realmPool.enabled
     `realmPool.enabled: true` requires `kind: StatefulSet` (currently
     `{{ .Values.kind | default "Deployment" }}`). The auto-generated peer
     `home_server` entries point at the per-pod DNS names backed by the
-    headless Service — Deployments don't expose those, so the rendered
-    entries wouldn't resolve. Either switch to `kind: StatefulSet` or set
+    headless Service — Deployments and DaemonSets don't expose those
+    (Deployment pods are named `<name>-<random>` and DaemonSet pods only
+    get the headless Service when you BYO one), so the rendered entries
+    wouldn't resolve. Either switch to `kind: StatefulSet` or set
     `realmPool.enabled: false`.
 {{- else if lt $replicas 2 -}}
 freeradius: realmPool.enabled
