@@ -215,43 +215,6 @@
   validator catches it at `helm install` / `helm template` instead of at
   apply time.
 
-- **`realmPool` — auto-generated peer home_server entries + pools for
-  StatefulSet deployments.** Opt-in via `realmPool.enabled: true`. When
-  the workload is a StatefulSet with `replicaCount > 1`, the chart now
-  renders TWO `home_server` entries per replica (one `_auth`, one
-  `_acct`) plus TWO matching `home_server_pool` entries
-  (`<name>_auth`, `<name>_acct`). Names are snake_case
-  (`<name>_<ord>_<auth|acct>`) so FreeRADIUS proxy/realm references
-  read cleanly; `realmPool.name` has any hyphens auto-converted to
-  underscores via the new `freeradius.utils.snakeCase` helper (so
-  `my-cluster` → `my_cluster_0_auth`, etc.). The auth home_servers
-  target `containerPorts.auth` (1812 default, overridable via
-  `realmPool.port`); the acct home_servers target `containerPorts.acct`
-  (1813). Both target the same per-pod DNS name
-  (`<fullname>-<ord>.<headless-svc>.<ns>.svc.cluster.local`). Pools use
-  `load-balance` by default (overridable via `realmPool.type`).
-  Additive: rendered after the user-supplied `.Values.homeServers[]` /
-  `.Values.homeServerPools[]` arrays; any same-named user entry wins
-  per-entry (mirrors the existing `radsec` chart-managed-with-override
-  pattern). Knobs: `realmPool.{enabled, name, type, port, proto,
-  secret, virtualServer}` — defaults `name: cluster`, `type:
-  load-balance`, `proto: udp`, `port: ""` (auth fallback to
-  `containerPorts.auth`). The secret is required and must match the
-  `clients{}` block that accepts the peer-pod source IPs (typically the
-  existing `clients.localhost` wildcard with `ipv4addr: 0.0.0.0/0`
-  covers it).
-- `freeradius.utils.snakeCase` — new helper in `_utils.tpl` that
-  converts a hyphenated DNS-1123 string into a snake_case identifier
-  legal as a FreeRADIUS proxy/realm name. Used by the realmPool
-  rendering so any user-supplied `realmPool.name` with hyphens still
-  renders to a valid `home_server` / `home_server_pool` identifier.
-- `freeradius.validate.realmPool` — hard-fails
-  `realmPool.enabled: true` paired with `kind != StatefulSet`
-  (per-pod DNS requires StatefulSet), `replicaCount < 2` (one-member
-  pool is a no-op), or an empty `realmPool.secret`. Validator catches
-  the misconfig at `helm template` time instead of letting it ship an
-  empty / unresolvable pool.
-
 ### Changed
 
 - **`oidc.py` is more verbose for diagnostics.** No change to the runtime
