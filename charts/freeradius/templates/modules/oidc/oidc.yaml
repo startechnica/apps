@@ -45,7 +45,6 @@ metadata:
   namespace: {{ include "st-common.names.namespace" $ | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: freeradius
-    app.firmansyah.id/oidc-instance: {{ $name | quote }}
   {{- if $.Values.commonAnnotations }}
   annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}

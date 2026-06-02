@@ -150,7 +150,7 @@ architecture: standalone
 ## @param logging.msg_denied Reply message returned when the user exceeds the Simultaneous-Use limit. Rendered as a quoted string.
 ##
 logging:
-  destination: files
+  destination: stdout
   colourise: true
   file: ${logdir}/radius.log
   syslog_facility: daemon
@@ -1236,7 +1236,7 @@ terminationGracePeriodSeconds: ""
 priorityClassName: ""
 ## @param podManagementPolicy StatefulSet pod-start ordering. Empty (default) lets Kubernetes apply its built-in `OrderedReady`; set `Parallel` to start all pods simultaneously. IMMUTABLE on existing StatefulSets — Kubernetes rejects updates to this field after creation, so flipping the value on a live release requires `kubectl delete sts --cascade=orphan` (preserves pods + PVCs) before the new spec lands. No effect on Deployment / DaemonSet workloads.
 ##
-podManagementPolicy: ""
+podManagementPolicy: Parallel
 ## @param hostAliases Add deployment host aliases
 ##
 hostAliases: []

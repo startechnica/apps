@@ -344,8 +344,6 @@ spec:
             {{- else }}
             - -f
             {{- end }}
-            - -l
-            - stdout
           {{- end }}
           env:
             {{- include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
