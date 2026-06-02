@@ -395,15 +395,25 @@
   the trailing newline is preserved. Affected both `sites/default` and the
   newly-wired `sites/inner-tunnel` (the bug existed in `default` since 1.2.0
   but only fired when at least one `clients.<x>.oidc` binding was set).
-- OIDC dispatch arms now guard each `Packet-Src-IP[v6]-Address == "<addr>"`
-  comparison with an attribute-existence check (`&Attr && Attr == "..."`)
-  so an IPv4-only request doesn't bail with
+- OIDC dispatch arms now guard each `Packet-Src-IP[v6]-Address` comparison
+  with an attribute-existence check (`&Attr && &Attr <= "..."`) so an
+  IPv4-only request doesn't bail with
   `Failed casting lhs operand: Failed resolving "" to IPv6 address` when
   the OR falls through to the IPv6 leg (and vice versa for IPv6-only).
   Without the guard, unlang resolves the absent attribute to `""` and the
   cast to IPv6 fails at runtime; the cast error stamps Module-Failure-
   Message and the arm evaluates as false, so dispatch silently misses
   the matching instance.
+- OIDC dispatch arms now use the `<=` IP-in-prefix operator instead of `==`
+  for the `clients.<x>.{ipv4addr,ipv6addr}` match. `==` is exact-string
+  equality in unlang, so any CIDR value (`0.0.0.0/0`, `192.168.1.0/24`,
+  `::/0`) silently missed — the dispatch always fell through, NAS-bound
+  OIDC never fired. The `<=` operator (FR3 `unlang(5)` §CONDITIONS, "checking
+  that an IP address is contained within a network") handles both CIDR and
+  single hosts uniformly: a bare host like `172.18.0.1` is a /32 prefix
+  containing only itself, so the same render works for both. This matches
+  the semantic of the underlying `clients{}` block (which has always parsed
+  CIDR natively for shared-secret matching).
 
 ## 1.1.0 (2026-05-29)
 

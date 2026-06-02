@@ -76,12 +76,13 @@ data:
             #  tunnelled inner-auth to the matching `oidc_<name>_authorize` policy.
             {{- range $i, $arm := $oidcArms.arms }}
             {{- $cond := list -}}
-            {{- /* Guard each comparison on attribute existence (`&Attr && Attr == "..."`) so an
+            {{- /* Guard each comparison on attribute existence (`&Attr && &Attr <= "..."`) so an
                    IPv4-only request doesn't fail to cast an absent Packet-Src-IPv6-Address to IPv6
-                   (and vice versa). Without the guard, unlang resolves the missing attribute to
-                   "" and bails with "Failed casting lhs operand: Failed resolving \"\"". */}}
-            {{- if $arm.ipv4 }}{{- $cond = append $cond (printf "(&Packet-Src-IP-Address && Packet-Src-IP-Address == %s)" ($arm.ipv4 | quote)) -}}{{- end -}}
-            {{- if $arm.ipv6 }}{{- $cond = append $cond (printf "(&Packet-Src-IPv6-Address && Packet-Src-IPv6-Address == %s)" ($arm.ipv6 | quote)) -}}{{- end }}
+                   (and vice versa). The `<=` operator does IP-in-prefix containment (FR3 unlang(5)),
+                   so both a single host (`172.18.0.1`) and a CIDR (`172.18.0.0/16`, `0.0.0.0/0`)
+                   work — `==` only does exact-string equality and silently misses any CIDR value. */}}
+            {{- if $arm.ipv4 }}{{- $cond = append $cond (printf "(&Packet-Src-IP-Address && &Packet-Src-IP-Address <= %s)" ($arm.ipv4 | quote)) -}}{{- end -}}
+            {{- if $arm.ipv6 }}{{- $cond = append $cond (printf "(&Packet-Src-IPv6-Address && &Packet-Src-IPv6-Address <= %s)" ($arm.ipv6 | quote)) -}}{{- end }}
             {{ if $i }}elsif{{ else }}if{{ end }} ({{ join " || " $cond }}) {
                 {{ include "freeradius.oidc.policyName" (dict "name" $arm.instance) }}
             }
