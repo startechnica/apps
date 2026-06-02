@@ -106,10 +106,9 @@ data:
     {{- if $cdiHomeServer }}
     {{- $cdiFullname := include "st-common.names.fullname" . }}
     {{- $cdiBase := include "freeradius.utils.snakeCase" $cdiFullname }}
-    {{- $cdiHeadless := include "freeradius.headlessServiceName" . }}
     {{- $cdiNs := include "st-common.names.namespace" . }}
     {{- range $i := until (int ($.Values.replicaCount | default 1)) }}
-    {{- $cdiPodFqdn := printf "%s-%d.%s.%s.svc.cluster.local" $cdiFullname $i $cdiHeadless $cdiNs }}
+    {{- $cdiPodFqdn := printf "%s-%d.%s.svc" $cdiFullname $i $cdiNs }}
     home_server {{ $cdiBase }}_{{ $i }}_auth {
         type = auth
         ipaddr = {{ $cdiPodFqdn | quote }}
