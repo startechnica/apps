@@ -87,15 +87,15 @@ In addition to whatever you add via `extraEnvVars*`, the chart injects a small f
 | `FREERADIUS_MODS_REST_PASSWORD`               | `modules.rest.enabled` (empty-string `envFrom` fallback always wired; an explicit `env:` secretKeyRef overrides when `modules.rest.auth != "none"`) | rlm_rest module Secret, key `mods-rest-password`                                         | `rlm_rest` body-template `password` field                                                                             |
 | `FREERADIUS_MODS_REDIS_PASSWORD`              | Redis-with-auth in use — bundled `redis.enabled: true` (auth on by default) OR explicit `modules.redis.existingSecret`                        | Bundled Redis subchart Secret OR BYO Secret named by `modules.redis.existingSecret`      | `rlm_redis` and Redis-backed `rlm_cache` connection password                                                          |
 | `FREERADIUS_MODS_EAP_TLS_PRIVKEY_PASSWORD`    | `modules.eap.enabled` **AND** `modules.eap.tlsConfig.private_key_password` is set                                                             | Chart credentials Secret, key `mods-eap-tls-privkey-password`                            | EAP module's `tls-config { private_key_password = $ENV{...} }`                                                       |
-| `FREERADIUS_KEYCLOAK_CLIENT_SECRET`           | `keycloak.enabled` AND `keycloak.instances.default.clientSecret` is set (or its `existingSecret` BYO is set)                                  | Per-instance Keycloak Secret (`<fullname>-keycloak`), key `client-secret`                | OIDC `client_secret` for the `default` Keycloak instance — read by the lua/python mapper via `os.environ.get(...)`   |
-| `FREERADIUS_KEYCLOAK_<NAME>_CLIENT_SECRET`    | each non-`default` Keycloak instance with `clientSecret` (or `existingSecret`) set                                                            | Per-instance Keycloak Secret (`<fullname>-keycloak-<name>`)                              | OIDC `client_secret` for the named instance                                                                           |
+| `FREERADIUS_OIDC_CLIENT_SECRET`               | `modules.oidc.enabled` AND `modules.oidc.instances.default.clientSecret` is set (or its `existingSecret` BYO is set)                          | Per-instance OIDC Secret (`<fullname>-oidc`), key `client-secret`                        | OAuth2 `client_secret` for the `default` OIDC instance — read by the rlm_python3 wrapper via `os.environ.get(...)`    |
+| `FREERADIUS_OIDC_<NAME>_CLIENT_SECRET`        | each non-`default` OIDC instance with `clientSecret` (or `existingSecret`) set                                                                | Per-instance OIDC Secret (`<fullname>-oidc-<name>`), key `client-secret`                 | OAuth2 `client_secret` for the named instance                                                                         |
 
 A few things worth knowing:
 
 - **Auto-generation.** When the source value is left empty (`sites.status.secret: ""`, `sites.radsec.tls.private_key_password: ""`, `modules.eap.tlsConfig.private_key_password: ""`, etc.), the chart materialises a random value into the chart credentials Secret on install and preserves it across upgrades via Helm's `lookup`. See [§Auto-generated credentials](#auto-generated-credentials) below for the rotation caveats around `helm template`-based workflows.
 - **Pin them via your own Secret.** `auth.existingSecret` mounts one BYO Secret holding every chart-managed credential key; `auth.existingSecretPerPassword` lets you point each credential at its own Secret (e.g. one managed by an external-secrets operator). The env var names above stay the same — only the backing Secret changes.
-- **Per-instance Keycloak prefix.** The `default` Keycloak instance uses the bare prefix `FREERADIUS_KEYCLOAK_`; every other instance uses `FREERADIUS_KEYCLOAK_<NAME>_` with the instance name upper-cased (e.g. `keycloak.instances.partner-realm.clientSecret` → `FREERADIUS_KEYCLOAK_PARTNER_REALM_CLIENT_SECRET`).
-- **Not in the table above.** Keycloak coordinates other than `CLIENT_SECRET` (URL / realm / clientId / scope / connectTimeout / roleMapper / ca_file / insecure / role-and-attribute mappings) are **baked into the wrapper ConfigMaps at chart-render time** — they are *not* runtime env vars. Update the values and re-apply to change them.
+- **Per-instance OIDC prefix.** The `default` OIDC instance uses the bare prefix `FREERADIUS_OIDC_`; every other instance uses `FREERADIUS_OIDC_<NAME>_` with the instance name upper-cased (e.g. `modules.oidc.instances.partner-realm.clientSecret` → `FREERADIUS_OIDC_PARTNER_REALM_CLIENT_SECRET`).
+- **Not in the table above.** OIDC coordinates other than `CLIENT_SECRET` (`tokenUrl` / `introspectUrl` / `clientId` / `scope` / `connectTimeout` / `rolesClaim` / `groupsClaim` / `tls.*` / role-and-group-and-attribute mappings / `introspect` / `refreshTokenCache` / `cache.*`) are **baked into the per-instance rlm_python3 wrapper at chart-render time** — they are *not* runtime env vars. Update the values and re-apply to change them.
 - **Your own `$ENV{...}`.** When you write `$ENV{FREERADIUS_RADSEC_CLIENT_AP_SECRET}` (or any other custom name) inside values like `sites.radsec.clients[*].secret`, `homeServers[*].secret`, or `realms[*].secret`, those env vars are **not** auto-created by the chart. Inject them yourself via `extraEnvVars` (inline `valueFrom` `secretKeyRef`) or `extraEnvVarsSecret` (a Secret you manage that the Deployment pulls in via `envFrom`).
 
 ### Setting Pod's affinity
@@ -249,57 +249,69 @@ under `mariadb.enabled` / `postgresql.enabled`, and the standard
 `radcheck` / `radreply` / `radusergroup` schema is auto-loaded by the
 chart's `db-bootstrap` initContainer.
 
-### Keycloak (OIDC) authentication
+### OIDC authentication
 
-FreeRADIUS can authenticate users against a Keycloak realm using the OAuth2
-Resource Owner Password Credentials (ROPC) grant. Because ROPC needs the
-cleartext password, this only works for password-based flows — **PAP**, or
-**EAP-TTLS/PAP** as the inner method. MSCHAPv2/PEAP cannot authenticate against
-Keycloak. Enable **Direct Access Grants** on the Keycloak client.
+FreeRADIUS can authenticate users against any OIDC provider (Keycloak,
+Authentik, Azure AD, Auth0, Okta, …) using the OAuth2 Resource Owner Password
+Credentials (ROPC) grant. Because ROPC needs the cleartext password, this only
+works for password-based flows — **PAP**, or **EAP-TTLS/PAP** as the inner
+method. MSCHAPv2/PEAP cannot authenticate against an OIDC IdP. Enable the
+ROPC grant on the IdP's client (Keycloak calls it **Direct Access Grants**).
 
-Two backends are available via `keycloak.instances.<name>.mode`:
-
-| Mode                | Module              | Image needs                                  |
-| ------------------- | ------------------- | -------------------------------------------- |
-| `python` (default)  | `rlm_python3` script (config baked in by Helm, delegates to shared `keycloak_common.py`) | Bundled — no rebuild needed |
-| `lua`               | `rlm_lua` script (same shape, shared `keycloak_common.lua`)                              | `rlm_lua`, `lua-cjson`, `luasec`/`luasocket` |
-
-Both modes do the same flow: ROPC password grant against the token endpoint,
-then JWT-decode the returned `access_token` to read the user's client roles,
-then expose them to the `keycloak_<name>_authorize` unlang policy which maps
-the first matching role to the reply attributes.
+Each backend is configured as a named instance under
+`modules.oidc.instances.<name>`. The chart renders one `oidc` (or
+`oidc_<name>`) rlm_python3 module instance + a matching unlang policy
+(`oidc_authorize` / `oidc_<name>_authorize`) per entry. The Python wrapper is
+generated at chart-render time from the per-instance config — no custom image
+needed; `rlm_python3` is already bundled in
+`freeradius/freeradius-server:3.2.8`.
 
 ```yaml
-keycloak:
-  enabled: true
-  instances:
-    default:
-      mode: python
-      url: https://auth.example.com
-      realm: corp
-      clientId: freeradius
-      clientSecret: "<confidential-client-secret>"   # omit for a public client
-      roleMappings:
-        - role: network-admin        # a *client* role on `clientId`
-          reply:
-            - 'Service-Type := Administrative-User'
-            - 'Cisco-AVPair := "shell:priv-lvl=15"'
-        - role: wifi-user
-          reply:
-            - 'Tunnel-Type:0 := VLAN'
-            - 'Tunnel-Medium-Type:0 := IEEE-802'
-            - 'Tunnel-Private-Group-Id:0 := "10"'
-      denyWithoutRole: true          # reject users with no matching role
+modules:
+  oidc:
+    enabled: true
+    wireDefaultSite: true            # call `default` instance from sites/default's else-branch
+    unmatchedReject: false           # when no `default`, dispatch falls through to `pap` (set true to reject)
+    instances:
+      default:
+        tokenUrl: https://auth.example.com/realms/corp/protocol/openid-connect/token
+        clientId: freeradius
+        clientSecret: "<confidential-client-secret>"   # empty for a public client
+        rolesClaim: realm_access.roles                 # IdP-specific JWT claim path
+        roleMappings:
+          - role: network-admin
+            reply:
+              - 'Service-Type := Administrative-User'
+              - 'Cisco-AVPair := "shell:priv-lvl=15"'
+          - role: wifi-user
+            reply:
+              - 'Tunnel-Type:0 := VLAN'
+              - 'Tunnel-Medium-Type:0 := IEEE-802'
+              - 'Tunnel-Private-Group-Id:0 := "10"'
+        denyWithoutRole: true        # reject users matching no roleMappings entry
+        cache:
+          enabled: true              # cache token + claims (requires redis-backed rlm_cache)
+          ttl: 300
 ```
 
-`roleAttribute` (default `Class`) is the control attribute the script
-populates with role names. `roleMapper` selects where roles come from in the
-JWT: `client` (`resource_access[clientId].roles`) or `realm`
-(`realm_access.roles`).
+`rolesClaim` is **required** when you set `roleMappings` — there is no
+provider-specific default. Common paths: `realm_access.roles` (Keycloak),
+`groups` (Authentik / Azure AD), `resource_access.<clientId>.roles` (Keycloak
+client roles). The chart's docs in [values.yaml](values.yaml) under
+`modules.oidc.instances` enumerate every per-instance key
+(`tokenUrl`, `introspectUrl`, `clientId`, `clientSecret`, `existingSecret`,
+`scope`, `connectTimeout`, `roleAttribute`, `rolesClaim`, `denyWithoutRole`,
+`roleMappings`, `groupAttribute`, `groupsClaim`, `groupMappings`,
+`attributeMappings`, `require`, `introspect`, `refreshTokenCache`,
+`cache.{enabled,ttl}`, `tls.{caCert,existingSecret,existingSecretCaKey,insecure}`,
+`existingConfigMap`).
 
-By default (`wireDefaultSite: true`) the `default` virtual server's authorize
-section is wired to the `default` instance automatically. Set it to `false`
-to call `keycloak_authorize` from your own site config.
+Bind a specific NAS to a named instance with `clients.<x>.oidc: <name>`. NAS
+entries without a binding fall through to the `default` instance (when
+`wireDefaultSite: true`) or to `pap` (when `unmatchedReject: false`).
+
+Migration from the 1.1.0 `keycloak.*` module: see
+[§Upgrading → Keycloak module removed](#keycloak-module-removed-migrate-to-modulesoidc-breaking).
 
 ### EAP-TTLS / PEAP supplicant notes
 
@@ -709,14 +721,13 @@ the genCA fallback only.
 ## TODO
 
 - **winbind sidecar to join domain / Samba** — bundle an optional winbind/samba sidecar so FreeRADIUS can join an Active Directory / Samba domain and authenticate against it (MS-CHAPv2 via `ntlm_auth`, machine-account-based PEAP/EAP-MSCHAPv2, group lookups via `wbinfo`). Needs Kerberos keytab plumbing, domain-join init container or pre-joined Secret, and integration with `modules.mschap` / `modules.exec`.
-- **`modules.ldap` full schema** — currently a stub (`enabled` + `existingConfigMap` only). Every sibling module (`sql`, `rest`, `eap`, `cache`, `redis`, `keycloak`) ships a fully templated schema rendered via `freeradius.tplvalues.renderConfig`; LDAP being the odd one out forces every install to fall back to `existingConfigMap`. Add `server` / `port` / `identity` / `password` (with `existingSecret`), `base_dn`, `user`, `group`, `tls`, `pool`, and wire TLS material into a `freeradius.ldap.tls.*` flow mirroring `modules.sql.tls`.
+- **`modules.ldap` full schema** — currently a stub (`enabled` + `existingConfigMap` only). Every sibling module (`sql`, `rest`, `eap`, `cache`, `redis`, `oidc`) ships a fully templated schema rendered via `freeradius.tplvalues.renderConfig`; LDAP being the odd one out forces every install to fall back to `existingConfigMap`. Add `server` / `port` / `identity` / `password` (with `existingSecret`), `base_dn`, `user`, `group`, `tls`, `pool`, and wire TLS material into a `freeradius.ldap.tls.*` flow mirroring `modules.sql.tls`.
 - **DHCP listener port auto-wiring** — `sites.dhcp.enabled: true` mounts the `dhcp` virtual server but leaves `containerPorts` / Service entry / NetworkPolicy ingress as manual `extraPorts`. Either wire it the way `coa` is wired (add `containerPorts.dhcp`, `service.ports.dhcp`, NetworkPolicy ingress rule) or document the intentional gap in the values comment.
 - **`helm test` hook running `radclient`** — `tests/` directory already exists but holds no hook pods. Add a `helm.sh/hook: test` pod that runs `radclient -p 1812 status <fullname>:<status-port> <sites.status.secret>` against the deployed Service, giving ArgoCD/Flux a post-sync health gate. Cost: ~30 lines; payoff: catches broken installs before traffic hits.
 - **EAP-PWD method** — `modules.eap.methods` ships `tls` / `ttls` / `peap` / `mschapv2`, but not `pwd`. EAP-PWD is the passwordless WiFi method that needs neither certificates nor a TLS-shared infra — useful for small/home deployments and as a stepping-stone before full EAP-TLS rollouts. Add `pwd` to the default methods list and an `eap.pwd.*` config block (default group 19, etc.).
 - **TOTP / 2FA (`rlm_totp`)** — increasingly table-stakes for VPN/WiFi second-factor. Add `modules.totp.enabled` with `time_offset`, `lookback`, `lookforward`, `otp_length`, `key_attribute` knobs and wire it into the `authorize` / `authenticate` sections so it can layer on top of PAP/CHAP. Pairs naturally with the existing SQL backend for shared-secret storage.
-- **External-Secrets / SecretProviderClass integration** — credentials, RADIUS shared secrets, TLS material, and Keycloak `clientSecret` all live in chart-managed Secrets today. Many shops source from Vault / AWS Secrets Manager / GCP Secret Manager via ExternalSecrets or CSI SecretProviderClass. Add a `values.externalSecrets.*` pattern (or at minimum a docs §pattern under "Bring your own Secret") showing how to point `auth.existingSecret`, `tls.certificatesSecret`, `keycloak.instances[].existingSecret`, etc. at an externally-synced Secret.
+- **External-Secrets / SecretProviderClass integration** — credentials, RADIUS shared secrets, TLS material, and per-instance OIDC `clientSecret` all live in chart-managed Secrets today. Many shops source from Vault / AWS Secrets Manager / GCP Secret Manager via ExternalSecrets or CSI SecretProviderClass. Add a `values.externalSecrets.*` pattern (or at minimum a docs §pattern under "Bring your own Secret") showing how to point `auth.existingSecret`, `tls.certificatesSecret`, `modules.oidc.instances.<name>.existingSecret`, etc. at an externally-synced Secret.
 - **PodMonitor as alternative to ServiceMonitor** — `metrics.serviceMonitor.*` is wired; some Prometheus Operator installs (notably kube-prometheus-stack with a non-default selector scope) prefer PodMonitor. Add `metrics.podMonitor.enabled` rendering `templates/metrics/PodMonitor.yaml` mirroring the ServiceMonitor shape — small template, broadens out-of-the-box compatibility.
-- **OIDC introspect policy decoupled from Keycloak** — the introspection policy under `templates/modules/keycloak/keycloak-policy.yaml` is generic RFC 7662 introspection in disguise (Keycloak just happens to implement it). A `modules.oidc.*` peer module — with `introspect_url`, `client_id`, `client_secret`, `scope_attribute`, `role_attribute` — would let users hook FreeRADIUS to Authentik / Auth0 / Azure AD / Okta without re-implementing the flow. Share the underlying lua/python helper rather than duplicating it.
 
 ## Troubleshooting
 
@@ -754,24 +765,18 @@ the new shape).
   (`sitesTlsPrivKeyPassword` → `sitesRadsecPrivKeyPassword`).
   Top-level `tls.*` (cert material switch) and `sites.tlsCache` are
   unaffected.
-- **Keycloak is now multi-instance.** The singleton `keycloak.*` block is
-  replaced by `keycloak.instances.<name>`, with NAS-to-instance binding
-  declared on the NAS side (`clients.<x>.keycloak: <name>`). Existing
-  single-Keycloak values keep working via a deprecation shim that
-  synthesises `keycloak.instances.default`; both removed in the next
-  major. See [§Upgrading → Keycloak is now multi-instance](#keycloak-is-now-multi-instance--nas--instance-binding-via-clientsxkeycloak).
-- **Keycloak `rest` mode removed.** `python` is a strict superset (bundled
-  rlm_python3, no custom image). `mode: rest` now fails validation with a
-  migration message; the legacy `mode` default switches from `rest` to
-  `python`.
-- **Keycloak script env vars renamed `KC_*` → `FREERADIUS_KEYCLOAK_*`.**
-  Internal rename — only observable when exec'ing into the pod or
-  overriding the mapper-script ConfigMaps.
-  See [§Upgrading → Keycloak script env vars renamed](#keycloak-script-env-vars-renamed-to-freeradius_keycloak_).
-- **Keycloak mapper-script filenames renamed.** `keycloak-mapper.lua` →
-  `keycloak.lua`, `keycloak_mapper.py` → `keycloak.py` (default);
-  `keycloak_<name>.{py,lua}` for named instances. Only affects users
-  overriding the mapper-script ConfigMaps.
+- **Keycloak module removed end-to-end → use `modules.oidc.*`.** The
+  dedicated `keycloak.*` top-level block, its mapper ConfigMaps
+  (`keycloak.{lua,py}`), env-var prefix (`FREERADIUS_KEYCLOAK_*` and the
+  earlier `KC_*`), and NAS binding (`clients.<x>.keycloak`) are gone.
+  Replaced by a generic, provider-agnostic OIDC module supporting any
+  IdP (Keycloak, Authentik, Azure AD, Auth0, Okta, …) with per-instance
+  config under `modules.oidc.instances.<name>` and NAS binding via
+  `clients.<x>.oidc: <name>`. **No automatic migration shim** — the
+  schemas differ enough (provider-agnostic `tokenUrl` instead of
+  `url`+`realm`, required `rolesClaim`, no `mode` knob, rlm_python3-only)
+  that a values rewrite is the only safe path. See [§Upgrading →
+  Keycloak module removed](#keycloak-module-removed-migrate-to-modulesoidc-breaking).
 - **`sites/coa.yaml` refactored to listen-inside-server.** Drops two
   over-flexible knobs: `sites.coa.listen.type` (only `coa` is valid) and
   `sites.coa.listen.virtual_server` (must match the on-disk filename).
@@ -1317,7 +1322,17 @@ not values.
 | `image.tag`                                   | FreeRADIUS image tag (immutable tags are recommended)                                                                    | `3.2.3`                        |
 | `image.pullPolicy`                            | FreeRADIUS image pull policy                                                                                             | `IfNotPresent`                 |
 | `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
-| `image.debug`                                 | Set to true if you would like to see extra information on logs                                                           | `false`                        |
+| `image.debug`                                 | Toggle the container args between `-f` (normal foreground) and `-fxx` (verbose debug). Independent of `logging.destination`. | `false`                        |
+| `architecture`                                | FreeRADIUS architecture mode. `standalone` (default) or `replication`. The `replication` value flips `proxy_requests` on and feeds the chart's proxy/realm machinery; `standalone` runs the server without proxying. | `standalone`                   |
+| `logging.destination`                         | FreeRADIUS log sink: `files` (write to `logging.file`), `syslog` (use `logging.syslog_facility`), `stdout`, or `stderr`. Runtime `-X` debug flag overrides this to stdout. | `stdout`                       |
+| `logging.colourise`                           | Highlight WARN / ERROR log lines on stderr / stdout. No-op when output is not a TTY.                                     | `true`                         |
+| `logging.file`                                | Log file path when `logging.destination: files`. `${logdir}` is a FreeRADIUS variable interpolated by FreeRADIUS at startup, not by Helm. | `${logdir}/radius.log`         |
+| `logging.syslog_facility`                     | Syslog facility used when `logging.destination: syslog`. OS-dependent allowed values; `daemon` is the conventional default. | `daemon`                       |
+| `logging.stripped_names`                      | When `true`, log the realm-stripped form of `User-Name` instead of the raw value.                                        | `false`                        |
+| `logging.auth`                                | Log every Access-Accept / Access-Reject result.                                                                          | `false`                        |
+| `logging.auth_badpass`                        | Log the offered password on rejected authentication. Requires `logging.auth: true`. Footgun — secrets in logs.            | `false`                        |
+| `logging.auth_goodpass`                       | Log the offered password on successful authentication. Requires `logging.auth: true`. Footgun — secrets in logs.          | `false`                        |
+| `logging.msg_denied`                          | Reply message returned when the user exceeds the Simultaneous-Use limit (rendered as a quoted string).                   | `"You are already logged in - access denied"` |
 | `hostAliases`                                 | Deployment pod host aliases                                                                                              | `[]`                           |
 | `command`                                     | Override default container command (useful when using custom images)                                                     | `[]`                           |
 | `args`                                        | Override default container args (useful when using custom images)                                                        | `[]`                           |
@@ -1359,19 +1374,21 @@ not values.
 | `containerSecurityContext.enabled`            | Enabled FreeRADIUS container Security Context                                                                            | `true`                         |
 | `containerSecurityContext.runAsUser`          | Set FreeRADIUS container Security Context runAsUser                                                                      | `101`                          |
 | `containerSecurityContext.runAsNonRoot`       | Set FreeRADIUS container Security Context runAsNonRoot                                                                   | `true`                         |
-| `tls.enabled`                                 | Enable TLS support for replication traffic                                                                               | `false`                        |
-| `tls.autoGenerated`                           | Generate automatically self-signed TLS certificates                                                                      | `false`                        |
-| `tls.autoGenerator.certmanager.enabled`       |                                                                                                                          | `false`                        |
-| `tls.certificatesSecret`                      | Name of the secret that contains the certificates                                                                        | `"false"`                           |
-| `tls.certFilename`                            | Certificate filename                                                                                                     | `""`                           |
-| `tls.certKeyFilename`                         | Certificate key filename                                                                                                 | `""`                           |
-| `tls.certCAFilename`                          | CA Certificate filename                                                                                                  | `""`                           |
-| `configuration`                               | Configuration for the FreeRADIUS server (`radiusd.conf`)                                                                 | `""`                           |
-| `configurationsConfigMap`                     | ConfigMap with the FreeRADIUS configuration files (Note: Overrides `configurations`). The value is evaluated as a template. | `""`                        |
+| `tls.enabled`                                 | Enable RADSEC (RADIUS over TLS, TCP/2083) — RADSEC listener + chart-managed `home_server radsec` loopback + matching `home_server_pool radsec` / `realm radsec`. | `false`                        |
+| `tls.autoGenerated`                           | **DEPRECATED — no longer consulted; removal in next major.** TLS auto-generation is now implicit when `tls.enabled` is set and no `tls.certificatesSecret` is supplied. | `false`                        |
+| `tls.certificatesSecret`                      | Name of an existing Secret containing the RADSEC certificate material (`tls.crt`, `tls.key`, `ca.crt`). When set, opts out of chart-managed generation. | `""`                           |
+| `tls.certFilename`                            | Certificate filename inside `tls.certificatesSecret`                                                                     | `""`                           |
+| `tls.certKeyFilename`                         | Certificate key filename inside `tls.certificatesSecret`                                                                 | `""`                           |
+| `tls.certCAFilename`                          | CA Certificate filename inside `tls.certificatesSecret`                                                                  | `""`                           |
+| `configurations`                              | Inline override for the FreeRADIUS `radiusd.conf` body (run through `tplvalues.render`). When set, replaces the chart-managed body in `templates/configmaps/configuration.yaml`. Leave empty to use the chart-managed default. | `""`                           |
+| `configurationsConfigMap`                     | Name of an externally-managed ConfigMap supplying `radiusd.conf` (must contain a `radiusd.conf` key). When set, skips both the chart-managed body and `configurations` — the Deployment mounts this resource at `/etc/freeradius/radiusd.conf`. Evaluated as a template. | `""`                           |
 | `initdbScripts`                               | Specify dictionary of scripts to be run at first boot                                                                    | `{}`                           |
 | `initdbScriptsConfigMap`                      | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                      | `""`                           |
+| `extraStartupArgs`                            | Extra args prepended to the FreeRADIUS container command line (before `-f` / `-fxx`).                                    | `""`                           |
 | `extraFlags`                                  | FreeRADIUS additional command line flags                                                                                 | `""`                           |
+| `kind`                                        | Workload kind rendered by `templates/Application.yaml`. Accepted case-insensitively: `Deployment` / `StatefulSet` / `DaemonSet`. `StatefulSet` gives stable per-pod identity + per-replica `volumeClaimTemplates`; `DaemonSet` schedules one pod per node and ignores `replicaCount` / `horizontalPodAutoscaler`. | `Deployment`                   |
 | `replicaCount`                                | Desired number of cluster nodes                                                                                          | `3`                            |
+| `podManagementPolicy`                         | StatefulSet pod-start ordering. Empty → Kubernetes default (`OrderedReady`); `Parallel` starts all pods simultaneously. **IMMUTABLE on existing StatefulSets** — flipping the value on a live release requires `kubectl delete sts <release> --cascade=orphan` (preserves pods + PVCs) before the new spec lands. No effect on Deployment / DaemonSet. | `Parallel`                     |
 | `podLabels`                                   | Extra labels for FreeRADIUS pods                                                                                         | `{}`                           |
 | `podAnnotations`                              | Annotations for FreeRADIUS  pods                                                                                         | `{}`                           |
 | `podAffinityPreset`                           | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                           |
@@ -1498,6 +1515,9 @@ Inline definitions of FreeRADIUS proxy targets (`home_server`), pools, and realm
 | `homeServers`                              | Inline `home_server` entries. Per-entry fields use snake_case mirroring FreeRADIUS native `home_server { }` directives (`name`, `type`, `ipaddr`, `port`, `secret`, `proto`, `response_window`, `zombie_period`, `revive_interval`, `status_check`, `check_interval`, `num_answers_to_alive`). See `values.yaml` for the full per-entry schema. | `[]` |
 | `homeServerPools`                          | Inline `home_server_pool` entries. Per-entry: `name`, `type`, `home_servers` (list of `home_server` name references), optional `virtual_server`, `fallback`. | `[]` |
 | `realms`                                   | Inline `realm` entries. Per-entry: `name`, new-style proxy via `auth_pool` / `acct_pool` / `coa_pool`, old-style proxy via `authhost` / `accthost` / `secret`, optional `nostrip` flag, optional local `virtual_server`. `realm LOCAL { }` is chart-managed (emitted unconditionally unless overridden by a user `name: LOCAL` entry); when `tls.enabled` the chart also emits `realm radsec { auth_pool = radsec }` plus the matching `home_server radsec` and `home_server_pool radsec` loopback definitions. | `[]` |
+| `createDefaultInstance.realm`              | Emit a chart-managed `realm DEFAULT { auth_pool = <fullname>_auth_pool; acct_pool = <fullname>_acct_pool }` block referencing the auto-gen pools. No-op outside `kind: StatefulSet`. | `false` |
+| `createDefaultInstance.homeServer`         | Emit one `home_server <fullname>_<ord>_auth` and one `<fullname>_<ord>_acct` per StatefulSet replica, each targeting the matching per-pod Service (`<fullname>-<ord>.<ns>.svc`). `secret` is rendered as literal `$ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}` — wire the env var yourself via `extraEnvVarsSecret`. No-op outside `kind: StatefulSet`. | `false` |
+| `createDefaultInstance.homeServerPool`     | Emit `home_server_pool <fullname>_auth_pool` and `<fullname>_acct_pool` (each `type = load-balance`) listing the per-pod home_servers. No-op outside `kind: StatefulSet`. | `false` |
 
 
 ### Custom FreeRADIUS enabled sites parameters
@@ -1529,22 +1549,19 @@ Inline definitions of FreeRADIUS proxy targets (`home_server`), pools, and realm
 | `sites.radsec.existingConfigMap`             | BYO ConfigMap (key `radsec`) mounted at `sites-enabled/radsec`; skips chart rendering                  | `""`        |
 
 
-### Keycloak integration parameters
+### OIDC integration parameters
 
-| Name                       | Description                                                                                                            | Value                      |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `keycloak.enabled`         | Render the Keycloak auth configs + Secret and mount them into the pod                                                 | `false`                    |
-| `keycloak.mode`            | Auth backend: `python` (bundled `rlm_python3`) or `lua` (custom image with `rlm_lua`). Both do ROPC + JWT-decode + role mapping.                                   | `python`                   |
-| `keycloak.url`             | Base URL of the Keycloak server                                                                                       | `https://auth.example.com` |
-| `keycloak.realm`           | Keycloak realm holding the users (required when enabled)                                                              | `""`                       |
-| `keycloak.clientId`        | OIDC client_id with Direct Access Grants enabled                                                                      | `freeradius`               |
-| `keycloak.clientSecret`    | Secret for a confidential client. Stored in a Secret and injected via `$ENV{FREERADIUS_KEYCLOAK_CLIENT_SECRET}`; empty = public client | `""`                       |
-| `keycloak.scope`           | Optional OAuth scope appended to the token request                                                                    | `""`                       |
-| `keycloak.connectTimeout`  | Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)                     | `4.0`                      |
-| `keycloak.wireDefaultSite` | Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module                           | `true`                     |
-| `keycloak.roleAttribute`   | (lua mode) Control attribute the Lua mapper populates with role names (one value per role)                            | `Class`                    |
-| `keycloak.denyWithoutRole` | (lua mode) Reject the request when no `roleMappings` entry matches                                                    | `false`                    |
-| `keycloak.roleMappings`    | (lua mode) Ordered role→reply map (first match wins): `role` + `reply` (list of unlang `Attr := value` lines)         | `[]`                       |
+Generic OIDC module (`modules.oidc.*`) — provider-agnostic ROPC + JWT/introspect
+flow against any IdP (Keycloak, Authentik, Azure AD, Auth0, Okta, …). Per-instance
+config under `modules.oidc.instances.<name>`; NAS-to-instance binding via
+`clients.<x>.oidc: <name>`.
+
+| Name                                                  | Description                                                                                                                                                                | Value     |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `modules.oidc.enabled`                                | Master gate — render the OIDC ConfigMaps + Secrets + mounts. No-op when `false`.                                                                                           | `false`   |
+| `modules.oidc.wireDefaultSite`                        | Auto-wire the `default` instance's `oidc_authorize` as the dispatch chain's `else` branch in `sites/default` and `sites/inner-tunnel`. No-op when no `default` instance.   | `true`    |
+| `modules.oidc.unmatchedReject`                        | When `true` AND no `default` instance is wired, the dispatch chain rejects unmatched NAS instead of falling through to `pap`.                                              | `false`   |
+| `modules.oidc.instances`                              | Map of named OIDC backends. Key = instance name (`^[a-z][a-z0-9_]*$`). Per-instance keys (see `modules.oidc.instances` block in [values.yaml](values.yaml) for the full schema): `tokenUrl` (REQUIRED), `introspectUrl`, `clientId`, `clientSecret` / `existingSecret`, `scope`, `connectTimeout`, `roleAttribute`, `rolesClaim`, `denyWithoutRole`, `roleMappings`, `groupAttribute`, `groupsClaim`, `groupMappings`, `attributeMappings`, `require`, `introspect`, `refreshTokenCache`, `cache.{enabled,ttl}`, `tls.{caCert,existingSecret,existingSecretCaKey,insecure}`, `existingConfigMap`. | `{}`      |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
