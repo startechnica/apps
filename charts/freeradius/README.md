@@ -301,6 +301,47 @@ By default (`wireDefaultSite: true`) the `default` virtual server's authorize
 section is wired to the `default` instance automatically. Set it to `false`
 to call `keycloak_authorize` from your own site config.
 
+### EAP-TTLS / PEAP supplicant notes
+
+EAP-TTLS and PEAP exchange identity in two phases — once *before* the TLS tunnel
+is established (outer / "anonymous" identity, visible in cleartext to anyone
+sniffing the air) and once *inside* the tunnel (inner / real identity, encrypted).
+If the supplicant doesn't set a distinct outer identity, FreeRADIUS logs the
+following warning on every auth and the real username travels over the air in
+the clear:
+
+```
+(N) WARNING: Outer and inner identities are the same. User privacy is compromised.
+```
+
+The fix lives entirely on the supplicant side — the chart can't do anything
+about it. Configure the WiFi / 802.1X profile with:
+
+| Field | Value |
+| --- | --- |
+| **Identity** (inner) | the real user, e.g. `logan@etb.co.id` |
+| **Anonymous identity** (outer) | `anonymous@<realm>`, e.g. `anonymous@etb.co.id` |
+| **Password** | the real password |
+
+The realm part (after `@`) of the anonymous identity must match the real realm
+so FreeRADIUS' `suffix` module routes the outer EAP to the correct inner-tunnel
+virtual server. The local-part (`anonymous` here) is arbitrary — anything not
+identifying the user works.
+
+Roll-out paths:
+
+- **Android (8.0+):** WiFi network → Advanced → "Anonymous identity" field
+- **iOS / iPadOS / macOS:** the "Outside Identity" field in the WPA-Enterprise
+  profile (`.mobileconfig` `OuterIdentity` key)
+- **Windows 10/11:** 802.1X advanced settings → "Specify authentication mode" →
+  enable **Privacy** and set the anonymous identity
+- **MDM (Intune, JumpCloud, Jamf, …):** push the anonymous identity as part of
+  the WiFi configuration profile — end users never see the setting
+
+Older supplicants without an outer-identity field can't suppress the warning;
+the real username will leak. Either upgrade the supplicant or accept the
+privacy trade-off.
+
 ### Routing via Gateway (`gateway-api` or `istio`)
 
 Three top-level knobs control whether and how a Gateway fronts the

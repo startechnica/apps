@@ -101,27 +101,46 @@ data:
     }
     {{- end }}
 
-    {{- /* Auto-generated peer home_server entries — one per StatefulSet replica,
-           pointing at the stable per-pod DNS name backed by the headless Service.
-           Additive: any user-supplied entry whose `name` matches `<realmPool.name>-<ord>`
-           wins and skips the auto-gen for that ordinal (same conflict-avoidance pattern
-           the `radsec` block uses above). Gated by $rpEnabled at file scope, so this
-           section is unreachable outside `kind: StatefulSet` AND `replicaCount > 1`. */}}
+    {{- /* Auto-generated peer home_server entries — TWO per StatefulSet replica
+           (one `_auth` and one `_acct`), each pointing at the stable per-pod DNS
+           name backed by the headless Service. Naming is snake_case
+           (`<realmPool.name>_<ord>_<auth|acct>`) since FreeRADIUS proxy/realm
+           identifiers conventionally avoid hyphens — `realmPool.name` has its
+           hyphens converted to underscores so a user-supplied "my-cluster" still
+           renders cleanly.
+           Additive: any user-supplied entry whose `name` matches one of the
+           auto-gen names wins and skips the auto-gen for that ordinal/type
+           (same conflict-avoidance pattern the `radsec` block uses above).
+           Gated by $rpEnabled at file scope, so this section is unreachable
+           outside `kind: StatefulSet` AND `replicaCount > 1`. */}}
     {{- if $rpEnabled }}
     {{- $rp := .Values.realmPool }}
     {{- $rpFullname := include "st-common.names.fullname" . }}
     {{- $rpHeadless := include "freeradius.headlessServiceName" . }}
     {{- $rpNs := include "st-common.names.namespace" . }}
-    {{- $rpPort := default .Values.containerPorts.auth (toString $rp.port | trim) }}
+    {{- $rpSnakeName := include "freeradius.utils.snakeCase" $rp.name }}
+    {{- $rpAuthPort := default .Values.containerPorts.auth (toString $rp.port | trim) }}
+    {{- $rpAcctPort := .Values.containerPorts.acct }}
     {{- $rpUserNames := list }}
     {{- range .Values.homeServers }}{{- $rpUserNames = append $rpUserNames .name }}{{- end }}
     {{- range $i := until $rpReplicas }}
-    {{- $rpName := printf "%s-%d" $rp.name $i }}
-    {{- if not (has $rpName $rpUserNames) }}
-    home_server {{ $rpName }} {
+    {{- $rpAuthName := printf "%s_%d_auth" $rpSnakeName $i }}
+    {{- $rpAcctName := printf "%s_%d_acct" $rpSnakeName $i }}
+    {{- $rpPodFqdn := printf "%s-%d.%s.%s.svc.cluster.local" $rpFullname $i $rpHeadless $rpNs }}
+    {{- if not (has $rpAuthName $rpUserNames) }}
+    home_server {{ $rpAuthName }} {
         type = auth
-        ipaddr = "{{ $rpFullname }}-{{ $i }}.{{ $rpHeadless }}.{{ $rpNs }}.svc.cluster.local"
-        port = {{ $rpPort }}
+        ipaddr = {{ $rpPodFqdn | quote }}
+        port = {{ $rpAuthPort }}
+        secret = {{ $rp.secret | quote }}
+        proto = {{ default "udp" $rp.proto }}
+    }
+    {{- end }}
+    {{- if not (has $rpAcctName $rpUserNames) }}
+    home_server {{ $rpAcctName }} {
+        type = acct
+        ipaddr = {{ $rpPodFqdn | quote }}
+        port = {{ $rpAcctPort }}
         secret = {{ $rp.secret | quote }}
         proto = {{ default "udp" $rp.proto }}
     }
