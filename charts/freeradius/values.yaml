@@ -1236,7 +1236,7 @@ terminationGracePeriodSeconds: ""
 priorityClassName: ""
 ## @param podManagementPolicy podManagementPolicy retained for compatibility with replication-mode rollouts (no effect on Deployment workloads).
 ##
-podManagementPolicy: ""
+podManagementPolicy: Parallel
 ## @param hostAliases Add deployment host aliases
 ##
 hostAliases: []
