@@ -379,6 +379,22 @@
   in verbose debug mode by default.
 - Added a writable `emptyDir` at `/var/run/radiusd` so the daemon can write its
   pidfile under `readOnlyRootFilesystem: true`.
+- OIDC dispatch chain is now also rendered into `sites/inner-tunnel` (it was
+  only emitted into `sites/default` despite the Added-note promising both).
+  EAP-TTLS / PEAP tunnelled auth bound via `clients.<x>.oidc: <instance>` now
+  reaches `oidc_<name>_authorize` — previously the inner-tunnel authorize
+  section fell straight through to `pap` with no OIDC call. `Packet-Src-IP-
+  Address` / `Packet-Src-IPv6-Address` still reflect the outer NAS inside the
+  tunnel (RFC 5281 §11.2), so the same NAS-binding logic works unchanged.
+- OIDC dispatch arms no longer render the `if (Packet-Src-IP-Address …) {`
+  directive glued onto the trailing comment line of the preamble. The ipv6
+  arm's terminating `-}}` was eating the newline + leading indent before the
+  `{{ if $i }}elsif{{ else }}if{{ end }}` action, which produced
+  ``…runs before `pap`.if (…) {`` — a single comment line followed by an
+  unmatched closing `}`, which would fail `radiusd -C`. Changed to `}}` so
+  the trailing newline is preserved. Affected both `sites/default` and the
+  newly-wired `sites/inner-tunnel` (the bug existed in `default` since 1.2.0
+  but only fired when at least one `clients.<x>.oidc` binding was set).
 
 ## 1.1.0 (2026-05-29)
 

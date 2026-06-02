@@ -156,7 +156,7 @@ data:
             {{- range $i, $arm := $oidcArms.arms }}
             {{- $cond := list -}}
             {{- if $arm.ipv4 }}{{- $cond = append $cond (printf "Packet-Src-IP-Address == %s" ($arm.ipv4 | quote)) -}}{{- end -}}
-            {{- if $arm.ipv6 }}{{- $cond = append $cond (printf "Packet-Src-IPv6-Address == %s" ($arm.ipv6 | quote)) -}}{{- end -}}
+            {{- if $arm.ipv6 }}{{- $cond = append $cond (printf "Packet-Src-IPv6-Address == %s" ($arm.ipv6 | quote)) -}}{{- end }}
             {{ if $i }}elsif{{ else }}if{{ end }} ({{ join " || " $cond }}) {
                 {{ include "freeradius.oidc.policyName" (dict "name" $arm.instance) }}
             }

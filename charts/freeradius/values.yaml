@@ -717,7 +717,7 @@ modules:
       - ttls
       - peap
       - mschapv2
-      # - md5
+      - md5
 
     ## Per-method config. Which methods are rendered is controlled by `methods`
     ## above. Each method's config map (`modules.eap.<method>`) becomes the body

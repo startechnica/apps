@@ -62,6 +62,45 @@ data:
         #    daily
             expiration
             logintime
+
+            {{- if .Values.modules.oidc.enabled }}
+            {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+            {{- $oidcArms := (include "freeradius.oidc.dispatchArms" .) | fromYaml }}
+            {{- $oidcHasDefault := hasKey $oidcResolved.instances "default" }}
+            {{- $oidcWireDefault := and $oidcHasDefault .Values.modules.oidc.wireDefaultSite }}
+            {{- if $oidcArms.arms }}
+            #  OIDC multi-instance dispatch — mirrors the block in `sites/default`.
+            #  Inside an EAP-TTLS / PEAP tunnel `Packet-Src-IP-Address` /
+            #  `Packet-Src-IPv6-Address` still reflect the *outer* NAS (RFC 5281
+            #  §11.2), so the same `clients.<x>.oidc: <instance>` binding routes
+            #  tunnelled inner-auth to the matching `oidc_<name>_authorize` policy.
+            {{- range $i, $arm := $oidcArms.arms }}
+            {{- $cond := list -}}
+            {{- if $arm.ipv4 }}{{- $cond = append $cond (printf "Packet-Src-IP-Address == %s" ($arm.ipv4 | quote)) -}}{{- end -}}
+            {{- if $arm.ipv6 }}{{- $cond = append $cond (printf "Packet-Src-IPv6-Address == %s" ($arm.ipv6 | quote)) -}}{{- end }}
+            {{ if $i }}elsif{{ else }}if{{ end }} ({{ join " || " $cond }}) {
+                {{ include "freeradius.oidc.policyName" (dict "name" $arm.instance) }}
+            }
+            {{- end }}
+            {{- if $oidcWireDefault }}
+            else {
+                #  Default OIDC instance — catches NAS without an explicit
+                #  `clients.<x>.oidc` binding (wireDefaultSite: true).
+                oidc_authorize
+            }
+            {{- else if .Values.modules.oidc.unmatchedReject }}
+            else {
+                #  No matching instance and no default fallback — reject
+                #  (`modules.oidc.unmatchedReject: true`).
+                reject
+            }
+            {{- end }}
+            {{- else if $oidcWireDefault }}
+            #  OIDC: only the default instance is wired (no `clients.*` has an
+            #  `oidc:` binding). Calls `oidc_authorize` directly.
+            oidc_authorize
+            {{- end }}
+            {{- end }}
             pap
         }
 
