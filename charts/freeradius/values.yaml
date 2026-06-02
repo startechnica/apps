@@ -1234,9 +1234,9 @@ terminationGracePeriodSeconds: ""
 ## @param priorityClassName Priority class name
 ##
 priorityClassName: ""
-## @param podManagementPolicy podManagementPolicy retained for compatibility with replication-mode rollouts (no effect on Deployment workloads).
+## @param podManagementPolicy StatefulSet pod-start ordering. Empty (default) lets Kubernetes apply its built-in `OrderedReady`; set `Parallel` to start all pods simultaneously. IMMUTABLE on existing StatefulSets — Kubernetes rejects updates to this field after creation, so flipping the value on a live release requires `kubectl delete sts --cascade=orphan` (preserves pods + PVCs) before the new spec lands. No effect on Deployment / DaemonSet workloads.
 ##
-podManagementPolicy: Parallel
+podManagementPolicy: ""
 ## @param hostAliases Add deployment host aliases
 ##
 hostAliases: []
