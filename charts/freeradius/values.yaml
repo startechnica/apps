@@ -975,6 +975,48 @@ homeServerPools: []
 ##
 realms: []
 
+## Chart-managed default proxy primitives — three independent toggles, each
+## emits one config piece. The chart does NOT cross-validate them: enabling
+## `realm` without `homeServerPool` emits a `realm DEFAULT` that references
+## pools you must supply via `homeServerPools[]` (else FreeRADIUS fails at
+## startup with "Reference to non-existent pool"); enabling `homeServerPool`
+## without `homeServer` similarly references home_servers you supply via
+## `homeServers[]`. Loud-fail-at-startup is the desired feedback.
+##
+## All three are no-op when `kind != StatefulSet` — the per-pod `home_server`
+## entries depend on stable per-pod DNS via the headless Service, which only
+## StatefulSet provides; the realm and pools dangle without their underlying
+## home_servers, so the whole feature is gated together.
+##
+## Identifiers derive from `<fullname>` snake-cased (hyphens → underscores
+## via `freeradius.utils.snakeCase`). For a release `demo-freeradius` with
+## `replicaCount: 2`, all three toggles on:
+##
+##   realm DEFAULT {
+##       auth_pool = demo_freeradius_auth_pool
+##       acct_pool = demo_freeradius_acct_pool
+##   }
+##   home_server demo_freeradius_0_auth { type = auth; ipaddr = "demo-freeradius-0.demo-freeradius-headless.<ns>.svc.cluster.local"; ... }
+##   home_server demo_freeradius_0_acct { type = acct; ... }
+##   home_server demo_freeradius_1_auth { ... }
+##   home_server demo_freeradius_1_acct { ... }
+##   home_server_pool demo_freeradius_auth_pool { type = load-balance; home_server = demo_freeradius_0_auth; home_server = demo_freeradius_1_auth }
+##   home_server_pool demo_freeradius_acct_pool { type = load-balance; home_server = demo_freeradius_0_acct; home_server = demo_freeradius_1_acct }
+##
+## The home_server `secret` renders literally as
+## `secret = $ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}` — wire the env var via
+## `extraEnvVarsSecret` and use the same `$ENV{...}` expansion in the
+## matching `clients{}` entry so peer-pod Access-Request packets authenticate.
+##
+## @param createDefaultInstance.realm Emit a `realm DEFAULT { auth_pool, acct_pool }` block referencing the auto-gen pools.
+## @param createDefaultInstance.homeServer Emit one `home_server <fullname>_<ord>_auth` and one `<fullname>_<ord>_acct` per StatefulSet replica.
+## @param createDefaultInstance.homeServerPool Emit one `home_server_pool <fullname>_auth_pool` and one `<fullname>_acct_pool` listing the per-pod home_servers.
+##
+createDefaultInstance:
+  realm: false
+  homeServer: false
+  homeServerPool: false
+
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
 ## the corresponding container port / Service port / NetworkPolicy entry.

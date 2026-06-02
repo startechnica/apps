@@ -32,6 +32,18 @@ Usage:
 {{- end -}}
 {{- end -}}
 
+{{/*
+Convert a string to snake_case-safe form for FreeRADIUS identifiers — replace
+hyphens with underscores. Used by `createDefaultInstance` to derive
+proxy/realm names from `st-common.names.fullname` (which is DNS-1123 and
+hyphen-separated).
+Usage:
+{{ include "freeradius.utils.snakeCase" "my-release-freeradius" }}   -> my_release_freeradius
+*/}}
+{{- define "freeradius.utils.snakeCase" -}}
+{{- . | toString | replace "-" "_" -}}
+{{- end -}}
+
 {{- define "freeradius.tplvalues.renderConfig" -}}
 {{- $out := "" -}}
 {{- range $key, $val := .value -}}

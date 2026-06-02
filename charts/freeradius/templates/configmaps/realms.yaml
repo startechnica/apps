@@ -65,3 +65,15 @@ data:
         {{- end }}
     }
     {{- end }}
+
+    {{- /* createDefaultInstance.realm — `realm DEFAULT` referencing the auto-gen
+           pools by their `<fullname>_<auth|acct>_pool` names. Pool refs dangle
+           without `createDefaultInstance.homeServerPool: true` — FreeRADIUS
+           fails loudly. */}}
+    {{- if and .Values.createDefaultInstance.realm (include "freeradius.isStatefulSet" .) }}
+    {{- $cdiBase := include "freeradius.utils.snakeCase" (include "st-common.names.fullname" .) }}
+    realm DEFAULT {
+        auth_pool = {{ $cdiBase }}_auth_pool
+        acct_pool = {{ $cdiBase }}_acct_pool
+    }
+    {{- end }}

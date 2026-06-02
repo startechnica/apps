@@ -3,7 +3,8 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if or .Values.homeServers .Values.tls.enabled }}
+{{- $cdiHomeServer := and .Values.createDefaultInstance.homeServer (include "freeradius.isStatefulSet" .) -}}
+{{- if or .Values.homeServers .Values.tls.enabled $cdiHomeServer }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -98,4 +99,31 @@ data:
     }
     {{- end }}
 
+    {{- /* createDefaultInstance.homeServer — one auth + one acct entry per
+           StatefulSet replica, named `<fullname>_<ord>_<auth|acct>`. Pod FQDN
+           resolves through the headless Service. Secret is the literal env-var
+           expansion; the user wires the env var via extraEnvVarsSecret. */}}
+    {{- if $cdiHomeServer }}
+    {{- $cdiFullname := include "st-common.names.fullname" . }}
+    {{- $cdiBase := include "freeradius.utils.snakeCase" $cdiFullname }}
+    {{- $cdiHeadless := include "freeradius.headlessServiceName" . }}
+    {{- $cdiNs := include "st-common.names.namespace" . }}
+    {{- range $i := until (int ($.Values.replicaCount | default 1)) }}
+    {{- $cdiPodFqdn := printf "%s-%d.%s.%s.svc.cluster.local" $cdiFullname $i $cdiHeadless $cdiNs }}
+    home_server {{ $cdiBase }}_{{ $i }}_auth {
+        type = auth
+        ipaddr = {{ $cdiPodFqdn | quote }}
+        port = {{ $.Values.containerPorts.auth }}
+        secret = $ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}
+        proto = udp
+    }
+    home_server {{ $cdiBase }}_{{ $i }}_acct {
+        type = acct
+        ipaddr = {{ $cdiPodFqdn | quote }}
+        port = {{ $.Values.containerPorts.acct }}
+        secret = $ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}
+        proto = udp
+    }
+    {{- end }}
+    {{- end }}
 {{- end }}

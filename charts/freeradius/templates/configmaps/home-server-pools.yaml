@@ -3,7 +3,8 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if or .Values.homeServerPools .Values.tls.enabled }}
+{{- $cdiHomeServerPool := and .Values.createDefaultInstance.homeServerPool (include "freeradius.isStatefulSet" .) -}}
+{{- if or .Values.homeServerPools .Values.tls.enabled $cdiHomeServerPool }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -45,6 +46,27 @@ data:
         {{- end }}
         {{- if .fallback }}
         fallback = {{ .fallback }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- /* createDefaultInstance.homeServerPool — two pools, `<fullname>_auth_pool`
+           and `<fullname>_acct_pool`, each load-balancing across the per-pod
+           home_servers emitted by home-servers.yaml. References dangle without
+           `createDefaultInstance.homeServer: true` — FreeRADIUS fails loudly. */}}
+    {{- if $cdiHomeServerPool }}
+    {{- $cdiBase := include "freeradius.utils.snakeCase" (include "st-common.names.fullname" .) }}
+    {{- $cdiReplicas := int (.Values.replicaCount | default 1) }}
+    home_server_pool {{ $cdiBase }}_auth_pool {
+        type = load-balance
+        {{- range $i := until $cdiReplicas }}
+        home_server = {{ $cdiBase }}_{{ $i }}_auth
+        {{- end }}
+    }
+    home_server_pool {{ $cdiBase }}_acct_pool {
+        type = load-balance
+        {{- range $i := until $cdiReplicas }}
+        home_server = {{ $cdiBase }}_{{ $i }}_acct
         {{- end }}
     }
     {{- end }}

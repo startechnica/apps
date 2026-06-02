@@ -867,6 +867,20 @@
         }
       }
     },
+    "createDefaultInstance": {
+      "type": "object",
+      "properties": {
+        "realm": {
+          "type": "boolean"
+        },
+        "homeServer": {
+          "type": "boolean"
+        },
+        "homeServerPool": {
+          "type": "boolean"
+        }
+      }
+    },
     "sites": {
       "type": "object",
       "properties": {
