@@ -406,6 +406,153 @@ entries:
   freeradius:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: "**Generic OIDC authentication module** — `modules.oidc.*` replaces the dedicated Keycloak module (now removed). Configure any number of provider-agnostic backends (Keycloak, Authentik, Azure AD, Auth0, Okta, …) under `modules.oidc.instances.<name>` with `tokenUrl` (required), optional `introspectUrl`, OAuth2 client credentials, TLS material, and claim-path config. NAS-to-backend binding via `clients.<x>.oidc: <name>` renders an `if (Packet-Src-IP-Address == …)` dispatch chain into `sites/default` + `sites/inner-tunnel`."
+        - kind: added
+          description: "Per-instance OIDC features: `roleMappings` / `groupMappings` (unlang reply mapping keyed off `rolesClaim` / `groupsClaim`), `attributeMappings` (generic JWT-claim → reply engine — reply attrs added to cache `update {}` so hits preserve them), `require` (truthy-claim guard list, e.g. `[email_verified]`), `introspect` (RFC 7662 vs local JWT-payload decode — catches revocation), `refreshTokenCache` (cache-aside with refresh-token freshness check on cache hit, rendered as a second `oidc_<name>_validate` rlm_python3 instance the policy calls)."
+        - kind: added
+          description: "Per-instance OIDC K8s resources: one module ConfigMap (`<fullname>-oidc[-<name>]` → `mods-enabled/oidc[_<name>]`), one policy ConfigMap (`<fullname>-oidc[-<name>]-policy` → `policy.d/oidc[_<name>]`), one client-secret Secret (skipped under `existingSecret`), one TLS CA Secret (skipped under `tls.existingSecret`); per-instance TLS mount at `/etc/freeradius/certs-oidc[-<name>]/ca.crt`; `client_secret` rides in via `FREERADIUS_OIDC[_<NAME>]_CLIENT_SECRET` env."
+        - kind: added
+          description: "Single shared `<fullname>-oidc-python` ConfigMap holds the per-instance rlm_python3 wrapper scripts (one data key per instance: `oidc_default.py`, `oidc_<name>.py`); the shared `oidc.py` library (pure logic, no env reads, no module-level config) lives in `<fullname>-oidc-py` and is mounted alongside under `python_path`. Wrappers delegate to `oidc.{authorize,accounting,validate}` over a `_CONFIG` dict baked in at chart-render time."
+        - kind: added
+          description: "`cache oidc[_<name>]_cache` rlm_cache instance per OIDC instance whose `cache.enabled: true`, namespaced cache key `oidc:<name>:%{User-Name}` (non-overridable) to prevent cross-instance cache hits on common usernames."
+        - kind: added
+          description: "OIDC namespacing helpers `freeradius.oidc.{resolveInstances, envVarPrefix, moduleName, validateModuleName, policyName, rolesPolicyName, groupsPolicyName, modKey, policyKey, scriptKey, cacheName, cacheKey, dispatchArms, clientSecretName, tlsVolumeName, tls.{enabled,createSecret,secretName,caKey,caFilePath}}` — single source of truth for the legacy-default-vs-named naming split."
+        - kind: added
+          description: "`freeradius.validate.oidcInstances` + `freeradius.validate.oidcClientBindings` — per-instance schema validation (`tokenUrl` required, `introspect: true` requires `introspectUrl` and a client secret, `refreshTokenCache: true` requires `cache.enabled: true` and a Redis backend, `roleMappings` requires `rolesClaim`, name regex, TLS-caCert/existingSecret exclusivity, `extraEnvVars` must not shadow the per-instance env-var prefix) plus a typo guard on every `clients.<x>.oidc`."
+        - kind: added
+          description: "Bundled Redis subchart (Bitnami, `condition: redis.enabled`) as an optional backend for the redis/cache modules; auto-targets `<release>-redis-master`, pulls password from the subchart Secret."
+        - kind: added
+          description: "`templates/modules/redis.yaml` + `modules.redis.*` — rlm_redis module (`%{redis:...}` xlat) rendered as `<fullname>-mods-redis`, mounted at `mods-enabled/redis`, with config-checksum annotation for rollout-on-change."
+        - kind: added
+          description: "`templates/modules/cache.yaml` + `modules.cache.*` — standalone rlm_cache module with pluggable `driver` (`rbtree` / `redis` / `memcached`), required `update {}` validated by `freeradius.validate.cache`."
+        - kind: added
+          description: "NetworkPolicy egress to the Redis backend on `modules.redis.port`, rendered when rlm_redis or the redis-driver cache is enabled (skipped under `networkPolicy.allowExternalEgress`)."
+        - kind: added
+          description: "`templates/Issuer.yaml` — self-signed CA chain bootstrapped via cert-manager (self-signed Issuer → CA Certificate → CA Issuer) when the chart issues via cert-manager and no external `tls.certManager.issuerRef.name` is supplied."
+        - kind: added
+          description: "`tls.certManager.ca.{commonName,duration,renewBefore,secretName}` — tuning knobs for the bootstrapped CA. `freeradius.tls.useCertManager` helper is the single source of truth for the cert-manager vs genCA branch."
+        - kind: added
+          description: "`templates/gateway-api/EnvoyProxy.yaml` — JSON access-log format on the chart-managed EnvoyProxy CR: bytes received/sent, duration, client IP, method/path, headers, response code/flags, upstream host. Renders by default under `gateway.infrastructure: envoy`."
+        - kind: added
+          description: "`gateway.proxyProtocol` — end-to-end PROXY-protocol v1 wiring for RADSEC. When `true` (AND `gateway.implementation: gateway-api` AND `gateway.infrastructure: envoy` AND `tls.enabled: true`) the chart renders an Envoy Gateway `BackendTrafficPolicy` (`gateway.envoyproxy.io/v1alpha1`) scoped to the FreeRADIUS Service's `tls-radsec` port (`proxyProtocol.version: V1`), and forces `proxy_protocol = yes` on the RADSEC `listen { }` block so FreeRADIUS sets `Packet-Src-IP-Address` to the real client IP. v1 is pinned because FreeRADIUS 3.2.x parses v1 only; UDP auth/acct/coa is untouched (PROXY protocol is TCP-only)."
+        - kind: added
+          description: "`freeradius.validate.gatewayProxyProtocol` — hard-fails `gateway.proxyProtocol: true` paired with `gateway.implementation: istio`, `gateway.infrastructure: \"\"`, or `tls.enabled: false`. Each combination would render a CR that can't function (BTP needs Envoy Gateway; FR-side parsing needs the RADSEC TCP listener)."
+        - kind: changed
+          description: "Chart-rendered UDPRoute (auth/acct/coa) and TLSRoute (radsec) `parentRefs` now include `sectionName` matching the corresponding Gateway listener name, so each route attaches to one specific listener instead of all compatible listeners on the parent Gateway. Routes whose `parentRefs` are overridden via `gateway.{udpRoute,tlsRoute}.parentRefs` are passed through verbatim and unaffected."
+        - kind: added
+          description: "`values.schema.json` — type-only JSON Schema draft-07 ships with the chart so `helm install/template/lint` catches gross value-type mismatches at submit time."
+        - kind: added
+          description: "`.helmignore` — excludes the schema regen helper (`.gen-*.py`), `ci/` render fixtures, and Claude-side artifacts (`.claude/`, `CLAUDE.md`) from the packaged chart."
+        - kind: changed
+          description: "`sites/coa.yaml` refactored to listen-inside-server (modern FR 3.x style matching `default`/`inner-tunnel`/`status`/`dhcp`). Drops over-flexible knobs `sites.coa.listen.type` (only `coa` is valid) and `sites.coa.listen.virtual_server` (must match `sites-enabled/coa`); `sites.coa.listen.ipaddr` kept."
+        - kind: changed
+          description: "**BREAKING** — RADSEC site renamed `tls` → `radsec` end-to-end: `templates/sites/tls.yaml` → `templates/sites/radsec.yaml`, ConfigMap `<r>-sites-tls` → `<r>-sites-radsec`, data key + mount path `tls` → `radsec`, FreeRADIUS-internal `home_server tls` / `home_server_pool tls` / `realm tls` blocks renamed; `sites.tls.*` values → `sites.radsec.*`; Secret key `sites-tls-privkey-password` → `sites-radsec-privkey-password`; env `FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD` → `FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`; BYO key `sitesTlsPrivKeyPassword` → `sitesRadsecPrivKeyPassword`. Top-level `tls.*` (cert material switch) untouched; `sites.tlsCache` (EAP session-cache site) untouched."
+        - kind: changed
+          description: "`st-common` dependency moved from the GitHub Pages HTTP repo to the GHCR OCI registry (`oci://ghcr.io/startechnica/charts`) — aligns with the chart's own publish path and removes the Pages-index round-trip."
+        - kind: changed
+          description: "**BREAKING** — cert-manager is now used automatically whenever its API is detected on the cluster; the chart falls back to the in-template genCA path only when the API is absent. There is no toggle to force the genCA path on a cluster where cert-manager is installed — to opt out for a given release, pre-create a Secret and set `tls.certificatesSecret`. The `validate.tls` hard-fail is removed (auto-generation handles every case); `validate.eap` keeps the `methods` / `default_eap_type` checks but drops the `tlsConfig` cert-source clause."
+        - kind: changed
+          description: "`tls.certManager.issuerRef.name` now defaults to `\"\"` (was `selfsigned-issuer`); empty bootstraps a chart-managed CA, set it to use a pre-existing Issuer/ClusterIssuer."
+        - kind: changed
+          description: "**BREAKING** — TLS auto-generation is now implicit whenever the matching feature is enabled (`tls.enabled`, `modules.eap.enabled`, `modules.sql.tls.enabled`) and no `*certificatesSecret` / `*certificates_secret` is supplied. The previous opt-in toggles (`tls.autoGenerated`, `modules.sql.tls.autoGenerated`, `modules.eap.tlsConfig.autoGenerated`) are no longer consulted. To opt out, set the corresponding `*certificatesSecret` / `*certificates_secret`."
+        - kind: changed
+          description: "Replaced the env-vars ConfigMap with a Secret (`templates/secrets/envvars.yaml`), dropped unused `FREERADIUS_ENABLE_TLS` / `FREERADIUS_SITES_NAMESPACE` keys; Deployment `envFrom` switches to `secretRef` for chart-managed env vars."
+        - kind: removed
+          description: "**BREAKING** — Dedicated Keycloak module removed end-to-end. The 1.1.0 top-level `keycloak.{enabled,mode,url,realm,clientId,clientSecret,scope,connectTimeout,roleAttribute,roleMapper,denyWithoutRole,roleMappings,tls.*,cache.*}` block is gone, along with `templates/modules/mods-config/keycloak/configmap-{lua,policy,rest}.yaml`, all `freeradius.keycloak.*` helpers, `freeradius.validate.keycloak*` validators, the `KC_*` / `FREERADIUS_KEYCLOAK_*` env-var injection, and the `clients.<x>.keycloak` NAS binding. Migrate to the new generic `modules.oidc.*` module — same JWT/ROPC flow against any OIDC provider, plus `groupMappings` / `attributeMappings` / `require` / `introspect` / `refreshTokenCache`. NAS binding is now `clients.<x>.oidc: <name>`."
+        - kind: removed
+          description: "**BREAKING** — `lua` mapper-script mode removed. The 1.1.0 chart accepted `keycloak.mode: lua` via rlm_lua, but rlm_lua is not bundled in `freeradius/freeradius-server:3.2.8`; the new `modules.oidc.*` module is rlm_python3-only."
+        - kind: removed
+          description: "**BREAKING** — `keycloak.mode: rest` removed. `python` mode was a strict superset (same ROPC POST + JWT-decode for role extraction, via the bundled rlm_python3) so the rest variant added nothing but config surface; gone along with the dedicated Keycloak module."
+        - kind: deprecated
+          description: "TLS auto-generation toggles `tls.autoGenerated`, `tls.certManager.create`, `modules.sql.tls.autoGenerated`, `modules.eap.tlsConfig.autoGenerated` — all four still accepted, no longer consulted. NOTES.txt fires a deprecation advisory when any is set to a non-default value; all four removed in the next major."
+        - kind: fixed
+          description: "Certificate / Issuer templates no longer emit an invalid `apiVersion: false` manifest when the cert-manager API is absent — gates now test `freeradius.tls.useCertManager` explicitly."
+        - kind: fixed
+          description: "`templates/configmaps/clients.yaml` no longer fails to render when `clients` carries non-client scalar keys (`includeFile`, `existingConfigMapName`) — non-map entries are skipped via `kindIs \"map\"`."
+        - kind: fixed
+          description: "`image.debug` (previously documented but unwired) now gates the container args between `-f` (normal) and `-fxx` (debug), so FreeRADIUS no longer starts in verbose debug mode by default."
+        - kind: fixed
+          description: "Added a writable `emptyDir` at `/var/run/radiusd` so the daemon can write its pidfile under `readOnlyRootFilesystem: true`."
+        - kind: added
+          description: "`createDefaultInstance.{realm, homeServer, homeServerPool}` — three independent opt-in toggles for chart-managed peer-mesh proxy primitives, each emitting one config piece named after `<fullname>` snake_case. `realm` emits a `realm DEFAULT { auth_pool = <fullname>_auth_pool; acct_pool = <fullname>_acct_pool }` block; `homeServer` emits one `home_server <fullname>_<ord>_<auth|acct>` per StatefulSet replica (`ipaddr` pointing at the per-pod Service, `secret` rendered as literal `$ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}` — user wires the env var via `extraEnvVarsSecret`); `homeServerPool` emits two `<fullname>_<auth|acct>_pool` blocks load-balancing across the per-pod entries. All three silently skip on non-StatefulSet kinds. No cross-toggle validation — enabling one without the others dangles refs and FreeRADIUS fails loudly at startup."
+        - kind: added
+          description: "`logging.*` knobs surface the FreeRADIUS `log { }` directive set as chart values (`destination` / `colourise` / `file` / `syslog_facility` / `stripped_names` / `auth` / `auth_badpass` / `auth_goodpass` / `msg_denied`). Booleans render as native `yes`/`no` via `ternary`; `msg_denied` is `| quote`d. Default `destination: stdout` makes `kubectl logs` work out of the box."
+        - kind: added
+          description: "`freeradius.isDaemonSet` template helper mirrors `freeradius.isStatefulSet` (case-insensitive kind match). `templates/Service-headless.yaml` gate widened from `if isStatefulSet` to `if or isStatefulSet isDaemonSet` — DaemonSet pods get the same DNS-based per-pod discovery (one A record per pod IP) StatefulSet uses."
+        - kind: changed
+          description: "**BREAKING** — `radiusd.conf` body moved from the values-side `.Values.configurations` (89-line inline default) and `files/radiusd.conf` (1214-line upstream-style file that didn't match chart paths) into `templates/configmaps/configuration.yaml`. The body is now chart-managed end-to-end; `.Values.configurations` stays as a verbatim-string override and `.Values.configurationsConfigMap` stays as the BYO ConfigMap escape hatch. Application.yaml mount + volume gates dropped (always present unless BYO). Old `files/radiusd.conf` deleted."
+        - kind: changed
+          description: "Log destination is now controlled by the rendered `radiusd.conf` `log { destination = ... }` (via `.Values.logging.destination`). The previously-hardcoded `-l stdout` CLI override dropped from `templates/Application.yaml` container args — the configmap is the single source of truth. Set `logging.destination: files` (+ `logging.file: <path>`) to write to disk; leave at the `stdout` default for `kubectl logs`."
+        - kind: changed
+          description: "`podManagementPolicy` default flipped from `\"\"` (empty → Kubernetes default `OrderedReady`) to `Parallel` for new StatefulSet installs. **IMMUTABLE on live StatefulSets** — flipping the value on an existing release fails ArgoCD/k8s sync with `Forbidden: updates to statefulset spec for fields other than ... are forbidden`. Recovery: `kubectl delete sts <release> --cascade=orphan` (preserves pods + PVCs) before the new spec applies. No effect on Deployment / DaemonSet."
+        - kind: changed
+          description: "Snake_case rename batch covering the remaining camelCase FreeRADIUS-directive mirrors: `modules.sql.{readGroups, readProfiles}` → `read_groups` / `read_profiles`; `modules.json.encode.value.{singleValueAsArray, enumAsInteger, datesAsInteger, alwaysString}` → snake_case; `modules.cache.maxEntries` (and per-instance `modules.cache.instances.<name>.maxEntries`) → `max_entries`; `modules.eap.{timerExpire, ignoreUnknownEapTypes, ciscoAccountingUsernameBug, maxSessions, defaultType}` → `timer_expire` / `ignore_unknown_eap_types` / `cisco_accounting_username_bug` / `max_sessions` / `default_eap_type`. All BREAKING — old keys silently ignored, validator + error-message text updated alongside the `default_eap_type` rename. Schema (`values.schema.json`) reflects the new shape."
+        - kind: changed
+          description: "**BREAKING** — `modules.eap.tlsConfig.cipher_list` changed from string to `[]string`. The chart joins entries with the OpenSSL `:` separator via `freeradius.utils.joinOrDefault`. Default `[\"DEFAULT\"]`; empty list and nil both fall through to `DEFAULT`. Mirrors the same change already shipped for `sites.radsec.tls.cipher_list`. Schema rejects the old scalar string form."
+        - kind: changed
+          description: "**BREAKING** — `sites.radsec.tls.cipher_list` changed from string to `[]string` (same shape + join semantics as `modules.eap.tlsConfig.cipher_list`). Multi-token example: `[\"HIGH\", \"!aNULL\", \"!MD5\"]` → `HIGH:!aNULL:!MD5`."
+        - kind: changed
+          description: "EnvoyProxy access-log JSON trimmed to TCP-relevant fields: `bytes_received`, `bytes_sent`, `client_ip`, `duration`, `start_time`, `protocol`, `upstream_host`. Dropped the HTTP-only `%REQ(:AUTHORITY)%` / `%REQ(X-ENVOY-ORIGINAL-METHOD)%` / `%REQ(X-ENVOY-ORIGINAL-PATH)%` / `%REQ(X-PROXY-USER)%` / `%REQ(REMOTE-USER)%` / `%REQ(X-REQUEST-ID)%` / `%RESPONSE_CODE%` / `%RESPONSE_FLAGS%` operators (all evaluate to empty over a raw TCP RADSEC listener) plus the commented `basic_auth_user` placeholder."
+        - kind: changed
+          description: "`templates/modules/oidc/{oidc, oidc-policy, secret, secret-tls}.yaml` no longer emit the `app.firmansyah.id/oidc-instance: <name>` metadata label — vendor-prefixed, never consumed by any selector / NetworkPolicy / RBAC / dashboard inside the chart. Pure metadata-only stripper; chart-correctness unaffected."
+        - kind: changed
+          description: "Collapse nested `metadata.annotations` rendering in `templates/Application.yaml` + `templates/Service.yaml` into a single `st-common.tplvalues.merge` + `st-common.tplvalues.render` pass. Outer `if or A B` already gates non-empty input; inner per-source `if` was redundant. Matches the pattern in `templates/Service-headless.yaml`."
+        - kind: changed
+          description: "`values.yaml` now re-states `redis.metrics.extraArgs: {}` matching the Bitnami redis subchart's map shape — makes the contract explicit so a downstream override that hands a list trips a parse failure rather than a `coalesce.go: cannot overwrite table with non table for redis.metrics.extraArgs (map[])` warning at template time."
+      artifacthub.io/images: |
+        - name: freeradius
+          image: docker.io/freeradius/freeradius-server:3.2.8
+      category: AccessManagement
+    apiVersion: v2
+    appVersion: 3.2.8
+    created: "2026-06-02T19:02:16.236056589Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: oci://ghcr.io/startechnica/charts
+      version: 0.1.21
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 20.5.9
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.7.27
+    - condition: redis.enabled
+      name: redis
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 25.5.3
+    description: FreeRADIUS is a modular, high performance free RADIUS suite developed
+      and distributed under the GNU General Public License, version 2, and is free
+      for download and use.
+    digest: c8966932c3390f711abbc9b443b26623ef4900a284dadc9aff8a61be41c1b3da
+    home: https://github.com/startechnica/apps/tree/main/charts/freeradius
+    icon: https://freeradius.org/img/wordmark.svg
+    keywords:
+    - freeradius
+    - radius
+    - radsec
+    - mysql
+    - postgresql
+    - ldap
+    kubeVersion: '>=1.24.0-0'
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: freeradius
+    sources:
+    - https://freeradius.org/
+    - https://github.com/FreeRADIUS/freeradius-server
+    - https://github.com/startechnica/apps.git
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/freeradius-1.2.0/freeradius-1.2.0.tgz
+    version: 1.2.0
+  - annotations:
+      artifacthub.io/changes: |
         - kind: changed
           description: "1.1.0 major release — values.yaml restructured, TLS/cert-manager keys consolidated, gateway-api stack adapted for RADIUS (UDPRoute/TLSRoute), bundled PostgreSQL subchart added alongside MariaDB, REST/JSON/PAM/PAP modules, top-level keys cleaned up (modsEnabled→modules, sitesEnabled→sites, database.bootstrap→bootstrap.database); see CHANGELOG.md and README §Upgrading for migration."
       artifacthub.io/images: |
@@ -3246,4 +3393,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-28T23:53:01.0245842Z"
+generated: "2026-06-02T19:02:16.236182566Z"
