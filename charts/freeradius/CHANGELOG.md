@@ -173,6 +173,40 @@
   regardless. The standalone `sites.radsec.listen.proxy_protocol` knob
   remains available for non-Envoy front-ends (HAProxy, AWS NLB
   direct-to-pod, …).
+- **Per-pod Services for StatefulSet (`templates/Service-perPod.yaml`).** When
+  `kind: StatefulSet`, the chart now also renders one Service per replica named
+  `<fullname>-<ord>` alongside the main load-balanced Service and the headless
+  Service. Each per-pod Service targets exactly one pod via
+  `statefulset.kubernetes.io/pod-name` (the label kube-controller-manager adds
+  to every StatefulSet pod automatically). All knobs inherit from
+  `.Values.service.*` — no new values keys. Two intentional differences from
+  the main Service:
+  - `spec.externalTrafficPolicy` is hardcoded to `Local`. Each per-pod Service
+    has a single backing pod, so the cross-node traffic drop that `Local`
+    causes is exactly correct, and the client source IP is preserved end-to-
+    end (no kube-proxy SNAT). NAS IPs land in `Packet-Src-IP-Address` for
+    `clients.conf` matching.
+  - `spec.ports[].nodePort` is unset on all per-pod Services. K8s auto-
+    allocates a unique NodePort per pod — the main Service keeps the fixed
+    `service.nodePorts.*` knob; per-pod NodePorts would otherwise collide
+    cluster-wide.
+  Gated purely on `kind: StatefulSet`. No render under Deployment or
+  DaemonSet (their pods don't carry the `pod-name` label the selector needs).
+- **Gateway API routes fan out per-pod for StatefulSet.** When
+  `kind: StatefulSet` AND `gateway.implementation: gateway-api`, each chart-
+  managed route's `backendRefs` now lists one entry per replica targeting that
+  replica's per-pod Service (equal weight). UDPRoute auth / acct / coa and
+  TLSRoute radsec all fan out symmetrically. Deployment and DaemonSet keep a
+  single backendRef pointing at the main load-balanced Service. Combined with
+  per-pod `externalTrafficPolicy: Local`, this preserves the NAS source IP
+  end-to-end through the Envoy data plane.
+- `freeradius.service.portsList` and `freeradius.gateway.backendRefs` —
+  new shared helpers in `_helpers.tpl`. The ports list now has a single source
+  of truth used by both `Service.yaml` and `Service-perPod.yaml` (drift on
+  port additions becomes impossible). `backendRefs` centralises the
+  Deployment-vs-StatefulSet fan-out logic so future routes pick it up
+  automatically. All 26 existing Service / Gateway helm-unittest cases pass
+  unchanged.
 - `freeradius.validate.gatewayProxyProtocol` — hard-fails
   `gateway.proxyProtocol: true` paired with `gateway.implementation: istio`,
   `gateway.infrastructure: ""`, or `tls.enabled: false`. Each combination

@@ -108,10 +108,10 @@ tests:
 
   - it: rejects an invalid workload kind
     set:
-      kind: DaemonSet
+      kind: Job
     asserts:
       - failedTemplate:
-          errorPattern: 'kind must be one of \[Deployment, StatefulSet\]'
+          errorPattern: 'kind must be one of \[Deployment, StatefulSet, DaemonSet\]'
 
   - it: adds the radsec container port when tls is enabled
     set:
