@@ -19,9 +19,8 @@ SPDX-License-Identifier: APACHE-2.0
        match anything — the chart skips this template silently.
 */}}
 
-{{- $kind := lower (toString (.Values.kind | default "Deployment")) -}}
 {{- $replicas := int (.Values.replicaCount | default 1) -}}
-{{- if and (eq $kind "statefulset") (gt $replicas 0) }}
+{{- if and (include "freeradius.isStatefulSet" .) (gt $replicas 0) }}
 {{- $fullname := include "st-common.names.fullname" . }}
 {{- $svcNs := include "st-common.names.namespace" . }}
 {{- range $i := until $replicas }}

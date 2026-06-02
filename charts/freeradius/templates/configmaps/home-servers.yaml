@@ -3,9 +3,8 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- $rpKind := lower (toString (.Values.kind | default "Deployment")) -}}
 {{- $rpReplicas := int (.Values.replicaCount | default 1) -}}
-{{- $rpEnabled := and (hasKey .Values "realmPool") .Values.realmPool.enabled (eq $rpKind "statefulset") (gt $rpReplicas 1) -}}
+{{- $rpEnabled := and (hasKey .Values "realmPool") .Values.realmPool.enabled (include "freeradius.isStatefulSet" .) (gt $rpReplicas 1) -}}
 {{- if or .Values.homeServers .Values.tls.enabled $rpEnabled }}
 apiVersion: v1
 kind: ConfigMap

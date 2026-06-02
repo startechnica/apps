@@ -475,9 +475,8 @@ Soft-no-ops (no message): `realmPool.enabled: false`, or
 */}}
 {{- define "freeradius.validate.realmPool" -}}
 {{- if and (hasKey .Values "realmPool") .Values.realmPool.enabled -}}
-{{- $kind := lower (toString (.Values.kind | default "Deployment")) -}}
 {{- $replicas := int (.Values.replicaCount | default 1) -}}
-{{- if ne $kind "statefulset" -}}
+{{- if not (include "freeradius.isStatefulSet" .) -}}
 freeradius: realmPool.enabled
     `realmPool.enabled: true` requires `kind: StatefulSet` (currently
     `{{ .Values.kind | default "Deployment" }}`). The auto-generated peer

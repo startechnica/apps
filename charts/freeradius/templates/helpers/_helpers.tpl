@@ -19,6 +19,20 @@ a StatefulSet so per-pod DNS (`<fullname>-0.<headless>.<ns>.svc`) resolves.
 {{- end -}}
 
 {{/*
+Whether `.Values.kind` resolves to StatefulSet (case-insensitive, defaults to
+Deployment when unset). Returns the literal string "true" — truthy in
+template `if` — when StatefulSet, and the empty string (falsy) otherwise.
+Negate with `not` for "render only on Deployment / DaemonSet" gates.
+Usage:
+  {{- if include "freeradius.isStatefulSet" . }}             # render if SS
+  {{- if not (include "freeradius.isStatefulSet" .) }}       # render if NOT SS
+  {{- $rpEnabled := and (...) (include "freeradius.isStatefulSet" .) (...) }}
+*/}}
+{{- define "freeradius.isStatefulSet" -}}
+{{- if eq (lower (toString (.Values.kind | default "Deployment"))) "statefulset" -}}true{{- end -}}
+{{- end -}}
+
+{{/*
 Render the FreeRADIUS Service ports list — used by both the main load-balanced
 Service.yaml and the per-pod Service-perPod.yaml so the port shape stays in
 lockstep. When `suppressNodePorts: true` is passed (the per-pod path), every
@@ -42,10 +56,9 @@ Usage:
 {{- define "freeradius.gateway.backendRefs" -}}
 {{- $ctx := .context -}}
 {{- $port := .port -}}
-{{- $kind := lower (toString ($ctx.Values.kind | default "Deployment")) -}}
 {{- $svcNs := include "st-common.names.namespace" $ctx -}}
 {{- $fullname := include "st-common.names.fullname" $ctx -}}
-{{- if eq $kind "statefulset" -}}
+{{- if include "freeradius.isStatefulSet" $ctx -}}
 {{- $replicas := int ($ctx.Values.replicaCount | default 1) -}}
 {{- range $i := until $replicas }}
 - group: ""
