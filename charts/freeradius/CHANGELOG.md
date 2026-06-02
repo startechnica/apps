@@ -183,6 +183,70 @@
 
 ### Changed
 
+- **`oidc.py` is more verbose for diagnostics.** No change to the runtime
+  contract; opaque failures turn into actionable log lines:
+  - `_post_form` now returns `(status, body, err)` where `err` is the
+    `repr()` of the caught `URLError` / `OSError` on network/TLS failure
+    (previously swallowed). `authorize()` and `validate()` surface it
+    into `radlog`, so:
+
+        oidc[keycloak]: token request failed (network/TLS): \
+            <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] ...>
+
+    instead of the prior bare `token request failed (network/TLS)`. The
+    same applies to introspection failures (new code path: introspect
+    network failure → `RLM_MODULE_FAIL` with the error surfaced, vs. the
+    prior bucket of "either revoked or network broken — can't tell").
+  - L_DBG entries around each HTTP call: `ROPC POST <url> (user=...)` /
+    `ROPC -> HTTP <status>`, `introspect POST <url>`, `refresh_token
+    POST <url>` / `refresh_token -> HTTP <status>`. Visible under
+    `radiusd -X`; lets you confirm the chart rendered the right
+    `tokenUrl` / `introspectUrl` without exec-into-pod + curl.
+  - **Token response visibility.** L_DBG: token-response metadata after a
+    successful ROPC (`token_type`, `expires_in`, `scope`, refresh? y/n) —
+    enough to verify scope/lifetime without leaking the bearer token.
+    L_AUTH: HTTP body on 4xx/5xx token responses (RFC 6749's
+    `{"error": "...", "error_description": "..."}`) — surfaces why the
+    IdP rejected the ROPC (bad credentials, client misconfigured, scope
+    denied) instead of just an HTTP code.
+  - **Claim visibility.** L_DBG after JWT decode / introspect: sorted
+    top-level claim keys, plus the resolved values at each configured
+    claim path (`required[]`, `rolesClaim`, `groupsClaim`). Lets you see
+    exactly what the IdP returned at the paths the chart cares about.
+    Top-level values are NOT logged — keys only, since values may carry
+    PII the operator didn't ask for.
+  - **"No roles" warning is now diagnostic.** Walks the configured
+    `rolesClaim` path one segment at a time and reports where it broke
+    (`segment X.Y missing; available at parent: [a, b, c]`). The Keycloak
+    case where the realm uses `realm_access.roles` but the chart was
+    configured for `resource_access.<client>.roles` now points at the
+    first missing segment instead of "no roles at <full path>".
+  - L_WARN when local JWT decode returns no claims (malformed token,
+    truncated body, etc.) — previously every downstream check
+    (`required`, `rolesClaim`, `groupsClaim`, `attributeMappings`)
+    silently saw an empty dict and either no-op'd or accepted the user.
+  - L_DBG: extracted role/group lists logged as a single line each
+    (`extracted N role(s): [...]`) instead of one log line per item.
+  - **id_token claims are now merged into the claim source.** Per OIDC
+    Core §3.1.3.3 the token endpoint returns an `id_token` alongside
+    `access_token` whenever the request carries the `openid` scope. The
+    id_token is the authoritative identity bearer (`sub`, `email`,
+    `name`, `preferred_username`, …) — claims the access_token
+    typically lacks. The module now decodes both and uses the union for
+    `required[]`, `rolesClaim`, `groupsClaim`, `attributeMappings`
+    (id_token wins on conflicts for shared registered claims; access-
+    token-only fields like `realm_access.roles` /
+    `resource_access.*` are untouched). Pure OAuth 2.0 providers that
+    don't emit id_token degrade silently. L_DBG also reports the
+    id_token-only vs access-token-only key sets so you can see which
+    bearer carried which claim. Introspection path is unchanged — when
+    `introspect: true`, RFC 7662 is the single source of truth.
+  - L_DBG: token-response extras dict (anything outside the standard
+    OIDC fields) — Keycloak's `not-before-policy`, Authentik's
+    `id_token_expires`, Azure's `ext_expires_in`, etc. — without baking
+    provider knowledge into the chart.
+  - L_DBG: `session_state` from the token response (when present) — lets
+    you trace the same session across renewal/refresh log lines.
 - **`sites/coa.yaml` refactored to listen-inside-server pattern.** Aligned
   with the modern FreeRADIUS 3.x convention used by `default`,
   `inner-tunnel`, `status`, `dhcp` (the upstream `sites-available/coa`

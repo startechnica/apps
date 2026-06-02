@@ -165,9 +165,12 @@ data:
 
 
     def _post_form(endpoint, fields, headers, timeout, ca_file, insecure):
-        """POST application/x-www-form-urlencoded. Returns (status, body)
-        where body is parsed JSON or None on parse failure; status is None
-        on network error."""
+        """POST application/x-www-form-urlencoded. Returns (status, body, err):
+        - status is the HTTP code, or None on network/TLS error
+        - body is parsed JSON, or None on parse failure / no body
+        - err is a short error string when status is None (network layer
+          that failed: DNS, TCP, TLS, timeout), else None. Surfaced into
+          the radlog so the operator can diagnose without curl-from-pod."""
         data = urllib.parse.urlencode(fields).encode("ascii")
         merged = {"Content-Type": "application/x-www-form-urlencoded"}
         merged.update(headers or {})
@@ -182,12 +185,12 @@ data:
                 raw = e.read()
             except OSError:
                 raw = b""
-        except (urllib.error.URLError, OSError):
-            return None, None
+        except (urllib.error.URLError, OSError) as e:
+            return None, None, repr(e)
         try:
-            return status, json.loads(raw or b"null")
+            return status, json.loads(raw or b"null"), None
         except ValueError:
-            return status, None
+            return status, None, None
 
 
     def _ropc(token_url, fields, timeout, ca_file, insecure):
@@ -195,16 +198,19 @@ data:
 
 
     def _introspect(introspect_url, token, client_id, client_secret, timeout, ca_file, insecure):
-        """RFC 7662 introspection. Returns the introspection response
-        dict when `active: true`, else None (revoked, expired, or
-        endpoint error). client_secret MUST be set — most providers
-        reject unauthenticated introspect calls."""
+        """RFC 7662 introspection. Returns (body, err) where body is the
+        introspection response dict when `active: true`, else None
+        (revoked, expired, or endpoint error). `err` is a short network-
+        error string when the call failed at the transport layer, else
+        None — surfaced into the radlog for diagnostics. client_secret
+        MUST be set — most providers reject unauthenticated introspect
+        calls."""
         headers = {"Authorization": _basic_auth(client_id, client_secret)}
-        status, body = _post_form(introspect_url, {"token": token}, headers,
-                                  timeout, ca_file, insecure)
+        status, body, err = _post_form(introspect_url, {"token": token}, headers,
+                                       timeout, ca_file, insecure)
         if status == 200 and isinstance(body, dict) and body.get("active"):
-            return body
-        return None
+            return body, None
+        return None, err
 
 
     def _refresh(token_url, refresh_token, client_id, client_secret, timeout, ca_file, insecure):
@@ -264,23 +270,45 @@ data:
         if cfg.get("scope"):
             fields["scope"] = cfg["scope"]
 
-        status, body = _ropc(token_url, fields, timeout, ca_file, insecure)
+        radiusd.radlog(radiusd.L_DBG,
+            f"{log_prefix}[{instance}]: ROPC POST {token_url} (user={username})")
+        status, body, err = _ropc(token_url, fields, timeout, ca_file, insecure)
+        radiusd.radlog(radiusd.L_DBG,
+            f"{log_prefix}[{instance}]: ROPC -> HTTP {status}")
 
         if status is None:
             radiusd.radlog(radiusd.L_ERR,
-                f"{log_prefix}[{instance}]: token request failed (network/TLS)")
+                f"{log_prefix}[{instance}]: token request failed (network/TLS): {err}")
             return radiusd.RLM_MODULE_FAIL
         if status in (400, 401):
+            #  IdP returned RFC 6749 error body — usually `{"error": "invalid_grant",
+            #  "error_description": "..."}`. Surface it so the operator sees WHY the
+            #  ROPC was rejected (bad credentials, client misconfigured, scope denied).
             radiusd.radlog(radiusd.L_AUTH,
-                f"{log_prefix}[{instance}]: ROPC rejected for {username} (HTTP {status})")
+                f"{log_prefix}[{instance}]: ROPC rejected for {username} (HTTP {status}): {body!r}")
             return radiusd.RLM_MODULE_REJECT
         if status != 200 or not body or "access_token" not in body:
             radiusd.radlog(radiusd.L_ERR,
-                f"{log_prefix}[{instance}]: unexpected token response for {username} (HTTP {status})")
+                f"{log_prefix}[{instance}]: unexpected token response for {username} (HTTP {status}): {body!r}")
             return radiusd.RLM_MODULE_FAIL
+
+        radiusd.radlog(radiusd.L_DBG,
+            f"{log_prefix}[{instance}]: ROPC ok — token_type={body.get('token_type')}, expires_in={body.get('expires_in')}, scope={body.get('scope')!r}, id_token={'yes' if body.get('id_token') else 'no'}, refresh={'yes' if body.get('refresh_token') else 'no'}, session_state={body.get('session_state')!r}")
+        #  Log any token-response fields the chart doesn't read explicitly — useful
+        #  for IdP-specific extensions (Keycloak's not-before-policy, Azure's
+        #  ext_expires_in, Authentik's id_token_expires, …) without baking
+        #  provider knowledge into the chart.
+        extra = {k: v for k, v in body.items()
+                 if k not in {"access_token", "refresh_token", "id_token",
+                              "token_type", "expires_in", "scope",
+                              "session_state"}}
+        if extra:
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: ROPC extra fields: {extra}")
 
         access_token  = body["access_token"]
         refresh_token = body.get("refresh_token")
+        id_token      = body.get("id_token")
 
         if cfg.get("introspect"):
             introspect_url = cfg.get("introspect_url")
@@ -292,15 +320,57 @@ data:
                 radiusd.radlog(radiusd.L_ERR,
                     f"{log_prefix}[{instance}]: introspect requires client_secret")
                 return radiusd.RLM_MODULE_FAIL
-            claims = _introspect(introspect_url, access_token,
-                                 cfg["client_id"], cfg["client_secret"],
-                                 timeout, ca_file, insecure)
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: introspect POST {introspect_url}")
+            claims, ierr = _introspect(introspect_url, access_token,
+                                       cfg["client_id"], cfg["client_secret"],
+                                       timeout, ca_file, insecure)
             if claims is None:
+                if ierr:
+                    radiusd.radlog(radiusd.L_ERR,
+                        f"{log_prefix}[{instance}]: introspect failed (network/TLS): {ierr}")
+                    return radiusd.RLM_MODULE_FAIL
                 radiusd.radlog(radiusd.L_AUTH,
                     f"{log_prefix}[{instance}]: introspect rejected token for {username}")
                 return radiusd.RLM_MODULE_REJECT
         else:
-            claims = _decode_jwt_claims(access_token)
+            #  Per OIDC Core §3.1.3.3, an `openid`-scoped token request also returns
+            #  an `id_token` — a signed JWT carrying identity claims that the
+            #  access_token typically doesn't have (`email`, `name`,
+            #  `preferred_username`, …). Merge them so claim mappings can match
+            #  against either; id_token wins on conflicts because for shared
+            #  registered claims (`sub`, `iss`, `aud`, `exp`, `iat`) it's the
+            #  authoritative identity source. access_token-only claims
+            #  (`realm_access.roles`, `resource_access.*`, scope-bound role
+            #  buckets, etc.) are untouched. Pure OAuth 2.0 providers that don't
+            #  emit id_token degrade silently.
+            access_claims = _decode_jwt_claims(access_token)
+            id_claims     = _decode_jwt_claims(id_token) if id_token else {}
+            claims = {**access_claims, **id_claims}
+            if not claims:
+                radiusd.radlog(radiusd.L_WARN,
+                    f"{log_prefix}[{instance}]: JWT decode yielded no claims for {username} — `required`, `rolesClaim`, `groupsClaim`, `attributeMappings` will all see an empty body")
+            elif id_claims:
+                only_in_id     = sorted(set(id_claims) - set(access_claims))
+                only_in_access = sorted(set(access_claims) - set(id_claims))
+                radiusd.radlog(radiusd.L_DBG,
+                    f"{log_prefix}[{instance}]: merged claims — id_token only: {only_in_id}, access_token only: {only_in_access}")
+
+        #  Snapshot of the claim body the rest of the function will read against.
+        #  Top-level keys only — the values would be too noisy (and may include PII
+        #  the operator didn't ask for). The configured claim paths (rolesClaim,
+        #  groupsClaim, required[]) get their RESOLVED values logged below.
+        radiusd.radlog(radiusd.L_DBG,
+            f"{log_prefix}[{instance}]: claims keys: {sorted(claims.keys())}")
+        for name in (cfg.get("required") or []):
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: required claim `{name}` = {claims.get(name)!r}")
+        if cfg.get("roles_claim_path"):
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: roles@`{cfg['roles_claim_path']}` = {_get_path(claims, cfg['roles_claim_path'])!r}")
+        if cfg.get("groups_claim_path") and cfg.get("group_mappings"):
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: groups@`{cfg['groups_claim_path']}` = {_get_path(claims, cfg['groups_claim_path'])!r}")
 
         missing = _check_required(claims, cfg.get("required"))
         if missing:
@@ -315,19 +385,32 @@ data:
         reply_attrs  = []
 
         if roles:
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: extracted {len(roles)} role(s): {roles}")
             for role in roles:
-                radiusd.radlog(radiusd.L_DBG,
-                    f"{log_prefix}[{instance}]: role -> {role}")
                 config_attrs.append((cfg["role_attribute"], role))
         elif cfg.get("roles_claim_path"):
-            radiusd.radlog(radiusd.L_WARN,
-                f"{log_prefix}[{instance}]: no roles for {username} at claim path `{cfg['roles_claim_path']}`")
+            #  Help the operator see WHY no roles were extracted. Walk the path one
+            #  segment at a time and report where it broke — saves a curl-the-JWT
+            #  step. Cheap (path is config, not data) and bounded.
+            path = cfg["roles_claim_path"]
+            cur, seen = claims, []
+            for seg in path.split("."):
+                seen.append(seg)
+                if not isinstance(cur, dict) or seg not in cur:
+                    radiusd.radlog(radiusd.L_WARN,
+                        f"{log_prefix}[{instance}]: no roles for {username} at claim path `{path}` — segment `{'.'.join(seen)}` missing; available at parent: {sorted(cur.keys()) if isinstance(cur, dict) else type(cur).__name__}")
+                    break
+                cur = cur[seg]
+            else:
+                radiusd.radlog(radiusd.L_WARN,
+                    f"{log_prefix}[{instance}]: no roles for {username} at claim path `{path}` — value is {type(cur).__name__}, expected list (got: {cur!r})")
 
         if groups:
             ga = cfg.get("group_attribute", "Class")
+            radiusd.radlog(radiusd.L_DBG,
+                f"{log_prefix}[{instance}]: extracted {len(groups)} group(s) -> &control:{ga}: {groups}")
             for group in groups:
-                radiusd.radlog(radiusd.L_DBG,
-                    f"{log_prefix}[{instance}]: group -> {group}")
                 config_attrs.append((ga, group))
 
         for m in (cfg.get("attribute_mappings") or []):
@@ -368,10 +451,14 @@ data:
                 f"{log_prefix}[{instance}]: token_url not set (validate)")
             return radiusd.RLM_MODULE_FAIL
 
-        status, _ = _refresh(token_url, refresh_token,
-                             cfg["client_id"], cfg.get("client_secret", ""),
-                             cfg["timeout"], cfg.get("ca_file"),
-                             cfg.get("insecure", False))
+        radiusd.radlog(radiusd.L_DBG,
+            f"{log_prefix}[{instance}]: refresh_token POST {token_url}")
+        status, _, err = _refresh(token_url, refresh_token,
+                                  cfg["client_id"], cfg.get("client_secret", ""),
+                                  cfg["timeout"], cfg.get("ca_file"),
+                                  cfg.get("insecure", False))
+        radiusd.radlog(radiusd.L_DBG,
+            f"{log_prefix}[{instance}]: refresh_token -> HTTP {status}")
 
         if status == 200:
             radiusd.radlog(radiusd.L_DBG,
@@ -381,8 +468,12 @@ data:
             radiusd.radlog(radiusd.L_AUTH,
                 f"{log_prefix}[{instance}]: refresh-token rejected (cache hit -> session revoked)")
             return radiusd.RLM_MODULE_REJECT
-        radiusd.radlog(radiusd.L_ERR,
-            f"{log_prefix}[{instance}]: refresh-token request failed (HTTP {status})")
+        if status is None:
+            radiusd.radlog(radiusd.L_ERR,
+                f"{log_prefix}[{instance}]: refresh-token request failed (network/TLS): {err}")
+        else:
+            radiusd.radlog(radiusd.L_ERR,
+                f"{log_prefix}[{instance}]: refresh-token request failed (HTTP {status})")
         return radiusd.RLM_MODULE_FAIL
 
 
