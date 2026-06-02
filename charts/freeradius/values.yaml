@@ -129,16 +129,6 @@ image:
 ## clients map, and extra environment variables / startup flags.
 ## =============================================================================
 
-## @param architecture FreeRADIUS architecture (`standalone` or `replication`)
-##
-architecture: standalone
-
-## FreeRADIUS `log { }` directives surfaced as values. Renders into the
-## chart-managed `radiusd.conf` (`templates/configmaps/configuration.yaml`)
-## when neither `configurations` nor `configurationsConfigMap` overrides it.
-## Field names mirror FreeRADIUS native directive names (snake_case).
-## Booleans below render as FreeRADIUS-native `yes` / `no`.
-##
 ## @param logging.destination Where log lines go: `files` (write to `logging.file`), `syslog` (use `logging.syslog_facility`), `stdout`, or `stderr`. The `-X` debug flag overrides this to stdout at runtime regardless.
 ## @param logging.colourise Highlight WARN / ERROR lines on stderr / stdout. No-op when output is not a TTY.
 ## @param logging.file Log file path when `destination: files`. Defaults to `${logdir}/radius.log` (interpolated by FreeRADIUS at startup using the `logdir` from radiusd.conf, not by Helm).
@@ -253,12 +243,12 @@ modules:
     ## @param modules.sql.read_clients Read RADIUS clients from the database (`nas` table). Clients are only read on server startup. (Maps 1:1 to FreeRADIUS `read_clients`.)
     ##
     read_clients: true
-    ## @param modules.sql.readGroups Read the group tables (`groupcheck`/`groupreply`) during authorization. When `true`, group tables are read unless `Fall-Through = no` is set in the reply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
+    ## @param modules.sql.read_groups Read the group tables (`groupcheck`/`groupreply`) during authorization. When `true`, group tables are read unless `Fall-Through = no` is set in the reply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
     ##
-    readGroups: true
-    ## @param modules.sql.readProfiles Read user profiles during authorization. When `true`, profiles are read unless `Fall-Through = no` is set in the groupreply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
+    read_groups: true
+    ## @param modules.sql.read_profiles Read user profiles during authorization. When `true`, profiles are read unless `Fall-Through = no` is set in the groupreply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
     ##
-    readProfiles: true
+    read_profiles: true
     ## TLS configuration for the SQL connection itself. Independent of the
     ## in-pod RADSEC TLS (see top-level `tls:` block) and of cert-manager (see
     ## `tls.certManager.*`).
@@ -444,18 +434,18 @@ modules:
         ##
         prefix: ""
       value:
-        ## @param modules.json.encode.value.singleValueAsArray Always emit values as a JSON array, even single values.
+        ## @param modules.json.encode.value.single_value_as_array Always emit values as a JSON array, even single values.
         ##
-        singleValueAsArray: false
-        ## @param modules.json.encode.value.enumAsInteger Emit the integer value of enumerated attributes instead of their textual alias.
+        single_value_as_array: false
+        ## @param modules.json.encode.value.enum_as_integer Emit the integer value of enumerated attributes instead of their textual alias.
         ##
-        enumAsInteger: false
-        ## @param modules.json.encode.value.datesAsInteger Emit date attributes as seconds since the epoch instead of a textual date.
+        enum_as_integer: false
+        ## @param modules.json.encode.value.dates_as_integer Emit date attributes as seconds since the epoch instead of a textual date.
         ##
-        datesAsInteger: false
-        ## @param modules.json.encode.value.alwaysString Force all values to be quoted JSON strings (integers are otherwise emitted unquoted).
+        dates_as_integer: false
+        ## @param modules.json.encode.value.always_string Force all values to be quoted JSON strings (integers are otherwise emitted unquoted).
         ##
-        alwaysString: false
+        always_string: false
 
   ## PAM authentication module (rlm_pam). Hands authentication off to Linux
   ## PAM (`/etc/pam.d/${pam_auth}` inside the container). The upstream
@@ -496,7 +486,7 @@ modules:
   pap:
     ## @param modules.pap.enabled Enable the FreeRADIUS PAP module.
     ##
-    enabled: false
+    enabled: true
     ## @param modules.pap.existingConfigMap Mount an existing ConfigMap (must contain a `pap` key with the module config) at `mods-enabled/pap` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
@@ -518,7 +508,7 @@ modules:
   redis:
     ## @param modules.redis.enabled Enable the FreeRADIUS Redis module.
     ##
-    enabled: false
+    enabled: true
     ## @param modules.redis.existingConfigMap Mount an existing ConfigMap (must contain a `redis` key) at `mods-enabled/redis` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
@@ -564,22 +554,22 @@ modules:
   cache:
     ## @param modules.cache.enabled Enable the FreeRADIUS cache module (rlm_cache).
     ##
-    enabled: false
+    enabled: true
     ## @param modules.cache.existingConfigMap Mount an existing ConfigMap (must contain a `cache` key) at `mods-enabled/cache` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
     ## @param modules.cache.driver Cache backend driver. One of `rbtree` (in-memory, per-pod), `redis` (shared across replicas — reuses the connection under `modules.redis`, and the bundled Redis password when `redis.auth.enabled`), `memcached`.
     ##
-    driver: rbtree
+    driver: redis
     ## @param modules.cache.key Cache key expansion (FreeRADIUS xlat). Embed the quotes in the value so it renders quoted.
     ##
     key: '"%{User-Name}"'
     ## @param modules.cache.ttl Default entry time-to-live in seconds.
     ##
     ttl: 3600
-    ## @param modules.cache.maxEntries Maximum number of cached entries (0 = unlimited).
+    ## @param modules.cache.max_entries Maximum number of cached entries (0 = unlimited).
     ##
-    maxEntries: 0
+    max_entries: 0
     ## @param modules.cache.update Body of the required rlm_cache `update { }` section, rendered verbatim (through `tpl`, so values may be referenced). FreeRADIUS refuses to load the module unless this holds at least one map. Each line is FreeRADIUS map syntax `<list>:<attr> <op> <value>`: on store it is written to the cache entry, on retrieve it is copied back onto the request. The default caches the whole reply list; customise for what you actually need.
     ##
     update: |-
@@ -599,7 +589,7 @@ modules:
     ## `cache` instance (and the chart-managed `cache_tls` / `oidc_<name>_cache`
     ## siblings). Each top-level key is a FreeRADIUS module instance name
     ## (used directly in unlang as `<name>`) with the same schema as the base:
-    ## `driver`, `key`, `ttl`, `maxEntries` (default 0), `update` (required),
+    ## `driver`, `key`, `ttl`, `max_entries` (default 0), `update` (required),
     ## `config`, `memcached.config`. One ConfigMap per instance renders into
     ## `mods-enabled/<name>`. `driver: redis` auto-injects the `redis { }`
     ## sub-block reusing `modules.redis.*` connection params, same as the base.
@@ -618,7 +608,7 @@ modules:
   ## EAP module (rlm_eap). Provides TLS-based EAP methods that share one
   ## `tls-config` server certificate: EAP-TLS (mutual TLS, client
   ## certificate) and EAP-TTLS (TLS tunnel + inner auth via a virtual
-  ## server). `defaultType` selects which enabled method is offered to peers
+  ## server). `default_eap_type` selects which enabled method is offered to peers
   ## that don't negotiate one. EAP runs over plain RADIUS (UDP auth) — it is
   ## independent of RADSEC (`tls.enabled`).
   ##
@@ -629,22 +619,22 @@ modules:
   eap:
     ## @param modules.eap.enabled Enable the FreeRADIUS EAP module.
     ##
-    enabled: false
+    enabled: true
     ## @param modules.eap.existingConfigMap Mount an existing ConfigMap (must contain an `eap` key with the module config) at `mods-enabled/eap` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
-    ## @param modules.eap.defaultType Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled outer methods (`tls`, `ttls`) listed in `methods`.
+    ## @param modules.eap.default_eap_type Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled outer methods (`tls`, `ttls`) listed in `methods`.
     ##
-    defaultType: ttls
-    ## @param modules.eap.timerExpire Seconds an EAP session may sit idle before it is expired (`timer_expire`).
-    ## @param modules.eap.ignoreUnknownEapTypes Silently ignore EAP requests for unknown/unconfigured types instead of NAK-ing (`ignore_unknown_eap_types`).
-    ## @param modules.eap.ciscoAccountingUsernameBug Work around the Cisco accounting User-Name bug (`cisco_accounting_username_bug`).
-    ## @param modules.eap.maxSessions Maximum number of concurrent EAP sessions (`max_sessions`). Defaults to the FreeRADIUS `${max_requests}` config var.
+    default_eap_type: ttls
+    ## @param modules.eap.timer_expire Seconds an EAP session may sit idle before it is expired.
+    ## @param modules.eap.ignore_unknown_eap_types Silently ignore EAP requests for unknown/unconfigured types instead of NAK-ing.
+    ## @param modules.eap.cisco_accounting_username_bug Work around the Cisco accounting User-Name bug.
+    ## @param modules.eap.max_sessions Maximum number of concurrent EAP sessions. Defaults to the FreeRADIUS `${max_requests}` config var.
     ##
-    timerExpire: 60
-    ignoreUnknownEapTypes: false
-    ciscoAccountingUsernameBug: false
-    maxSessions: "${max_requests}"
+    timer_expire: 60
+    ignore_unknown_eap_types: false
+    cisco_accounting_username_bug: false
+    max_sessions: "${max_requests}"
     ## @param modules.eap.methods [array] EAP methods to render, each as its own block. Outer methods (`tls`, `ttls`)
     ##   reference the shared `tlsConfig`; inner methods (`mschapv2`, `md5`, `pap`) render as empty blocks for use inside the TTLS tunnel (selected via `ttls.default_eap_type`). Remove a method to disable it — e.g. drop `md5` (EAP-MD5 is legacy/insecure).
     ##
@@ -679,7 +669,7 @@ modules:
     ##
     ttls:
       tls: tls-common
-      # default_eap_type: pap
+      default_eap_type: md5
       copy_request_to_tunnel: "yes"
       use_tunneled_reply: "yes"
       virtual_server: inner-tunnel
@@ -710,7 +700,7 @@ modules:
     ## @param modules.eap.tlsConfig.cert_ca_filename Override filename of the CA certificate inside the mounted Secret.
     ## @param modules.eap.tlsConfig.private_key_password Password for the EAP leaf key when it is password-protected. Auto-generated into the chart credentials Secret (`mods-eap-tls-privkey-password`) when empty.
     ## @param modules.eap.tlsConfig.random_file Source of randomness passed to the TLS engine (`random_file`).
-    ## @param modules.eap.tlsConfig.cipher_list OpenSSL cipher list (`cipher_list`). `DEFAULT` keeps the image's compiled-in list.
+    ## @param modules.eap.tlsConfig.cipher_list [array] OpenSSL cipher tokens, joined with `:` and rendered into `cipher_list = <tokens>`. `["DEFAULT"]` keeps the image's compiled-in list; empty / nil falls through to `DEFAULT`. Multi-token example: `["HIGH", "!aNULL", "!MD5"]` → `HIGH:!aNULL:!MD5`.
     ## @param modules.eap.tlsConfig.cipher_server_preference Honour the server's cipher order over the client's (`cipher_server_preference`).
     ## @param modules.eap.tlsConfig.min_version Minimum TLS protocol version offered (`tls_min_version`).
     ## @param modules.eap.tlsConfig.max_version Maximum TLS protocol version offered (`tls_max_version`).
@@ -724,7 +714,8 @@ modules:
       cert_ca_filename: ""
       private_key_password: ""
       random_file: /dev/urandom
-      cipher_list: "DEFAULT"
+      cipher_list:
+        - "DEFAULT"
       cipher_server_preference: false
       min_version: "1.2"
       max_version: "1.3"
@@ -971,6 +962,12 @@ sites:
   default:
     enabled: true
     existingConfigMap: ""
+    authorize: ""
+    authenticate: ""
+    preacct: ""
+    accounting: ""
+    postacct: ""
+    session: ""
   ## @param sites.innerTunnel.enabled Enable the `inner-tunnel` virtual server (EAP-TTLS/PEAP inner identity). Required by the EAP module's tunnelled methods.
   ## @param sites.innerTunnel.existingConfigMap Mount an existing ConfigMap (must contain an `inner-tunnel` key with the virtual-server config) at `sites-enabled/inner-tunnel` instead of the chart-rendered one; the chart then skips rendering its own.
   ##

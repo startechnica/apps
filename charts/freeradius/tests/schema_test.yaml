@@ -22,3 +22,51 @@ tests:
       replicaCount: "two"
     asserts:
       - failedTemplate: {}
+
+  - it: accepts sites.radsec.tls.cipher_list as an array of strings
+    set:
+      sites.radsec.tls.cipher_list:
+        - "HIGH"
+        - "!aNULL"
+        - "!MD5"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: rejects sites.radsec.tls.cipher_list as a scalar string
+    set:
+      sites.radsec.tls.cipher_list: "HIGH:!aNULL:!MD5"
+    asserts:
+      - failedTemplate: {}
+
+  - it: accepts modules.eap.tlsConfig.cipher_list as an array of strings
+    set:
+      modules.eap.tlsConfig.cipher_list:
+        - "DEFAULT"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: rejects modules.eap.tlsConfig.cipher_list as a scalar string
+    set:
+      modules.eap.tlsConfig.cipher_list: "DEFAULT"
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a non-boolean for modules.eap.ignore_unknown_eap_types
+    set:
+      modules.eap.ignore_unknown_eap_types: "yes"
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a non-boolean for modules.sql.read_groups
+    set:
+      modules.sql.read_groups: "yes"
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a non-integer for modules.cache.max_entries
+    set:
+      modules.cache.max_entries: "lots"
+    asserts:
+      - failedTemplate: {}

@@ -101,9 +101,6 @@
         }
       }
     },
-    "architecture": {
-      "type": "string"
-    },
     "logging": {
       "type": "object",
       "properties": {
@@ -223,10 +220,10 @@
             "read_clients": {
               "type": "boolean"
             },
-            "readGroups": {
+            "read_groups": {
               "type": "boolean"
             },
-            "readProfiles": {
+            "read_profiles": {
               "type": "boolean"
             },
             "tls": {
@@ -445,16 +442,16 @@
                 "value": {
                   "type": "object",
                   "properties": {
-                    "singleValueAsArray": {
+                    "single_value_as_array": {
                       "type": "boolean"
                     },
-                    "enumAsInteger": {
+                    "enum_as_integer": {
                       "type": "boolean"
                     },
-                    "datesAsInteger": {
+                    "dates_as_integer": {
                       "type": "boolean"
                     },
-                    "alwaysString": {
+                    "always_string": {
                       "type": "boolean"
                     }
                   }
@@ -555,7 +552,7 @@
             "ttl": {
               "type": "integer"
             },
-            "maxEntries": {
+            "max_entries": {
               "type": "integer"
             },
             "update": {
@@ -593,19 +590,19 @@
             "existingConfigMap": {
               "type": "string"
             },
-            "defaultType": {
+            "default_eap_type": {
               "type": "string"
             },
-            "timerExpire": {
+            "timer_expire": {
               "type": "integer"
             },
-            "ignoreUnknownEapTypes": {
+            "ignore_unknown_eap_types": {
               "type": "boolean"
             },
-            "ciscoAccountingUsernameBug": {
+            "cisco_accounting_username_bug": {
               "type": "boolean"
             },
-            "maxSessions": {
+            "max_sessions": {
               "type": "string"
             },
             "methods": {
@@ -689,7 +686,10 @@
                   "type": "string"
                 },
                 "cipher_list": {
-                  "type": "string"
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "cipher_server_preference": {
                   "type": "boolean"

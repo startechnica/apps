@@ -56,7 +56,7 @@ data:
         driver = "rlm_cache_{{ .Values.modules.cache.driver }}"
         key = {{ .Values.modules.cache.key }}
         ttl = {{ .Values.modules.cache.ttl }}
-        max_entries = {{ .Values.modules.cache.maxEntries }}
+        max_entries = {{ .Values.modules.cache.max_entries }}
         {{- with .Values.modules.cache.config }}
         {{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
         {{- end }}
@@ -166,7 +166,7 @@ data:
         driver = "rlm_cache_{{ $cfg.driver }}"
         key = {{ $cfg.key }}
         ttl = {{ $cfg.ttl }}
-        max_entries = {{ $cfg.maxEntries | default 0 }}
+        max_entries = {{ $cfg.max_entries | default 0 }}
         {{- with $cfg.config }}
         {{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
         {{- end }}

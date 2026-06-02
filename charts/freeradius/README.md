@@ -793,6 +793,29 @@ the new shape).
   - `modules.sql.groupAttribute` / `modules.sql.readClients` → `modules.sql.group_attribute` / `modules.sql.read_clients`
   - `sites.radsec.cipher` → `sites.radsec.tls.cipher_list`
   - `sites.radsec.privateKeyPassword` → `sites.radsec.tls.private_key_password`
+- **Remaining module-directive renames to snake_case** — same-release
+  silent-ignore (old keys silently dropped, FreeRADIUS-native names land):
+  - `modules.sql.{readGroups,readProfiles}` → `read_groups` / `read_profiles`
+  - `modules.json.encode.value.{singleValueAsArray,enumAsInteger,datesAsInteger,alwaysString}` → snake_case
+  - `modules.cache.maxEntries` (and per-instance `modules.cache.instances.<name>.maxEntries`) → `max_entries`
+  - `modules.eap.{timerExpire,ignoreUnknownEapTypes,ciscoAccountingUsernameBug,maxSessions}` → snake_case
+  - `modules.eap.defaultType` → `default_eap_type` (validator + error-message text updated alongside)
+- **`modules.eap.tlsConfig.cipher_list` string → `[]string`** — mirrors
+  the same shape already shipped for `sites.radsec.tls.cipher_list`.
+  Joined with `:` via `freeradius.utils.joinOrDefault`; default
+  `["DEFAULT"]`; empty list / nil falls through to `DEFAULT`.
+  `values.schema.json` rejects the old scalar string form.
+- **`radiusd.conf` body moved into the configmap template.** Same-release
+  refactor — `.Values.configurations` and `files/radiusd.conf` are no
+  longer the source of truth for the default `radiusd.conf` body; the
+  chart-managed body now lives in `templates/configmaps/configuration.yaml`.
+  Both escape hatches remain accepted: `.Values.configurations` as an
+  inline-string override, `.Values.configurationsConfigMap` as a BYO
+  ConfigMap. Default-case users see no behavior change.
+- **`podManagementPolicy` default flipped to `Parallel`.** Cross-release
+  behavior change for StatefulSet workloads. IMMUTABLE on existing
+  installs — k8s rejects field updates. See [§Upgrading →
+  podManagementPolicy default is now `Parallel`](#podmanagementpolicy-default-is-now-parallel-statefulset-only).
 
 ### 1.1.0
 
@@ -1001,6 +1024,39 @@ Key migration points:
 > `oidc:<name>:%{User-Name}`) and naturally expire at `cache.ttl`. Flush
 > sooner with `redis-cli FLUSHDB` against the chart's Redis if stale
 > entries matter.
+
+#### podManagementPolicy default is now `Parallel` (StatefulSet only)
+
+The `podManagementPolicy` default flipped from `""` (Kubernetes default
+`OrderedReady`) to `Parallel`. Fresh installs get parallel pod start;
+existing StatefulSets cannot pick up the new default because
+**Kubernetes forbids in-place updates to this field**:
+
+    StatefulSet.apps "<release>" is invalid: spec: Forbidden:
+    updates to statefulset spec for fields other than 'replicas',
+    'ordinals', 'template', 'updateStrategy',
+    'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds'
+    are forbidden
+
+ArgoCD / Flux sync will surface this error on the next reconcile.
+
+Two recovery options:
+
+```yaml
+# Option A — pin the old behavior in your values overlay (no downtime).
+podManagementPolicy: ""        # restores OrderedReady; ArgoCD stops complaining
+```
+
+```bash
+# Option B — actually adopt Parallel (delete the StatefulSet, keep the
+# pods + PVCs, let the controller re-apply with the new spec).
+kubectl delete sts <release> -n <ns> --cascade=orphan
+# pods stay running; PVCs untouched; the next ArgoCD sync re-creates
+# the StatefulSet with podManagementPolicy: Parallel.
+```
+
+No effect on Deployment / DaemonSet workloads — the field is StatefulSet-
+specific.
 
 ### To 1.1.0 (breaking)
 
@@ -1323,7 +1379,6 @@ not values.
 | `image.pullPolicy`                            | FreeRADIUS image pull policy                                                                                             | `IfNotPresent`                 |
 | `image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                         | `[]`                           |
 | `image.debug`                                 | Toggle the container args between `-f` (normal foreground) and `-fxx` (verbose debug). Independent of `logging.destination`. | `false`                        |
-| `architecture`                                | FreeRADIUS architecture mode. `standalone` (default) or `replication`. The `replication` value flips `proxy_requests` on and feeds the chart's proxy/realm machinery; `standalone` runs the server without proxying. | `standalone`                   |
 | `logging.destination`                         | FreeRADIUS log sink: `files` (write to `logging.file`), `syslog` (use `logging.syslog_facility`), `stdout`, or `stderr`. Runtime `-X` debug flag overrides this to stdout. | `stdout`                       |
 | `logging.colourise`                           | Highlight WARN / ERROR log lines on stderr / stdout. No-op when output is not a TTY.                                     | `true`                         |
 | `logging.file`                                | Log file path when `logging.destination: files`. `${logdir}` is a FreeRADIUS variable interpolated by FreeRADIUS at startup, not by Helm. | `${logdir}/radius.log`         |

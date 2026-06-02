@@ -221,11 +221,11 @@ data:
 
     	# If set to 'yes' (default) we read the group tables unless Fall-Through = no in the reply table.
     	# If set to 'no' we do not read the group tables unless Fall-Through = yes in the reply table.
-    	read_groups = {{ ternary "yes" "no" .Values.modules.sql.readGroups }}
+    	read_groups = {{ ternary "yes" "no" .Values.modules.sql.read_groups }}
 
     	# If set to 'yes' (default) we read profiles unless Fall-Through = no in the groupreply table.
     	# If set to 'no' we do not read profiles unless Fall-Through = yes in the groupreply table.
-    	read_profiles = {{ ternary "yes" "no" .Values.modules.sql.readProfiles }}
+    	read_profiles = {{ ternary "yes" "no" .Values.modules.sql.read_profiles }}
 
     	# Remove stale session if checkrad does not see a double login
     	delete_stale_sessions = yes

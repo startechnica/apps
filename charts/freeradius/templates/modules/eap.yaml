@@ -22,12 +22,12 @@ data:
   eap: |-
     ## modules/eap -- EAP module (rlm_eap), EAP-TLS + EAP-TTLS methods
     eap {
-        default_eap_type = {{ .Values.modules.eap.defaultType }}
+        default_eap_type = {{ .Values.modules.eap.default_eap_type }}
 
-        timer_expire = {{ .Values.modules.eap.timerExpire }}
-        ignore_unknown_eap_types = {{ ternary "yes" "no" .Values.modules.eap.ignoreUnknownEapTypes }}
-        cisco_accounting_username_bug = {{ ternary "yes" "no" .Values.modules.eap.ciscoAccountingUsernameBug }}
-        max_sessions = {{ .Values.modules.eap.maxSessions }}
+        timer_expire = {{ .Values.modules.eap.timer_expire }}
+        ignore_unknown_eap_types = {{ ternary "yes" "no" .Values.modules.eap.ignore_unknown_eap_types }}
+        cisco_accounting_username_bug = {{ ternary "yes" "no" .Values.modules.eap.cisco_accounting_username_bug }}
+        max_sessions = {{ .Values.modules.eap.max_sessions }}
 
         tls-config {{ .Values.modules.eap.tlsConfig.name }} {
             certificate_file = {{ include "freeradius.eap.tlsConfig.certPath" . }}
@@ -38,7 +38,7 @@ data:
             ca_file = {{ include "freeradius.eap.tlsConfig.caCertPath" . }}
             random_file = {{ .Values.modules.eap.tlsConfig.random_file }}
 
-            cipher_list = "{{ .Values.modules.eap.tlsConfig.cipher_list }}"
+            cipher_list = "{{ include "freeradius.utils.joinOrDefault" (dict "list" .Values.modules.eap.tlsConfig.cipher_list "sep" ":" "default" "DEFAULT") }}"
             cipher_server_preference = {{ ternary "yes" "no" .Values.modules.eap.tlsConfig.cipher_server_preference }}
             tls_min_version = "{{ .Values.modules.eap.tlsConfig.min_version }}"
             tls_max_version = "{{ .Values.modules.eap.tlsConfig.max_version }}"

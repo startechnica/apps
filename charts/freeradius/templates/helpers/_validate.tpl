@@ -216,7 +216,7 @@ Validation message: EAP module configuration coherence.
 
 Rejects:
   - `eap.enabled: true` with no EAP method enabled,
-  - `eap.defaultType` not among the ENABLED methods.
+  - `eap.default_eap_type` not among the ENABLED methods.
 
 A TLS server certificate is no longer validated here: when the module is enabled
 and no `certificates_secret` is supplied, the chart auto-generates one (via
@@ -225,7 +225,7 @@ cert-manager when its API is present, otherwise via the shared genCA path) —
 */}}
 {{- define "freeradius.validate.eap" -}}
 {{- if .Values.modules.eap.enabled -}}
-{{- $type := .Values.modules.eap.defaultType -}}
+{{- $type := .Values.modules.eap.default_eap_type -}}
 {{- $methods := .Values.modules.eap.methods -}}
 {{- $outer := list -}}
 {{- if has "tls" $methods -}}{{- $outer = append $outer "tls" -}}{{- end -}}
@@ -235,9 +235,9 @@ freeradius: modules.eap.methods
     `modules.eap.enabled: true` but no outer EAP method is enabled. Add at least
     one of `tls` / `ttls` to `modules.eap.methods`.
 {{- else if not (has $type $outer) -}}
-freeradius: modules.eap.defaultType
-    `modules.eap.defaultType: {{ $type }}` must be one of the enabled outer
-    methods ({{ join ", " $outer }}). Either change `defaultType` or add that
+freeradius: modules.eap.default_eap_type
+    `modules.eap.default_eap_type: {{ $type }}` must be one of the enabled outer
+    methods ({{ join ", " $outer }}). Either change `default_eap_type` or add that
     method to `modules.eap.methods`.
 {{- end -}}
 {{- end -}}

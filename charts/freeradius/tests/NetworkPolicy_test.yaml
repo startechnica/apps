@@ -17,6 +17,8 @@ tests:
   - it: narrows egress to DNS only when allowExternalEgress is false
     set:
       networkPolicy.allowExternalEgress: false
+      modules.redis.enabled: false
+      modules.cache.driver: rbtree
     asserts:
       - lengthEqual:
           path: spec.egress

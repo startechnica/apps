@@ -214,6 +214,38 @@
   data plane; FR-side parsing needs the RADSEC TCP listener), so the
   validator catches it at `helm install` / `helm template` instead of at
   apply time.
+- **`createDefaultInstance.{realm, homeServer, homeServerPool}`** — three
+  independent opt-in toggles for chart-managed peer-mesh proxy primitives.
+  Each emits one config piece named after `<fullname>` snake-cased (via the
+  new `freeradius.utils.snakeCase` helper):
+  - `realm: true` → `realm DEFAULT { auth_pool = <fullname>_auth_pool; acct_pool = <fullname>_acct_pool }`
+    appended to `templates/configmaps/realms.yaml`.
+  - `homeServer: true` → one `home_server <fullname>_<ord>_auth` and one
+    `<fullname>_<ord>_acct` per StatefulSet replica (`<fullname>-<ord>.<ns>.svc`
+    targeting the per-pod Service from `Service-perPod.yaml`). `secret` is
+    the literal `$ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}` — wire the env
+    var yourself via `extraEnvVarsSecret` and use the same expansion in the
+    matching `clients{}` entry. No chart-managed credentials path.
+  - `homeServerPool: true` → two `home_server_pool <fullname>_<auth|acct>_pool`
+    blocks (each `type = load-balance`) listing the per-pod home_servers.
+  All three silently skip on `kind != StatefulSet`. No cross-toggle
+  validation: enabling one without the others dangles refs and FreeRADIUS
+  fails loudly at startup (the desired feedback).
+- **`logging.*` knobs.** New top-level values block surfacing the
+  FreeRADIUS `log { }` directive set as Helm values: `destination` (`files`
+  / `syslog` / `stdout` / `stderr`), `colourise`, `file`, `syslog_facility`,
+  `stripped_names`, `auth`, `auth_badpass`, `auth_goodpass`, `msg_denied`.
+  Booleans render as native `yes`/`no` via `ternary`; `msg_denied` runs
+  through `| quote`. Default `destination: stdout` makes `kubectl logs`
+  work out of the box without further config. Rendered from
+  `templates/configmaps/configuration.yaml` whenever neither
+  `.Values.configurations` nor `.Values.configurationsConfigMap` overrides
+  the chart-managed body.
+- **`freeradius.isDaemonSet` template helper** mirrors
+  `freeradius.isStatefulSet` (case-insensitive kind match — returns the
+  literal string `"true"` for DaemonSet, empty otherwise). Useful for
+  "non-Deployment" gates via `or (include "freeradius.isStatefulSet" .)
+  (include "freeradius.isDaemonSet" .)`.
 
 ### Changed
 
@@ -355,7 +387,7 @@
   opt out of cert-manager issuance for a given release, pre-create a Secret
   and set `tls.certificatesSecret`. The `validate.tls` hard-fail is removed
   (auto-generation handles every case); `validate.eap` keeps the `methods` /
-  `defaultType` checks but drops the `tlsConfig` cert-source clause.
+  `default_eap_type` checks but drops the `tlsConfig` cert-source clause.
 - `tls.certManager.issuerRef.name` now defaults to `""` (was
   `selfsigned-issuer`). Empty bootstraps a chart-managed CA; set it to use a
   pre-existing Issuer/ClusterIssuer and skip the bootstrap.
@@ -387,6 +419,78 @@
   `gateway.{udpRoute,tlsRoute}.parentRefs` pass through verbatim and are
   unaffected. Same for the ListenerSet attachment path
   (`gateway.listenerSet.enabled`), where listener names are user-defined.
+- **`radiusd.conf` body moved into `templates/configmaps/configuration.yaml`.**
+  The 89-line inline default in `.Values.configurations` and the 1214-line
+  upstream-style `files/radiusd.conf` (which used `/var/log/freeradius`
+  paths that didn't match the chart's pod layout) are both gone. The
+  chart-managed body lives in the configmap template as a single source of
+  truth. **Escape hatches preserved:** `.Values.configurations` still
+  accepts an inline-string override (run through `tplvalues.render`);
+  `.Values.configurationsConfigMap` still accepts a BYO ConfigMap name.
+  Application.yaml mount + volume gates dropped (always present unless
+  BYO). `files/radiusd.conf` deleted.
+- **Log destination control moved to the configmap.** The previously-
+  hardcoded `-l stdout` CLI override on the FreeRADIUS container args
+  dropped from `templates/Application.yaml`; the rendered `radiusd.conf`
+  `log { destination = ... }` (driven by `.Values.logging.destination`) is
+  now the single source of truth. New default `logging.destination: stdout`
+  preserves the previous behavior — set `logging.destination: files`
+  (+ `logging.file: <path>`) to write to disk.
+- **`podManagementPolicy` default flipped from `""` to `Parallel`** for
+  fresh StatefulSet installs (faster rollouts; the FreeRADIUS workload has
+  no inter-pod startup ordering requirement). **IMMUTABLE on existing
+  StatefulSets** — Kubernetes rejects updates to this field with
+  `Forbidden: updates to statefulset spec for fields other than 'replicas',
+  'ordinals', 'template', 'updateStrategy', 'persistentVolumeClaimRetention
+  Policy' and 'minReadySeconds' are forbidden`. Recovery on a live release:
+  `kubectl delete sts <release> -n <ns> --cascade=orphan` (preserves
+  pods + PVCs) before the new spec lands. No effect on Deployment /
+  DaemonSet workloads.
+- **Snake_case rename batch — remaining camelCase FreeRADIUS-directive
+  mirrors.** Same-release rename (the matching v1.2.0 surface flipped to
+  snake_case along the way), so old keys are silently ignored:
+  - `modules.sql.{readGroups, readProfiles}` → `read_groups` / `read_profiles`
+  - `modules.json.encode.value.{singleValueAsArray, enumAsInteger, datesAsInteger, alwaysString}` → snake_case
+  - `modules.cache.maxEntries` (and per-instance `modules.cache.instances.<name>.maxEntries`) → `max_entries`
+  - `modules.eap.{timerExpire, ignoreUnknownEapTypes, ciscoAccountingUsernameBug, maxSessions}` → snake_case
+  - `modules.eap.defaultType` → `default_eap_type` (validator + error-message text updated alongside; new key matches the FreeRADIUS native directive verbatim)
+- **`modules.eap.tlsConfig.cipher_list` string → `[]string`.** The chart
+  joins entries with the OpenSSL `:` separator via
+  `freeradius.utils.joinOrDefault`. Default `["DEFAULT"]`; empty list and
+  nil both fall through to `DEFAULT`. Mirrors the same change shipped for
+  `sites.radsec.tls.cipher_list`. `values.schema.json` rejects the old
+  scalar string form.
+- **`sites.radsec.tls.cipher_list` string → `[]string`** (same shape +
+  join semantics as `modules.eap.tlsConfig.cipher_list`). Multi-token
+  example: `["HIGH", "!aNULL", "!MD5"]` → `HIGH:!aNULL:!MD5`.
+- **EnvoyProxy access-log JSON trimmed to TCP-relevant fields.**
+  `templates/gateway-api/EnvoyProxy.yaml` keeps `bytes_received` /
+  `bytes_sent` / `client_ip` / `duration` / `start_time` / `protocol` /
+  `upstream_host`. Drops the HTTP-only `%REQ(:AUTHORITY)%`,
+  `%REQ(X-ENVOY-ORIGINAL-METHOD)%`, `%REQ(X-ENVOY-ORIGINAL-PATH)%`,
+  `%REQ(X-PROXY-USER)%`, `%REQ(REMOTE-USER)%`, `%REQ(X-REQUEST-ID)%`,
+  `%RESPONSE_CODE%`, `%RESPONSE_FLAGS%` operators (all evaluate to empty
+  over a raw TCP RADSEC listener) plus the commented `basic_auth_user`
+  placeholder.
+- `templates/modules/oidc/{oidc, oidc-policy, secret, secret-tls}.yaml` no
+  longer emit the `app.firmansyah.id/oidc-instance: <name>` metadata label
+  — vendor-prefixed, never consumed by any selector / NetworkPolicy /
+  RBAC / dashboard inside the chart. Pure metadata stripper; chart
+  correctness unaffected.
+- `templates/Service-headless.yaml` gate widened from `if isStatefulSet`
+  to `if or isStatefulSet isDaemonSet` — DaemonSet pods get the same
+  DNS-based per-pod discovery (one A record per pod IP) StatefulSet uses.
+  Deployment still skips (workload-wide load-balanced ClusterIP suffices).
+- Collapse nested `metadata.annotations` rendering in
+  `templates/Application.yaml` + `templates/Service.yaml` into a single
+  `st-common.tplvalues.merge` + `st-common.tplvalues.render` pass. Outer
+  `if or A B` already gates non-empty input; inner per-source `if` was
+  redundant. Matches the pattern in `templates/Service-headless.yaml`.
+- `values.yaml` now re-states `redis.metrics.extraArgs: {}` to match the
+  Bitnami redis subchart's map shape — makes the contract explicit so a
+  downstream override that hands a list trips a parse failure rather than
+  a `coalesce.go: cannot overwrite table with non table for
+  redis.metrics.extraArgs (map[])` warning at template time.
 
 ### Removed (BREAKING — see Upgrading)
 

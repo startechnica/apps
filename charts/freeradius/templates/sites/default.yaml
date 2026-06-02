@@ -187,13 +187,17 @@ data:
             {{- end }}
             pap
 
-        #    Autz-Type Status-Server {
-        #
-        #    }
+            # Autz-Type Status-Server {
+            #
+            # }
 
             Autz-Type New-TLS-Connection {
                     ok
             }
+
+            {{- if .Values.sites.default.authorize }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.sites.default.authorize "context" $) | nindent 4 }}
+            {{- end }}
         }
 
 
@@ -204,7 +208,7 @@ data:
             }
             {{- end }}
 
-        #    dpsk
+            # dpsk
 
             Auth-Type CHAP {
                 chap
@@ -222,48 +226,56 @@ data:
             pam
             {{- end }}
 
-        #    Auth-Type LDAP {
-        #        ldap
-        #    }
+            # Auth-Type LDAP {
+            #     ldap
+            # }
 
             {{- if .Values.modules.eap.enabled }}
             eap
             {{- end }}
 
-        #    Auth-Type eap {
-        #        eap {
-        #            handled = 1
-        #        }
-        #        if (handled && (Response-Packet-Type == Access-Challenge)) {
-        #            attr_filter.access_challenge.post-auth
-        #            handled  # override the "updated" code from attr_filter
-        #        }
-        #    }
+            # Auth-Type eap {
+            #     eap {
+            #         handled = 1
+            #     }
+            #     if (handled && (Response-Packet-Type == Access-Challenge)) {
+            #         attr_filter.access_challenge.post-auth
+            #         handled  # override the "updated" code from attr_filter
+            #     }
+            # }
+
+            {{- if .Values.sites.default.authenticate }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.sites.default.authenticate "context" $) | nindent 4 }}
+            {{- end }}
         }
 
 
         preacct {
             preprocess
 
-        #    acct_counters64
+            # acct_counters64
 
-        #    update request {
-        #          &FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
-        #    }
+            # update request {
+            #       &FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
+            # }
 
             acct_unique
 
-        #    IPASS
+            # IPASS
             suffix
-        #    ntdomain
+            # ntdomain
 
             files
+
+            {{- if .Values.sites.default.preacct }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.sites.default.preacct "context" $) | nindent 4 }}
+            {{- end }}
         }
 
         accounting {
-        #    cui
+            # cui
 
-            detail
+             detail
         #    daily
 
         #    unix
@@ -287,17 +299,25 @@ data:
 
             attr_filter.accounting_response
 
-        #    Acct-Type Status-Server {
-        #
-        #    }
+            # Acct-Type Status-Server {
+            #
+            # }
+
+            {{- if .Values.sites.default.accounting }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.sites.default.accounting "context" $) | nindent 4 }}
+            {{- end }}
         }
 
 
         session {
-        #    radutmp
+            # radutmp
 
             {{- if .Values.modules.sql.enabled }}
             sql
+            {{- end }}
+
+            {{- if .Values.sites.default.session }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.sites.default.session "context" $) | nindent 4 }}
             {{- end }}
         }
 
@@ -343,11 +363,11 @@ data:
             -sql
             {{- end }}
 
-        #    ldap
+            # ldap
 
             exec
 
-        #    wimax
+            # wimax
 
         #    update reply {
         #           Reply-Message += "%{TLS-Cert-Serial}"
