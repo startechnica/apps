@@ -6,9 +6,12 @@ SPDX-License-Identifier: APACHE-2.0
 {{- if and .Values.gateway.enabled (eq .Values.gateway.implementation "gateway-api") .Values.gateway.udpRoute.enabled -}}
 {{- $apiVersion := include "st-common.capabilities.networkingGatewayUDPRoute.apiVersion" . -}}
 {{- if not (eq $apiVersion "false") -}}
-{{- $svcName := include "st-common.names.fullname" . -}}
 {{- $svcNs := include "st-common.names.namespace" . -}}
-{{- $parentRefs := include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.udpRoute.parentRefs "context" $) -}}
+{{- $override := .Values.gateway.udpRoute.parentRefs -}}
+{{- /* backendRefs fan out to one entry per StatefulSet replica when
+       kind: StatefulSet (each replica's per-pod Service from
+       Service-perPod.yaml, equal weight). Deployment / DaemonSet keep a single
+       backendRef targeting the main load-balanced Service. */ -}}
 apiVersion: {{ $apiVersion }}
 kind: UDPRoute
 metadata:
@@ -19,15 +22,10 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- $parentRefs | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" $override "sectionName" "auth" "context" $) | nindent 4 }}
   rules:
     - backendRefs:
-        - group: ""
-          kind: Service
-          name: {{ $svcName }}
-          namespace: {{ $svcNs | quote }}
-          port: {{ .Values.service.ports.auth | int }}
-          weight: 1
+        {{- include "freeradius.gateway.backendRefs" (dict "context" $ "port" .Values.service.ports.auth) | nindent 8 }}
 ---
 apiVersion: {{ $apiVersion }}
 kind: UDPRoute
@@ -39,15 +37,10 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- $parentRefs | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" $override "sectionName" "acct" "context" $) | nindent 4 }}
   rules:
     - backendRefs:
-        - group: ""
-          kind: Service
-          name: {{ $svcName }}
-          namespace: {{ $svcNs | quote }}
-          port: {{ .Values.service.ports.acct | int }}
-          weight: 1
+        {{- include "freeradius.gateway.backendRefs" (dict "context" $ "port" .Values.service.ports.acct) | nindent 8 }}
 {{- if .Values.sites.coa.enabled }}
 ---
 apiVersion: {{ $apiVersion }}
@@ -60,15 +53,10 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- $parentRefs | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" $override "sectionName" "coa" "context" $) | nindent 4 }}
   rules:
     - backendRefs:
-        - group: ""
-          kind: Service
-          name: {{ $svcName }}
-          namespace: {{ $svcNs | quote }}
-          port: {{ .Values.service.ports.coa | int }}
-          weight: 1
+        {{- include "freeradius.gateway.backendRefs" (dict "context" $ "port" .Values.service.ports.coa) | nindent 8 }}
 {{- end }}
 {{- end -}}
 {{- end -}}

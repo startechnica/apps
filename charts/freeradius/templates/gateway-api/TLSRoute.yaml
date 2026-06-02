@@ -16,17 +16,15 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.tlsRoute.parentRefs "context" $) | nindent 4 }}
+  parentRefs: {{- include "freeradius.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.tlsRoute.parentRefs "sectionName" "radsec" "context" $) | nindent 4 }}
   {{- if .Values.gateway.hostnames }}
   hostnames: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.hostnames "context" $) | nindent 4 }}
   {{- end }}
   rules:
     - backendRefs:
-        - group: ""
-          kind: Service
-          name: {{ include "st-common.names.fullname" . }}
-          namespace: {{ include "st-common.names.namespace" . | quote }}
-          port: {{ .Values.service.ports.radsec | int }}
-          weight: 1
+        {{- /* Fan out one backendRef per StatefulSet replica (per-pod Service)
+               when kind: StatefulSet; otherwise a single backendRef targets the
+               main load-balanced Service. */}}
+        {{- include "freeradius.gateway.backendRefs" (dict "context" $ "port" .Values.service.ports.radsec) | nindent 8 }}
 {{- end -}}
 {{- end -}}

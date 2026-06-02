@@ -1,0 +1,71 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.sites.tlsCache.enabled (not .Values.sites.tlsCache.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-sites-tls-cache" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  tls-cache: |
+    ######################################################################
+    #
+    #  tls-cache — virtual server backing EAP TLS session resumption.
+    #
+    #  Invoked by rlm_eap when `tls-config { cache { virtual_server = tls-cache } }`
+    #  is set (auto-wired by this chart when `sites.tlsCache.enabled`). Each
+    #  section delegates to the dedicated `cache_tls` rlm_cache instance
+    #  (templates/modules/cache-tls.yaml), which is Redis-backed for cross-pod
+    #  resumption.
+    #
+    ######################################################################
+    server tls-cache {
+
+        #  Lookup. Two-step probe: Cache-Status-Only short-circuits on miss
+        #  without dragging the blob over the wire, then load on hit.
+        cache load {
+            update control {
+                &Cache-Status-Only := 'yes'
+            }
+            cache_tls
+            if (notfound) {
+                return
+            }
+            update control {
+                &Cache-Status-Only := 'no'
+            }
+            cache_tls
+        }
+
+        #  Save a new session blob (rlm_cache stores &session-state: per
+        #  the cache_tls `update { }` block).
+        cache save {
+            cache_tls
+        }
+
+        #  Forced expiry: Cache-TTL := 0 deletes the entry on next access.
+        cache clear {
+            update control {
+                &Cache-TTL := 0
+            }
+            cache_tls
+        }
+
+        #  Renew TTL on active sessions so long-lived connections survive
+        #  past the configured ttl. Positive Cache-TTL resets the expiry.
+        cache refresh {
+            update control {
+                &Cache-TTL := {{ .Values.sites.tlsCache.ttl }}
+            }
+            cache_tls
+        }
+    }
+{{- end }}

@@ -1,0 +1,73 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $cdiHomeServerPool := and .Values.createDefaultInstance.homeServerPool (include "freeradius.isStatefulSet" .) -}}
+{{- if or .Values.homeServerPools .Values.tls.enabled $cdiHomeServerPool }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-home-server-pools" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  home-server-pools.conf: |-
+    {{- /* `home_server_pool radsec` is chart-managed so wrapping charts
+           that override .Values.homeServerPools don't accidentally drop
+           it. A user-supplied `name: radsec` entry in .Values.homeServerPools
+           wins. Gated on tls.enabled to match `home_server radsec`. */}}
+    {{- $hasRadsec := false }}
+    {{- range .Values.homeServerPools }}
+    {{- if eq .name "radsec" }}
+      {{- $hasRadsec = true }}
+    {{- end }}
+    {{- end }}
+
+    {{- if and .Values.tls.enabled (not $hasRadsec) }}
+    home_server_pool radsec {
+        type = fail-over
+        home_server = radsec
+    }
+    {{- end }}
+
+    {{- range .Values.homeServerPools }}
+    home_server_pool {{ .name }} {
+        type = {{ default "fail-over" .type }}
+        {{- range .home_servers }}
+        home_server = {{ . }}
+        {{- end }}
+        {{- if .virtual_server }}
+        virtual_server = {{ .virtual_server }}
+        {{- end }}
+        {{- if .fallback }}
+        fallback = {{ .fallback }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- /* createDefaultInstance.homeServerPool — two pools, `<fullname>_auth_pool`
+           and `<fullname>_acct_pool`, each load-balancing across the per-pod
+           home_servers emitted by home-servers.yaml. References dangle without
+           `createDefaultInstance.homeServer: true` — FreeRADIUS fails loudly. */}}
+    {{- if $cdiHomeServerPool }}
+    {{- $cdiBase := include "freeradius.utils.snakeCase" (include "st-common.names.fullname" .) }}
+    {{- $cdiReplicas := int (.Values.replicaCount | default 1) }}
+    home_server_pool {{ $cdiBase }}_auth_pool {
+        type = load-balance
+        {{- range $i := until $cdiReplicas }}
+        home_server = {{ $cdiBase }}_{{ $i }}_auth
+        {{- end }}
+    }
+    home_server_pool {{ $cdiBase }}_acct_pool {
+        type = load-balance
+        {{- range $i := until $cdiReplicas }}
+        home_server = {{ $cdiBase }}_{{ $i }}_acct
+        {{- end }}
+    }
+    {{- end }}
+{{- end }}

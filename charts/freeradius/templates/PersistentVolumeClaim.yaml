@@ -3,7 +3,10 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+{{- /* Skip when the workload kind is StatefulSet — Application.yaml's
+       volumeClaimTemplates owns the PVCs in that mode. Match `.Values.kind`
+       case-insensitively, mirroring Application.yaml. */}}
+{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) (not (include "freeradius.isStatefulSet" .)) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

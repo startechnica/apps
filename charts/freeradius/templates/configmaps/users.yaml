@@ -1,0 +1,51 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- /*
+Renders the FreeRADIUS `files` module user database (the file at
+`/etc/freeradius/mods-config/files/authorize` inside the container) from the
+top-level `users:` map. Mounted via subPath from `templates/Deployment.yaml`
+so the upstream image's bundled `mods-enabled/files` symlink picks it up
+without any module-config changes.
+
+File format:
+  <username>    <PasswordType> := "<password>"[, <extra-check-attr>, ...]
+                <reply-attr-1> := "<value>",
+                <reply-attr-N> := "<value>"
+
+Reply attributes use FreeRADIUS map syntax verbatim (operator + quoting are
+the operator's responsibility). All-but-last reply lines end with a comma;
+the last one has no trailing comma.
+*/}}
+{{- if .Values.users }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-users" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  authorize: |
+    # Rendered by the chart from `.Values.users` — do not hand-edit; changes
+    # made via `kubectl edit cm` will be reverted on next `helm upgrade`.
+    {{- range $user := .Values.users }}
+
+    {{ $user.name }}    {{ default "Cleartext-Password" $user.passwordType }} := {{ $user.password | quote }}
+    {{- range $user.attributes -}}
+    ,
+        {{ . }}
+    {{- end }}
+    {{- if $user.reply }}
+    {{- $replyLast := sub (len $user.reply) 1 }}
+    {{- range $i, $attr := $user.reply }}
+        {{ $attr }}{{ if lt $i $replyLast }},{{ end }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+{{- end }}

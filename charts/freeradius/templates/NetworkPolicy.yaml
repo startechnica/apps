@@ -32,6 +32,12 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+    {{- if or .Values.modules.redis.enabled (and .Values.modules.cache.enabled (eq .Values.modules.cache.driver "redis")) }}
+    # Allow egress to the Redis backend (rlm_redis / cache module)
+    - ports:
+        - port: {{ .Values.modules.redis.port }}
+          protocol: TCP
+    {{- end }}
     {{- if .Values.networkPolicy.extraEgress }}
     {{- include "st-common.tplvalues.render" (dict "value" .Values.networkPolicy.extraEgress "context" $) | nindent 4 }}
     {{- end }}

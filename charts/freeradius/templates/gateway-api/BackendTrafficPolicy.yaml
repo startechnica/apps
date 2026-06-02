@@ -1,0 +1,63 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- /*
+Envoy Gateway `BackendTrafficPolicy` that prepends a PROXY-protocol v1
+header to every TCP connection Envoy opens to the FreeRADIUS Service.
+Pairs with the FreeRADIUS-side `proxy_protocol = yes` directive in the
+RADSEC `listen { }` block (also gated on `gateway.proxyProtocol: true`),
+so the real client IP arrives end-to-end:
+
+  [client] -> [L4 LB] -> [Envoy] --PROXY v1--> [FreeRADIUS RADSEC]
+                                  (BTP adds)  (radsec listen parses)
+
+UDP traffic is unaffected — `proxyProtocol` only triggers on TCP
+connections, so UDP auth/acct/coa routes pass through untouched.
+
+Rendered when:
+  - `gateway.enabled`
+  - `gateway.implementation: gateway-api`
+  - `gateway.infrastructure: envoy`     (BTP is an Envoy Gateway CR)
+  - `gateway.proxyProtocol: true`
+  - the `BackendTrafficPolicy` CRD is installed on the cluster
+    (`gateway.envoyproxy.io/v1alpha1`)
+
+v1 (text format) is the version FreeRADIUS 3.2.x parses on its TCP
+listeners; v2 (binary) is not supported by the FreeRADIUS receive path
+in 3.2.x, so the chart pins v1 rather than exposing a knob that could
+silently break RADSEC.
+*/}}
+{{- if and
+      .Values.gateway.enabled
+      (eq .Values.gateway.implementation "gateway-api")
+      (eq .Values.gateway.infrastructure "envoy")
+      .Values.gateway.proxyProtocol -}}
+{{- $apiVersion := include "st-common.capabilities.envoyproxyBackendTrafficPolicy.apiVersion" . -}}
+{{- if $apiVersion -}}
+apiVersion: {{ $apiVersion }}
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ printf "%s-proxy-protocol" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: {{ include "st-common.names.fullname" . }}
+      # Scoped to the RADSEC TCP port specifically — `proxyProtocol`
+      # only activates on TCP backend connections, so without
+      # sectionName this would technically be a no-op for the UDP
+      # ports, but the explicit scope makes the intent clear and
+      # protects any future TCP port on the same Service from
+      # inheriting PROXY-protocol framing it can't parse.
+      sectionName: tls-radsec
+  proxyProtocol:
+    version: V1
+{{- end -}}
+{{- end -}}

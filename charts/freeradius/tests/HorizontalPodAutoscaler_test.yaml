@@ -1,0 +1,65 @@
+suite: HorizontalPodAutoscaler
+release:
+  name: my-radius
+  namespace: radius
+# Pin to a modern k8s so we exercise the autoscaling/v2 `target.type/averageUtilization`
+# shape; the chart falls back to the legacy `targetAverageUtilization` for <1.23.
+capabilities:
+  majorVersion: 1
+  minorVersion: 30
+templates:
+  - templates/HorizontalPodAutoscaler.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: targets the workload Deployment when enabled
+    set:
+      horizontalPodAutoscaler.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: my-radius-freeradius
+      - equal:
+          path: spec.minReplicas
+          value: 1
+      - equal:
+          path: spec.maxReplicas
+          value: 5
+
+  - it: emits both CPU and memory metrics when both targets are set
+    set:
+      horizontalPodAutoscaler.enabled: true
+      horizontalPodAutoscaler.targetCPU: 70
+      horizontalPodAutoscaler.targetMemory: 80
+    asserts:
+      - lengthEqual:
+          path: spec.metrics
+          count: 2
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 70
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 80

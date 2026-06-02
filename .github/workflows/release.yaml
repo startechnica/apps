@@ -44,8 +44,51 @@ jobs:
       - name: Run chart-testing (lint)
         run: ct lint --target-branch ${{ github.event.repository.default_branch }} --chart-dirs charts
 
+  # Runs helm-unittest against every chart that ships a `tests/` directory —
+  # currently just `charts/freeradius/tests/`. Charts without a `tests/` dir
+  # are silently skipped, so this job naturally expands as we add tests to
+  # other charts. Runs in parallel with `lint` for faster PR feedback.
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5.0.0
+        with:
+          version: latest
+
+      - name: Install helm-unittest plugin
+        # `--verify=false` because helm-unittest releases aren't signed and
+        # newer Helm refuses unverifiable plugin sources by default.
+        run: helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest --version 1.1.0
+
+      # Subchart .tgz files under `charts/<chart>/charts/` are gitignored, so
+      # the deps must be materialized from Chart.lock before unittest can render
+      # templates that call subchart helpers (e.g. `st-common.names.fullname`).
+      - name: Run helm unit tests
+        run: |
+          shopt -s nullglob
+          failed=0
+          found=0
+          for tests_dir in charts/*/tests/; do
+            chart="${tests_dir%/tests/}"
+            found=1
+            echo "::group::helm unittest $chart"
+            helm dependency build "$chart"
+            helm unittest "$chart" || failed=1
+            echo "::endgroup::"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No charts/<chart>/tests/ directories found — nothing to run."
+          fi
+          exit $failed
+
   release:
-    needs: lint
+    needs:
+      - lint
+      - unittest
     # Lint runs on every branch; only publish releases from main.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

@@ -1,0 +1,851 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- /* `.Values.kind` is accepted case-insensitively (`Deployment` / `deployment`,
+       `StatefulSet` / `statefulset`, `DaemonSet` / `daemonset`) and normalised
+       here to its canonical PascalCase spelling for the `kind:` field and
+       apiVersion lookup. */}}
+{{- $kindRaw := .Values.kind | default "Deployment" }}
+{{- $kindMap := dict "deployment" "Deployment" "statefulset" "StatefulSet" "daemonset" "DaemonSet" }}
+{{- $kind := index $kindMap (lower (toString $kindRaw)) }}
+{{- if not $kind }}
+{{- fail (printf "freeradius: .Values.kind must be one of [Deployment, StatefulSet, DaemonSet] (case-insensitive), got %q" $kindRaw) }}
+{{- end }}
+{{- /* StatefulSet manages its own PVCs via volumeClaimTemplates when
+       persistence is enabled and no existing claim is BYO'd; in that mode the
+       `data` entry under spec.volumes is omitted (the template provides it).
+       DaemonSet has no equivalent — a shared PVC across all node pods only
+       works on RWX storage; users on RWO should either disable persistence
+       or BYO a per-node hostPath (validator not enforced — operator's call). */}}
+{{- $useVCT := and (eq $kind "StatefulSet") .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+{{- /* apiVersion lookup keyed off `$kind`. All three share `apps/v1` on
+       1.14+, but route through the per-kind helpers so a future kube-version
+       split lands in one place. */}}
+{{- $apiVersion := "" }}
+{{- if eq $kind "StatefulSet" }}{{- $apiVersion = include "st-common.capabilities.statefulset.apiVersion" . }}
+{{- else if eq $kind "DaemonSet" }}{{- $apiVersion = include "st-common.capabilities.daemonset.apiVersion" . }}
+{{- else }}{{- $apiVersion = include "st-common.capabilities.deployment.apiVersion" . }}{{- end }}
+apiVersion: {{ $apiVersion }}
+kind: {{ $kind }}
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if or .Values.deploymentAnnotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.deploymentAnnotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- /* DaemonSet has no `replicas` (one pod per scheduled node); Deployment and
+         StatefulSet honour `replicaCount` unless the HPA is taking over. */}}
+  {{- if and (ne $kind "DaemonSet") (not .Values.horizontalPodAutoscaler.enabled) }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
+      app.kubernetes.io/component: freeradius
+  {{- if eq $kind "StatefulSet" }}
+  serviceName: {{ include "freeradius.headlessServiceName" . }}
+  {{- if .Values.podManagementPolicy }}
+  podManagementPolicy: {{ .Values.podManagementPolicy }}
+  {{- end }}
+  {{- if .Values.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- else if eq $kind "DaemonSet" }}
+  {{- /* DaemonSet shares the `updateStrategy:` field name with StatefulSet
+         (rollingUpdate vs OnDelete). No serviceName / replicas / podManagement. */}}
+  {{- if .Values.updateStrategy }}
+  updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- else }}
+  {{- if .Values.updateStrategy }}
+  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  template:
+    metadata:
+      {{- if or .Values.podAnnotations .Values.commonAnnotations (not .Values.existingConfigmap) (not .Values.auth.existingSecret) }}
+      annotations:
+        {{- if not .Values.existingConfigmap }}
+        checksum/secret-env: {{ include (print $.Template.BasePath "/secrets/envvars.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.default.enabled (not .Values.sites.default.existingConfigMap) }}
+        checksum/configmap-sites-default: {{ include (print $.Template.BasePath "/sites/default.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.innerTunnel.enabled (not .Values.sites.innerTunnel.existingConfigMap) }}
+        checksum/configmap-sites-inner-tunnel: {{ include (print $.Template.BasePath "/sites/inner-tunnel.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.status.enabled (not .Values.sites.status.existingConfigMap) }}
+        checksum/configmap-sites-status: {{ include (print $.Template.BasePath "/sites/status.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.coa.enabled (not .Values.sites.coa.existingConfigMap) }}
+        checksum/configmap-sites-coa: {{ include (print $.Template.BasePath "/sites/coa.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.dhcp.enabled (not .Values.sites.dhcp.existingConfigMap) }}
+        checksum/configmap-sites-dhcp: {{ include (print $.Template.BasePath "/sites/dhcp.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.tls.enabled (not .Values.sites.radsec.existingConfigMap) }}
+        checksum/configmap-sites-radsec: {{ include (print $.Template.BasePath "/sites/radsec.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.sites.tlsCache.enabled (not .Values.sites.tlsCache.existingConfigMap) }}
+        checksum/configmap-sites-tls-cache: {{ include (print $.Template.BasePath "/sites/tls-cache.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.eap.enabled (not .Values.modules.eap.existingConfigMap) }}
+        checksum/configmap-mods-eap: {{ include (print $.Template.BasePath "/modules/eap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.pam.enabled (not .Values.modules.pam.existingConfigMap) }}
+        checksum/configmap-mods-pam: {{ include (print $.Template.BasePath "/modules/pam.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.pap.enabled (not .Values.modules.pap.existingConfigMap) }}
+        checksum/configmap-mods-pap: {{ include (print $.Template.BasePath "/modules/pap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.sql.enabled (not .Values.modules.sql.existingConfigMap) }}
+        checksum/configmap-mods-sql: {{ include (print $.Template.BasePath "/modules/sql.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.rest.enabled (not .Values.modules.rest.existingConfigMap) }}
+        checksum/configmap-mods-rest: {{ include (print $.Template.BasePath "/modules/rest.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.json.enabled (not .Values.modules.json.existingConfigMap) }}
+        checksum/configmap-mods-json: {{ include (print $.Template.BasePath "/modules/json.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.modules.redis.enabled (not .Values.modules.redis.existingConfigMap) }}
+        checksum/configmap-mods-redis: {{ include (print $.Template.BasePath "/modules/redis.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and (not .Values.modules.cache.existingConfigMap) (or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.modules.cache.instances) }}
+        checksum/configmap-mods-cache: {{ include (print $.Template.BasePath "/modules/cache.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.modsConfig }}
+        checksum/configmap-mods-config: {{ include (print $.Template.BasePath "/configmaps/mods-config.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if not .Values.clients.existingConfigMapName }}
+        checksum/configmap-clients: {{ include (print $.Template.BasePath "/configmaps/clients.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.users }}
+        checksum/configmap-users: {{ include (print $.Template.BasePath "/configmaps/users.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Files.Get "files/proxy.conf" }}
+        checksum/configmap-proxy: {{ include (print $.Template.BasePath "/configmaps/proxy.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if or .Values.homeServers .Values.tls.enabled }}
+        checksum/configmap-home-servers: {{ include (print $.Template.BasePath "/configmaps/home-servers.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if or .Values.homeServerPools .Values.tls.enabled }}
+        checksum/configmap-home-server-pools: {{ include (print $.Template.BasePath "/configmaps/home-server-pools.yaml") . | sha256sum }}
+        {{- end }}
+        checksum/configmap-realms: {{ include (print $.Template.BasePath "/configmaps/realms.yaml") . | sha256sum }}
+        {{- if .Values.modules.oidc.enabled }}
+        checksum/configmap-oidc-py: {{ include (print $.Template.BasePath "/modules/oidc/oidc-py.yaml") . | sha256sum }}
+        {{- $oidcResolvedAnno := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+        {{- $oidcHasSecret := false -}}{{- $oidcHasTls := false -}}
+        {{- range $name, $cfg := $oidcResolvedAnno.instances -}}
+        {{- if and $cfg.clientSecret (not $cfg.existingSecret) }}{{- $oidcHasSecret = true }}{{- end -}}
+        {{- if include "freeradius.oidc.tls.createSecret" (dict "instance" $cfg) }}{{- $oidcHasTls = true }}{{- end -}}
+        {{- end }}
+        checksum/configmap-oidc: {{ include (print $.Template.BasePath "/modules/oidc/oidc.yaml") . | sha256sum }}
+        checksum/configmap-oidc-policy: {{ include (print $.Template.BasePath "/modules/oidc/oidc-policy.yaml") . | sha256sum }}
+        checksum/configmap-oidc-mapper-python: {{ include (print $.Template.BasePath "/modules/oidc/oidc-conf-py.yaml") . | sha256sum }}
+        {{- if $oidcHasSecret }}
+        checksum/secret-oidc: {{ include (print $.Template.BasePath "/modules/oidc/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $oidcHasTls }}
+        checksum/secret-oidc-tls: {{ include (print $.Template.BasePath "/modules/oidc/secret-tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- end }}
+        {{- if not .Values.auth.existingSecret }}
+        checksum/secret-credentials: {{ include (print $.Template.BasePath "/secrets/credentials.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if include "freeradius.sql.tls.createSecret" . }}
+        checksum/secret-sql-tls: {{ include (print $.Template.BasePath "/secrets/sql-tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if include "freeradius.tls.createSecret" . }}
+        checksum/secret-tls: {{ include (print $.Template.BasePath "/secrets/tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if include "freeradius.rest.tls.createSecret" . }}
+        checksum/secret-rest-tls: {{ include (print $.Template.BasePath "/secrets/rest-tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if include "freeradius.eap.tlsConfig.createSecret" . }}
+        checksum/secret-eap-tls: {{ include (print $.Template.BasePath "/secrets/eap-tls.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.commonAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.podAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 8 }}
+        app.kubernetes.io/component: freeradius
+        {{- if .Values.podLabels }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.affinity }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- include "freeradius.image.pullSecrets" . | nindent 6 }}
+      {{- if .Values.hostAliases }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      {{- if .Values.schedulerName }}
+      schedulerName: {{ .Values.schedulerName | quote }}
+      {{- end }}
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+      serviceAccountName: {{ include "freeradius.serviceAccountName" . }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" $) | nindent 8 }}
+      {{- end }}
+      {{- $needsDbBootstrap := and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) }}
+      initContainers:
+        {{- if .Values.initContainers }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+        {{- end }}
+        {{- /* Stage the projected virtual servers into a writable emptyDir. The
+               sites source is a projected/configMap volume, which is mounted
+               read-only and cannot be chmod'd; copying the files out lets us set
+               the sites-enabled directory to 0711 owned by the runtime user. */}}
+        - name: prepare-sites
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |
+              printf '%s\n' "[prepare-sites] staging virtual servers into {{ .Values.sites.includeDir }}" >&2
+              for f in /tmp/freeradius-sites/*; do
+                [ -e "$f" ] || continue
+                cp -L "$f" {{ .Values.sites.includeDir }}/
+              done
+              chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.sites.includeDir }}
+              chmod 0711 {{ .Values.sites.includeDir }}
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+          volumeMounts:
+            - name: freeradius-sites-tmp
+              mountPath: /tmp/freeradius-sites
+              readOnly: true
+            - name: freeradius-sites
+              mountPath: {{ .Values.sites.includeDir }}
+        {{- if and .Values.bootstrap.volumePermissions.enabled .Values.persistence.enabled }}
+        - name: volume-permissions
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.bootstrap.volumePermissions.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.bootstrap.volumePermissions.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |
+              printf '%s\n' "[system] Change permission" >&2
+              chown -R {{ .Values.containerSecurityContext.runAsUser }}:{{ .Values.podSecurityContext.fsGroup }} {{ .Values.persistence.mountPath }}
+              chmod 0711 {{ .Values.persistence.mountPath }}
+          {{- if eq ( toString ( .Values.bootstrap.volumePermissions.securityContext.runAsUser )) "auto" }}
+          securityContext: {{- omit .Values.bootstrap.volumePermissions.securityContext "runAsUser" | toYaml | nindent 12 }}
+          {{- else }}
+          securityContext: {{- .Values.bootstrap.volumePermissions.securityContext | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .Values.bootstrap.volumePermissions.resources }}
+          resources: {{- toYaml .Values.bootstrap.volumePermissions.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath }}
+              {{- end }}
+        {{- end }}
+        {{- if $needsDbBootstrap }}
+        - name: db-bootstrap
+          image: {{ include "freeradius.bootstrap.database.image" . }}
+          imagePullPolicy: {{ .Values.bootstrap.database.image.pullPolicy | quote }}
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - /scripts/db-bootstrap.sh
+          env:
+            - name: DB_DIALECT
+              value: {{ .Values.modules.sql.dialect | quote }}
+            - name: DB_HOST
+              value: {{ include "freeradius.sql.host" . | quote }}
+            - name: DB_PORT
+              value: {{ include "freeradius.sql.port" . }}
+            - name: DB_NAME
+              value: {{ include "freeradius.sql.name" . | quote }}
+            - name: DB_USER
+              value: {{ include "freeradius.sql.user" . | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "freeradius.sql.secretName" . }}
+                  key: {{ include "freeradius.sql.secretKey" . }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" "capabilities" "readOnlyRootFilesystem" | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if .Values.bootstrap.database.resources }}
+          resources: {{- toYaml .Values.bootstrap.database.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: db-schema
+              mountPath: /schema
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              subPath: db-bootstrap.sh
+              readOnly: true
+        {{- end }}
+      containers:
+        - name: freeradius
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          {{- if .Values.diagnosticMode.enabled }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          {{- else if .Values.command }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.diagnosticMode.enabled }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          {{- else if .Values.args }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{- else }}
+          args:
+            {{- if .Values.image.debug }}
+            - -fxx
+            {{- else }}
+            - -f
+            {{- end }}
+          {{- end }}
+          env:
+            {{- include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
+            {{- if .Values.modules.oidc.enabled }}
+            {{- /* Per-instance `<prefix>CLIENT_SECRET` only. Endpoints, claim
+                   paths, mappings etc. are baked into the per-instance Python
+                   wrapper at chart-render time; the client_secret is the only
+                   sensitive value, so it stays in a Secret and rides in via
+                   env. */}}
+            {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+            {{- range $name, $cfg := $oidcResolved.instances }}
+            {{- if $cfg.clientSecret }}
+            {{- $envPrefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) }}
+            - name: {{ $envPrefix }}CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "freeradius.oidc.clientSecretName" (dict "name" $name "instance" $cfg "context" $) }}
+                  key: client-secret
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- if .Values.existingConfigmap }}
+            - configMapRef:
+                name: {{ include "freeradius.names.envvars" . }}
+            {{- else }}
+            - secretRef:
+                name: {{ include "freeradius.names.envvars" . }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ .Values.extraEnvVarsCM }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.extraEnvVarsSecret }}
+            {{- end }}
+          {{- if .Values.lifecycleHooks }}
+          lifecycle: {{- include "st-common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: auth
+              containerPort: {{ .Values.containerPorts.auth }}
+              protocol: UDP
+            - name: acct
+              containerPort: {{ .Values.containerPorts.acct }}
+              protocol: UDP
+            {{- if .Values.sites.coa.enabled }}
+            - name: coa
+              containerPort: {{ .Values.containerPorts.coa }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.tls.enabled }}
+            - name: radsec
+              containerPort: {{ .Values.containerPorts.radsec }}
+              protocol: TCP
+            {{- end }}
+            {{- if .Values.sites.status.enabled }}
+            - name: status
+              containerPort: {{ .Values.containerPorts.status }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.extraPorts }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraPorts "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if not .Values.diagnosticMode.enabled }}
+          {{- if .Values.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.startupProbe.enabled }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.livenessProbe.enabled }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.readinessProbe.enabled }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.resources }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.resources "context" $) | nindent 12 }}
+          {{- else if and .Values.resourcesPreset (ne .Values.resourcesPreset "none") }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ default "/startechnica/freeradius" .Values.persistence.mountPath }}
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath }}
+              {{- end }}
+            - name: freeradius-config
+              mountPath: /etc/freeradius/radiusd.conf
+              subPath: radiusd.conf
+            - name: freeradius-clients
+              mountPath: /etc/freeradius/clients.conf
+              subPath: clients.conf
+              readOnly: true
+            {{- if .Values.users }}
+            - name: freeradius-users
+              mountPath: /etc/freeradius/mods-config/files/authorize
+              subPath: authorize
+              readOnly: true
+            {{- end }}
+            {{- if .Files.Get "files/proxy.conf" }}
+            - name: freeradius-proxy
+              mountPath: /etc/freeradius/proxy.conf
+              subPath: proxy.conf
+              readOnly: true
+            {{- end }}
+            {{- if or .Values.homeServers .Values.tls.enabled }}
+            - name: freeradius-home-servers
+              mountPath: /opt/startechnica/freeradius/home-servers.conf
+              subPath: home-servers.conf
+              readOnly: true
+            {{- end }}
+            {{- if or .Values.homeServerPools .Values.tls.enabled }}
+            - name: freeradius-home-server-pools
+              mountPath: /opt/startechnica/freeradius/home-server-pools.conf
+              subPath: home-server-pools.conf
+              readOnly: true
+            {{- end }}
+            - name: freeradius-realms
+              mountPath: /opt/startechnica/freeradius/realms.conf
+              subPath: realms.conf
+              readOnly: true
+            {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+            - name: custom-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
+            {{- if .Values.modules.sql.enabled }}
+            - name: freeradius-mods-sql
+              mountPath: /etc/freeradius/mods-enabled/sql
+              subPath: sql
+            {{- end }}
+            {{- if .Values.modules.rest.enabled }}
+            - name: freeradius-mods-rest
+              mountPath: /etc/freeradius/mods-enabled/rest
+              subPath: rest
+            {{- end }}
+            {{- if .Values.modules.json.enabled }}
+            - name: freeradius-mods-json
+              mountPath: /etc/freeradius/mods-enabled/json
+              subPath: json
+            {{- end }}
+            {{- if .Values.modules.eap.enabled }}
+            - name: freeradius-mods-eap
+              mountPath: /etc/freeradius/mods-enabled/eap
+              subPath: eap
+            {{- end }}
+            {{- if .Values.modules.pam.enabled }}
+            - name: freeradius-mods-pam
+              mountPath: /etc/freeradius/mods-enabled/pam
+              subPath: pam
+            {{- end }}
+            {{- if .Values.modules.pap.enabled }}
+            - name: freeradius-mods-pap
+              mountPath: /etc/freeradius/mods-enabled/pap
+              subPath: pap
+            {{- end }}
+            {{- if .Values.modules.redis.enabled }}
+            - name: freeradius-mods-redis
+              mountPath: /etc/freeradius/mods-enabled/redis
+              subPath: redis
+            {{- end }}
+            {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.modules.cache.instances }}
+            - name: freeradius-mods-cache
+              mountPath: /etc/freeradius/mods-enabled/cache
+              subPath: cache
+            {{- end }}
+            {{- /* All virtual servers (chart sites + extraSites) staged by the
+                   prepare-sites init container into a 0711 emptyDir, mounted as
+                   the whole sites-enabled directory. */}}
+            - name: freeradius-sites
+              mountPath: {{ .Values.sites.includeDir }}
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            {{- if .Values.tls.enabled }}
+            - name: freeradius-tls
+              mountPath: /opt/startechnica/freeradius/certs
+              readOnly: true
+            {{- end }}
+            {{- if .Values.modules.sql.tls.enabled }}
+            - name: freeradius-sql-tls
+              mountPath: /opt/startechnica/freeradius/certs-sql
+              readOnly: true
+            {{- end }}
+            {{- if and .Values.modules.rest.enabled .Values.modules.rest.tls.enabled }}
+            - name: freeradius-rest-tls
+              mountPath: /opt/startechnica/freeradius/certs-rest
+              readOnly: true
+            {{- end }}
+            {{- if .Values.modules.eap.enabled }}
+            - name: freeradius-eap-tls
+              mountPath: /opt/startechnica/freeradius/certs-eap
+              readOnly: true
+            {{- end }}
+            - name: temp
+              mountPath: /startechnica/freeradius/tmp
+            - name: var-run-dir
+              mountPath: /var/run/radiusd
+            - name: freeradius-base
+              mountPath: /opt/startechnica/freeradius
+            {{- range .Values.extraModules }}
+            - name: {{ .name }}
+              mountPath: /etc/freeradius/mods-enabled/{{ .name }}
+              subPath: {{ .key | default .name }}
+            {{- end }}
+            {{- range $subdir, $files := .Values.modsConfig }}
+            {{- if $files }}
+            - name: {{ printf "mods-config-%s" $subdir }}
+              mountPath: /etc/freeradius/mods-config/{{ $subdir }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- if .Values.modules.oidc.enabled }}
+            {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+            {{- range $name, $cfg := $oidcResolved.instances }}
+            {{- $modKey := include "freeradius.oidc.modKey" (dict "name" $name) }}
+            {{- $polKey := include "freeradius.oidc.policyKey" (dict "name" $name) }}
+            {{- $volModName := ternary "oidc" (printf "oidc-%s" $name) (eq $name "default") }}
+            {{- $volPolName := ternary "oidc-policy" (printf "oidc-%s-policy" $name) (eq $name "default") }}
+            - name: {{ $volModName }}
+              mountPath: /etc/freeradius/mods-enabled/{{ $modKey }}
+              subPath: {{ $modKey }}
+              readOnly: true
+            - name: {{ $volPolName }}
+              mountPath: /etc/freeradius/policy.d/{{ $polKey }}
+              subPath: {{ $polKey }}
+              readOnly: true
+            {{- if include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
+            - name: {{ include "freeradius.oidc.tlsVolumeName" (dict "name" $name) }}
+              mountPath: {{ ternary "/etc/freeradius/certs-oidc" (printf "/etc/freeradius/certs-oidc-%s" $name) (eq $name "default") }}
+              readOnly: true
+            {{- end }}
+            {{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
+            - name: oidc-python
+              mountPath: /etc/freeradius/scripts/{{ $scriptKey }}
+              subPath: {{ $scriptKey }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- /* Shared oidc.py library — one mount whenever modules.oidc is enabled. */}}
+            {{- if .Values.modules.oidc.enabled }}
+            - name: oidc-py
+              mountPath: /etc/freeradius/scripts/oidc.py
+              subPath: oidc.py
+              readOnly: true
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- end }}
+        {{- if .Values.sidecars }}
+          {{- include "st-common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+        {{- if .Values.modules.sql.enabled }}
+        - name: freeradius-mods-sql
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "sql" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.rest.enabled }}
+        - name: freeradius-mods-rest
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "rest" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.json.enabled }}
+        - name: freeradius-mods-json
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "json" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.eap.enabled }}
+        - name: freeradius-mods-eap
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "eap" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.pam.enabled }}
+        - name: freeradius-mods-pam
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "pam" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.pap.enabled }}
+        - name: freeradius-mods-pap
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "pap" "context" $) }}
+        {{- end }}
+        {{- if .Values.modules.redis.enabled }}
+        - name: freeradius-mods-redis
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "redis" "context" $) }}
+        {{- end }}
+        {{- if or .Values.modules.cache.enabled .Values.sites.tlsCache.enabled .Values.modules.cache.instances }}
+        - name: freeradius-mods-cache
+          configMap:
+            name: {{ include "freeradius.module.configMapName" (dict "module" "cache" "context" $) }}
+        {{- end }}
+        {{- /* One projected volume aggregates every enabled virtual server
+               (chart sites + extraSites). Each chart site ConfigMap holds a
+               single key named after the site, so it is projected whole (the
+               key becomes the filename); BYO and enable gating are resolved per
+               source via freeradius.site.configMapName. extraSites use `items`
+               since their key may differ from the path. This is read-only, so
+               the `prepare-sites` init container copies it into the writable
+               `freeradius-sites` emptyDir to set 0711 on sites-enabled/. */}}
+        - name: freeradius-sites-tmp
+          projected:
+            sources:
+              {{- if .Values.sites.default.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "default" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.innerTunnel.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "inner-tunnel" "key" "innerTunnel" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.status.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "status" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.coa.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "coa" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.dhcp.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "dhcp" "context" $) }}
+              {{- end }}
+              {{- if .Values.tls.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "radsec" "context" $) }}
+              {{- end }}
+              {{- if .Values.sites.tlsCache.enabled }}
+              - configMap:
+                  name: {{ include "freeradius.site.configMapName" (dict "site" "tls-cache" "key" "tlsCache" "context" $) }}
+              {{- end }}
+              {{- range .Values.extraSites }}
+              - configMap:
+                  name: {{ tpl .existingConfigMap $ }}
+                  items:
+                    - key: {{ .key | default .name }}
+                      path: {{ .name }}
+              {{- end }}
+        - name: freeradius-sites
+          emptyDir: {}
+        {{- range .Values.extraModules }}
+        - name: {{ .name }}
+          configMap:
+            name: {{ tpl .existingConfigMap $ }}
+        {{- end }}
+        {{- range $subdir, $files := .Values.modsConfig }}
+        {{- if $files }}
+        - name: {{ printf "mods-config-%s" $subdir }}
+          configMap:
+            name: {{ printf "%s-mods-config-%s" (include "st-common.names.fullname" $) $subdir }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.modules.oidc.enabled }}
+        {{- $oidcResolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+        {{- $fullname := include "st-common.names.fullname" . }}
+        {{- range $name, $cfg := $oidcResolved.instances }}
+        {{- $volModName := ternary "oidc" (printf "oidc-%s" $name) (eq $name "default") }}
+        {{- $volPolName := ternary "oidc-policy" (printf "oidc-%s-policy" $name) (eq $name "default") }}
+        {{- $cmModName := ternary (printf "%s-oidc" $fullname) (printf "%s-oidc-%s" $fullname $name) (eq $name "default") }}
+        {{- $cmPolName := ternary (printf "%s-oidc-policy" $fullname) (printf "%s-oidc-%s-policy" $fullname $name) (eq $name "default") }}
+        - name: {{ $volModName }}
+          configMap:
+            name: {{ default $cmModName $cfg.existingConfigMap }}
+        - name: {{ $volPolName }}
+          configMap:
+            name: {{ $cmPolName }}
+        {{- if include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
+        - name: {{ include "freeradius.oidc.tlsVolumeName" (dict "name" $name) }}
+          secret:
+            secretName: {{ include "freeradius.oidc.tls.secretName" (dict "name" $name "instance" $cfg "context" $) }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- /* Shared OIDC volumes — one per release regardless of instance count:
+               `oidc-py` carries the shared library, `oidc-python` carries every
+               per-instance wrapper as separate keys; both are subPath-mounted
+               into /etc/freeradius/scripts/ alongside one another. */}}
+        {{- if .Values.modules.oidc.enabled }}
+        - name: oidc-py
+          configMap:
+            name: {{ printf "%s-oidc-py" (include "st-common.names.fullname" .) }}
+        - name: oidc-python
+          configMap:
+            name: {{ printf "%s-oidc-python" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        - name: scripts
+          configMap:
+            name: {{ printf "%s-scripts" (include "st-common.names.fullname" .) }}
+        - name: temp
+          emptyDir: {}
+        - name: var-run-dir
+          emptyDir: {}
+        - name: freeradius-base
+          emptyDir: {}
+        {{- if not $useVCT }}
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "freeradius.claimName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.tls.enabled }}
+        - name: freeradius-tls
+          secret:
+            secretName: {{ include "freeradius.tls.secretName" . }}
+        {{- end }}
+        {{- if .Values.modules.sql.tls.enabled }}
+        - name: freeradius-sql-tls
+          secret:
+            secretName: {{ include "freeradius.sql.tls.secretName" . }}
+        {{- end }}
+        {{- if and .Values.modules.rest.enabled .Values.modules.rest.tls.enabled }}
+        - name: freeradius-rest-tls
+          secret:
+            secretName: {{ include "freeradius.rest.tls.secretName" . }}
+        {{- end }}
+        {{- if .Values.modules.eap.enabled }}
+        - name: freeradius-eap-tls
+          secret:
+            secretName: {{ include "freeradius.eap.tlsConfig.secretName" . }}
+        {{- end }}
+        - name: freeradius-config
+          configMap:
+            name: {{ include "freeradius.configurationCM" . }}
+        - name: freeradius-clients
+          configMap:
+            name: {{ default (printf "%s-clients" (include "st-common.names.fullname" .)) .Values.clients.existingConfigMapName }}
+        {{- if .Values.users }}
+        - name: freeradius-users
+          configMap:
+            name: {{ printf "%s-users" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- if .Files.Get "files/proxy.conf" }}
+        - name: freeradius-proxy
+          configMap:
+            name: {{ printf "%s-proxy" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- if or .Values.homeServers .Values.tls.enabled }}
+        - name: freeradius-home-servers
+          configMap:
+            name: {{ printf "%s-home-servers" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        {{- if or .Values.homeServerPools .Values.tls.enabled }}
+        - name: freeradius-home-server-pools
+          configMap:
+            name: {{ printf "%s-home-server-pools" (include "st-common.names.fullname" .) }}
+        {{- end }}
+        - name: freeradius-realms
+          configMap:
+            name: {{ printf "%s-realms" (include "st-common.names.fullname" .) }}
+        {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
+        - name: custom-init-scripts
+          configMap:
+            name: {{ include "freeradius.initdbScriptsCM" . }}
+        {{- end }}
+        {{- if and .Values.modules.sql.enabled .Values.bootstrap.database.enabled (has .Values.modules.sql.dialect (list "mysql" "postgresql")) }}
+        - name: db-schema
+          configMap:
+            name: {{ include "freeradius.bootstrap.database.schemaConfigMapName" . }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+  {{- if $useVCT }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 10 }}
+          app.kubernetes.io/component: freeradius
+        {{- if or .Values.persistence.annotations .Values.commonAnnotations }}
+        annotations:
+          {{- if .Values.commonAnnotations }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 10 }}
+          {{- end }}
+          {{- if .Values.persistence.annotations }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.persistence.annotations "context" $) | nindent 10 }}
+          {{- end }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- range .Values.persistence.accessModes }}
+          - {{ . | quote }}
+          {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}
+        {{- include "st-common.storage.class" (dict "persistence" .Values.persistence "global" .Values.global) | nindent 8 }}
+        {{- if .Values.persistence.selector }}
+        selector: {{- include "st-common.tplvalues.render" (dict "value" .Values.persistence.selector "context" $) | nindent 10 }}
+        {{- end }}
+        {{- if .Values.persistence.dataSource }}
+        dataSource: {{- include "st-common.tplvalues.render" (dict "value" .Values.persistence.dataSource "context" $) | nindent 10 }}
+        {{- end }}
+  {{- end }}

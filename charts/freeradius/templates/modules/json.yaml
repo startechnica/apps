@@ -33,10 +33,10 @@ data:
             }
 
             value {
-                single_value_as_array = {{ ternary "yes" "no" .Values.modules.json.encode.value.singleValueAsArray }}
-                enum_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.enumAsInteger }}
-                dates_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.datesAsInteger }}
-                always_string = {{ ternary "yes" "no" .Values.modules.json.encode.value.alwaysString }}
+                single_value_as_array = {{ ternary "yes" "no" .Values.modules.json.encode.value.single_value_as_array }}
+                enum_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.enum_as_integer }}
+                dates_as_integer = {{ ternary "yes" "no" .Values.modules.json.encode.value.dates_as_integer }}
+                always_string = {{ ternary "yes" "no" .Values.modules.json.encode.value.always_string }}
             }
         }
     }

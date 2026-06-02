@@ -1,0 +1,26 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- /*
+Chart-managed FreeRADIUS proxy.conf. Sourced from `files/proxy.conf`
+(extracted from the FreeRADIUS 3.2.8 source tree, with `realm LOCAL`
+commented out so it can be defined via `.Values.realms`). Mounted at
+`/etc/freeradius/proxy.conf` to replace the upstream image's bundled file.
+*/}}
+{{- if .Files.Get "files/proxy.conf" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-proxy" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  proxy.conf: |
+    {{- .Files.Get "files/proxy.conf" | nindent 4 }}
+{{- end }}

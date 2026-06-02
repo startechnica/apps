@@ -1,0 +1,27 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+{{- if and .Values.modules.redis.enabled (not .Values.modules.redis.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-mods-redis" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  redis: |
+    # rlm_redis module configuration (connection used for %{redis:...} xlat)
+    redis {
+        server = {{ include "freeradius.redis.host" . }}
+        {{- if include "freeradius.redis.usePassword" . }}
+        password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
+        {{- end }}
+
+        {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit .Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 8 }}
+    }
+{{- end }}

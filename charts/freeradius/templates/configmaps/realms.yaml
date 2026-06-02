@@ -1,0 +1,79 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-realms" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  realms.conf: |-
+    {{- /* `realm LOCAL` and `realm radsec` are chart-managed so wrapping
+           charts that override .Values.realms don't accidentally drop
+           them. A user-supplied entry with the same `name` in .Values.realms
+           wins (the corresponding static block below is skipped to avoid a
+           Duplicate realm error). `realm radsec` is gated on tls.enabled
+           since the radsec home_server / home_server_pool only exist when
+           the RADSEC virtual server is rendered. */}}
+    {{- $hasLocal := false }}
+    {{- $hasRadsec := false }}
+    {{- range .Values.realms }}
+    {{- if eq .name "LOCAL" }}{{- $hasLocal = true }}{{- end }}
+    {{- if eq .name "radsec" }}{{- $hasRadsec = true }}{{- end }}
+    {{- end }}
+    {{- if not $hasLocal }}
+    realm LOCAL {
+    }
+    {{- end }}
+    {{- if and .Values.tls.enabled (not $hasRadsec) }}
+    realm radsec {
+        auth_pool = radsec
+    }
+    {{- end }}
+    {{- range .Values.realms }}
+    realm {{ .name }} {
+        {{- if .auth_pool }}
+        auth_pool = {{ .auth_pool }}
+        {{- end }}
+        {{- if .acct_pool }}
+        acct_pool = {{ .acct_pool }}
+        {{- end }}
+        {{- if .coa_pool }}
+        coa_pool = {{ .coa_pool }}
+        {{- end }}
+        {{- if .authhost }}
+        authhost = {{ .authhost }}
+        {{- end }}
+        {{- if .accthost }}
+        accthost = {{ .accthost }}
+        {{- end }}
+        {{- if .secret }}
+        secret = {{ .secret | quote }}
+        {{- end }}
+        {{- if .nostrip }}
+        nostrip
+        {{- end }}
+        {{- if .virtual_server }}
+        virtual_server = {{ .virtual_server }}
+        {{- end }}
+    }
+    {{- end }}
+
+    {{- /* createDefaultInstance.realm — `realm DEFAULT` referencing the auto-gen
+           pools by their `<fullname>_<auth|acct>_pool` names. Pool refs dangle
+           without `createDefaultInstance.homeServerPool: true` — FreeRADIUS
+           fails loudly. */}}
+    {{- if and .Values.createDefaultInstance.realm (include "freeradius.isStatefulSet" .) }}
+    {{- $cdiBase := include "freeradius.utils.snakeCase" (include "st-common.names.fullname" .) }}
+    realm DEFAULT {
+        auth_pool = {{ $cdiBase }}_auth_pool
+        acct_pool = {{ $cdiBase }}_acct_pool
+    }
+    {{- end }}

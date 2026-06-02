@@ -1,0 +1,81 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Per-instance ConfigMaps holding the FreeRADIUS module-instance block for
+each configured OIDC backend (rlm_python3 wrapper). One ConfigMap per
+resolved instance:
+
+  default → `<fullname>-oidc`           key: `oidc`
+  <name>  → `<fullname>-oidc-<name>`    key: `oidc_<name>`
+
+Mounted into the pod at `mods-enabled/<key>` via the Deployment. Each
+ConfigMap holds an `rlm_python3` module instance pointing at the
+per-instance wrapper (`oidc[_<name>].py`) that lives alongside the shared
+`oidc_common.py` library.
+
+When `refreshTokenCache: true`, a SECOND module instance is appended:
+`python3 oidc_<name>_validate` — same script file, binds
+`func_authorize = "validate"`. The policy calls it on cache hit to check
+the cached refresh_token is still accepted by the IdP.
+
+BYO override: setting `modules.oidc.instances.<name>.existingConfigMap`
+skips the chart-rendered ConfigMap and reuses the named one.
+*/}}
+
+{{- if .Values.modules.oidc.enabled }}
+{{- $resolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+{{- $fullname := include "st-common.names.fullname" . }}
+{{- range $name, $cfg := $resolved.instances }}
+{{- if not $cfg.existingConfigMap }}
+{{- $modName := include "freeradius.oidc.moduleName" (dict "name" $name) }}
+{{- $validateModName := include "freeradius.oidc.validateModuleName" (dict "name" $name) }}
+{{- $modKey := include "freeradius.oidc.modKey" (dict "name" $name) }}
+{{- $cmName := ternary (printf "%s-oidc" $fullname) (printf "%s-oidc-%s" $fullname $name) (eq $name "default") }}
+{{- $envPrefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) }}
+{{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
+{{- $scriptBase := trimSuffix ".py" $scriptKey }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $cmName }}
+  namespace: {{ include "st-common.names.namespace" $ | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" $.Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if $.Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $.Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  {{ $modKey }}: |
+    ## rlm_python3 instance running the OIDC authenticator/mapper for `{{ $name }}`.
+    ## Bundled in the default `freeradius/freeradius-server:3.2.8` image.
+    ## The Python module file is `{{ $scriptKey }}` (mounted under
+    ## `python_path`) — a per-instance wrapper with config baked in by
+    ## Helm that delegates to the shared `oidc_common.py` library.
+    ## Only `{{ $envPrefix }}CLIENT_SECRET` (sensitive) rides in via env.
+    python3 {{ $modName }} {
+        python_path = "/etc/freeradius/scripts"
+        # rlm_python3 requires `mod_<section>` paired with each
+        # `func_<section>` — the top-level `module` directive alone is
+        # insufficient and triggers "Instantiation failed" at startup.
+        mod_authorize  = "{{ $scriptBase }}"
+        func_authorize = "authorize"
+        mod_accounting  = "{{ $scriptBase }}"
+        func_accounting = "accounting"
+    }
+    {{- if $cfg.refreshTokenCache }}
+
+    ## Cache-hit refresh-token validator for `{{ $name }}`. Same Python
+    ## module as `{{ $modName }}`, binds `func_authorize = "validate"`.
+    python3 {{ $validateModName }} {
+        python_path = "/etc/freeradius/scripts"
+        mod_authorize  = "{{ $scriptBase }}"
+        func_authorize = "validate"
+    }
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,53 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- /*
+Envoy Gateway data-plane resource. Rendered when `gateway.enabled`,
+`implementation: gateway-api`, `infrastructure: envoy`, AND
+`envoyProxy.create: true`. Lives in the gateway namespace alongside the
+chart's Gateway, which references it via `spec.infrastructure.parametersRef`.
+
+`create: false` is the BYO mode — the operator manages the EnvoyProxy
+externally and references it by name; this template is skipped.
+
+The chart-managed EnvoyProxy emits an empty `spec: {}` so Envoy Gateway
+applies its own defaults. Customize by switching to BYO
+(`envoyProxy.create: false` + `envoyProxy.name: <your-cr>`) and managing
+the spec body in whichever tool owns that CR.
+*/}}
+{{- if include "freeradius.gateway.envoyProxy.create" . }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: {{ include "freeradius.gateway.envoyProxy.name" . }}
+  namespace: {{ include "st-common.gateway.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 1
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            json:
+              bytes_received: "%BYTES_RECEIVED%"
+              bytes_sent: "%BYTES_SENT%"
+              client_ip: "%DOWNSTREAM_REMOTE_ADDRESS%"
+              duration: "%DURATION%"
+              start_time: "%START_TIME%"
+              protocol: "%PROTOCOL%"
+              upstream_host: "%UPSTREAM_HOST%"
+            type: JSON
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+{{- end }}

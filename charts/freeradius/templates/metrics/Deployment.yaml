@@ -72,8 +72,13 @@ spec:
             - name: RADIUS_PASSWORD
               valueFrom:
                 secretKeyRef:
+                {{- if .Values.auth.existingSecretPerPassword }}
+                  name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.metricsSecret "context" $)) $ }}
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "metricsSecret") }}
+                {{- else }}
                   name: {{ include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecret "context" $) }}
-                  key: sites-status-secret
+                  key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "exporter-secret") }}
+                {{- end }}
             - name: WEB_LISTEN_ADDRESS
               value: ":{{ .Values.containerPorts.metrics }}"
             - name: WEB_TELEMETRY_PATH

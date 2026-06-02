@@ -20,7 +20,7 @@ metadata:
   {{- end }}
 spec:
   gateways:
-    - {{ include "st-common.gateway.fullname" . }}
+    - {{ include "freeradius.gateway.fullname" . }}
   hosts:
     {{- if $hosts }}
     {{- range $hosts }}

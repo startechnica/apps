@@ -1,0 +1,298 @@
+suite: Istio gateway (Gateway / VirtualService)
+release:
+  name: my-radius
+  namespace: radius
+# Inject the Istio CRDs so the chart's capability lookups don't return "false".
+capabilities:
+  apiVersions:
+    - networking.istio.io/v1/Gateway
+    - networking.istio.io/v1/VirtualService
+tests:
+  - it: nothing renders by default (gateway disabled)
+    templates:
+      - templates/istio/Gateway.yaml
+      - templates/istio/VirtualService.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: nothing renders when gateway.enabled but implementation is gateway-api
+    templates:
+      - templates/istio/Gateway.yaml
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: gateway-api
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### Istio Gateway — UDP servers for auth+acct (always), coa (gated),
+  ### radsec (gated). Selector defaults to `istio.io/gateway-name: ingressgateway`.
+  ###
+
+  - it: Gateway renders auth+acct UDP servers by default
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+    asserts:
+      - isKind:
+          of: Gateway
+      - equal:
+          path: apiVersion
+          value: networking.istio.io/v1
+      - equal:
+          path: spec.selector["istio.io/gateway-name"]
+          value: ingressgateway
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: auth
+              number: 1812
+              protocol: UDP
+            hosts:
+              - "*"
+          any: true
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: acct
+              number: 1813
+              protocol: UDP
+            hosts:
+              - "*"
+          any: true
+      - notContains:
+          path: spec.servers
+          content:
+            port:
+              name: coa
+          any: true
+      - notContains:
+          path: spec.servers
+          content:
+            port:
+              name: radsec
+          any: true
+
+  - it: Gateway adds a coa UDP server when sites.coa.enabled
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      sites.coa.enabled: true
+    asserts:
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: coa
+              number: 3799
+              protocol: UDP
+            hosts:
+              - "*"
+          any: true
+
+  - it: Gateway uses PASSTHROUGH TLS when tls.enabled (in-pod radsec)
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: radsec
+              number: 2083
+              protocol: TLS
+            hosts:
+              - "*"
+            tls:
+              mode: PASSTHROUGH
+          any: true
+
+  - it: Gateway uses SIMPLE TLS with credentialName when only gateway.tls.enabled
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      gateway.tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: radsec
+              number: 2083
+              protocol: TLS
+            hosts:
+              - "*"
+            tls:
+              mode: SIMPLE
+              credentialName: my-radius-freeradius-gateway-tls
+          any: true
+
+  - it: gateway.hostnames replaces the default `*` host on every Gateway server
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      tls.enabled: true
+      gateway.hostnames:
+        - radius.example.com
+    asserts:
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: auth
+              number: 1812
+              protocol: UDP
+            hosts:
+              - radius.example.com
+          any: true
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: radsec
+              number: 2083
+              protocol: TLS
+            hosts:
+              - radius.example.com
+            tls:
+              mode: PASSTHROUGH
+          any: true
+
+  - it: existingGateway skips the chart-rendered Gateway
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      gateway.existingGateway: my-byo-istio-gateway
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### Istio VirtualService — gateway binding + default TLS routing block
+  ### that SNI-matches `gateway.hostnames` to the in-cluster radsec service.
+  ###
+
+  - it: VirtualService renders by default (implementation=istio)
+    templates:
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: apiVersion
+          value: networking.istio.io/v1
+      - contains:
+          path: spec.gateways
+          content: my-radius-freeradius-gateway
+          any: true
+
+  - it: VirtualService gets a default TLS route to the radsec service port when tls.enabled
+    templates:
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      tls.enabled: true
+    asserts:
+      - exists:
+          path: spec.tls
+      - equal:
+          path: spec.tls[0].match[0].port
+          value: 2083
+      - equal:
+          path: spec.tls[0].route[0].destination.host
+          value: my-radius-freeradius.radius.svc.cluster.local
+      - equal:
+          path: spec.tls[0].route[0].destination.port.number
+          value: 2083
+
+  - it: virtualService.existingVirtualService skips the chart-rendered VS
+    templates:
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      gateway.virtualService.existingVirtualService: my-byo-vs
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  ###
+  ### Cross-implementation isolation — when implementation is istio, the
+  ### Gateway API resources must NOT render.
+  ###
+
+  - it: implementation=istio does not render any gateway-api resources
+    templates:
+      - templates/gateway-api/Gateway.yaml
+      - templates/gateway-api/UDPRoute.yaml
+      - templates/gateway-api/TLSRoute.yaml
+      - templates/gateway-api/ReferenceGrant.yaml
+      - templates/gateway-api/EnvoyProxy.yaml
+      - templates/gateway-api/ListenerSet.yaml
+      - templates/gateway-api/BackendTrafficPolicy.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      # Default `gateway.infrastructure: envoy` is only valid with the gateway-api
+      # implementation (chart-level validation). Clear it for the istio path.
+      gateway.infrastructure: ""
+      tls.enabled: true
+      gateway.referenceGrant.enabled: true
+      gateway.listenerSet.enabled: true
+      gateway.listenerSet.listeners:
+        - name: extra
+          port: 1234
+          protocol: UDP
+    asserts:
+      - hasDocuments:
+          count: 0

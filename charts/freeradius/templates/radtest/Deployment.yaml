@@ -1,0 +1,102 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Utility pod for sending RADIUS Access-Requests against this chart's FreeRADIUS
+service from inside the cluster. Uses `2stacks/radtest` (Alpine, ~8 MB) which
+ships `radtest` / `radclient` preinstalled, then runs `sleep infinity` so you
+can:
+
+  kubectl exec -it deploy/<release>-freeradius-radtest -- sh
+  radtest <user> <pass> "$RADIUS_HOST" "$RADIUS_NAS_PORT" "$RADIUS_SECRET"
+
+Disabled by default (radtest.enabled). Intended for short-lived debugging,
+NOT for production traffic generation.
+*/}}
+{{- if .Values.radtest.enabled }}
+{{- $svc := include "st-common.names.fullname" . -}}
+{{- $svcNs := include "st-common.names.namespace" . -}}
+{{- $radiusHost := printf "%s.%s.svc.%s" $svc $svcNs .Values.clusterDomain -}}
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ printf "%s-radtest" $svc }}
+  namespace: {{ $svcNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: radtest
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.radtest.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels: {{- include "st-common.labels.matchLabels" (dict "customLabels" .Values.commonLabels "context" $) | nindent 6 }}
+      app.kubernetes.io/component: radtest
+  template:
+    metadata:
+      {{- if or .Values.radtest.podAnnotations .Values.commonAnnotations }}
+      annotations:
+        {{- if .Values.commonAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.radtest.podAnnotations }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.radtest.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 8 }}
+        app.kubernetes.io/component: radtest
+        {{- if .Values.radtest.podLabels }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.radtest.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "freeradius.image.pullSecrets" . | nindent 6 }}
+      {{- if .Values.radtest.affinity }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.radtest.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.radtest.nodeSelector }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .Values.radtest.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.radtest.tolerations }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.radtest.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.radtest.priorityClassName }}
+      priorityClassName: {{ .Values.radtest.priorityClassName | quote }}
+      {{- end }}
+      automountServiceAccountToken: false
+      containers:
+        - name: radtest
+          image: {{ include "st-common.images.image" (dict "imageRoot" .Values.radtest.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.radtest.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              printf '%s\n' "[radtest] ready ($(radtest 2>&1 | head -1 || echo radtest)). Try:" >&2
+              printf '%s\n' "[radtest]   radtest <user> <pass> $RADIUS_HOST $RADIUS_NAS_PORT $RADIUS_SECRET" >&2
+              exec sleep infinity
+          env:
+            - name: RADIUS_HOST
+              value: {{ $radiusHost | quote }}
+            - name: RADIUS_AUTH_PORT
+              value: {{ .Values.service.ports.auth | default 1812 | quote }}
+            - name: RADIUS_ACCT_PORT
+              value: {{ .Values.service.ports.acct | default 1813 | quote }}
+            - name: RADIUS_NAS_PORT
+              value: "0"
+            - name: RADIUS_SECRET
+              value: {{ .Values.radtest.secret | quote }}
+            {{- if .Values.radtest.extraEnvVars }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.radtest.extraEnvVars "context" $) | nindent 12 }}
+            {{- end }}
+          {{- if .Values.radtest.resources }}
+          resources: {{- toYaml .Values.radtest.resources | nindent 12 }}
+          {{- else if and .Values.radtest.resourcesPreset (ne .Values.radtest.resourcesPreset "none") }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.radtest.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.radtest.containerSecurityContext.enabled }}
+          securityContext: {{- omit .Values.radtest.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+{{- end }}

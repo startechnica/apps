@@ -3,7 +3,15 @@
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
-{{- if .Values.horizontalPodAutoscaler.enabled }}
+{{- /* HPA can target any workload that exposes the `scale` subresource —
+       Deployment and StatefulSet both qualify; DaemonSet does not (one pod
+       per node is the whole point), so the chart skips the HPA render when
+       kind=DaemonSet rather than emitting an HPA that would never converge. */}}
+{{- $hpaKindRaw := .Values.kind | default "Deployment" }}
+{{- $hpaKindMap := dict "deployment" "Deployment" "statefulset" "StatefulSet" "daemonset" "DaemonSet" }}
+{{- $hpaKind := index $hpaKindMap (lower (toString $hpaKindRaw)) }}
+{{- if and .Values.horizontalPodAutoscaler.enabled (ne $hpaKind "DaemonSet") }}
+{{- $hpaTargetApi := ternary (include "st-common.capabilities.statefulset.apiVersion" .) (include "st-common.capabilities.deployment.apiVersion" .) (eq $hpaKind "StatefulSet") }}
 apiVersion: {{ include "st-common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
 kind: HorizontalPodAutoscaler
 metadata:
@@ -15,8 +23,8 @@ metadata:
   {{- end }}
 spec:
   scaleTargetRef:
-    apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
-    kind: Deployment
+    apiVersion: {{ $hpaTargetApi }}
+    kind: {{ $hpaKind }}
     name: {{ include "st-common.names.fullname" . }}
   minReplicas: {{ .Values.horizontalPodAutoscaler.minReplicas }}
   maxReplicas: {{ .Values.horizontalPodAutoscaler.maxReplicas }}

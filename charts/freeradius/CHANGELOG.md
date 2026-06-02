@@ -1,5 +1,634 @@
 # Changelog
 
+## 1.2.0 (2026-06-02)
+
+### Added
+
+- **Generic OIDC authentication module (`modules.oidc.*`).** Replaces
+  the dedicated Keycloak module from 1.1.0 (which is now removed — see
+  `### Removed` below). Provider-agnostic: works against any OIDC
+  provider with an RFC 6749 token endpoint and (optionally) an RFC 7662
+  introspect endpoint — Keycloak, Authentik, Azure AD, Auth0, Okta,
+  etc. Configure any number of backends under
+  `modules.oidc.instances.<name>` with `tokenUrl` (required), optional
+  `introspectUrl`, OAuth2 client credentials (`clientId` +
+  `clientSecret` / `existingSecret`), TLS material (`tls.caCert` /
+  `tls.existingSecret` / `tls.insecure`), and claim-path config
+  (`rolesClaim`, `groupsClaim`, `roleAttribute`, `groupAttribute`).
+  NAS-to-backend binding via `clients.<x>.oidc: <name>` renders an
+  `if (Packet-Src-IP-Address == …) { oidc_<name>_authorize }` dispatch
+  chain into `sites/default` and `sites/inner-tunnel`.
+  `modules.oidc.unmatchedReject` — when `true` and no `default` instance
+  is wired, the dispatch chain's `else` branch rejects unmatched NAS
+  instead of falling through to `pap`.
+
+- **Per-instance OIDC features:**
+  - `roleMappings` / `groupMappings` — unlang reply-mapping policies
+    keyed off the claim path (`rolesClaim`, `groupsClaim`). Roles land
+    in `&control:<roleAttribute>` (default `Class`); groups in
+    `&control:<groupAttribute>` (default `Class` — validator rejects
+    when both attributes collide and both mappings are non-empty). The
+    chart emits `oidc[_<name>]_roles` and `oidc[_<name>]_groups` policy
+    blocks alongside the main authorize policy.
+  - `attributeMappings` — generic `{claim, reply}` engine copying any
+    top-level JWT claim verbatim to a reply attribute (e.g.
+    `preferred_username` → `User-Name`, `sub` → `Class`). The chosen
+    reply attrs are added to the cache `update {}` so they survive
+    cache hits.
+  - `require` — list of JWT claim names that must be truthy after
+    decode (or introspection). Catches "user authenticated but
+    admin-disabled-since-issuance" via e.g.
+    `require: [email_verified]`; rejects early before any reply attrs
+    are populated.
+  - `introspect` — switches the post-ROPC claim source from local
+    JWT-payload decode to RFC 7662 introspection at `introspectUrl`.
+    Catches token revocation, admin-disabled-since-issuance, and
+    provider key rotation. Validator rejects `introspect: true` without
+    a client secret (RFC 7662 calls are HTTP-Basic-authenticated).
+  - `refreshTokenCache` — only meaningful with `cache.enabled`. The
+    ROPC response's `refresh_token` rides out in
+    `&control:Tmp-String-9` so the cache layer stores it; a second
+    module instance `oidc[_<name>]_validate` (rlm_python3, same script,
+    `func_authorize = "validate"`) is rendered, and the policy calls
+    it on cache hit. The validator attempts `grant_type=refresh_token`
+    against the IdP: HTTP 200 confirms the session is alive, 400/401
+    triggers cache-entry invalidation + reject, network FAIL falls
+    through gracefully with the cached attrs intact.
+
+- **Per-instance OIDC K8s resources:**
+  - One module ConfigMap (`<fullname>-oidc[-<name>]`) for
+    `mods-enabled/oidc[_<name>]` — the rlm_python3 module instance
+    block.
+  - One policy ConfigMap (`<fullname>-oidc[-<name>]-policy`) for
+    `policy.d/oidc[_<name>]` — wraps the module with optional rlm_cache
+    cache-aside and cache-hit refresh-token validate.
+  - One client-secret Secret per instance (skipped under
+    `existingSecret`); `client_secret` rides into the pod via
+    `FREERADIUS_OIDC[_<NAME>]_CLIENT_SECRET` env.
+  - One TLS CA Secret per instance (skipped under `tls.existingSecret`),
+    mounted at `/etc/freeradius/certs-oidc[-<name>]/ca.crt`.
+
+- **Shared OIDC python library + per-instance wrappers.** A single
+  `<fullname>-oidc-py` ConfigMap renders the shared `oidc.py`
+  library — pure logic, no env reads, no module-level config — so one
+  bug fix to the library propagates to every instance on the next
+  `helm upgrade`. A single `<fullname>-oidc-python` ConfigMap carries
+  the per-instance wrappers as separate `data` keys (`oidc_default.py`,
+  `oidc_<name>.py`, …); each wrapper imports `oidc` and delegates
+  `authorize(p)` / `accounting(p)` / `validate(p)` over a `_CONFIG`
+  dict baked in at chart-render time. Both ConfigMaps are mounted
+  under `/etc/freeradius/scripts/` via subPath mounts so `python_path`
+  resolves `import oidc` to the shared file.
+
+- `cache oidc[_<name>]_cache` rlm_cache instance per OIDC instance
+  whose `cache.enabled: true`, rendered into the shared
+  `mods-enabled/cache` file. The cache key is hard-coded to
+  `oidc:<name>:%{User-Name}` (non-overridable) to prevent silent
+  cross-instance cache hits on common usernames.
+
+- OIDC namespacing helpers
+  `freeradius.oidc.{resolveInstances, envVarPrefix, moduleName,
+  validateModuleName, policyName, rolesPolicyName, groupsPolicyName,
+  modKey, policyKey, scriptKey, cacheName, cacheKey, dispatchArms,
+  clientSecretName, tlsVolumeName, tls.{enabled, createSecret,
+  secretName, caKey, caFilePath}}` — single source of truth for the
+  legacy-default-vs-named naming split.
+
+- `freeradius.validate.oidcInstances` + `freeradius.validate.oidcClientBindings`
+  — per-instance schema validation (`tokenUrl` required;
+  `introspect: true` requires `introspectUrl` and a client secret;
+  `refreshTokenCache: true` requires `cache.enabled: true` and a Redis
+  backend; `roleMappings` requires `rolesClaim`; instance-name regex;
+  TLS `caCert`/`existingSecret` exclusivity; `extraEnvVars` must not
+  shadow the per-instance `FREERADIUS_OIDC[_<NAME>]_` prefix) plus a
+  typo guard on every `clients.<x>.oidc` reference.
+
+- **`values.schema.json`** — JSON Schema draft-07, type-only walk of
+  `values.yaml` (matches the convention used by charts/adminer and
+  charts/open-appsec-injector). Catches gross value-type mismatches at
+  `helm install` / `helm template` / `helm lint` time without trying to
+  be a value-level lint. Nullable placeholders (e.g.
+  `gateway.existingGateway: ~`) are typed as `["string", "null"]` so
+  both the default and any user override validate. Regen helper at
+  `charts/freeradius/.gen-values-schema.py`; excluded from the package
+  via `.helmignore`.
+
+- **`.helmignore`** — first-class chart packaging excludes: standard
+  VCS / IDE patterns plus this repo's build helpers (`.gen-*.py`,
+  `ci/` render fixtures) and Claude-side artifacts (`.claude/`,
+  `CLAUDE.md`).
+
+- Bundled **Redis** subchart (Bitnami, `condition: redis.enabled`) as an
+  optional backend for the redis/cache modules. When enabled, the modules
+  auto-target the `<release>-redis-master` Service and pull the password from the
+  subchart Secret (`$ENV{FREERADIUS_MODS_REDIS_PASSWORD}`) via the new
+  `freeradius.redis.*` helpers.
+- `templates/modules/redis.yaml` + `modules.redis.*` — rlm_redis module
+  (`%{redis:...}` xlat), rendered as `<fullname>-mods-redis`, mounted at
+  `mods-enabled/redis`, with a config-checksum annotation for rollout-on-change.
+- `templates/modules/cache.yaml` + `modules.cache.*` — standalone rlm_cache
+  module with a pluggable `driver` (`rbtree` in-memory, `redis` reusing the
+  redis connection, `memcached`), rendered as `<fullname>-mods-cache` and
+  mounted at `mods-enabled/cache`. Includes the required `update { }` section
+  (`modules.cache.update`, default `&reply: += &reply:`) — rlm_cache refuses to
+  load without at least one map. The driver value and a non-empty `update` are
+  both checked by the new `freeradius.validate.cache` aggregator rule.
+- NetworkPolicy egress to the Redis backend on `modules.redis.port` (TCP),
+  rendered when `rlm_redis` or the redis-driver cache is enabled. Skipped under
+  `networkPolicy.allowExternalEgress` (which already permits all egress).
+- `templates/Issuer.yaml` — self-signed CA chain bootstrapped via cert-manager
+  (a self-signed `Issuer` → a CA `Certificate` with `isCA: true` → a CA
+  `Issuer`). Rendered when the chart issues via cert-manager and no external
+  `tls.certManager.issuerRef.name` is supplied; the RADSEC and gateway leaf
+  Certificates then reference this chart-managed CA Issuer.
+- `tls.certManager.ca.{commonName,duration,renewBefore,secretName}` — tuning
+  knobs for the bootstrapped CA.
+- `freeradius.tls.useCertManager` helper — single source of truth for whether
+  the chart issues TLS through cert-manager (vs. the in-template genCA path).
+- `templates/gateway-api/EnvoyProxy.yaml` — JSON access-log format on the
+  chart-managed EnvoyProxy CR: bytes received/sent, duration, client IP,
+  method/path, headers, response code/flags, upstream host. Renders by
+  default under `gateway.infrastructure: envoy`.
+- **End-to-end PROXY protocol v1 for RADSEC** — new `gateway.proxyProtocol`
+  flag. When `true` (and `gateway.implementation: gateway-api` +
+  `gateway.infrastructure: envoy` + `tls.enabled: true`), the chart wires
+  PROXY v1 from the Envoy data plane into the RADSEC `listen { }` block in
+  one shot:
+  - Renders `templates/gateway-api/BackendTrafficPolicy.yaml` — an Envoy
+    Gateway `BackendTrafficPolicy` (`gateway.envoyproxy.io/v1alpha1`)
+    scoped to the FreeRADIUS Service's `tls-radsec` port via
+    `targetRefs[].sectionName`, with `proxyProtocol.version: V1`. Envoy
+    prepends a PROXY v1 header to every TCP connection it opens to the
+    pod. Other Service ports (UDP auth/acct/coa, optional `udp-status`)
+    are not in scope.
+  - Forces `proxy_protocol = yes` on the RADSEC `listen { }` block via an
+    `or` with the existing `sites.radsec.listen.proxy_protocol` knob — so
+    FreeRADIUS parses the PROXY header and replaces
+    `Packet-Src-IP-Address` with the real client IP. `clients.conf`
+    matching, accounting logs, and policy all see the real source.
+
+  v1 is pinned because FreeRADIUS 3.2.x parses v1 only on its TCP
+  listeners (v2 is undocumented in the receive path); the flag has no
+  effect on UDP auth/acct/coa, which can't accept PROXY headers
+  regardless. The standalone `sites.radsec.listen.proxy_protocol` knob
+  remains available for non-Envoy front-ends (HAProxy, AWS NLB
+  direct-to-pod, …).
+- **Per-pod Services for StatefulSet (`templates/Service-perPod.yaml`).** When
+  `kind: StatefulSet`, the chart now also renders one Service per replica named
+  `<fullname>-<ord>` alongside the main load-balanced Service and the headless
+  Service. Each per-pod Service targets exactly one pod via
+  `statefulset.kubernetes.io/pod-name` (the label kube-controller-manager adds
+  to every StatefulSet pod automatically). All knobs inherit from
+  `.Values.service.*` — no new values keys. Two intentional differences from
+  the main Service:
+  - `spec.externalTrafficPolicy` is hardcoded to `Local`. Each per-pod Service
+    has a single backing pod, so the cross-node traffic drop that `Local`
+    causes is exactly correct, and the client source IP is preserved end-to-
+    end (no kube-proxy SNAT). NAS IPs land in `Packet-Src-IP-Address` for
+    `clients.conf` matching.
+  - `spec.ports[].nodePort` is unset on all per-pod Services. K8s auto-
+    allocates a unique NodePort per pod — the main Service keeps the fixed
+    `service.nodePorts.*` knob; per-pod NodePorts would otherwise collide
+    cluster-wide.
+  Gated purely on `kind: StatefulSet`. No render under Deployment or
+  DaemonSet (their pods don't carry the `pod-name` label the selector needs).
+- **Gateway API routes fan out per-pod for StatefulSet.** When
+  `kind: StatefulSet` AND `gateway.implementation: gateway-api`, each chart-
+  managed route's `backendRefs` now lists one entry per replica targeting that
+  replica's per-pod Service (equal weight). UDPRoute auth / acct / coa and
+  TLSRoute radsec all fan out symmetrically. Deployment and DaemonSet keep a
+  single backendRef pointing at the main load-balanced Service. Combined with
+  per-pod `externalTrafficPolicy: Local`, this preserves the NAS source IP
+  end-to-end through the Envoy data plane.
+- `freeradius.service.portsList` and `freeradius.gateway.backendRefs` —
+  new shared helpers in `_helpers.tpl`. The ports list now has a single source
+  of truth used by both `Service.yaml` and `Service-perPod.yaml` (drift on
+  port additions becomes impossible). `backendRefs` centralises the
+  Deployment-vs-StatefulSet fan-out logic so future routes pick it up
+  automatically. All 26 existing Service / Gateway helm-unittest cases pass
+  unchanged.
+- `freeradius.validate.gatewayProxyProtocol` — hard-fails
+  `gateway.proxyProtocol: true` paired with `gateway.implementation: istio`,
+  `gateway.infrastructure: ""`, or `tls.enabled: false`. Each combination
+  would render a CR that can't function (BTP needs Envoy Gateway as the
+  data plane; FR-side parsing needs the RADSEC TCP listener), so the
+  validator catches it at `helm install` / `helm template` instead of at
+  apply time.
+- **`createDefaultInstance.{realm, homeServer, homeServerPool}`** — three
+  independent opt-in toggles for chart-managed peer-mesh proxy primitives.
+  Each emits one config piece named after `<fullname>` snake-cased (via the
+  new `freeradius.utils.snakeCase` helper):
+  - `realm: true` → `realm DEFAULT { auth_pool = <fullname>_auth_pool; acct_pool = <fullname>_acct_pool }`
+    appended to `templates/configmaps/realms.yaml`.
+  - `homeServer: true` → one `home_server <fullname>_<ord>_auth` and one
+    `<fullname>_<ord>_acct` per StatefulSet replica (`<fullname>-<ord>.<ns>.svc`
+    targeting the per-pod Service from `Service-perPod.yaml`). `secret` is
+    the literal `$ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}` — wire the env
+    var yourself via `extraEnvVarsSecret` and use the same expansion in the
+    matching `clients{}` entry. No chart-managed credentials path.
+  - `homeServerPool: true` → two `home_server_pool <fullname>_<auth|acct>_pool`
+    blocks (each `type = load-balance`) listing the per-pod home_servers.
+  All three silently skip on `kind != StatefulSet`. No cross-toggle
+  validation: enabling one without the others dangles refs and FreeRADIUS
+  fails loudly at startup (the desired feedback).
+- **`logging.*` knobs.** New top-level values block surfacing the
+  FreeRADIUS `log { }` directive set as Helm values: `destination` (`files`
+  / `syslog` / `stdout` / `stderr`), `colourise`, `file`, `syslog_facility`,
+  `stripped_names`, `auth`, `auth_badpass`, `auth_goodpass`, `msg_denied`.
+  Booleans render as native `yes`/`no` via `ternary`; `msg_denied` runs
+  through `| quote`. Default `destination: stdout` makes `kubectl logs`
+  work out of the box without further config. Rendered from
+  `templates/configmaps/configuration.yaml` whenever neither
+  `.Values.configurations` nor `.Values.configurationsConfigMap` overrides
+  the chart-managed body.
+- **`freeradius.isDaemonSet` template helper** mirrors
+  `freeradius.isStatefulSet` (case-insensitive kind match — returns the
+  literal string `"true"` for DaemonSet, empty otherwise). Useful for
+  "non-Deployment" gates via `or (include "freeradius.isStatefulSet" .)
+  (include "freeradius.isDaemonSet" .)`.
+
+### Changed
+
+- **`oidc.py` is more verbose for diagnostics.** No change to the runtime
+  contract; opaque failures turn into actionable log lines:
+  - `_post_form` now returns `(status, body, err)` where `err` is the
+    `repr()` of the caught `URLError` / `OSError` on network/TLS failure
+    (previously swallowed). `authorize()` and `validate()` surface it
+    into `radlog`, so:
+
+        oidc[keycloak]: token request failed (network/TLS): \
+            <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] ...>
+
+    instead of the prior bare `token request failed (network/TLS)`. The
+    same applies to introspection failures (new code path: introspect
+    network failure → `RLM_MODULE_FAIL` with the error surfaced, vs. the
+    prior bucket of "either revoked or network broken — can't tell").
+  - L_DBG entries around each HTTP call: `ROPC POST <url> (user=...)` /
+    `ROPC -> HTTP <status>`, `introspect POST <url>`, `refresh_token
+    POST <url>` / `refresh_token -> HTTP <status>`. Visible under
+    `radiusd -X`; lets you confirm the chart rendered the right
+    `tokenUrl` / `introspectUrl` without exec-into-pod + curl.
+  - **Token response visibility.** L_DBG: token-response metadata after a
+    successful ROPC (`token_type`, `expires_in`, `scope`, refresh? y/n) —
+    enough to verify scope/lifetime without leaking the bearer token.
+    L_AUTH: HTTP body on 4xx/5xx token responses (RFC 6749's
+    `{"error": "...", "error_description": "..."}`) — surfaces why the
+    IdP rejected the ROPC (bad credentials, client misconfigured, scope
+    denied) instead of just an HTTP code.
+  - **Claim visibility.** L_DBG after JWT decode / introspect: sorted
+    top-level claim keys, plus the resolved values at each configured
+    claim path (`required[]`, `rolesClaim`, `groupsClaim`). Lets you see
+    exactly what the IdP returned at the paths the chart cares about.
+    Top-level values are NOT logged — keys only, since values may carry
+    PII the operator didn't ask for.
+  - **"No roles" warning is now diagnostic.** Walks the configured
+    `rolesClaim` path one segment at a time and reports where it broke
+    (`segment X.Y missing; available at parent: [a, b, c]`). The Keycloak
+    case where the realm uses `realm_access.roles` but the chart was
+    configured for `resource_access.<client>.roles` now points at the
+    first missing segment instead of "no roles at <full path>".
+  - L_WARN when local JWT decode returns no claims (malformed token,
+    truncated body, etc.) — previously every downstream check
+    (`required`, `rolesClaim`, `groupsClaim`, `attributeMappings`)
+    silently saw an empty dict and either no-op'd or accepted the user.
+  - L_DBG: extracted role/group lists logged as a single line each
+    (`extracted N role(s): [...]`) instead of one log line per item.
+  - **id_token claims are now merged into the claim source.** Per OIDC
+    Core §3.1.3.3 the token endpoint returns an `id_token` alongside
+    `access_token` whenever the request carries the `openid` scope. The
+    id_token is the authoritative identity bearer (`sub`, `email`,
+    `name`, `preferred_username`, …) — claims the access_token
+    typically lacks. The module now decodes both and uses the union for
+    `required[]`, `rolesClaim`, `groupsClaim`, `attributeMappings`
+    (id_token wins on conflicts for shared registered claims; access-
+    token-only fields like `realm_access.roles` /
+    `resource_access.*` are untouched). Pure OAuth 2.0 providers that
+    don't emit id_token degrade silently. L_DBG also reports the
+    id_token-only vs access-token-only key sets so you can see which
+    bearer carried which claim. Introspection path is unchanged — when
+    `introspect: true`, RFC 7662 is the single source of truth.
+  - L_DBG: token-response extras dict (anything outside the standard
+    OIDC fields) — Keycloak's `not-before-policy`, Authentik's
+    `id_token_expires`, Azure's `ext_expires_in`, etc. — without baking
+    provider knowledge into the chart.
+  - L_DBG: `session_state` from the token response (when present) — lets
+    you trace the same session across renewal/refresh log lines.
+- **`sites/coa.yaml` refactored to listen-inside-server pattern.** Aligned
+  with the modern FreeRADIUS 3.x convention used by `default`,
+  `inner-tunnel`, `status`, `dhcp` (the upstream `sites-available/coa`
+  is the lone holdout still using listen-outside; we don't follow it).
+  Now renders as `server coa { listen { type = coa ... } recv-coa{} send-coa{} }`.
+  Two over-flexible knobs dropped from values: `sites.coa.listen.type`
+  (only `coa` is ever valid) and `sites.coa.listen.virtual_server` (the
+  server name must match the on-disk filename `sites-enabled/coa`).
+  `sites.coa.listen.ipaddr` remains. Migration: drop the two keys from
+  any values file overriding them.
+- **RADSEC site renamed `tls` → `radsec`** end-to-end. The chart's stock
+  RADSEC virtual server (file, ConfigMap data key, FreeRADIUS-internal
+  block names) now uses the protocol's actual name everywhere — the old
+  `tls`-named site collided visually with the in-pod TLS material
+  switch (`tls.enabled` / `tls.certificatesSecret`, which stay
+  untouched). Specifically:
+  - File: `templates/sites/tls.yaml` → `templates/sites/radsec.yaml`
+    (git-mv'd to preserve history); ConfigMap renamed
+    `<fullname>-sites-tls` → `<fullname>-sites-radsec`; data key `tls:` → `radsec:`;
+    in-pod mount path `sites-enabled/tls` → `sites-enabled/radsec`.
+  - FreeRADIUS-internal block names: `home_server tls`, `home_server_pool tls`,
+    `realm tls` (and their `home_server = tls` / `auth_pool = tls`
+    references) → `home_server radsec` / `home_server_pool radsec` /
+    `realm radsec`.
+  - values.yaml: the `sites.tls.*` block (`enabled`, `existingConfigMap`,
+    `cipher`, `privateKeyPassword`, `radsecSecret`) became `sites.radsec.*`.
+  - Secret / env / BYO: chart-managed credentials key
+    `sites-tls-privkey-password` → `sites-radsec-privkey-password`;
+    env var `FREERADIUS_SITES_TLS_PRIVKEY_PASSWORD` →
+    `FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`;
+    `auth.existingSecretPerPassword.sitesTlsPrivKeyPassword` →
+    `sitesRadsecPrivKeyPassword`.
+  - Top-level `tls.*` (RADSEC cert material —
+    `tls.enabled` / `tls.certificatesSecret` / `tls.certManager.issuerRef.*`)
+    is **unchanged** by this rename — these knobs describe
+    TLS-the-protocol, not the site name. (`tls.autoGenerated` /
+    `tls.certManager.create` are deprecated in this release for an
+    unrelated reason; see `### Deprecated` below.)
+  - `sites.tlsCache` / `cache_tls` / `sites-enabled/tls-cache`
+    (the EAP TLS session-resumption site) is **unchanged** — separate
+    feature, kept its existing name.
+
+  Breaking values change. Migration:
+
+      sites:
+    -   tls:
+    +   radsec:
+          enabled: true
+          cipher: "DEFAULT"
+          privateKeyPassword: ""
+          radsecSecret: ""
+
+      auth:
+        existingSecretPerPassword:
+    -     sitesTlsPrivKeyPassword:
+    +     sitesRadsecPrivKeyPassword:
+            name: my-secret
+            key:  privkey-password
+
+- **`st-common` dependency moved from the GitHub Pages HTTP repo to the
+  GHCR OCI registry.** `repository: oci://ghcr.io/startechnica/charts`
+  (was `https://startechnica.github.io/apps`). Same chart, same version
+  (0.1.21) — just a different fetch path. Aligns with the chart's own
+  publish path (`.github/workflows/release.yaml` pushes to
+  `oci://ghcr.io/<owner>/charts`) and skips the Pages-index round-trip.
+  `helm dependency build` re-fetches; existing renders are byte-identical.
+- **cert-manager is now used automatically (BREAKING).** Whenever the
+  cert-manager API is detected on the cluster, the chart issues RADSEC and
+  gateway certificates through cert-manager; when the API is absent it falls
+  back to the in-template self-signed genCA path. There is no longer a toggle
+  to force the genCA path on a cluster where cert-manager is installed — to
+  opt out of cert-manager issuance for a given release, pre-create a Secret
+  and set `tls.certificatesSecret`. The `validate.tls` hard-fail is removed
+  (auto-generation handles every case); `validate.eap` keeps the `methods` /
+  `default_eap_type` checks but drops the `tlsConfig` cert-source clause.
+- `tls.certManager.issuerRef.name` now defaults to `""` (was
+  `selfsigned-issuer`). Empty bootstraps a chart-managed CA; set it to use a
+  pre-existing Issuer/ClusterIssuer and skip the bootstrap.
+- **TLS auto-generation is now implicit (BREAKING).** When the matching
+  feature is enabled (`tls.enabled`, `modules.eap.enabled`,
+  `modules.sql.tls.enabled`) and no `*certificatesSecret` / `*certificates_secret`
+  is supplied, the chart auto-generates TLS material — via cert-manager when
+  its API is present, otherwise via the shared genCA path. The previous opt-in
+  toggles (`tls.autoGenerated`, `modules.sql.tls.autoGenerated`,
+  `modules.eap.tlsConfig.autoGenerated`) are no longer consulted; see
+  `### Deprecated` below. To opt out of chart-managed generation, set the
+  corresponding `*certificatesSecret` / `*certificates_secret`.
+- Replaced the env-vars ConfigMap (`templates/configmap/envvars.yaml`) with a
+  Secret (`templates/secret/envvars.yaml`, keeping the `<fullname>-envvars`
+  name). Dropped the unused `FREERADIUS_ENABLE_TLS` / `FREERADIUS_SITES_NAMESPACE`
+  keys (nothing read them — TLS and site config are rendered directly into the
+  per-site ConfigMaps); the only remaining content is the conditional
+  `FREERADIUS_MODS_REST_PASSWORD` fallback, which now lives in a Secret rather
+  than a ConfigMap. The Deployment `envFrom` switches to `secretRef` for the
+  chart-managed env vars (the `existingConfigmap` BYO path still uses
+  `configMapRef`).
+- **Routes attach to specific Gateway listeners via `sectionName`.** The
+  chart-rendered UDPRoute (`auth`/`acct`/`coa`) and TLSRoute (`radsec`)
+  now emit `spec.parentRefs[].sectionName` matching the listener name in
+  the chart's Gateway, so each route attaches to one specific listener
+  rather than all compatible listeners on the parent Gateway. Threaded
+  through `freeradius.gateway.routeParentRefs` (new optional `sectionName`
+  argument) — routes whose `parentRefs` are overridden via
+  `gateway.{udpRoute,tlsRoute}.parentRefs` pass through verbatim and are
+  unaffected. Same for the ListenerSet attachment path
+  (`gateway.listenerSet.enabled`), where listener names are user-defined.
+- **`radiusd.conf` body moved into `templates/configmaps/configuration.yaml`.**
+  The 89-line inline default in `.Values.configurations` and the 1214-line
+  upstream-style `files/radiusd.conf` (which used `/var/log/freeradius`
+  paths that didn't match the chart's pod layout) are both gone. The
+  chart-managed body lives in the configmap template as a single source of
+  truth. **Escape hatches preserved:** `.Values.configurations` still
+  accepts an inline-string override (run through `tplvalues.render`);
+  `.Values.configurationsConfigMap` still accepts a BYO ConfigMap name.
+  Application.yaml mount + volume gates dropped (always present unless
+  BYO). `files/radiusd.conf` deleted.
+- **Log destination control moved to the configmap.** The previously-
+  hardcoded `-l stdout` CLI override on the FreeRADIUS container args
+  dropped from `templates/Application.yaml`; the rendered `radiusd.conf`
+  `log { destination = ... }` (driven by `.Values.logging.destination`) is
+  now the single source of truth. New default `logging.destination: stdout`
+  preserves the previous behavior — set `logging.destination: files`
+  (+ `logging.file: <path>`) to write to disk.
+- **`podManagementPolicy` default flipped from `""` to `Parallel`** for
+  fresh StatefulSet installs (faster rollouts; the FreeRADIUS workload has
+  no inter-pod startup ordering requirement). **IMMUTABLE on existing
+  StatefulSets** — Kubernetes rejects updates to this field with
+  `Forbidden: updates to statefulset spec for fields other than 'replicas',
+  'ordinals', 'template', 'updateStrategy', 'persistentVolumeClaimRetention
+  Policy' and 'minReadySeconds' are forbidden`. Recovery on a live release:
+  `kubectl delete sts <release> -n <ns> --cascade=orphan` (preserves
+  pods + PVCs) before the new spec lands. No effect on Deployment /
+  DaemonSet workloads.
+- **Snake_case rename batch — remaining camelCase FreeRADIUS-directive
+  mirrors.** Same-release rename (the matching v1.2.0 surface flipped to
+  snake_case along the way), so old keys are silently ignored:
+  - `modules.sql.{readGroups, readProfiles}` → `read_groups` / `read_profiles`
+  - `modules.json.encode.value.{singleValueAsArray, enumAsInteger, datesAsInteger, alwaysString}` → snake_case
+  - `modules.cache.maxEntries` (and per-instance `modules.cache.instances.<name>.maxEntries`) → `max_entries`
+  - `modules.eap.{timerExpire, ignoreUnknownEapTypes, ciscoAccountingUsernameBug, maxSessions}` → snake_case
+  - `modules.eap.defaultType` → `default_eap_type` (validator + error-message text updated alongside; new key matches the FreeRADIUS native directive verbatim)
+- **`modules.eap.tlsConfig.cipher_list` string → `[]string`.** The chart
+  joins entries with the OpenSSL `:` separator via
+  `freeradius.utils.joinOrDefault`. Default `["DEFAULT"]`; empty list and
+  nil both fall through to `DEFAULT`. Mirrors the same change shipped for
+  `sites.radsec.tls.cipher_list`. `values.schema.json` rejects the old
+  scalar string form.
+- **`sites.radsec.tls.cipher_list` string → `[]string`** (same shape +
+  join semantics as `modules.eap.tlsConfig.cipher_list`). Multi-token
+  example: `["HIGH", "!aNULL", "!MD5"]` → `HIGH:!aNULL:!MD5`.
+- **EnvoyProxy access-log JSON trimmed to TCP-relevant fields.**
+  `templates/gateway-api/EnvoyProxy.yaml` keeps `bytes_received` /
+  `bytes_sent` / `client_ip` / `duration` / `start_time` / `protocol` /
+  `upstream_host`. Drops the HTTP-only `%REQ(:AUTHORITY)%`,
+  `%REQ(X-ENVOY-ORIGINAL-METHOD)%`, `%REQ(X-ENVOY-ORIGINAL-PATH)%`,
+  `%REQ(X-PROXY-USER)%`, `%REQ(REMOTE-USER)%`, `%REQ(X-REQUEST-ID)%`,
+  `%RESPONSE_CODE%`, `%RESPONSE_FLAGS%` operators (all evaluate to empty
+  over a raw TCP RADSEC listener) plus the commented `basic_auth_user`
+  placeholder.
+- `templates/modules/oidc/{oidc, oidc-policy, secret, secret-tls}.yaml` no
+  longer emit the `app.firmansyah.id/oidc-instance: <name>` metadata label
+  — vendor-prefixed, never consumed by any selector / NetworkPolicy /
+  RBAC / dashboard inside the chart. Pure metadata stripper; chart
+  correctness unaffected.
+- `templates/Service-headless.yaml` gate widened from `if isStatefulSet`
+  to `if or isStatefulSet isDaemonSet` — DaemonSet pods get the same
+  DNS-based per-pod discovery (one A record per pod IP) StatefulSet uses.
+  Deployment still skips (workload-wide load-balanced ClusterIP suffices).
+- Collapse nested `metadata.annotations` rendering in
+  `templates/Application.yaml` + `templates/Service.yaml` into a single
+  `st-common.tplvalues.merge` + `st-common.tplvalues.render` pass. Outer
+  `if or A B` already gates non-empty input; inner per-source `if` was
+  redundant. Matches the pattern in `templates/Service-headless.yaml`.
+- `values.yaml` now re-states `redis.metrics.extraArgs: {}` to match the
+  Bitnami redis subchart's map shape — makes the contract explicit so a
+  downstream override that hands a list trips a parse failure rather than
+  a `coalesce.go: cannot overwrite table with non table for
+  redis.metrics.extraArgs (map[])` warning at template time.
+
+### Removed (BREAKING — see Upgrading)
+
+- **Dedicated Keycloak module removed end-to-end.** The 1.1.0 top-level
+  `keycloak.*` block — `enabled`, `mode`, `url`, `realm`, `clientId`,
+  `clientSecret`, `scope`, `connectTimeout`, `roleAttribute`,
+  `roleMapper`, `denyWithoutRole`, `roleMappings`, `tls.*`, `cache.*` —
+  is gone. So are
+  `templates/modules/mods-config/keycloak/configmap-{lua,policy,rest}.yaml`,
+  every `freeradius.keycloak.*` helper, `freeradius.validate.keycloak*`
+  validators, the Keycloak coordinate env vars (`KC_*` /
+  `FREERADIUS_KEYCLOAK_*`) injected into the pod, the
+  `clients.<x>.keycloak` NAS binding, and the
+  `Auth-Type REST { keycloak_rest }` wiring in `sites/inner-tunnel`.
+  Migrate to the new generic `modules.oidc.*` module — same JWT/ROPC
+  flow against any OIDC provider, plus `groupMappings` /
+  `attributeMappings` / `require` / `introspect` / `refreshTokenCache`.
+  NAS binding is now `clients.<x>.oidc: <name>`. See
+  **Upgrading → Keycloak module removed; migrate to `modules.oidc.*`**
+  in the README.
+- **`lua` mapper-script mode removed.** The 1.1.0 chart accepted
+  `keycloak.mode: lua` via rlm_lua, but rlm_lua is not bundled in
+  `freeradius/freeradius-server:3.2.8` (the chart's default image), so
+  enabling it required a custom image. The new `modules.oidc.*` module
+  is rlm_python3-only — bundled in the stock image, no custom build
+  needed.
+- **`keycloak.mode: rest` removed.** `python` mode was a strict
+  superset (same ROPC POST + JWT-decode for role extraction, via the
+  bundled rlm_python3) so the rest variant added nothing but config
+  surface; gone along with the dedicated Keycloak module.
+
+### Deprecated
+
+- **TLS auto-generation toggles** `tls.autoGenerated`,
+  `tls.certManager.create`, `modules.sql.tls.autoGenerated`, and
+  `modules.eap.tlsConfig.autoGenerated` — all four still accepted in
+  values for backwards compatibility, but no longer consulted by the
+  templates. Auto-generation is now implicit (see `### Changed` above).
+  `NOTES.txt` fires a deprecation advisory whenever any of these is set to
+  a non-default value:
+
+      DEPRECATION: the following TLS auto-generation toggles are no longer
+      consulted by the chart and will be removed in the next major release.
+      …
+        - tls.autoGenerated                       (RADSEC leaf is now auto-generated implicitly)
+        - tls.certManager.create: false           (no longer forces the genCA path; …)
+        - modules.sql.tls.autoGenerated: false    (no longer suppresses generation; …)
+        - modules.eap.tlsConfig.autoGenerated: false   (no longer suppresses generation; …)
+
+  Migration (no action required for the default case — auto-generation
+  Just Works):
+
+      tls:
+        enabled: true
+      - autoGenerated: true            # remove — now implicit
+      - certManager:
+      -   create: true                 # remove — now implicit
+
+      modules:
+        sql:
+          tls:
+            enabled: true
+      -     autoGenerated: false       # if you relied on this to suppress
+      +     certificatesSecret: my-sql-tls   # generation, BYO a Secret instead
+
+        eap:
+          enabled: true
+          tlsConfig:
+      -     autoGenerated: false       # if you relied on this to suppress
+      +     certificates_secret: my-eap-tls  # generation, BYO a Secret instead
+
+  Marked `deprecated: true` in `values.schema.json` for all four properties.
+  Slated for removal in the next major bump.
+
+### Fixed
+
+- Certificate / Issuer templates no longer emit an invalid `apiVersion: false`
+  manifest when the cert-manager API is absent. The
+  `st-common.capabilities.certmanager*` helpers return the string `"false"`
+  (truthy in templates); the gates now test it explicitly via
+  `freeradius.tls.useCertManager` / `ne … "false"`.
+- `templates/configmaps/clients.yaml` no longer fails to render when the
+  `clients` map carries non-client scalar keys (`includeFile`,
+  `existingConfigMapName`) — it skips non-map entries via `kindIs "map"`
+  instead of a hand-maintained `omit` list.
+- `image.debug` (previously documented but unwired) now gates the container
+  args between `-f` (normal) and `-fxx` (debug), so FreeRADIUS no longer starts
+  in verbose debug mode by default.
+- Added a writable `emptyDir` at `/var/run/radiusd` so the daemon can write its
+  pidfile under `readOnlyRootFilesystem: true`.
+- OIDC dispatch chain is now also rendered into `sites/inner-tunnel` (it was
+  only emitted into `sites/default` despite the Added-note promising both).
+  EAP-TTLS / PEAP tunnelled auth bound via `clients.<x>.oidc: <instance>` now
+  reaches `oidc_<name>_authorize` — previously the inner-tunnel authorize
+  section fell straight through to `pap` with no OIDC call. `Packet-Src-IP-
+  Address` / `Packet-Src-IPv6-Address` still reflect the outer NAS inside the
+  tunnel (RFC 5281 §11.2), so the same NAS-binding logic works unchanged.
+- OIDC dispatch arms no longer render the `if (Packet-Src-IP-Address …) {`
+  directive glued onto the trailing comment line of the preamble. The ipv6
+  arm's terminating `-}}` was eating the newline + leading indent before the
+  `{{ if $i }}elsif{{ else }}if{{ end }}` action, which produced
+  ``…runs before `pap`.if (…) {`` — a single comment line followed by an
+  unmatched closing `}`, which would fail `radiusd -C`. Changed to `}}` so
+  the trailing newline is preserved. Affected both `sites/default` and the
+  newly-wired `sites/inner-tunnel` (the bug existed in `default` since 1.2.0
+  but only fired when at least one `clients.<x>.oidc` binding was set).
+- OIDC dispatch arms now guard each `Packet-Src-IP[v6]-Address` comparison
+  with an attribute-existence check (`&Attr && &Attr <= "..."`) so an
+  IPv4-only request doesn't bail with
+  `Failed casting lhs operand: Failed resolving "" to IPv6 address` when
+  the OR falls through to the IPv6 leg (and vice versa for IPv6-only).
+  Without the guard, unlang resolves the absent attribute to `""` and the
+  cast to IPv6 fails at runtime; the cast error stamps Module-Failure-
+  Message and the arm evaluates as false, so dispatch silently misses
+  the matching instance.
+- OIDC role-mapping and group-mapping policies (`oidc[_<name>]_roles`,
+  `oidc[_<name>]_groups`) now guard the multi-value `[*]` comparison on
+  attribute existence: `&control:<attr> && &control:<attr>[*] == "..."`.
+  Without the guard, when the IdP returns no roles at the configured
+  `rolesClaim` (or groups at `groupsClaim`), the `[*]` iterator hits an
+  absent attribute and FreeRADIUS bails with
+  `ERROR: Failed retrieving values required to evaluate condition`,
+  skipping the remaining arms. The auth still completes via the outer
+  `if (ok) { Auth-Type := Accept }` set by `oidc_<name>_authorize`, but
+  every "user has no role" or "user has no group" case stamps an ugly
+  error in the log. Guard matches the same pattern used for the dispatch
+  arms.
+- OIDC dispatch arms now use the `<=` IP-in-prefix operator instead of `==`
+  for the `clients.<x>.{ipv4addr,ipv6addr}` match. `==` is exact-string
+  equality in unlang, so any CIDR value (`0.0.0.0/0`, `192.168.1.0/24`,
+  `::/0`) silently missed — the dispatch always fell through, NAS-bound
+  OIDC never fired. The `<=` operator (FR3 `unlang(5)` §CONDITIONS, "checking
+  that an IP address is contained within a network") handles both CIDR and
+  single hosts uniformly: a bare host like `172.18.0.1` is a /32 prefix
+  containing only itself, so the same render works for both. This matches
+  the semantic of the underlying `clients{}` block (which has always parsed
+  CIDR natively for shared-secret matching).
+
 ## 1.1.0 (2026-05-29)
 
 Major release. End-to-end modernization: values.yaml restructured with

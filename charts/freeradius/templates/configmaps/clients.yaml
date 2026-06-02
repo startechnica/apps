@@ -1,0 +1,45 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if not .Values.clients.existingConfigMapName }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-clients" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  clients.conf: |-
+    {{- /* FreeRADIUS `client { }` blocks hold a single address — `ipaddr` /
+           `ipv4addr` / `ipv6addr` all map to the same underlying field, so
+           putting both v4 and v6 in one block silently keeps only the last
+           parsed value. When a values entry sets both, the chart emits TWO
+           sibling blocks: `<name>` for the IPv4 address and `<name>_v6` for
+           the IPv6 address, sharing every other directive (secret, proto,
+           nas_type, virtual_server, coa_server, require_message_authenticator,
+           limit{}). v4-only and v6-only entries emit a single block. */}}
+    {{- range $name, $client := .Values.clients }}
+    {{- if kindIs "map" $client }}
+    {{- $hasV4 := and $client.ipv4addr (ne $client.ipv4addr "") -}}
+    {{- $hasV6 := and $client.ipv6addr (ne $client.ipv6addr "") -}}
+    {{- if $hasV4 }}
+    client {{ $name }} {
+        ipaddr = {{ $client.ipv4addr | quote }}
+        {{- include "freeradius.clientBlockBody" $client | nindent 8 }}
+    }
+    {{- end }}
+    {{- if $hasV6 }}
+    client {{ if $hasV4 }}{{ printf "%s_v6" $name }}{{ else }}{{ $name }}{{ end }} {
+        ipv6addr = {{ $client.ipv6addr | quote }}
+        {{- include "freeradius.clientBlockBody" $client | nindent 8 }}
+    }
+    {{- end }}
+    {{- end }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,15 @@
+dependencies:
+- name: st-common
+  repository: oci://ghcr.io/startechnica/charts
+  version: 0.1.21
+- name: mariadb
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 20.5.9
+- name: postgresql
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 16.7.27
+- name: redis
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 25.5.3
+digest: sha256:f441ef33e937ebd5861af4c259376efb5d72d1098b6b6fc02da536ac455be043
+generated: "2026-05-31T11:06:27.766104+07:00"

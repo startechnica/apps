@@ -17,7 +17,7 @@ Auto-derive `allowedRoutes.namespaces.from` for the chart-rendered listeners:
 apiVersion: {{ include "st-common.capabilities.networkingGatewayGateway.apiVersion" . }}
 kind: Gateway
 metadata:
-  name: {{ include "st-common.gateway.fullname" . }}
+  name: {{ include "freeradius.gateway.fullname" . }}
   namespace: {{ $gwNs | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
@@ -25,6 +25,13 @@ metadata:
   {{- end }}
 spec:
   gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  {{- if eq .Values.gateway.infrastructure "envoy" }}
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: {{ include "freeradius.gateway.envoyProxy.name" . }}
+  {{- end }}
   {{- if .Values.gateway.listeners }}
   listeners: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listeners "context" $) | nindent 4 }}
   {{- else }}

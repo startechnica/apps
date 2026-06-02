@@ -9,6 +9,7 @@
 .bzr/
 .bzrignore
 .claude/
+.debug/
 .hg/
 .hgignore
 .svn/
@@ -28,6 +29,7 @@
 # OWNERS file for Kubernetes
 OWNERS
 
-# Helm dependency build artifacts (downloaded subcharts + lock)
-charts/*/charts/
-charts/*/Chart.lock
+# Helm dependency build artifacts (downloaded subcharts).
+# Chart.lock IS committed so ArgoCD's `helm dependency build` pulls pinned
+# OCI tags instead of range-resolving via Docker Hub's (deprecated) tags/list.
+charts/**/charts/

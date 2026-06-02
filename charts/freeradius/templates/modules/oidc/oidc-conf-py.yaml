@@ -1,0 +1,87 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Single ConfigMap holding one rlm_python3 wrapper key per
+`modules.oidc.instances.<name>`. Per-instance config is baked in at
+chart-render time by Helm — only `client_secret` (sensitive) is read
+from env. Each wrapper delegates to `oidc.authorize / accounting /
+validate` (the shared library rendered separately by `oidc-py.yaml`).
+
+  ConfigMap: `<fullname>-oidc-python`
+  Keys:
+    default → `oidc_default.py`
+    <name>  → `oidc_<name>.py`
+
+The shared library (`oidc.py`) and the per-instance wrappers all land in
+`/etc/freeradius/scripts/` (via subPath mounts in the pod spec), and
+`python_path = "/etc/freeradius/scripts"` resolves `import oidc` to the
+shared file.
+*/}}
+
+{{- if .Values.modules.oidc.enabled }}
+{{- $resolved := include "freeradius.oidc.resolveInstances" . | fromYaml }}
+{{- $fullname := include "st-common.names.fullname" . }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-oidc-python" $fullname }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+{{- range $name, $cfg := $resolved.instances }}
+{{- $scriptKey := include "freeradius.oidc.scriptKey" (dict "name" $name) }}
+{{- $envPrefix := include "freeradius.oidc.envVarPrefix" (dict "name" $name) }}
+{{- $hasTls := include "freeradius.oidc.tls.enabled" (dict "instance" $cfg) }}
+  {{ $scriptKey }}: |-
+    """
+    Per-instance wrapper for OIDC instance `{{ $name }}`. Config is baked
+    in by Helm at chart-render time; only `client_secret` (sensitive)
+    comes from the per-instance Secret via env (`{{ $envPrefix }}CLIENT_SECRET`).
+    """
+
+    import os
+    import oidc
+
+    _CONFIG = {
+        "instance":            "{{ $name }}",
+        "log_prefix":          "oidc",
+        "token_url":           "{{ $cfg.tokenUrl }}",
+        "introspect_url":      "{{ default "" $cfg.introspectUrl }}",
+        "client_id":           "{{ default "freeradius" $cfg.clientId }}",
+        "client_secret":       os.environ.get("{{ $envPrefix }}CLIENT_SECRET"),
+        "scope":               "{{ default "" $cfg.scope }}",
+        "ca_file":             {{ if $hasTls }}"{{ include "freeradius.oidc.tls.caFilePath" (dict "name" $name "instance" $cfg "context" $) }}"{{ else }}None{{ end }},
+        "insecure":            {{ ternary "True" "False" $cfg.tls.insecure }},
+        "timeout":             {{ default "4.0" $cfg.connectTimeout }},
+        "role_attribute":      "{{ default "Class" $cfg.roleAttribute }}",
+        "roles_claim_path":    "{{ default "" $cfg.rolesClaim }}",
+        "group_attribute":     "{{ default "Class" $cfg.groupAttribute }}",
+        "groups_claim_path":   "{{ default "groups" $cfg.groupsClaim }}",
+        "group_mappings":      {{ $cfg.groupMappings | default list | toJson }},
+        "attribute_mappings":  {{ $cfg.attributeMappings | default list | toJson }},
+        "required":            {{ $cfg.require | default list | toJson }},
+        "introspect":          {{ ternary "True" "False" $cfg.introspect }},
+        "refresh_token_cache": {{ ternary "True" "False" $cfg.refreshTokenCache }},
+    }
+
+
+    def authorize(p):
+        return oidc.authorize(p, _CONFIG)
+
+
+    def accounting(p):
+        return oidc.accounting(p)
+
+
+    def validate(p):
+        return oidc.validate(p, _CONFIG)
+{{- end }}
+{{- end }}

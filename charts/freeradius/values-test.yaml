@@ -1,5 +1,5 @@
 persistence:
-  enabled: true
+  enabled: false
 #   storageClass: 
 
 service:
@@ -8,6 +8,8 @@ service:
   ipFamilyPolicy: PreferDualStack
 
 modules:
+  cache:
+    driver: redis
   sql:
     enabled: true
     dialect: mysql

@@ -1,0 +1,169 @@
+suite: Application (Deployment / StatefulSet)
+release:
+  name: my-radius
+  namespace: radius
+templates:
+  - templates/**
+tests:
+  - it: defaults to a Deployment with replicas=1 and no volumeClaimTemplates
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 1
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: metadata.name
+          value: my-radius-freeradius
+
+  - it: omits replicas when HPA is enabled
+    set:
+      horizontalPodAutoscaler.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: renders as StatefulSet when kind=StatefulSet
+    set:
+      kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+      skipEmptyTemplates: true
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.serviceName
+          value: my-radius-freeradius-headless
+
+  - it: emits volumeClaimTemplates when StatefulSet + persistence and no existingClaim
+    set:
+      kind: StatefulSet
+      persistence.enabled: true
+    documentSelector:
+      path: kind
+      value: StatefulSet
+      skipEmptyTemplates: true
+    asserts:
+      - exists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: data
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 8Gi
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+          any: true
+
+  - it: skips volumeClaimTemplates when StatefulSet + BYO existingClaim
+    set:
+      kind: StatefulSet
+      persistence.enabled: true
+      persistence.existingClaim: my-byo-pvc
+    documentSelector:
+      path: kind
+      value: StatefulSet
+      skipEmptyTemplates: true
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: my-byo-pvc
+
+  - it: skips volumeClaimTemplates when StatefulSet + persistence disabled (noprov)
+    set:
+      kind: StatefulSet
+      persistence.enabled: false
+    documentSelector:
+      path: kind
+      value: StatefulSet
+      skipEmptyTemplates: true
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+
+  - it: rejects an invalid workload kind
+    set:
+      kind: Job
+    asserts:
+      - failedTemplate:
+          errorPattern: 'kind must be one of \[Deployment, StatefulSet, DaemonSet\]'
+
+  - it: adds the radsec container port when tls is enabled
+    set:
+      tls.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: radsec
+            containerPort: 2083
+            protocol: TCP
+
+  - it: adds the db-bootstrap init container when sql is enabled with a supported dialect
+    set:
+      modules.sql.enabled: true
+      modules.sql.dialect: mysql
+      externalDatabase.host: mariadb.example.local
+      externalDatabase.user: radius
+      externalDatabase.password: radiuspw
+      externalDatabase.database: radius
+      bootstrap.database.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers
+          content:
+            name: db-bootstrap
+          any: true
+
+  - it: does not add the db-bootstrap init container when bootstrap.database is disabled
+    set:
+      modules.sql.enabled: true
+      modules.sql.dialect: mysql
+      externalDatabase.host: mariadb.example.local
+      externalDatabase.user: radius
+      externalDatabase.password: radiuspw
+      externalDatabase.database: radius
+      bootstrap.database.enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.initContainers
+          content:
+            name: db-bootstrap
+          any: true

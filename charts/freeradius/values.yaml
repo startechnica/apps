@@ -129,96 +129,30 @@ image:
 ## clients map, and extra environment variables / startup flags.
 ## =============================================================================
 
-## @param architecture FreeRADIUS architecture (`standalone` or `replication`)
+## @param logging.destination Where log lines go: `files` (write to `logging.file`), `syslog` (use `logging.syslog_facility`), `stdout`, or `stderr`. The `-X` debug flag overrides this to stdout at runtime regardless.
+## @param logging.colourise Highlight WARN / ERROR lines on stderr / stdout. No-op when output is not a TTY.
+## @param logging.file Log file path when `destination: files`. Defaults to `${logdir}/radius.log` (interpolated by FreeRADIUS at startup using the `logdir` from radiusd.conf, not by Helm).
+## @param logging.syslog_facility Syslog facility used when `destination: syslog`. Allowed values are OS-dependent; `daemon` is the conventional default.
+## @param logging.stripped_names When `false` (default), log the raw `User-Name` attribute; when `true`, log the stripped form. The chart default matches FreeRADIUS's upstream default.
+## @param logging.auth Log every Access-Accept / Access-Reject result.
+## @param logging.auth_badpass Log the offered password when authentication is rejected. Requires `auth: true`. Off by default — secrets in logs are a footgun.
+## @param logging.auth_goodpass Log the offered password when authentication succeeds. Requires `auth: true`. Off by default — secrets in logs are a footgun.
+## @param logging.msg_denied Reply message returned when the user exceeds the Simultaneous-Use limit. Rendered as a quoted string.
 ##
-architecture: standalone
+logging:
+  destination: stdout
+  colourise: true
+  file: ${logdir}/radius.log
+  syslog_facility: daemon
+  stripped_names: false
+  auth: false
+  auth_badpass: false
+  auth_goodpass: false
+  msg_denied: "You are already logged in - access denied"
 
-## @param configurations Inline FreeRADIUS configuration (rendered into a ConfigMap and mounted as `/etc/freeradius/radiusd.conf`). Leave empty to use the upstream image defaults.
-##
-configurations: |
-  prefix = /usr
-  exec_prefix = /usr
-  sysconfdir = /etc
-  localstatedir = /var
-  sbindir = ${exec_prefix}/sbin
-  logdir = /var/log/freeradius
-  raddbdir = /etc/freeradius
-  radacctdir = ${logdir}/radacct
+configurations: ""
 
-  name = radiusd
-
-  confdir = ${raddbdir}
-  modconfdir = ${confdir}/mods-config
-  certdir = ${confdir}/certs
-  cadir   = ${confdir}/certs
-  run_dir = ${localstatedir}/run/${name}
-
-  db_dir = ${raddbdir}
-  libdir = /usr/lib/freeradius
-  pidfile = ${run_dir}/${name}.pid
-  max_request_time = 30
-  cleanup_delay = 5
-  max_requests = 16384
-  hostname_lookups = no
-
-  unlang {
-  }
-
-  log {
-    destination = files
-    colourise = yes
-    file = ${logdir}/radius.log
-    syslog_facility = daemon
-    stripped_names = no
-    auth = no
-    auth_badpass = no
-    auth_goodpass = no
-
-    msg_denied = "You are already logged in - access denied"
-  }
-
-  checkrad = ${sbindir}/checkrad
-
-  ENV {
-  }
-
-  security {
-    allow_core_dumps = no
-    max_attributes = 200
-    reject_delay = 1
-    status_server = yes
-    require_message_authenticator = auto
-    limit_proxy_state = auto
-    allow_vulnerable_openssl = no
-  }
-
-  proxy_requests  = yes
-  $INCLUDE proxy.conf
-  $INCLUDE clients.conf
-
-  thread pool {
-    start_servers = 5
-    max_servers = 32
-    min_spare_servers = 3
-    max_spare_servers = 10
-    max_requests_per_server = 0
-    auto_limit_acct = no
-  }
-
-  modules {
-    $INCLUDE mods-enabled/
-  }
-
-  instantiate {
-  }
-
-  policy {
-    $INCLUDE{{ .Values.policies.includeDir }}/
-  }
-
-  $INCLUDE {{ .Values.sites.includeDir }}/
-
-## @param configurationsConfigMap Name of an externally-managed ConfigMap supplying FreeRADIUS configuration (Note: Overrides `configurations`). The value is evaluated as a template.
+## @param configurationsConfigMap Name of an externally-managed ConfigMap supplying FreeRADIUS configuration (must contain a `radiusd.conf` key). When set, the chart skips rendering its own `<fullname>-configurations` ConfigMap; the Deployment mounts this resource at `/etc/freeradius/radiusd.conf` instead. The value is evaluated as a template.
 ##
 configurationsConfigMap: ""
 ## @param existingConfigmap Name of an existing ConfigMap supplying the chart's standard env-vars (in place of the chart-rendered `<fullname>-envvars`). When set, the chart skips its own envvars ConfigMap and the Deployment's `envFrom` references this resource.
@@ -263,6 +197,7 @@ extraEnvVarsSecret: ""
 ## (with a `<name>` key) instead — the chart then skips rendering that module.
 ##
 modules:
+  includeDir: mods-enabled
   ## SQL backend for clients/users/accounting. When enabled, the chart renders
   ## the `sql` module config (`templates/modules/sql.yaml`) directly from these
   ## values and the database-connection helpers (the matching bundled subchart —
@@ -302,31 +237,30 @@ modules:
       groupreply: radgroupreply
       postauth: radpostauth
       usergroup: radusergroup
-    ## @param modules.sql.groupAttribute The group attribute specific to this instance of rlm_sql
+    ## @param modules.sql.group_attribute The group attribute specific to this instance of rlm_sql (maps 1:1 to FreeRADIUS `group_attribute`)
     ##
-    groupAttribute: SQL-Group
-    ## @param modules.sql.readClients Read RADIUS clients from the database (`nas` table). Clients are only read on server startup.
+    group_attribute: SQL-Group
+    ## @param modules.sql.read_clients Read RADIUS clients from the database (`nas` table). Clients are only read on server startup. (Maps 1:1 to FreeRADIUS `read_clients`.)
     ##
-    readClients: true
-    ## @param modules.sql.readGroups Read the group tables (`groupcheck`/`groupreply`) during authorization. When `true`, group tables are read unless `Fall-Through = no` is set in the reply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
+    read_clients: true
+    ## @param modules.sql.read_groups Read the group tables (`groupcheck`/`groupreply`) during authorization. When `true`, group tables are read unless `Fall-Through = no` is set in the reply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
     ##
-    readGroups: true
-    ## @param modules.sql.readProfiles Read user profiles during authorization. When `true`, profiles are read unless `Fall-Through = no` is set in the groupreply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
+    read_groups: true
+    ## @param modules.sql.read_profiles Read user profiles during authorization. When `true`, profiles are read unless `Fall-Through = no` is set in the groupreply table; when `false`, they are only read when `Fall-Through = yes` is set explicitly. Upstream rlm_sql default is `true`.
     ##
-    readProfiles: true
+    read_profiles: true
     ## TLS configuration for the SQL connection itself. Independent of the
     ## in-pod RADSEC TLS (see top-level `tls:` block) and of cert-manager (see
     ## `tls.certManager.*`).
     ##
     ## @param modules.sql.tls.enabled Enable TLS for the SQL backend connection
     ## @param modules.sql.tls.ciphers TLS cipher list passed to the SQL driver (empty leaves the driver default)
-    ## @param modules.sql.tls.autoGenerated Generate a self-signed TLS Secret for the SQL connection (`<fullname>-sql-tls`)
+    ## @param modules.sql.tls.autoGenerated [DEPRECATED — no longer consulted] When `modules.sql.tls.enabled: true` the chart now auto-generates a self-signed Secret implicitly (suppressed only by setting `modules.sql.tls.certificatesSecret`). Slated for removal in the next major bump.
     ## @param modules.sql.tls.certificatesSecret Name of an existing Secret holding `tls.crt` / `tls.key` / `ca.crt` for the SQL connection. Skips auto-generation when set.
     ## @param modules.sql.tls.certFilename Override filename of the leaf certificate inside the mounted Secret
     ## @param modules.sql.tls.certKeyFilename Override filename of the leaf key inside the mounted Secret
     ## @param modules.sql.tls.certCAFilename Override filename of the CA certificate inside the mounted Secret
     ## @param modules.sql.tls.existingTlsSecret [DEPRECATED — use `modules.sql.tls.certificatesSecret`] Legacy alias retained for backwards compatibility. Slated for removal in the next major bump.
-    ## @param modules.sql.tls.privateKeyPassword Password for the SQL leaf key when it is password-protected
     ##
     tls:
       enabled: false
@@ -337,7 +271,6 @@ modules:
       certKeyFilename: ""
       certCAFilename: ""
       existingTlsSecret: ""
-      privateKeyPassword: whatever
     ## SQLite-specific knobs, used when `modules.sql.dialect: sqlite`.
     ## @param modules.sql.sqlite.filename Path inside the container where the SQLite database file lives
     ## @param modules.sql.sqlite.busyTimeout SQLite `busy_timeout` (milliseconds)
@@ -435,7 +368,7 @@ modules:
     ## mutual TLS (client cert).
     ##
     ## @param modules.rest.tls.enabled Mount client TLS material (CA / cert / key) into the pod and wire it into the rlm_rest `tls{}` block. Independent of `check_cert*` below.
-    ## @param modules.rest.tls.auto_generated Render a chart-managed self-signed leaf via `templates/secret/rest-tls.yaml` (signed by the chart's shared CA). Skipped when `certificates_secret` is set.
+    ## @param modules.rest.tls.auto_generated Render a chart-managed self-signed leaf via `templates/secrets/rest-tls.yaml` (signed by the chart's shared CA). Skipped when `certificates_secret` is set.
     ## @param modules.rest.tls.certificates_secret Name of an existing Secret holding `tls.crt`/`tls.key`/`ca.crt`. Overrides chart-managed rendering.
     ## @param modules.rest.tls.cert_filename Override filename of the leaf certificate inside the mounted Secret.
     ## @param modules.rest.tls.cert_key_filename Override filename of the leaf key inside the mounted Secret.
@@ -501,18 +434,18 @@ modules:
         ##
         prefix: ""
       value:
-        ## @param modules.json.encode.value.singleValueAsArray Always emit values as a JSON array, even single values.
+        ## @param modules.json.encode.value.single_value_as_array Always emit values as a JSON array, even single values.
         ##
-        singleValueAsArray: false
-        ## @param modules.json.encode.value.enumAsInteger Emit the integer value of enumerated attributes instead of their textual alias.
+        single_value_as_array: false
+        ## @param modules.json.encode.value.enum_as_integer Emit the integer value of enumerated attributes instead of their textual alias.
         ##
-        enumAsInteger: false
-        ## @param modules.json.encode.value.datesAsInteger Emit date attributes as seconds since the epoch instead of a textual date.
+        enum_as_integer: false
+        ## @param modules.json.encode.value.dates_as_integer Emit date attributes as seconds since the epoch instead of a textual date.
         ##
-        datesAsInteger: false
-        ## @param modules.json.encode.value.alwaysString Force all values to be quoted JSON strings (integers are otherwise emitted unquoted).
+        dates_as_integer: false
+        ## @param modules.json.encode.value.always_string Force all values to be quoted JSON strings (integers are otherwise emitted unquoted).
         ##
-        alwaysString: false
+        always_string: false
 
   ## PAM authentication module (rlm_pam). Hands authentication off to Linux
   ## PAM (`/etc/pam.d/${pam_auth}` inside the container). The upstream
@@ -553,7 +486,7 @@ modules:
   pap:
     ## @param modules.pap.enabled Enable the FreeRADIUS PAP module.
     ##
-    enabled: false
+    enabled: true
     ## @param modules.pap.existingConfigMap Mount an existing ConfigMap (must contain a `pap` key with the module config) at `mods-enabled/pap` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
@@ -561,10 +494,121 @@ modules:
     ##
     normalise: true
 
+  ## Redis module (rlm_redis). Exposes the `%{redis:...}` xlat for talking to a
+  ## Redis server. Renders into `<fullname>-mods-redis`
+  ## (`templates/modules/redis.yaml`) and mounts at `mods-enabled/redis`. Set
+  ## `existingConfigMap` to mount a BYO ConfigMap instead. For a Redis-backed
+  ## attribute cache, enable `modules.cache` with `driver: redis` — it reuses
+  ## this connection (the settings below).
+  ##
+  ## Egress NetworkPolicy: when `networkPolicy.enabled: true` AND
+  ## `networkPolicy.allowExternalEgress: false`, add a rule under
+  ## `networkPolicy.extraEgress` so the pod can reach `modules.redis.server`.
+  ##
+  redis:
+    ## @param modules.redis.enabled Enable the FreeRADIUS Redis module.
+    ##
+    enabled: true
+    ## @param modules.redis.existingConfigMap Mount an existing ConfigMap (must contain a `redis` key) at `mods-enabled/redis` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
+    ## Redis connection. Every key here except `enabled` / `existingConfigMap` is
+    ## rendered verbatim into the `redis { }` block as a `key = value` directive
+    ## (nested maps become `key { }` sub-blocks) via
+    ## `freeradius.tplvalues.renderConfig`, evaluated through Helm `tpl` (escape a
+    ## literal `{{` as `{{ "{{" }}`). `server` is resolved by the chart (the bundled
+    ## subchart's `<release>-redis-master` Service when `redis.enabled`, otherwise
+    ## this value); the `${thread[pool].*}` values are FreeRADIUS config vars,
+    ## passed through verbatim.
+    ##
+    ## @param modules.redis.server Redis server hostname. Ignored when the bundled `redis` subchart is enabled.
+    ## @param modules.redis.port Redis server port.
+    ## @param modules.redis.pool.start Connections opened on module instantiation.
+    ## @param modules.redis.pool.min Minimum idle connections kept open.
+    ## @param modules.redis.pool.max Maximum open connections.
+    ## @param modules.redis.pool.spare Spare connections kept idle.
+    ## @param modules.redis.pool.uses Requests served per connection before recycle (0 = unlimited).
+    ## @param modules.redis.pool.retry_delay Seconds to wait after a failed open before retrying.
+    ## @param modules.redis.pool.lifetime Max connection lifetime in seconds (0 = unlimited).
+    ## @param modules.redis.pool.idle_timeout Seconds an idle connection is kept before closing.
+    ##
+    server: redis-master
+    port: 6379
+    # password: ""
+    # database: 0
+    pool:
+      start: "${thread[pool].start_servers}"
+      min: "${thread[pool].min_spare_servers}"
+      max: "${thread[pool].max_servers}"
+      spare: "${thread[pool].max_spare_servers}"
+      uses: 0
+      retry_delay: 30
+      lifetime: 0
+      idle_timeout: 60
+
+  ## Cache module (rlm_cache). Caches arbitrary attributes keyed by an xlat
+  ## expansion, with a pluggable backend `driver`. Renders into
+  ## `<fullname>-mods-cache` (`templates/modules/cache.yaml`) and mounts at
+  ## `mods-enabled/cache`. Set `existingConfigMap` to mount a BYO ConfigMap.
+  ##
+  cache:
+    ## @param modules.cache.enabled Enable the FreeRADIUS cache module (rlm_cache).
+    ##
+    enabled: true
+    ## @param modules.cache.existingConfigMap Mount an existing ConfigMap (must contain a `cache` key) at `mods-enabled/cache` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
+    ## @param modules.cache.driver Cache backend driver. One of `rbtree` (in-memory, per-pod), `redis` (shared across replicas — reuses the connection under `modules.redis`, and the bundled Redis password when `redis.auth.enabled`), `memcached`.
+    ##
+    driver: redis
+    ## @param modules.cache.key Cache key expansion (FreeRADIUS xlat). Embed the quotes in the value so it renders quoted.
+    ##
+    key: '"%{User-Name}"'
+    ## @param modules.cache.ttl Default entry time-to-live in seconds.
+    ##
+    ttl: 3600
+    ## @param modules.cache.max_entries Maximum number of cached entries (0 = unlimited).
+    ##
+    max_entries: 0
+    ## @param modules.cache.update Body of the required rlm_cache `update { }` section, rendered verbatim (through `tpl`, so values may be referenced). FreeRADIUS refuses to load the module unless this holds at least one map. Each line is FreeRADIUS map syntax `<list>:<attr> <op> <value>`: on store it is written to the cache entry, on retrieve it is copied back onto the request. The default caches the whole reply list; customise for what you actually need.
+    ##
+    update: |-
+      &reply: += &reply:
+    ## @param modules.cache.config [object] Extra `rlm_cache` directives merged verbatim into the `cache { }` block (e.g. `epoch`, `add_stats`). Rendered via `freeradius.tplvalues.renderConfig`.
+    ##
+    config: {}
+    ## Memcached backend settings, used when `driver: memcached`. Rendered verbatim
+    ## into the `memcached { }` sub-block.
+    ##
+    ## @param modules.cache.memcached.config [object] libmemcached driver settings (e.g. `options`).
+    ##
+    memcached:
+      config:
+        options: '"--SERVER=memcached:11211"'
+    ## Additional user-defined rlm_cache instances rendered alongside the base
+    ## `cache` instance (and the chart-managed `cache_tls` / `oidc_<name>_cache`
+    ## siblings). Each top-level key is a FreeRADIUS module instance name
+    ## (used directly in unlang as `<name>`) with the same schema as the base:
+    ## `driver`, `key`, `ttl`, `max_entries` (default 0), `update` (required),
+    ## `config`, `memcached.config`. One ConfigMap per instance renders into
+    ## `mods-enabled/<name>`. `driver: redis` auto-injects the `redis { }`
+    ## sub-block reusing `modules.redis.*` connection params, same as the base.
+    ##
+    ## @param modules.cache.instances [object] Additional named rlm_cache instances. Map key = FreeRADIUS instance name (e.g. `cache_coa`); value = config dict mirroring the base cache schema.
+    ## instances:
+    ##   cache_coa:
+    ##     driver: redis
+    ##     key: '"%{Acct-Session-Id}"'
+    ##     ttl: 7200
+    ##     update: |-
+    ##       &reply: += &reply:
+    ##
+    instances: {}
+
   ## EAP module (rlm_eap). Provides TLS-based EAP methods that share one
   ## `tls-config` server certificate: EAP-TLS (mutual TLS, client
   ## certificate) and EAP-TTLS (TLS tunnel + inner auth via a virtual
-  ## server). `defaultType` selects which enabled method is offered to peers
+  ## server). `default_eap_type` selects which enabled method is offered to peers
   ## that don't negotiate one. EAP runs over plain RADIUS (UDP auth) — it is
   ## independent of RADSEC (`tls.enabled`).
   ##
@@ -575,22 +619,22 @@ modules:
   eap:
     ## @param modules.eap.enabled Enable the FreeRADIUS EAP module.
     ##
-    enabled: false
+    enabled: true
     ## @param modules.eap.existingConfigMap Mount an existing ConfigMap (must contain an `eap` key with the module config) at `mods-enabled/eap` instead of the chart-rendered one; the chart then skips rendering its own.
     ##
     existingConfigMap: ""
-    ## @param modules.eap.defaultType Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled outer methods (`tls`, `ttls`) listed in `methods`.
+    ## @param modules.eap.default_eap_type Outer EAP method offered when the peer doesn't request a specific one. Must be one of the enabled outer methods (`tls`, `ttls`) listed in `methods`.
     ##
-    defaultType: ttls
-    ## @param modules.eap.timerExpire Seconds an EAP session may sit idle before it is expired (`timer_expire`).
-    ## @param modules.eap.ignoreUnknownEapTypes Silently ignore EAP requests for unknown/unconfigured types instead of NAK-ing (`ignore_unknown_eap_types`).
-    ## @param modules.eap.ciscoAccountingUsernameBug Work around the Cisco accounting User-Name bug (`cisco_accounting_username_bug`).
-    ## @param modules.eap.maxSessions Maximum number of concurrent EAP sessions (`max_sessions`). Defaults to the FreeRADIUS `${max_requests}` config var.
+    default_eap_type: ttls
+    ## @param modules.eap.timer_expire Seconds an EAP session may sit idle before it is expired.
+    ## @param modules.eap.ignore_unknown_eap_types Silently ignore EAP requests for unknown/unconfigured types instead of NAK-ing.
+    ## @param modules.eap.cisco_accounting_username_bug Work around the Cisco accounting User-Name bug.
+    ## @param modules.eap.max_sessions Maximum number of concurrent EAP sessions. Defaults to the FreeRADIUS `${max_requests}` config var.
     ##
-    timerExpire: 60
-    ignoreUnknownEapTypes: false
-    ciscoAccountingUsernameBug: false
-    maxSessions: "${max_requests}"
+    timer_expire: 60
+    ignore_unknown_eap_types: false
+    cisco_accounting_username_bug: false
+    max_sessions: "${max_requests}"
     ## @param modules.eap.methods [array] EAP methods to render, each as its own block. Outer methods (`tls`, `ttls`)
     ##   reference the shared `tlsConfig`; inner methods (`mschapv2`, `md5`, `pap`) render as empty blocks for use inside the TTLS tunnel (selected via `ttls.default_eap_type`). Remove a method to disable it — e.g. drop `md5` (EAP-MD5 is legacy/insecure).
     ##
@@ -599,7 +643,7 @@ modules:
       - ttls
       - peap
       - mschapv2
-      # - md5
+      - md5
 
     ## Per-method config. Which methods are rendered is controlled by `methods`
     ## above. Each method's config map (`modules.eap.<method>`) becomes the body
@@ -625,7 +669,7 @@ modules:
     ##
     ttls:
       tls: tls-common
-      # default_eap_type: pap
+      default_eap_type: md5
       copy_request_to_tunnel: "yes"
       use_tunneled_reply: "yes"
       virtual_server: inner-tunnel
@@ -643,22 +687,23 @@ modules:
     ## context (independent of in-pod RADSEC `tls.*`, SQL `modules.sql.tls.*`,
     ## and REST `modules.rest.tls.*`), mounted at
     ## `/opt/startechnica/freeradius/certs-eap`. EAP cannot run without a
-    ## server certificate, so leave `autoGenerated: true` (chart signs a leaf
-    ## off its shared internal CA) unless you bring your own.
+    ## server certificate, so the chart auto-generates one (via cert-manager
+    ## when its API is present, otherwise via the in-template shared genCA
+    ## path) whenever the module is enabled and `certificates_secret` is
+    ## empty.
     ##
     ## @param modules.eap.tlsConfig.name Name of the `tls-config` block (FreeRADIUS `tls-config <name>`). Each enabled method references it via `tls = <name>`.
-    ## @param modules.eap.tlsConfig.autoGenerated Render `templates/secret/eap-tls.yaml` with a chart-generated leaf signed by the shared internal CA. Skipped when `certificatesSecret` is set.
+    ## @param modules.eap.tlsConfig.autoGenerated [DEPRECATED — no longer consulted] When `modules.eap.enabled: true` the chart now auto-generates the EAP server leaf implicitly (suppressed only by setting `modules.eap.tlsConfig.certificates_secret`). Slated for removal in the next major bump.
     ## @param modules.eap.tlsConfig.certificates_secret Name of an existing Secret holding `tls.crt`/`tls.key`/`ca.crt` for EAP. Overrides chart-managed rendering.
     ## @param modules.eap.tlsConfig.cert_filename Override filename of the leaf certificate inside the mounted Secret.
     ## @param modules.eap.tlsConfig.cert_key_filename Override filename of the leaf key inside the mounted Secret.
     ## @param modules.eap.tlsConfig.cert_ca_filename Override filename of the CA certificate inside the mounted Secret.
     ## @param modules.eap.tlsConfig.private_key_password Password for the EAP leaf key when it is password-protected. Auto-generated into the chart credentials Secret (`mods-eap-tls-privkey-password`) when empty.
     ## @param modules.eap.tlsConfig.random_file Source of randomness passed to the TLS engine (`random_file`).
-    ## @param modules.eap.tlsConfig.cipher_list OpenSSL cipher list (`cipher_list`). `DEFAULT` keeps the image's compiled-in list.
+    ## @param modules.eap.tlsConfig.cipher_list [array] OpenSSL cipher tokens, joined with `:` and rendered into `cipher_list = <tokens>`. `["DEFAULT"]` keeps the image's compiled-in list; empty / nil falls through to `DEFAULT`. Multi-token example: `["HIGH", "!aNULL", "!MD5"]` → `HIGH:!aNULL:!MD5`.
     ## @param modules.eap.tlsConfig.cipher_server_preference Honour the server's cipher order over the client's (`cipher_server_preference`).
     ## @param modules.eap.tlsConfig.min_version Minimum TLS protocol version offered (`tls_min_version`).
     ## @param modules.eap.tlsConfig.max_version Maximum TLS protocol version offered (`tls_max_version`).
-    ## @param modules.eap.tlsConfig.cache.enable Enable the EAP TLS session cache (`cache { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
     ##
     tlsConfig:
       name: tls-common
@@ -669,34 +714,241 @@ modules:
       cert_ca_filename: ""
       private_key_password: ""
       random_file: /dev/urandom
-      cipher_list: "DEFAULT"
+      cipher_list:
+        - "DEFAULT"
       cipher_server_preference: false
       min_version: "1.2"
       max_version: "1.3"
+      ## @param modules.eap.tlsConfig.cache.enable Enable the EAP TLS session cache (`cache { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim). Overridden to `yes` when `sites.tlsCache.enabled` (the chart auto-wires that path).
+      ## EAP TLS session cache — OpenSSL session resumption for EAP-TLS / PEAP /
+      ## TTLS (distinct from `rlm_cache` / `modules.cache`). Enabling lets a
+      ## returning supplicant skip the full handshake.
+      ##
+      ## Multi-replica caveat: the cache is per-pod (in-memory by default).
+      ## `persist_dir` writes local disk only — shared RWX storage is unsafe for
+      ## concurrent OpenSSL session writes. With multiple replicas a supplicant
+      ## resuming on a different pod than the original will fall back to a full
+      ## handshake; useful only with `replicas: 1` or sticky session affinity on
+      ## the Service. For cross-pod resumption, enable `sites.tlsCache` — it
+      ## externalises the cache to a Redis-backed rlm_cache instance and
+      ## auto-wires `method = stateful` / `virtual_server = tls-cache` here.
+      ##
       cache:
         enable: "no"
+        lifetime: 86400                          # session lifetime in seconds (24h)
+        max_entries: 255                         # in-memory entries cap
+        name: EAP-module                         # namespace for the cache (lets multiple tls-configs coexist)
+        persist_dir: "${logdir}/tlscache"        # OPTIONAL — persist sessions to disk so resumption survives restarts
+        store_attributes: "yes"                  # write session attrs back into the request on resume
       ## @param modules.eap.tlsConfig.ocsp.enable Enable OCSP certificate checking (`ocsp { enable }`). Use `"yes"`/`"no"` (quoted, rendered verbatim).
       ##
       ocsp:
         enable: "no"
-        # name: "EAP module"
-        # persist_dir: "${logdir}/tlscache"
+        name: EAP-module
+        persist_dir: "${logdir}/tlscache"
       verify: {}
         # tmpdir: /tmp/radiusd
-        # client: "/path/to/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
+        # client: "/usr/bin/openssl verify -CApath ${..ca_path} %{TLS-Client-Cert-Filename}"
+  files:
+    enabled: false
+    existingConfigMap: ""
+  ldap:
+    ## @param modules.ldap.enabled Enable the FreeRADIUS LDAP module.
+    ##
+    enabled: false
+    ## @param modules.ldap.existingConfigMap Mount an existing ConfigMap (must contain an `ldap` key with the module config) at `mods-enabled/ldap` instead of the chart-rendered one; the chart then skips rendering its own.
+    ##
+    existingConfigMap: ""
+
+  ## Generic OIDC / OAuth 2.0 authentication backend. RFC 6749 password
+  ## grant (ROPC) plus optional RFC 7662 introspection. Works against any
+  ## OIDC provider that exposes a token endpoint (Authentik, Auth0,
+  ## Azure AD, Okta, generic Keycloak, …) — the per-instance wrapper
+  ## bakes the resolved endpoints into the Python module at chart-render
+  ## time, so the runtime library has no provider-specific code.
+  ##
+  ## Multi-instance: dispatch via `clients.<x>.oidc: <instance-name>`,
+  ## optional rlm_cache, optional refresh-token freshness check. The
+  ## per-instance Python wrapper is generated by Helm with all OIDC
+  ## endpoints + claim paths baked in at chart-render time.
+  ##
+  ## @param modules.oidc.enabled Render the OIDC auth configs + Secrets and mount them into the pod. Acts as the master feature gate; renders nothing when `false`.
+  ## @param modules.oidc.wireDefaultSite Auto-wire the `default` instance's `oidc_authorize` as the `else` branch of the dispatch chain in `sites/default` (catches NAS that aren't bound to a named instance via `clients.<x>.oidc`). No-op when no `default` instance is configured.
+  ## @param modules.oidc.unmatchedReject When `true` AND no `default` instance is wired, the dispatch chain's `else` branch rejects unmatched NAS instead of falling through to `pap`. Off by default.
+  ## @param modules.oidc.instances [object] Named OIDC backends. Map key = FreeRADIUS module instance name (matching `^[a-z][a-z0-9_]*$`); value = backend config dict. Bind a NAS to one with `clients.<x>.oidc: <instance-name>`.
+  ##
+  ## Per-instance keys (rendered into the Python wrapper at chart-render time):
+  ##   tokenUrl              str — RFC 6749 token endpoint (REQUIRED)
+  ##   introspectUrl         str — RFC 7662 introspect endpoint (REQUIRED when `introspect: true`)
+  ##   clientId              str — OAuth client_id
+  ##   clientSecret          str — confidential-client secret (Secret-backed; or use `existingSecret`)
+  ##   existingSecret        str — BYO Secret holding key `client-secret`
+  ##   scope                 str — space-separated OAuth scope (e.g. "openid profile email")
+  ##   connectTimeout        str — connect timeout in seconds
+  ##   roleAttribute         str — control attribute populated per role (default `Class`)
+  ##   rolesClaim            str — dotted path into JWT/introspect claims that yields a role list
+  ##                                (e.g. `roles`, `realm_access.roles`, `resource_access.<id>.roles`)
+  ##   denyWithoutRole       bool — reject when no role matches `roleMappings`
+  ##   roleMappings          list — ordered `[{role, reply: [...]}]` (first match wins)
+  ##   groupAttribute        str — control attribute populated per group (default `Class`)
+  ##   groupsClaim           str — dotted path that yields a group list (default `groups`)
+  ##   groupMappings         list — ordered `[{group, reply: [...]}]` (first match wins)
+  ##   attributeMappings     list — generic `[{claim, reply}]` claim→reply copy
+  ##   require               list — JWT claim names that must be truthy (e.g. `[email_verified]`)
+  ##   introspect            bool — use RFC 7662 introspect over local JWT decode (catches revocation)
+  ##   refreshTokenCache     bool — cache refresh_token + run a freshness check on cache hit
+  ##   cache.enabled         bool — render a `oidc_<name>_cache` rlm_cache instance
+  ##   cache.ttl             int — cache TTL in seconds
+  ##   tls.caCert            str — inline PEM CA bundle (for verifying the IdP cert)
+  ##   tls.existingSecret    str — BYO Secret containing the CA bundle
+  ##   tls.existingSecretCaKey str — key within `existingSecret` holding the bundle
+  ##   tls.insecure          bool — skip TLS verification (dev only)
+  ##   existingConfigMap     str — BYO module ConfigMap (skips chart-rendered one)
+  ##
+  ## instances:
+  ##   default:
+  ##     tokenUrl: "https://idp.example.com/oauth/token"
+  ##     clientId: freeradius
+  ##     clientSecret: ""
+  ##   authentik:
+  ##     tokenUrl: "https://auth.example.com/application/o/freeradius/token/"
+  ##     introspectUrl: "https://auth.example.com/application/o/introspect/"
+  ##     clientId: freeradius
+  ##     clientSecret: "..."
+  ##     scope: "openid profile email"
+  ##     rolesClaim: groups       # Authentik puts group membership in `groups`
+  ##     require: [email_verified]
+  ##     introspect: true
+  ##     cache:
+  ##       enabled: true
+  ##       ttl: 300
+  ##     roleMappings:
+  ##       - role: network-admin
+  ##         reply: ['Service-Type := Administrative-User']
+  ##
+  oidc:
+    enabled: false
+    wireDefaultSite: true
+    unmatchedReject: false
+    instances: {}
 
 ## FreeRADIUS policy definitions (the `policy { }` block in radiusd.conf).
 ##
-## @param policies.includeDir Absolute path the `policy.d` directory is included from inside the container
+## @param policies.includeDir Directory the `policy { }` block includes policies from. A relative path resolves against the config dir (`/etc/freeradius`), so the default reads the image's bundled `policy.d` (filter, eap, …) plus any chart-mounted policies (e.g. OIDC's `policy.d/oidc`). The directory must exist in the container — point it at an absolute path only if you mount your own populated `policy.d`.
 ##
 policies:
-  includeDir: /opt/startechnica/freeradius/policy.d
+  includeDir: policy.d
+
+## FreeRADIUS home_server definitions for proxy routing. Each entry renders a
+## `home_server <name> { ... }` block referenced by a `home_server_pool`.
+## Rendered into the `<fullname>-home-servers` ConfigMap, mounted at
+## `/opt/startechnica/freeradius/home-servers.conf` and `$INCLUDE`d from the
+## main configuration (absolute path) when this array is non-empty.
+## `homeServerPools` and `realms` render into their own sibling ConfigMaps
+## (`-home-server-pools` / `-realms`) under the same mount root and are
+## `$INCLUDE`d in dependency order (servers → pools → realms).
+##
+## @param homeServers [array] Inline home_server entries. Each entry: `name` is the home_server identifier (referenced by `homeServerPools[].homeServers`); `type` is `auth` / `acct` / `auth+acct` / `coa` (default `auth`); `ipaddr` / `port` address the remote (port default 1812); `secret` is the shared secret (use `$ENV{...}` to inject from the env, e.g. via `extraEnvVarsSecret`); `proto` is `udp` / `tcp` (default `udp`); the remaining fields (`response_window`, `zombie_period`, `revive_interval`, `status_check`, `check_interval`, `num_answers_to_alive`) map 1:1 to FreeRADIUS native `home_server { }` directives and are emitted only when set.
+## homeServers:
+##   - name: auth1
+##     type: auth
+##     ipaddr: 192.0.2.10
+##     port: 1812
+##     secret: $ENV{FREERADIUS_HOMESERVER_AUTH1_SECRET}
+##     proto: udp
+##     response_window: 20
+##     zombie_period: 40
+##     revive_interval: 120
+##     status_check: status-server
+##     check_interval: 30
+##     num_answers_to_alive: 3
+##
+homeServers: []
+
+## FreeRADIUS home_server_pool definitions. Each entry renders a
+## `home_server_pool <name> { ... }` block listing one or more `home_server`
+## members; realms reference pools via `realms[].authPool` / `acctPool`.
+##
+## @param homeServerPools [array] Inline home_server_pool entries. Each entry: `name` is the pool identifier referenced by realms; `type` is `fail-over` (default) / `load-balance` / `client-balance` / `client-port-balance` / `keyed-balance`; `home_servers` is the ordered list of `home_server` names belonging to this pool (each renders as one `home_server = <name>` line); `virtual_server` (optional, maps 1:1 to the FreeRADIUS `virtual_server` directive in `home_server_pool { }`) names a virtual server the proxied reply is processed through; `fallback` (optional) names a `home_server` used when every pool member is dead. Note: per-entry sub-fields use snake_case here for visual consistency with the rendered FreeRADIUS config; this is distinct from the top-level `.Values.homeServers` (camelCase, list of home_server *definitions*).
+## homeServerPools:
+##   - name: my_auth_failover
+##     type: fail-over
+##     home_servers:
+##       - auth1
+##       - auth2
+##     virtual_server: ""
+##     fallback: ""
+##
+homeServerPools: []
+
+## FreeRADIUS realm definitions for proxy routing. Each entry renders a
+## `realm <name> { ... }` block. Realms map an incoming request's User-Name
+## suffix to a `home_server_pool` (`authPool` / `acctPool`) or hand the
+## request to a local `virtualServer`. Leave empty to keep the upstream
+## `proxy.conf` realms unchanged.
+##
+## @param realms [array] Inline realm entries. Each entry: `name` is the realm string matched against the User-Name suffix (use `DEFAULT` for the fall-through realm, `NULL` for requests with no realm, `LOCAL` for the upstream-convention "handle locally, do not proxy" sentinel). All optional sub-fields below use snake_case mirroring FreeRADIUS native `realm { }` directive names; emit only the ones you need (mixing old-style and new-style is rejected by FreeRADIUS). Two routing modes: (a) **new-style proxy** via `auth_pool` / `acct_pool` / `coa_pool`, each referencing a `home_server_pool` name from `homeServerPools[]` (auth = Access-Request, acct = Accounting-Request, coa = Change-of-Authorization / Disconnect-Request); (b) **old-style proxy** via `authhost` / `accthost` / `secret` (FreeRADIUS 1.x/2.x compatibility — host:port pairs and the shared secret in-line). `virtual_server` handles the request locally instead of proxying (alternative to both modes). `nostrip: true` keeps the realm portion of User-Name when proxying (default strips). `realm LOCAL` is emitted by the chart unconditionally (the upstream definition in `files/proxy.conf` is commented out to avoid a "Duplicate realm" error). Supplying your own `name: LOCAL` entry below overrides the chart-managed one — useful for pointing LOCAL at a custom `virtual_server`. Wrapping charts can override `realms` freely without losing LOCAL.
+## realms:
+##   - name: example.com                  # new-style proxy via pool refs
+##     auth_pool: my_auth_failover
+##     acct_pool: my_acct_failover
+##     coa_pool: my_coa_pool
+##     nostrip: false
+##     virtual_server: ""
+##   - name: legacy.example.com           # old-style proxy
+##     authhost: radius.example.com:1600
+##     accthost: radius.example.com:1601
+##     secret: $ENV{FREERADIUS_REALM_LEGACY_SECRET}
+##
+realms: []
+
+## Chart-managed default proxy primitives — three independent toggles, each
+## emits one config piece. The chart does NOT cross-validate them: enabling
+## `realm` without `homeServerPool` emits a `realm DEFAULT` that references
+## pools you must supply via `homeServerPools[]` (else FreeRADIUS fails at
+## startup with "Reference to non-existent pool"); enabling `homeServerPool`
+## without `homeServer` similarly references home_servers you supply via
+## `homeServers[]`. Loud-fail-at-startup is the desired feedback.
+##
+## All three are no-op when `kind != StatefulSet` — the per-pod `home_server`
+## entries depend on stable per-pod DNS via the headless Service, which only
+## StatefulSet provides; the realm and pools dangle without their underlying
+## home_servers, so the whole feature is gated together.
+##
+## Identifiers derive from `<fullname>` snake-cased (hyphens → underscores
+## via `freeradius.utils.snakeCase`). For a release `demo-freeradius` with
+## `replicaCount: 2`, all three toggles on:
+##
+##   realm DEFAULT {
+##       auth_pool = demo_freeradius_auth_pool
+##       acct_pool = demo_freeradius_acct_pool
+##   }
+##   home_server demo_freeradius_0_auth { type = auth; ipaddr = "demo-freeradius-0.demo-freeradius-headless.<ns>.svc.cluster.local"; ... }
+##   home_server demo_freeradius_0_acct { type = acct; ... }
+##   home_server demo_freeradius_1_auth { ... }
+##   home_server demo_freeradius_1_acct { ... }
+##   home_server_pool demo_freeradius_auth_pool { type = load-balance; home_server = demo_freeradius_0_auth; home_server = demo_freeradius_1_auth }
+##   home_server_pool demo_freeradius_acct_pool { type = load-balance; home_server = demo_freeradius_0_acct; home_server = demo_freeradius_1_acct }
+##
+## The home_server `secret` renders literally as
+## `secret = $ENV{FREERADIUS_DEFAULT_INSTANCE_SECRET}` — wire the env var via
+## `extraEnvVarsSecret` and use the same `$ENV{...}` expansion in the
+## matching `clients{}` entry so peer-pod Access-Request packets authenticate.
+##
+## @param createDefaultInstance.realm Emit a `realm DEFAULT { auth_pool, acct_pool }` block referencing the auto-gen pools.
+## @param createDefaultInstance.homeServer Emit one `home_server <fullname>_<ord>_auth` and one `<fullname>_<ord>_acct` per StatefulSet replica.
+## @param createDefaultInstance.homeServerPool Emit one `home_server_pool <fullname>_auth_pool` and one `<fullname>_acct_pool` listing the per-pod home_servers.
+##
+createDefaultInstance:
+  realm: false
+  homeServer: false
+  homeServerPool: false
 
 ## Virtual-server enablement. Toggles the matching FreeRADIUS virtual server
 ## (`/etc/freeradius/sites-enabled/<name>` inside the container) and wires
 ## the corresponding container port / Service port / NetworkPolicy entry.
 ## Per-site config files are sourced from `files/sites/<name>` and rendered
-## into the `<release>-sites` ConfigMap by `templates/configmap/sites.yaml`.
+## into the `<release>-sites` ConfigMap by `templates/configmaps/sites.yaml`.
 ##
 sites:
   includeDir: /opt/startechnica/freeradius/sites-enabled
@@ -710,6 +962,12 @@ sites:
   default:
     enabled: true
     existingConfigMap: ""
+    authorize: ""
+    authenticate: ""
+    preacct: ""
+    accounting: ""
+    postacct: ""
+    session: ""
   ## @param sites.innerTunnel.enabled Enable the `inner-tunnel` virtual server (EAP-TTLS/PEAP inner identity). Required by the EAP module's tunnelled methods.
   ## @param sites.innerTunnel.existingConfigMap Mount an existing ConfigMap (must contain an `inner-tunnel` key with the virtual-server config) at `sites-enabled/inner-tunnel` instead of the chart-rendered one; the chart then skips rendering its own.
   ##
@@ -718,10 +976,13 @@ sites:
     existingConfigMap: ""
   ## @param sites.coa.enabled Enable the `coa` virtual server (Change-of-Authorization, UDP port `containerPorts.coa`).
   ## @param sites.coa.existingConfigMap Mount an existing ConfigMap (must contain a `coa` key with the virtual-server config) at `sites-enabled/coa` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.coa.listen.ipaddr Bind address for the CoA listener. Wildcard `*` accepts CoA traffic on every pod interface; set to `0.0.0.0` / a specific IPv4 / `::` for IPv6 to constrain.
   ##
   coa:
     enabled: false
     existingConfigMap: ""
+    listen:
+      ipaddr: "*"
   ## RADIUS `status` virtual server, used by the chart's liveness/readiness
   ## probes (`radclient status` over loopback) AND by the standalone metrics
   ## exporter Deployment (`metrics.enabled`) which talks to it over the
@@ -753,16 +1014,63 @@ sites:
   ## mounts the TLS material referenced by `tls.*` and opens the RADSEC
   ## container/Service port.
   ##
-  ## @param sites.tls.enabled Enable the RADSEC virtual server
-  ## @param sites.tls.cipher TLS cipher suite passed to the RADSEC server (`DEFAULT` keeps the upstream image's default list)
-  ## @param sites.tls.privateKeyPassword Password for the RADSEC private key when it is password-protected
-  ## @param sites.tls.existingConfigMap Mount an existing ConfigMap (must contain a `tls` key with the virtual-server config) at `sites-enabled/tls` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.radsec.enabled Enable the RADSEC virtual server
+  ## @param sites.radsec.listen.ipaddr Bind address for the RADSEC `listen { }` block. `*` accepts on every pod interface; set to `0.0.0.0` / a specific IPv4 / `::` for IPv6 to constrain. Note: the port is *not* configurable here — it is shared with the Service and NetworkPolicy via `containerPorts.radsec`.
+  ## @param sites.radsec.listen.type FreeRADIUS listen-socket type. Default `auth+acct` handles both Access-Request and Accounting-Request packets on the same RADSEC connection — typical for a RADSEC-replacement-for-UDP setup. Use `auth` or `acct` to constrain.
+  ## @param sites.radsec.listen.virtual_server Virtual server that processes decrypted RADSEC requests. Default `default` routes to the same `server default { }` that handles UDP traffic — see [README.md](README.md) §RADSEC for the rationale. Override to send RADSEC requests through a separate processing pipeline (must reference an existing virtual server, e.g. via `extraSites` or `sites.<name>.enabled`).
+  ## @param sites.radsec.listen.proxy_protocol Emit `proxy_protocol = yes` so the listener parses HAProxy PROXY-protocol headers and uses the real client IP for RADIUS client lookup. Useful when fronting the RADSEC port with an L4 load balancer that adds PROXY headers. Default `false` (directive omitted, matches FreeRADIUS image default).
+  ## @param sites.radsec.listen.check_client_connections Emit `check_client_connections = yes` so FreeRADIUS validates the client connection (TCP/TLS handshake) up front and rejects unauthorised peers before parsing RADIUS packets. Default `false` (directive omitted, matches FreeRADIUS image default).
+  ## @param sites.radsec.tls.cipher_list [array] OpenSSL cipher tokens passed to the RADSEC server's `tls { cipher_list = ... }` directive. The chart joins the entries with `:` (OpenSSL cipher-list separator) and applies the same value to the chart-managed `home_server radsec` loopback block in `home-servers.conf` so both peers negotiate consistently. The single-item list `["DEFAULT"]` keeps the upstream image's default list; set to explicit tokens to constrain (e.g. `["HIGH", "!aNULL", "!MD5"]` → `HIGH:!aNULL:!MD5`). Empty list `[]` also falls back to `DEFAULT`.
+  ## @param sites.radsec.tls.private_key_password Password for the RADSEC private key when it is password-protected. Renders the `tls { private_key_password = $ENV{...} }` line in both the radsec listener and the chart-managed `home_server radsec` loopback. Auto-generated into the chart credentials Secret (`sites-radsec-privkey-password`) when left empty; the env-var (`FREERADIUS_SITES_RADSEC_PRIVKEY_PASSWORD`) is wired only when this value is set.
+  ## @param sites.radsec.radsecSecret RADIUS shared secret for the loopback `clients radsec { client 127.0.0.1 { secret = … } }` block in the RADSEC virtual server. Stored under `clients-radsec-secret` in the chart-managed credentials Secret and injected via `$ENV{FREERADIUS_CLIENTS_RADSEC_SECRET}`. Auto-generated when empty; FreeRADIUS defaults the secret to literal `"radsec"` for `proto = tls` so any value works.
+  ## @param sites.radsec.existingConfigMap Mount an existing ConfigMap (must contain a `radsec` key with the virtual-server config) at `sites-enabled/radsec` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.radsec.clients [array] Additional external RADSEC peers (NASes, WiFi controllers, switches, VPN concentrators) authorised to connect on port `containerPorts.radsec`. Each entry renders a `client <name> { ... }` block inside the existing `clients radsec { }` group; the chart-managed loopback `client 127.0.0.1` (used by `home_server radsec` for the self-proxy pattern) is always emitted alongside, so don't add `127.0.0.1` here. Each entry: `name` is the on-config identifier (DNS-1123 label); `ipaddr` is an IPv4 host or CIDR (`192.0.2.50` / `192.0.2.0/24`); `ipv6addr` optional IPv6 variant — setting BOTH on the same entry renders TWO sibling `client { }` blocks (`<name>` for v4, `<name>_v6` for v6) sharing every other directive, since FreeRADIUS client blocks hold a single address each; `secret` is the RADIUS shared secret — FreeRADIUS defaults this to literal `"radsec"` for `proto = tls`, so an empty value works for vanilla RADSEC, set it when your NAS uses a real secret (use `$ENV{...}` to pull from `extraEnvVarsSecret`); `require_message_authenticator: true` enforces the BlastRADIUS mitigation per client; `nas_type` is a free-form NAS-Type tag (default `other`); `virtual_server` (optional) overrides the listener's default virtual server for this client. All field names mirror FreeRADIUS native `client { }` directive names.
   ##
-  tls:
+  radsec:
     enabled: false
     existingConfigMap: ""
-    cipher: "DEFAULT"
-    privateKeyPassword: ""
+    radsecSecret: ""
+    listen:
+      ipaddr: "*"
+      type: "auth+acct"
+      virtual_server: "default"
+      proxy_protocol: false
+      check_client_connections: false
+    tls:
+      cipher_list:
+        - "DEFAULT"
+      private_key_password: ""
+    ## clients:
+    ##   - name: ap-controller
+    ##     ipaddr: 192.0.2.50/32
+    ##     secret: $ENV{FREERADIUS_RADSEC_CLIENT_AP_SECRET}
+    ##     require_message_authenticator: true
+    ##     nas_type: cisco
+    ##     virtual_server: ""
+    ##     ipv6addr: ""
+    ##
+    clients: []
+  ## `tls-cache` virtual server — backs EAP TLS session resumption with a
+  ## shared Redis-backed rlm_cache instance, fixing the per-pod caveat
+  ## documented on `modules.eap.tlsConfig.cache` above. Enabling renders:
+  ##   * `sites-enabled/tls-cache` (this template)
+  ##   * `mods-enabled/cache_tls` — dedicated rlm_cache instance keyed on
+  ##     `%{TLS-Session-Id}`, reusing the Redis connection from `modules.redis.*`
+  ##   * auto-wires `tls-config { cache { enable = yes, method = stateful,
+  ##     virtual_server = tls-cache } }` into the EAP module
+  ## REQUIRES `modules.eap.enabled: true` AND a Redis backend (bundled subchart
+  ## `redis.enabled: true` or external `modules.redis.server`). Rendering
+  ## hard-fails via `freeradius.validate.tlsCache` otherwise — an in-pod
+  ## backend would defeat the cross-replica resumption this site exists for.
+  ##
+  ## @param sites.tlsCache.enabled Enable the `tls-cache` virtual server. Auto-wires the EAP cache directives; hard-fails without Redis.
+  ## @param sites.tlsCache.existingConfigMap Mount an existing ConfigMap (must contain a `tls-cache` key with the virtual-server config) at `sites-enabled/tls-cache` instead of the chart-rendered one; the chart then skips rendering its own.
+  ## @param sites.tlsCache.ttl TTL (seconds) for cached TLS sessions in the dedicated `cache_tls` instance. Should match the desired resumption window (typically aligned with `modules.eap.tlsConfig.cache.lifetime` if set).
+  ##
+  tlsCache:
+    enabled: false
+    existingConfigMap: ""
+    ttl: 86400
 
 
 ## RADIUS clients map rendered into a ConfigMap and mounted at
@@ -771,13 +1079,19 @@ sites:
 ## below are then ignored).
 ##
 clients:
-  ## @param clients.localhost.ipv4addr IPv4 address (or CIDR) the loopback client matches
-  ## @param clients.localhost.ipv6addr IPv6 address (or CIDR) the loopback client matches
+  includeFile: clients.conf
+  ## @param clients.existingConfigMapName Name of an existing ConfigMap supplying `clients.conf`. Overrides the chart-rendered entries above.
+  ##
+  existingConfigMapName: ""
+  ## @param clients.localhost.ipv4addr IPv4 address (or CIDR) the loopback client matches. Empty skips IPv4 (set `ipv6addr` for a v6-only NAS).
+  ## @param clients.localhost.ipv6addr IPv6 address (or CIDR) the loopback client matches. Setting BOTH `ipv4addr` and `ipv6addr` on the same entry renders TWO sibling `client { }` blocks (`<name>` for v4, `<name>_v6` for v6) sharing every other directive — FreeRADIUS client blocks hold a single address each, so the chart splits the entry to express "one logical NAS with two addresses".
   ## @param clients.localhost.proto Transport protocol (`udp` or `tcp`)
   ## @param clients.localhost.secret Shared secret used to authenticate this client
   ## @param clients.localhost.nas_type NAS-Type string reported by RADIUS attributes
   ## @param clients.localhost.virtual_server Virtual server (`sites-enabled/<name>`) requests from this client are dispatched to
-  ## @param clients.localhost.coa_server Virtual server handling CoA requests for this client
+  ## @param clients.localhost.coa_server Name of a `home_server` (or `home_server_pool`) used to proxy **outbound** CoA-Request/Disconnect packets sent to this client. Leave empty unless you've defined a matching `home_server` block — this chart does NOT currently render any. Inbound CoA is handled separately by `sites.coa.enabled` (a `listen` block + virtual server, not a client directive).
+  ## @param clients.localhost.require_message_authenticator Reject Access-Requests that arrive without a `Message-Authenticator` attribute. Mitigates the BlastRADIUS attack (CVE-2024-3596). Safe to enable when every NAS that hits this client entry is known to add Message-Authenticator (all modern radclients do).
+  ## @param clients.localhost.oidc Bind this NAS to a named OIDC backend defined under `modules.oidc.instances.<name>`. When set, the chart renders an `if (Packet-Src-IP-Address == <ipv4addr>) { oidc_<name>_authorize }` arm into the dispatch chain in `sites/default`. Leave empty to fall through to the `default` instance (when `modules.oidc.wireDefaultSite: true`) or to `pap`. Not emitted into `clients.conf` — FR3 client blocks are schema-validated and reject unknown directives.
   ## @param clients.localhost.limit.max_connections Maximum concurrent connections (TCP only)
   ## @param clients.localhost.limit.lifetime Maximum connection lifetime in seconds (0 = no limit)
   ## @param clients.localhost.limit.idle_timeout Idle timeout in seconds
@@ -789,38 +1103,77 @@ clients:
     secret: password
     nas_type: other
     virtual_server: default
-    coa_server: coa
+    coa_server: ""
+    require_message_authenticator: false
+    oidc: ""
     limit:
       max_connections: 16
       lifetime: 0
       idle_timeout: 30
-  ## @param clients.existingConfigMapName Name of an existing ConfigMap supplying `clients.conf`. Overrides the chart-rendered entries above.
-  ##
-  existingConfigMapName: ""
+
+
+## RADIUS users for the `files` module. When non-empty, the chart renders
+## `/etc/freeradius/mods-config/files/authorize` from these entries
+## (`templates/configmaps/users.yaml`) and mounts it via `subPath` so the
+## upstream image's existing `mods-enabled/files` symlink picks it up
+## automatically (no need to set `modules.files.enabled`). The `default`
+## virtual server already calls `files` unconditionally in `authorize {}`.
+##
+## File-based user storage is fine for small / static / dev deployments;
+## for production multi-user setups with mutations through the day, switch to
+## `modules.sql.enabled: true` (durable, queryable, no pod restart on change).
+##
+## Password hygiene note: values supplied here are baked into a ConfigMap
+## (not a Secret) and visible to anyone with read access to the namespace.
+## For dev/test that's usually fine; for anything sensitive, use the SQL
+## backend with a secret-keyed password Secret, or pre-create your own
+## `authorize` file and inject it via `extraVolumes` / `extraVolumeMounts`.
+##
+## @param users [array] RADIUS users to render into the `files` module's `authorize` file, in order (FreeRADIUS evaluates the file top-to-bottom with `Fall-Through = no` default semantics, so order matters when two entries could match). Each entry: `name` is REQUIRED (the username — used verbatim, FreeRADIUS accepts any non-whitespace string including `DEFAULT`); `password` is REQUIRED (cleartext when `passwordType` is the default, or the pre-hashed/encoded value matching `passwordType`); `passwordType` (FreeRADIUS check-attribute name — `Cleartext-Password` default, also `Crypt-Password`, `MD5-Password`, `SSHA-Password`, `NT-Password`, etc.); `attributes` (optional list of additional check attributes in raw FreeRADIUS map syntax, e.g. `["NAS-IP-Address == 192.0.2.1"]`); `reply` (optional list of reply attributes in raw map syntax, e.g. `['Filter-Id := "staff"']`). Array shape (vs the map shape used by `clients`) mirrors the other inline-FreeRADIUS-config primitives in this chart (`homeServers[]`, `homeServerPools[]`, `realms[]`, `sites.radsec.clients[]`) and preserves the declaration order that FreeRADIUS's first-match semantics depend on.
+## users:
+##   - name: alice
+##     password: wonderland
+##     reply:
+##       - 'Filter-Id := "staff"'
+##       - 'Framed-IP-Address := "10.0.0.42"'
+##   - name: bob
+##     password: '$1$abc123$Q2YS.Cb6yYTzS6e9YQyXq.'
+##     passwordType: Crypt-Password
+##   - name: charlie
+##     password: secret
+##     attributes:
+##       - 'NAS-IP-Address == 192.0.2.1'
+##     reply:
+##       - 'Service-Type := Framed-User'
+##
+users: []
 
 
 ## =============================================================================
 ## @section FreeRADIUS Authentication parameters
 ## -----------------------------------------------------------------------------
 ## How FreeRADIUS obtains the various secrets it needs (database password,
-## status-site shared secret, RADSEC key passphrase, SQL TLS key passphrase).
+## status-site shared secret, RADSEC key passphrase).
 ## Use these to bring your own Secret instead of the chart-managed one.
 ## =============================================================================
 
 auth:
-  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `sites-tls-privkey-password`, `mods-sql-tls-privkey-password`). Overrides chart-rendered Secret rendering.
+  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
   ##
   existingSecret: ""
-  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`).
+  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`). Recognised keys: `databasePassword`, `mariadbPassword`, `sitesStatusSecret`, `metricsSecret`, `sitesRadsecPrivKeyPassword`, `clientsRadsecSecret`, `modsRestPassword`, `modsEapTlsPrivKeyPassword`.
   ## e.g:
   ## existingSecretPerPassword:
   ##   keyMapping:
   ##     databasePassword: password
   ##     sitesStatusSecret: status-secret
+  ##     metricsSecret: exporter-secret
   ##   databasePassword:
   ##     name: freeradius.pocwatt-freeradius-cluster.credentials
   ##   sitesStatusSecret:
   ##     name: freeradius-status
+  ##   metricsSecret:
+  ##     name: freeradius-exporter
   ##
   existingSecretPerPassword: {}
 
@@ -833,6 +1186,9 @@ auth:
 ## Pod-level scheduling and security live in the next two sections.
 ## =============================================================================
 
+## @param kind Workload kind rendered by `templates/Application.yaml`. Allowed (case-insensitive): `Deployment` / `deployment`, `StatefulSet` / `statefulset`, `DaemonSet` / `daemonset` — normalised internally to canonical PascalCase. `Deployment` keeps the existing semantics (shared PVC mounted from `templates/PersistentVolumeClaim.yaml`); `StatefulSet` gives stable pod identity, wires the headless Service via `serviceName`, and switches persistence to per-replica `volumeClaimTemplates` rendered from `persistence.*` (the standalone `PersistentVolumeClaim.yaml` is then skipped); `DaemonSet` schedules one pod per node — `replicaCount` is ignored, `horizontalPodAutoscaler` is silently skipped (no scale subresource), and persistence still mounts the shared `PersistentVolumeClaim.yaml` (requires `RWX` for multi-node pods, or use `existingClaim` / `emptyDir`).
+##
+kind: Deployment
 ## @param replicaCount Number of FreeRADIUS pods. Ignored when `horizontalPodAutoscaler.enabled` is true.
 ##
 replicaCount: 1
@@ -875,9 +1231,9 @@ terminationGracePeriodSeconds: ""
 ## @param priorityClassName Priority class name
 ##
 priorityClassName: ""
-## @param podManagementPolicy podManagementPolicy retained for compatibility with replication-mode rollouts (no effect on Deployment workloads).
+## @param podManagementPolicy StatefulSet pod-start ordering. Empty (default) lets Kubernetes apply its built-in `OrderedReady`; set `Parallel` to start all pods simultaneously. IMMUTABLE on existing StatefulSets — Kubernetes rejects updates to this field after creation, so flipping the value on a live release requires `kubectl delete sts --cascade=orphan` (preserves pods + PVCs) before the new spec lands. No effect on Deployment / DaemonSet workloads.
 ##
-podManagementPolicy: ""
+podManagementPolicy: Parallel
 ## @param hostAliases Add deployment host aliases
 ##
 hostAliases: []
@@ -1057,7 +1413,7 @@ livenessProbe:
     command:
       - sh
       - /scripts/healthcheck.sh
-  initialDelaySeconds: 120
+  initialDelaySeconds: 20
   periodSeconds: 60
   timeoutSeconds: 2
   failureThreshold: 3
@@ -1075,7 +1431,7 @@ readinessProbe:
     command:
       - sh
       - /scripts/healthcheck.sh
-  initialDelaySeconds: 30
+  initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -1135,70 +1491,6 @@ extraSites: []
 ##              Reply-Message := "Hello %{User-Name}"
 ##
 modsConfig: {}
-## Keycloak integration — authenticate RADIUS users against Keycloak's OIDC
-## token endpoint (ROPC password grant). ROPC only works for cleartext-password
-## flows (PAP, or EAP-TTLS/PAP inner) — PEAP/MSCHAPv2 cannot authenticate
-## against Keycloak. Enable "Direct Access Grants" on the Keycloak client.
-##
-## Two backends, selected by `keycloak.mode`:
-##   - `lua` (default): a self-contained `rlm_lua` script does ROPC + RFC 7662
-##     token introspection over HTTPS, extracts client roles, and feeds the
-##     `keycloak_authorize` unlang policy (role→reply mapping). Renders under
-##     `templates/mods-config/keycloak/`:
-##       * `mods-enabled/keycloak_lua` + `scripts/keycloak-mapper.lua`
-##       * `policy.d/keycloak` (`keycloak_authorize` + `keycloak_roles`)
-##     The image MUST provide `rlm_lua`, `lua-cjson`, and an HTTPS-capable Lua
-##     lib (`luasec`/`luasocket`).
-##   - `rest`: a pure `rlm_rest` instance (`mods-enabled/keycloak_rest`) does the
-##     ROPC POST only — AUTH-ONLY, no introspection, `roleMappings` is ignored.
-##     Requires an `rlm_rest` with raw-body (`data`) support.
-## Both modes store `clientSecret` (when set) in a Secret, injected via `$ENV`.
-## With `wireDefaultSite` (default), the `default` site's authorize section is
-## wired automatically (sets `Auth-Type := Accept` on success).
-##
-## @param keycloak.enabled Render the Keycloak auth configs + Secret and mount them into the pod
-## @param keycloak.mode Auth backend: `lua` (ROPC + introspection + role mapping via rlm_lua) or `rest` (ROPC-only via rlm_rest, no roles)
-## @param keycloak.url Base URL of the Keycloak server
-## @param keycloak.realm Keycloak realm holding the users (required when enabled)
-## @param keycloak.clientId OIDC client_id with Direct Access Grants enabled
-## @param keycloak.clientSecret Secret for a confidential client. Stored in a Secret and injected via `$ENV{KC_CLIENT_SECRET}`; leave empty for a public client.
-## @param keycloak.scope Optional OAuth scope appended to the token request
-## @param keycloak.connectTimeout Socket timeout (seconds) for Keycloak HTTPS calls (lua: `https.TIMEOUT`; rest: `connect_timeout`)
-## @param keycloak.wireDefaultSite Auto-wire the `default` virtual server's authorize section to call the Keycloak auth module (lua: `keycloak_authorize`; rest: `keycloak_rest`). Disable to wire it from your own site config.
-## @param keycloak.roleAttribute (lua mode) Control attribute the Lua mapper populates with role names (one value per role)
-## @param keycloak.denyWithoutRole (lua mode) Reject the request when no `roleMappings` entry matches
-## @param keycloak.roleMappings [array] (lua mode) Ordered role→reply map (first match wins). Each entry: `role` (Keycloak client role) + `reply` (list of literal unlang `Attr := value` lines).
-##
-keycloak:
-  enabled: false
-  mode: lua
-  url: https://auth.example.com
-  realm: ""
-  clientId: freeradius
-  clientSecret: ""
-  scope: ""
-  connectTimeout: "4.0"
-  wireDefaultSite: true
-  roleAttribute: Class
-  denyWithoutRole: false
-  roleMappings: []
-  #   - role: network-admin
-  #     reply:
-  #       - 'Service-Type := Administrative-User'
-  #       - 'Filter-Id := "network-admin-policy"'
-  #       - 'Cisco-AVPair := "shell:priv-lvl=15"'
-  #   - role: wifi-user
-  #     reply:
-  #       - 'Tunnel-Type:0 := VLAN'
-  #       - 'Tunnel-Medium-Type:0 := IEEE-802'
-  #       - 'Tunnel-Private-Group-Id:0 := "10"'
-  #       - 'Filter-Id := "wifi-user-policy"'
-  #   - role: wifi-guest
-  #     reply:
-  #       - 'Tunnel-Type:0 := VLAN'
-  #       - 'Tunnel-Medium-Type:0 := IEEE-802'
-  #       - 'Tunnel-Private-Group-Id:0 := "99"'
-  #       - 'Session-Timeout := 3600'
 ## @param initContainers Add additional init containers for the FreeRADIUS pod(s)
 ##
 initContainers: []
@@ -1265,6 +1557,9 @@ metrics:
   ## @param metrics.enabled Render the standalone `bvantagelimited/freeradius_exporter` Deployment and Service. Requires `sites.status.enabled: true`.
   ##
   enabled: false
+  ## @param metrics.secret Shared secret authenticating the exporter Deployment's RADIUS Status-Server queries. Used by the metrics exporter (`RADIUS_PASSWORD`) AND by the `client exporter { }` block in the status virtual server (`$ENV{FREERADIUS_EXPORTER_SECRET}`). Separate from `sites.status.secret` — independent rotation, independent blast radius. When empty, the chart auto-generates a 16-char random value and persists it in the chart credentials Secret (`<fullname>`) under key `exporter-secret`; user-supplied values take precedence and are honoured on every render.
+  ##
+  secret: ""
   ## @param metrics.replicaCount Number of exporter pods.
   ##
   replicaCount: 1
@@ -1336,10 +1631,6 @@ metrics:
   ##
   livenessProbe:
     enabled: true
-    exec:
-      command:
-        - sh
-        - /health/healthcheck.sh
     initialDelaySeconds: 15
     periodSeconds: 30
     timeoutSeconds: 5
@@ -1354,10 +1645,6 @@ metrics:
   ##
   readinessProbe:
     enabled: true
-    exec:
-      command:
-        - sh
-        - /health/healthcheck.sh
     initialDelaySeconds: 5
     periodSeconds: 10
     timeoutSeconds: 3
@@ -1617,6 +1904,22 @@ service:
   ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity
   ##
   sessionAffinityConfig: {}
+  ## Sibling headless (`clusterIP: None`) Service. Rendered automatically when
+  ## `kind: StatefulSet` and skipped when `kind: Deployment` — a StatefulSet
+  ## needs it for stable per-pod DNS (`<fullname>-0.<headless>.<ns>.svc.cluster.local`),
+  ## a Deployment has no use for one. The chart's main Service still handles
+  ## client traffic (auth/acct/coa/radsec/status); this one only backs the
+  ## StatefulSet's `serviceName` and per-pod A records. Same selector and same
+  ## UDP/TCP ports as the main Service, mirrored from `containerPorts.*`, so
+  ## proxy realm fail-over targeting a specific pod works.
+  ##
+  headless:
+    ## @param service.headless.nameSuffix Suffix appended to `<fullname>` to form the headless Service name (final name: `<fullname>-<suffix>`).
+    ##
+    nameSuffix: "headless"
+    ## @param service.headless.publishNotReadyAddresses Include not-yet-ready pods in the headless DNS records. Helpful when downstream callers want to reach a specific ordinal during startup; safe for StatefulSet identity but not for load-balanced traffic.
+    ##
+    publishNotReadyAddresses: false
 
 ## Pod disruption budget configuration
 ##
@@ -1644,13 +1947,20 @@ podDisruptionBudget:
 ## Cert-manager-driven issuance is configured under `tls.certManager.*` — a
 ## single canonical location consumed by both the in-pod RADSEC `Certificate`
 ## and the gateway-namespace `Certificate` (when `gateway.tls.enabled`).
+##
+## Auto-generation is implicit: when `tls.enabled: true` and no
+## `certificatesSecret` / `existingSecretName` is supplied, the chart issues
+## TLS material via cert-manager when its API is detected — bootstrapping its
+## own CA chain (`templates/Issuer.yaml`) when no `certManager.issuerRef.name`
+## is set — and otherwise renders a chart-generated self-signed genCA leaf
+## via `templates/secrets/tls.yaml`.
 ## =============================================================================
 
 tls:
-  ## @param tls.enabled Enable RADSEC (TLS over TCP RADIUS). Opens `containerPorts.radsec` / `service.ports.radsec` on the pod and the Service, mounts the leaf cert via `templates/secret/tls.yaml`, and (when `gateway.enabled`) wires the istio/gateway-api TLS-passthrough listener.
+  ## @param tls.enabled Enable RADSEC (TLS over TCP RADIUS). Opens `containerPorts.radsec` / `service.ports.radsec` on the pod and the Service, mounts the leaf cert via `templates/secrets/tls.yaml`, and (when `gateway.enabled`) wires the istio/gateway-api TLS-passthrough listener.
   ##
   enabled: false
-  ## @param tls.autoGenerated Render `templates/secret/tls.yaml` with a chart-generated self-signed leaf certificate. Skipped when `certificatesSecret`, `existingSecretName`, or `tls.certManager.create` are set.
+  ## @param tls.autoGenerated [DEPRECATED — no longer consulted] When `tls.enabled: true` the chart now auto-generates RADSEC TLS material implicitly (mechanism: cert-manager when its API is detected, otherwise genCA; suppressed only by `tls.certificatesSecret` / `tls.existingSecretName`). Slated for removal in the next major bump.
   ##
   autoGenerated: false
   ## @param tls.certificatesMountPath Path inside the container where the RADSEC TLS material is mounted
@@ -1677,15 +1987,34 @@ tls:
   ## (when `gateway.enabled && gateway.tls.enabled`).
   ##
   certManager:
-    ## @param tls.certManager.create Render cert-manager `Certificate` resources for any TLS-enabled exposure (RADSEC and/or gateway).
+    ## @param tls.certManager.create [DEPRECATED — no longer consulted] The chart now uses cert-manager whenever its API is detected; there is no longer a way to force the in-template genCA path on a cluster where cert-manager is installed. To opt out of cert-manager issuance for this release, pre-create a Secret and point `tls.certificatesSecret` at it. Slated for removal in the next major bump.
     ##
-    create: false
-    ## @param tls.certManager.issuerRef Reference to the cert-manager Issuer / ClusterIssuer that signs the certificate(s).
+    create: true
+    ## @param tls.certManager.issuerRef Reference to a pre-existing cert-manager Issuer / ClusterIssuer that signs the leaf certificate(s).
+    ##   Leave `name` empty (with `tls.enabled: true` and no `tls.certificatesSecret`) to have the chart bootstrap its OWN self-signed CA via
+    ##   cert-manager: a self-signed `Issuer` → a CA `Certificate` (`isCA: true`) → a CA `Issuer`
+    ##   (`templates/Issuer.yaml`), with the RADSEC and gateway leaves referencing that chart-managed CA Issuer.
+    ##   Set `name` (with `group`/`kind`) to use an existing issuer instead and skip the bootstrap.
     ##
     issuerRef:
       group: cert-manager.io
       kind: ClusterIssuer
-      name: selfsigned-issuer
+      name: ""
+    ## Self-signed CA the chart bootstraps when `issuerRef.name` is empty. The CA `Issuer` is namespaced in the
+    ## release namespace, so it can sign the gateway leaf only when the gateway `Certificate` shares that namespace
+    ## (the default — see `gateway.gateway.namespace`). For a gateway in a different namespace, supply a
+    ## `ClusterIssuer` via `issuerRef` instead. Ignored when `issuerRef.name` is set.
+    ##
+    ## @param tls.certManager.ca.commonName Subject CN of the bootstrapped CA certificate. Defaults to `<fullname> CA`.
+    ## @param tls.certManager.ca.duration Validity of the bootstrapped CA certificate.
+    ## @param tls.certManager.ca.renewBefore Renew the CA this far before expiry (empty = cert-manager default).
+    ## @param tls.certManager.ca.secretName Secret holding the bootstrapped CA key/cert. Defaults to `<fullname>-ca`.
+    ##
+    ca:
+      commonName: ""
+      duration: 87600h
+      renewBefore: ""
+      secretName: ""
 
 
 ## =============================================================================
@@ -1777,6 +2106,9 @@ gateway:
   ## @param gateway.implementation Gateway implementation to render. Allowed values: `gateway-api` or `istio`.
   ##
   implementation: gateway-api
+  ## @param gateway.infrastructure Optional Gateway data-plane infrastructure extension. When set, the chart renders the matching infrastructure CR and attaches it to its Gateway via `spec.infrastructure.parametersRef`. Only applicable when `implementation: gateway-api`. Allowed values: `""` (none — Gateway uses its GatewayClass defaults) or `envoy` (renders an `EnvoyProxy` resource under `gateway.envoyproxy.io/v1alpha1`; pair with an Envoy Gateway-backed `gatewayClassName` such as `eg`). `gatewayClassName` is independent — set it to whichever GatewayClass backs your Envoy Gateway install.
+  ##
+  infrastructure: envoy
 
   ## ---- Gateway resource -----------------------------------------------------
   ## Configuration for the Gateway resource itself (created here, or referenced
@@ -1786,12 +2118,34 @@ gateway:
     ## @param gateway.gateway.create Create a Gateway API Gateway resource. When false the chart expects an existing Gateway to be referenced via `existingGateway` or per-route `parentRefs`.
     ##
     create: false
-    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to the chart fullname.
+    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to `<fullname>-gateway` (the `-gateway` suffix avoids a name collision with the chart's Service and Deployment — important under Envoy Gateway and Istio gateway-api, where the controller materialises an Envoy/Istio data-plane Deployment named after the Gateway in the same namespace).
     ##
     name: ""
     ## @param gateway.gateway.namespace Namespace for the Gateway resource. Defaults to the release namespace.
     ##
     namespace: ""
+
+  ## ---- EnvoyProxy (data-plane customization for Envoy Gateway) -------------
+  ## Consumed only when `gateway.infrastructure: envoy` AND
+  ## `implementation: gateway-api`. Same `{create, name}` shape as
+  ## `gateway.gateway.*`: `create: true` renders the chart's own EnvoyProxy
+  ## manifest in the gateway namespace; `create: false` is BYO and references
+  ## an externally-managed EnvoyProxy by `name`. Either way, the chart's
+  ## Gateway (when it owns one) wires `spec.infrastructure.parametersRef` to
+  ## the resolved name.
+  ##
+  envoyProxy:
+    ## @param gateway.envoyProxy.create Render the chart's EnvoyProxy manifest (`templates/gateway-api/EnvoyProxy.yaml`). When `true`, the chart owns the resource with a bundled opinionated spec (Kubernetes provider, 1 replica, JSON access-log telemetry to stdout); to tune the spec further than what the template exposes, switch to BYO (`create: false`) and manage the EnvoyProxy CR externally. When `false`, the chart skips rendering and uses `gateway.envoyProxy.name` for the Gateway's `parametersRef`.
+    ##
+    create: true
+    ## @param gateway.envoyProxy.name Name of the EnvoyProxy resource. When `create: true`, empty defaults to the chart fullname. When `create: false`, **required** — must reference an EnvoyProxy that exists in `gateway.gateway.namespace`.
+    ##
+    name: ""
+
+  ## @param gateway.proxyProtocol End-to-end PROXY-protocol v1 wiring for RADSEC. When `true` AND `gateway.implementation: gateway-api` AND `gateway.infrastructure: envoy` AND `tls.enabled: true`, the chart (1) renders an Envoy Gateway `BackendTrafficPolicy` (`gateway.envoyproxy.io/v1alpha1`) targeting the FreeRADIUS Service's `tls-radsec` port with `proxyProtocol.version: V1` (Envoy prepends PROXY v1 to every TCP connection to the pod), and (2) forces `proxy_protocol = yes` on the RADSEC `listen { }` block so FreeRADIUS parses the header and uses the real client IP for `Packet-Src-IP-Address` / `clients.conf` lookup. v1 is pinned because FreeRADIUS 3.2.x only parses v1 on its TCP listeners (v2 is undocumented in the receive path). UDP auth/acct/coa is untouched — PROXY protocol only applies to TCP, and FreeRADIUS UDP listeners can't parse it regardless. (To wire PROXY-protocol parsing without Envoy Gateway — e.g. behind HAProxy — set `sites.radsec.listen.proxy_protocol: true` independently.)
+  ##
+  proxyProtocol: false
+
   ## @param gateway.clusterDomain Cluster domain used by the VirtualService backend FQDN. Falls back to the top-level `clusterDomain` when empty.
   ##
   clusterDomain: ""
@@ -1801,9 +2155,9 @@ gateway:
   ## @param gateway.selector Gateway instance selector labels (Istio)
   ##
   selector: {}
-  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations)
+  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations). Default `istio` matches Istio's bundled gateway-api GatewayClass; set to `eg` for Envoy Gateway, `cilium` for Cilium, etc. Independent of `gateway.implementation` and `gateway.infrastructure` — the chart does not derive this from either knob.
   ##
-  gatewayClassName: istio
+  gatewayClassName: eg
   ## @param gateway.listeners Verbatim `listeners:` list rendered on the chart's Gateway. When non-empty, the chart skips its default UDP auth/acct/coa + TLS-passthrough listener generation.
   ##
   listeners: []
@@ -1816,7 +2170,7 @@ gateway:
 
   ## ---- TLS ------------------------------------------------------------------
   ## TLS configuration applied to the default Gateway listener generation and
-  ## to the chart-managed TLS Secret rendered by `templates/secret/gateway-tls.yaml`.
+  ## to the chart-managed TLS Secret rendered by `templates/secrets/gateway-tls.yaml`.
   ## The certificate Secret name is computed by the `freeradius.gateway.tlsSecretName`
   ## helper — single source of truth shared by both Gateway templates and the
   ## gateway-tls Secret, so listener and secret can never drift apart.
@@ -1828,7 +2182,7 @@ gateway:
     ## @param gateway.tls.existingSecret Name of an externally-managed Kubernetes Secret holding the TLS material the Gateway TLS listener references (only relevant when the listener uses `mode: SIMPLE` / Terminate).
     ##
     existingSecret: ""
-    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret`, `gateway.tls.secrets`, or `tls.certManager.create` are set.
+    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secrets/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret` / `gateway.tls.secrets` are set, or when cert-manager issuance is active (the cert-manager API is detected on the cluster) — in which case the gateway leaf is issued by `templates/Certificate.yaml` instead.
     ##
     selfSigned: false
     ## @param gateway.tls.secrets Custom TLS certificates rendered as Secrets in the gateway's namespace. 'name' should match what the Gateway listener references.
@@ -1943,6 +2297,9 @@ gateway:
 ##
 mariadb:
   enabled: false
+  global:
+    security:
+      allowInsecureImages: true
   auth:
     username: freeradius_user
     password: ""
@@ -1962,6 +2319,9 @@ mariadb:
 ##
 postgresql:
   enabled: false
+  global:
+    security:
+      allowInsecureImages: true
   auth:
     username: freeradius_user
     password: ""
@@ -1990,6 +2350,49 @@ externalDatabase:
   password: ""
   existingSecret: ""
   existingSecretPasswordKey: ""
+
+## Redis chart configuration. Enable to bundle a Bitnami Redis as the backend
+## for the `rlm_redis` / `rlm_cache` module (`modules.redis.enabled`). When
+## enabled, `modules.redis.server` is auto-pointed at the bundled
+## `<release>-redis-master` Service (via the `freeradius.redis.host` helper) and,
+## when `redis.auth.enabled`, the password is injected into the module from the
+## subchart's Secret as `$ENV{FREERADIUS_MODS_REDIS_PASSWORD}`.
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/redis/values.yaml
+##
+## @param redis.enabled Switch to enable or disable the bundled Redis subchart. Pairs with `modules.redis.enabled`.
+## @param redis.architecture Redis architecture (`standalone` or `replication`). The module targets the `-master` Service either way.
+## @param redis.auth.enabled Enable password authentication on the bundled Redis (Bitnami default). The chart wires the password into the redis module automatically.
+## @param redis.auth.password Password for the bundled Redis (auto-generated by the subchart when empty).
+## @param redis.auth.existingSecret Name of an existing Secret holding the Redis password. Overrides the subchart-managed Secret.
+## @param redis.auth.existingSecretPasswordKey Key inside the Secret that holds the password (Bitnami default `redis-password`).
+##
+redis:
+  enabled: false
+  global:
+    security:
+      allowInsecureImages: true
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/redis
+    tag: 8.6.2
+  architecture: standalone
+  auth:
+    enabled: true
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: ""
+  master:
+    kind: Deployment
+    persistence:
+      enabled: false
+  ## Bitnami's redis subchart declares `metrics.extraArgs` as a map (not a
+  ## list) — exporter CLI flags rendered as `--key=value` pairs. Re-stating
+  ## the shape here makes the contract explicit so downstream overrides don't
+  ## accidentally hand a list (which triggers `coalesce.go: cannot overwrite
+  ## table with non table for redis.metrics.extraArgs (map[])`).
+  ##
+  metrics:
+    extraArgs: {}
 
 ## Database bootstrap. Loads the rlm_sql schema (`files/schema/<dialect>.sql`)
 ## into the configured database via an init container on the FreeRADIUS pod
@@ -2075,3 +2478,95 @@ bootstrap:
     ##
     securityContext:
       runAsUser: 0
+
+## Utility deployment that ships `radtest` / `radclient` (Debian
+## `freeradius-utils` package). The chart's main image
+## (`freeradius/freeradius-server`) strips client tools, so this is the
+## convenient way to send RADIUS Access-Requests against the in-cluster
+## service for debugging Keycloak / EAP / SQL flows. The pod runs
+## `sleep infinity` after installing the package on first start; usage:
+##
+##   kubectl exec -it deploy/<release>-freeradius-radtest -- bash
+##   # env vars RADIUS_HOST / RADIUS_AUTH_PORT / RADIUS_SECRET are
+##   # pre-populated; supply the user/password (Keycloak creds):
+##   radtest <user> <pass> $RADIUS_HOST $RADIUS_NAS_PORT $RADIUS_SECRET
+##
+## Disabled by default. Intended for short-lived debugging — DO NOT use
+## as a production traffic generator.
+##
+radtest:
+  ## @param radtest.enabled Render the radtest utility Deployment.
+  ##
+  enabled: false
+  ## @param radtest.replicaCount Number of radtest pods.
+  ##
+  replicaCount: 1
+  ## Container image for the radtest utility pod. Defaults to `2stacks/radtest`
+  ## — Alpine-based, ~8 MB, ships `radtest` / `radclient` preinstalled (no
+  ## startup install step). Override to any image that already includes the
+  ## FreeRADIUS client tools if you want to pin a specific client version.
+  ##
+  ## @param radtest.image.registry Image registry
+  ## @param radtest.image.repository Image repository
+  ## @param radtest.image.tag Image tag
+  ## @param radtest.image.digest Image digest (overrides `tag` when set)
+  ## @param radtest.image.pullPolicy Image pull policy
+  ## @param radtest.image.pullSecrets Image pull secrets
+  ##
+  image:
+    registry: docker.io
+    repository: 2stacks/radtest
+    tag: latest
+    digest: ""
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  ## @param radtest.secret RADIUS shared secret used by the pre-populated `$RADIUS_SECRET` env var. Must match the entry in `clients.conf` for the source IP the radtest pod uses (cluster-internal — typically matches the loopback/in-cluster client entry).
+  ##
+  secret: password
+  ## @param radtest.extraEnvVars Extra environment variables for the radtest container.
+  ##
+  extraEnvVars: []
+  ## @param radtest.resources Set container requests/limits. Leave empty to fall back to `resourcesPreset`.
+  ## @param radtest.resourcesPreset Preset shorthand (`none`, `nano`, `micro`, `small`, ...) when `resources` is empty.
+  ##
+  resources: {}
+  resourcesPreset: nano
+  ## Radtest container security context. Tight by default (PSS "restricted"):
+  ## radtest/radclient only open a UDP socket, read stdin, and write to
+  ## stdout/stderr — no privileged ops, no on-disk state. Safe with a
+  ## non-root UID, dropped caps and a read-only root filesystem.
+  ##
+  ## @param radtest.containerSecurityContext.enabled Apply the security context to the radtest container.
+  ## @param radtest.containerSecurityContext.runAsUser UID for the radtest container.
+  ## @param radtest.containerSecurityContext.runAsGroup GID for the radtest container.
+  ## @param radtest.containerSecurityContext.runAsNonRoot Reject containers that try to run as root.
+  ## @param radtest.containerSecurityContext.allowPrivilegeEscalation Block child processes from gaining more privileges than the parent.
+  ## @param radtest.containerSecurityContext.readOnlyRootFilesystem Mount the container's root filesystem as read-only.
+  ## @param radtest.containerSecurityContext.capabilities Linux capabilities to add/drop on the radtest container.
+  ## @param radtest.containerSecurityContext.seccompProfile Seccomp profile applied to the radtest container.
+  ##
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  ## @param radtest.podAnnotations Annotations for the radtest pod.
+  ## @param radtest.podLabels Labels for the radtest pod.
+  ##
+  podAnnotations: {}
+  podLabels: {}
+  ## @param radtest.nodeSelector Node selector for the radtest pod.
+  ## @param radtest.tolerations Tolerations for the radtest pod.
+  ## @param radtest.affinity Affinity rules for the radtest pod.
+  ## @param radtest.priorityClassName Priority class for the radtest pod.
+  ##
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  priorityClassName: ""

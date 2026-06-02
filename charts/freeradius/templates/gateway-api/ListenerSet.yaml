@@ -22,7 +22,7 @@ spec:
     {{- else }}
     group: gateway.networking.k8s.io
     kind: Gateway
-    name: {{ include "st-common.gateway.fullname" . }}
+    name: {{ include "freeradius.gateway.fullname" . }}
     namespace: {{ include "st-common.gateway.namespace" . }}
     {{- end }}
   listeners: {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listenerSet.listeners "context" $) | nindent 4 }}

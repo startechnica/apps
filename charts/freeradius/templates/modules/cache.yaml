@@ -1,0 +1,197 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
+Single ConfigMap, single key (`cache`), holding every rlm_cache instance the
+chart manages concatenated into one FreeRADIUS module file. Sections rendered
+on demand:
+  - `cache { }`                  — base       (modules.cache.enabled)
+  - `cache cache_tls { }`        — EAP TLS    (sites.tlsCache.enabled)
+  - `cache oidc[_<name>]_cache`  — OIDC       (one per modules.oidc instance
+                                               whose `cache.enabled: true`)
+  - `cache <name> { }`           — per-entry  (modules.cache.instances.<name>)
+
+The Deployment mounts this as one file at `mods-enabled/cache`; rlm_cache
+parses every `cache <name>` block in the file and registers each as its own
+instance.
+
+BYO override: `modules.cache.existingConfigMap` skips this template entirely
+and the user provides the full module file themselves.
+
+The `redis { }` sub-block is intentionally inlined per instance — no shared
+helper, because the indirection hurts readability more than the duplication.
+*/}}
+{{- if not .Values.modules.cache.existingConfigMap -}}
+{{- $base := .Values.modules.cache.enabled -}}
+{{- $tls := .Values.sites.tlsCache.enabled -}}
+{{- $oidcInstances := dict -}}
+{{- if .Values.modules.oidc.enabled -}}
+{{- $resolvedOidc := include "freeradius.oidc.resolveInstances" . | fromYaml -}}
+{{- range $name, $cfg := $resolvedOidc.instances -}}
+{{- if and $cfg.cache $cfg.cache.enabled -}}
+{{- $_ := set $oidcInstances $name $cfg -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $oidc := not (empty $oidcInstances) -}}
+{{- $inst := not (empty .Values.modules.cache.instances) -}}
+{{- if or $base $tls $oidc $inst }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-mods-cache" (include "st-common.names.fullname" .) }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: freeradius
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+data:
+  cache: |
+    {{- if $base }}
+    # rlm_cache base module — attribute cache with a pluggable backend driver
+    cache {
+        driver = "rlm_cache_{{ .Values.modules.cache.driver }}"
+        key = {{ .Values.modules.cache.key }}
+        ttl = {{ .Values.modules.cache.ttl }}
+        max_entries = {{ .Values.modules.cache.max_entries }}
+        {{- with .Values.modules.cache.config }}
+        {{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+
+        # Attributes to cache. rlm_cache refuses to load unless this section
+        # holds at least one map ("Must have an 'update' section in order to
+        # cache anything").
+        update {
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.modules.cache.update "context" $) | nindent 12 }}
+        }
+
+        {{- if eq .Values.modules.cache.driver "redis" }}
+        # Redis backend — connection reused from modules.redis
+        redis {
+            server = {{ include "freeradius.redis.host" . }}
+            {{- if include "freeradius.redis.usePassword" . }}
+            password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
+            {{- end }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit .Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
+        }
+        {{- else if eq .Values.modules.cache.driver "memcached" }}
+        memcached {
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" .Values.modules.cache.memcached.config "context" $) | nindent 12 }}
+        }
+        {{- end }}
+    }
+    {{- end }}
+    {{- if $tls }}
+
+    # rlm_cache instance dedicated to OpenSSL TLS session blobs. Distinct from
+    # the generic `modules.cache` instance: keyed on %{TLS-Session-Id}, with a
+    # TTL tuned to the EAP session lifetime and an `update { }` that copies
+    # &session-state: in both directions (the EAP module pre-populates the
+    # serialized session there). Always Redis-backed — `freeradius.validate.tlsCache`
+    # hard-fails if no Redis is configured, since an in-pod backend defeats
+    # the cross-replica resumption that justifies enabling this at all.
+    cache cache_tls {
+        driver = "rlm_cache_redis"
+        key = "%{TLS-Session-Id}"
+        ttl = {{ .Values.sites.tlsCache.ttl }}
+        max_entries = 0
+
+        update {
+            &session-state: += &session-state:
+        }
+
+        redis {
+            server = {{ include "freeradius.redis.host" . }}
+            {{- if include "freeradius.redis.usePassword" . }}
+            password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
+            {{- end }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit .Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
+        }
+    }
+    {{- end }}
+    {{- if $oidc }}
+    {{- range $name, $cfg := $oidcInstances }}
+    {{- $cacheName := include "freeradius.oidc.cacheName" (dict "name" $name) }}
+    {{- $cacheKey := include "freeradius.oidc.cacheKey" (dict "name" $name) }}
+    {{- $roleAttr := default "Class" $cfg.roleAttribute }}
+    {{- $groupAttr := default "Class" $cfg.groupAttribute }}
+    {{- $emitGroupAttr := and $cfg.groupMappings (ne $roleAttr $groupAttr) }}
+    {{- $replyAttrs := dict }}
+    {{- range $m := default list $cfg.attributeMappings }}{{- $_ := set $replyAttrs $m.reply true }}{{- end }}
+
+    # rlm_cache instance dedicated to OIDC auth results for instance
+    # `{{ $name }}`. Keyed on `{{ $cacheKey }}` — instance-namespaced to
+    # prevent cross-instance cache hits on common usernames. Caches the
+    # attributes the mapper script populated so subsequent
+    # `{{ include "freeradius.oidc.policyName" (dict "name" $name) }}` calls within TTL skip
+    # the ROPC + claim-decode roundtrip to the IdP. Always Redis-backed —
+    # `freeradius.validate.oidcInstances` hard-fails if no Redis is
+    # configured.
+    cache {{ $cacheName }} {
+        driver = "rlm_cache_redis"
+        key = {{ $cacheKey }}
+        ttl = {{ $cfg.cache.ttl }}
+        max_entries = 0
+
+        update {
+            &control:{{ $roleAttr }} += &control:{{ $roleAttr }}
+            {{- if $emitGroupAttr }}
+            &control:{{ $groupAttr }} += &control:{{ $groupAttr }}
+            {{- end }}
+            {{- range $reply, $_ := $replyAttrs }}
+            &reply:{{ $reply }} += &reply:{{ $reply }}
+            {{- end }}
+            {{- if $cfg.refreshTokenCache }}
+            &control:Tmp-String-9 := &control:Tmp-String-9
+            {{- end }}
+        }
+
+        redis {
+            server = {{ include "freeradius.redis.host" $ }}
+            {{- if include "freeradius.redis.usePassword" $ }}
+            password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
+            {{- end }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit $.Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
+        }
+    }
+    {{- end }}
+    {{- end }}
+    {{- range $name, $cfg := .Values.modules.cache.instances }}
+
+    # User-defined rlm_cache instance (modules.cache.instances.{{ $name }}).
+    cache {{ $name }} {
+        driver = "rlm_cache_{{ $cfg.driver }}"
+        key = {{ $cfg.key }}
+        ttl = {{ $cfg.ttl }}
+        max_entries = {{ $cfg.max_entries | default 0 }}
+        {{- with $cfg.config }}
+        {{- include "freeradius.tplvalues.renderConfig" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+
+        update {
+            {{- include "st-common.tplvalues.render" (dict "value" $cfg.update "context" $) | nindent 12 }}
+        }
+
+        {{- if eq $cfg.driver "redis" }}
+        # Redis backend — connection reused from modules.redis
+        redis {
+            server = {{ include "freeradius.redis.host" $ }}
+            {{- if include "freeradius.redis.usePassword" $ }}
+            password = $ENV{FREERADIUS_MODS_REDIS_PASSWORD}
+            {{- end }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" (omit $.Values.modules.redis "enabled" "existingConfigMap" "server") "context" $) | nindent 12 }}
+        }
+        {{- else if eq $cfg.driver "memcached" }}
+        memcached {
+            {{- if $cfg.memcached }}
+            {{- include "freeradius.tplvalues.renderConfig" (dict "value" $cfg.memcached.config "context" $) | nindent 12 }}
+            {{- end }}
+        }
+        {{- end }}
+    }
+    {{- end }}
+{{- end }}
+{{- end }}
