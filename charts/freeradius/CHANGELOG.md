@@ -404,6 +404,18 @@
   cast to IPv6 fails at runtime; the cast error stamps Module-Failure-
   Message and the arm evaluates as false, so dispatch silently misses
   the matching instance.
+- OIDC role-mapping and group-mapping policies (`oidc[_<name>]_roles`,
+  `oidc[_<name>]_groups`) now guard the multi-value `[*]` comparison on
+  attribute existence: `&control:<attr> && &control:<attr>[*] == "..."`.
+  Without the guard, when the IdP returns no roles at the configured
+  `rolesClaim` (or groups at `groupsClaim`), the `[*]` iterator hits an
+  absent attribute and FreeRADIUS bails with
+  `ERROR: Failed retrieving values required to evaluate condition`,
+  skipping the remaining arms. The auth still completes via the outer
+  `if (ok) { Auth-Type := Accept }` set by `oidc_<name>_authorize`, but
+  every "user has no role" or "user has no group" case stamps an ugly
+  error in the log. Guard matches the same pattern used for the dispatch
+  arms.
 - OIDC dispatch arms now use the `<=` IP-in-prefix operator instead of `==`
   for the `clients.<x>.{ipv4addr,ipv6addr}` match. `==` is exact-string
   equality in unlang, so any CIDR value (`0.0.0.0/0`, `192.168.1.0/24`,

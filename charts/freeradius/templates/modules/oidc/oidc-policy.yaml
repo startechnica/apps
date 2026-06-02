@@ -117,10 +117,13 @@ data:
 
     {{- if $cfg.roleMappings }}
     #  Map roles read from `{{ $cfg.rolesClaim }}` (&control:{{ $cfg.roleAttribute }})
-    #  to RADIUS reply attributes. First match wins.
+    #  to RADIUS reply attributes. First match wins. The `&control:{{ $cfg.roleAttribute }} &&`
+    #  guard short-circuits when the IdP returns no roles at the claim path — without it,
+    #  the `[*]` iterator on an absent attribute errors with "Failed retrieving values
+    #  required to evaluate condition" and the rest of the chain is skipped.
     {{ $rolesPolName }} {
     {{- range $i, $m := $cfg.roleMappings }}
-        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $cfg.roleAttribute }}[*] == "{{ $m.role }}") {
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ $cfg.roleAttribute }} && &control:{{ $cfg.roleAttribute }}[*] == "{{ $m.role }}") {
             update reply {
             {{- range $line := $m.reply }}
                 {{ $line }}
@@ -141,10 +144,11 @@ data:
 
     {{- if $cfg.groupMappings }}
     #  Map groups read from `{{ default "groups" $cfg.groupsClaim }}` (&control:{{ default "Class" $cfg.groupAttribute }})
-    #  to RADIUS reply attributes. First match wins.
+    #  to RADIUS reply attributes. First match wins. The `&control:<attr> &&` guard handles the
+    #  no-groups case the same way the roles policy does — see the analogous comment above.
     {{ $groupsPolName }} {
     {{- range $i, $m := $cfg.groupMappings }}
-        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ default "Class" $cfg.groupAttribute }}[*] == "{{ $m.group }}") {
+        {{ if $i }}elsif{{ else }}if{{ end }} (&control:{{ default "Class" $cfg.groupAttribute }} && &control:{{ default "Class" $cfg.groupAttribute }}[*] == "{{ $m.group }}") {
             update reply {
             {{- range $line := $m.reply }}
                 {{ $line }}
