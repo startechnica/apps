@@ -970,15 +970,19 @@ homeServerPools: []
 ## The peer pods must accept Access-Request from each other — that is, the
 ## chart's `clients{}` block must cover the peer pod IPs (typically already
 ## true via `clients.localhost.ipv4addr: 0.0.0.0/0`) AND share the same secret
-## the realm pool uses. Set `realmPool.secret` to whatever the matching
-## `clients.<x>.secret` is, or inject both via the same `$ENV{...}` reference.
+## the realm pool uses. The shared secret is exposed in-container as
+## `$ENV{FREERADIUS_REALMPOOL_SECRET}` — point the matching `clients{}` entry
+## at the same expansion (`clients.<x>.secret: "$ENV{FREERADIUS_REALMPOOL_SECRET}"`).
+## The chart auto-generates the secret value into the credentials Secret
+## under key `realmpool-secret` on first install and persists it across
+## upgrades; set `realmPool.secret` to pin a literal instead.
 ##
 ## @param realmPool.enabled Gate for auto-generation. No-op outside `kind: StatefulSet` even when `true`.
 ## @param realmPool.name Pool name (also the home_server name prefix — entries are `<name>-<ord>`).
 ## @param realmPool.type FreeRADIUS pool type. Recommended values: `load-balance`, `fail-over`, `client-balance`, `keyed-balance`.
 ## @param realmPool.port UDP port the peer pods listen on. Default: empty -> falls back to `containerPorts.auth` (1812).
 ## @param realmPool.proto Wire protocol (`udp` is the only supported value today; the chart's RADIUS auth listeners are UDP).
-## @param realmPool.secret Shared secret used by both the home_server entry and the matching `clients{}` block on each peer. Required when `realmPool.enabled: true`. Use `$ENV{FREERADIUS_...}` to inject from a Secret via `extraEnvVarsSecret`.
+## @param realmPool.secret Shared secret consumed by the auto-generated home_server entries via `$ENV{FREERADIUS_REALMPOOL_SECRET}`. Leave empty to let the chart generate and persist a random 32-char value in the credentials Secret (`realmpool-secret` key) — recovered on subsequent renders. Setting a literal pins that value instead.
 ## @param realmPool.virtualServer Optional `virtual_server` directive emitted into the auto-generated pool — names a virtual server the proxied reply is processed through.
 ##
 realmPool:
@@ -1219,10 +1223,10 @@ users: []
 ## =============================================================================
 
 auth:
-  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
+  ## @param auth.existingSecret Name of an already-existing Secret containing chart-managed credentials (`database-password`, `mariadb-password`, `sites-status-secret`, `clients-radsec-secret`, `realmpool-secret` when `realmPool.enabled`, and `sites-radsec-privkey-password` / `mods-eap-tls-privkey-password` when the matching `tls.private_key_password` is set under `sites.radsec.tls.*` / `modules.eap.tlsConfig.*`). Overrides chart-rendered Secret rendering.
   ##
   existingSecret: ""
-  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`). Recognised keys: `databasePassword`, `mariadbPassword`, `sitesStatusSecret`, `metricsSecret`, `sitesRadsecPrivKeyPassword`, `clientsRadsecSecret`, `modsRestPassword`, `modsEapTlsPrivKeyPassword`.
+  ## @param auth.existingSecretPerPassword Per-credential override map. Each entry points to a different Secret/key combination — useful when individual passwords are managed by separate operators (e.g. CNPG for `databasePassword`). Recognised keys: `databasePassword`, `mariadbPassword`, `sitesStatusSecret`, `metricsSecret`, `sitesRadsecPrivKeyPassword`, `clientsRadsecSecret`, `modsRestPassword`, `modsEapTlsPrivKeyPassword`, `realmpoolSecret`.
   ## e.g:
   ## existingSecretPerPassword:
   ##   keyMapping:
@@ -2446,6 +2450,14 @@ redis:
     kind: Deployment
     persistence:
       enabled: false
+  ## Bitnami's redis subchart declares `metrics.extraArgs` as a map (not a
+  ## list) — exporter CLI flags rendered as `--key=value` pairs. Re-stating
+  ## the shape here makes the contract explicit so downstream overrides don't
+  ## accidentally hand a list (which triggers `coalesce.go: cannot overwrite
+  ## table with non table for redis.metrics.extraArgs (map[])`).
+  ##
+  metrics:
+    extraArgs: {}
 
 ## Database bootstrap. Loads the rlm_sql schema (`files/schema/<dialect>.sql`)
 ## into the configured database via an init container on the FreeRADIUS pod

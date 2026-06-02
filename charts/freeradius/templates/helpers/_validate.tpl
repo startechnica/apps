@@ -466,9 +466,12 @@ Rejects:
   - `realmPool.enabled: true` with `replicaCount < 2` (a single-replica
     peer pool is a no-op that still costs configuration surface — fail
     loudly so the misconfig is fixed instead of silently shipping an empty
-    pool),
-  - `realmPool.enabled: true` with an empty `realmPool.secret` (the
-    home_server entries need a secret; the chart can't synthesize one).
+    pool).
+
+The shared secret is sourced from `$ENV{FREERADIUS_REALMPOOL_SECRET}` at
+runtime; the chart auto-generates and persists it in the credentials
+Secret (`realmpool-secret` key), or honours a user-supplied
+`realmPool.secret` value if set — so neither path needs validation here.
 
 Soft-no-ops (no message): `realmPool.enabled: false`, or
 `realmPool` absent — both correctly render nothing.
@@ -491,12 +494,6 @@ freeradius: realmPool.enabled
     `realmPool.enabled: true` requires `replicaCount >= 2` (currently
     `{{ $replicas }}`). A peer pool with one member is a no-op; bump
     `replicaCount` or set `realmPool.enabled: false`.
-{{- else if not (trim (.Values.realmPool.secret | default "")) -}}
-freeradius: realmPool.secret
-    `realmPool.enabled: true` requires a non-empty `realmPool.secret`.
-    Each auto-generated `home_server` needs a shared secret matching the
-    `clients{}` block that accepts requests on the peer pods — set it to a
-    literal or to `$ENV{FREERADIUS_...}` injected via `extraEnvVarsSecret`.
 {{- end -}}
 {{- end -}}
 {{- end -}}

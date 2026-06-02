@@ -29,7 +29,9 @@ Usage:
   {{- $rpEnabled := and (...) (include "freeradius.isStatefulSet" .) (...) }}
 */}}
 {{- define "freeradius.isStatefulSet" -}}
-{{- if eq (lower (toString (.Values.kind | default "Deployment"))) "statefulset" -}}true{{- end -}}
+{{- if eq (lower (toString (.Values.kind | default "Deployment"))) "statefulset" -}}
+true
+{{- end -}}
 {{- end -}}
 
 {{/*

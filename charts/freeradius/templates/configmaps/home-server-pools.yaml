@@ -24,14 +24,18 @@ data:
            wins. Gated on tls.enabled to match `home_server radsec`. */}}
     {{- $hasRadsec := false }}
     {{- range .Values.homeServerPools }}
-    {{- if eq .name "radsec" }}{{- $hasRadsec = true }}{{- end }}
+    {{- if eq .name "radsec" }}
+      {{- $hasRadsec = true }}
     {{- end }}
+    {{- end }}
+
     {{- if and .Values.tls.enabled (not $hasRadsec) }}
     home_server_pool radsec {
         type = fail-over
         home_server = radsec
     }
     {{- end }}
+
     {{- range .Values.homeServerPools }}
     home_server_pool {{ .name }} {
         type = {{ default "fail-over" .type }}
@@ -71,6 +75,7 @@ data:
         {{- end }}
     }
     {{- end }}
+
     {{- if not (has $rpAcctPool $rpUserPools) }}
     home_server_pool {{ $rpAcctPool }} {
         type = {{ default "load-balance" $rp.type }}

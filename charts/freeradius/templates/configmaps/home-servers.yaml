@@ -121,7 +121,9 @@ data:
     {{- $rpAuthPort := default .Values.containerPorts.auth (toString $rp.port | trim) }}
     {{- $rpAcctPort := .Values.containerPorts.acct }}
     {{- $rpUserNames := list }}
-    {{- range .Values.homeServers }}{{- $rpUserNames = append $rpUserNames .name }}{{- end }}
+    {{- range .Values.homeServers }}
+    {{- $rpUserNames = append $rpUserNames .name }}
+    {{- end }}
     {{- range $i := until $rpReplicas }}
     {{- $rpAuthName := printf "%s_%d_auth" $rpSnakeName $i }}
     {{- $rpAcctName := printf "%s_%d_acct" $rpSnakeName $i }}
@@ -131,16 +133,17 @@ data:
         type = auth
         ipaddr = {{ $rpPodFqdn | quote }}
         port = {{ $rpAuthPort }}
-        secret = {{ $rp.secret | quote }}
+        secret = $ENV{FREERADIUS_REALMPOOL_SECRET}
         proto = {{ default "udp" $rp.proto }}
     }
     {{- end }}
+
     {{- if not (has $rpAcctName $rpUserNames) }}
     home_server {{ $rpAcctName }} {
         type = acct
         ipaddr = {{ $rpPodFqdn | quote }}
         port = {{ $rpAcctPort }}
-        secret = {{ $rp.secret | quote }}
+        secret = $ENV{FREERADIUS_REALMPOOL_SECRET}
         proto = {{ default "udp" $rp.proto }}
     }
     {{- end }}

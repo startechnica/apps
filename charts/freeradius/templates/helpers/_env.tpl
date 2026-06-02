@@ -78,6 +78,18 @@ Usage: {{ include "freeradius.secretEnvVars" . | trimPrefix "\n" | nindent 12 }}
       key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "clients-radsec-secret") }}
     {{- end }}
 {{- end }}
+{{- if and (hasKey .Values "realmPool") .Values.realmPool.enabled }}
+- name: FREERADIUS_REALMPOOL_SECRET
+  valueFrom:
+    secretKeyRef:
+    {{- if .Values.auth.existingSecretPerPassword }}
+      name: {{ tpl (include "st-common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.realmpoolSecret "context" $)) $ }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "realmpoolSecret") }}
+    {{- else }}
+      name: {{ $globalSecretName }}
+      key: {{ include "st-common.secrets.key" (dict "existingSecret" .Values.auth.existingSecret "key" "realmpool-secret") }}
+    {{- end }}
+{{- end }}
 {{- if and .Values.modules.rest.enabled (ne .Values.modules.rest.auth "none") }}
 - name: FREERADIUS_MODS_REST_PASSWORD
   valueFrom:
