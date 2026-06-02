@@ -1692,10 +1692,6 @@ metrics:
   ##
   livenessProbe:
     enabled: true
-    exec:
-      command:
-        - sh
-        - /health/healthcheck.sh
     initialDelaySeconds: 15
     periodSeconds: 30
     timeoutSeconds: 5
@@ -1710,10 +1706,6 @@ metrics:
   ##
   readinessProbe:
     enabled: true
-    exec:
-      command:
-        - sh
-        - /health/healthcheck.sh
     initialDelaySeconds: 5
     periodSeconds: 10
     timeoutSeconds: 3
