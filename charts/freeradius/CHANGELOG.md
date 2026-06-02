@@ -395,6 +395,15 @@
   the trailing newline is preserved. Affected both `sites/default` and the
   newly-wired `sites/inner-tunnel` (the bug existed in `default` since 1.2.0
   but only fired when at least one `clients.<x>.oidc` binding was set).
+- OIDC dispatch arms now guard each `Packet-Src-IP[v6]-Address == "<addr>"`
+  comparison with an attribute-existence check (`&Attr && Attr == "..."`)
+  so an IPv4-only request doesn't bail with
+  `Failed casting lhs operand: Failed resolving "" to IPv6 address` when
+  the OR falls through to the IPv6 leg (and vice versa for IPv6-only).
+  Without the guard, unlang resolves the absent attribute to `""` and the
+  cast to IPv6 fails at runtime; the cast error stamps Module-Failure-
+  Message and the arm evaluates as false, so dispatch silently misses
+  the matching instance.
 
 ## 1.1.0 (2026-05-29)
 
