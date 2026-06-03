@@ -141,9 +141,6 @@
     "extraEnvVars": {
       "type": "array"
     },
-    "extraEnvs": {
-      "type": "array"
-    },
     "extraEnvVarsCM": {
       "type": "string"
     },
@@ -417,13 +414,7 @@
     "sidecars": {
       "type": "array"
     },
-    "extraContainers": {
-      "type": "array"
-    },
     "initContainers": {
-      "type": "array"
-    },
-    "extraInitContainers": {
       "type": "array"
     },
     "networkPolicy": {

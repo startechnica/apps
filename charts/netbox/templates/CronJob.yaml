@@ -91,7 +91,7 @@ spec:
               - name: HOUSEKEEPING_INTERVAL
                 value: "20"
             {{- if .Values.housekeeping.extraEnvVars }}
-              {{- include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 12 }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 14 }}
             {{- end }}
             {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
             envFrom:

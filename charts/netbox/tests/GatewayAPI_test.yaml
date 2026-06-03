@@ -21,12 +21,13 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: Gateway renders an HTTP listener on the eg GatewayClass by default
+  - it: Gateway renders an HTTP listener on the configured GatewayClass
     templates:
       - templates/gateway-api/Gateway.yaml
     set:
       gateway.enabled: true
       gateway.gateway.create: true
+      gateway.gatewayClassName: eg
     asserts:
       - isKind:
           of: Gateway
@@ -104,12 +105,13 @@ tests:
             protocol: HTTPS
           any: true
 
-  - it: Gateway attaches the EnvoyProxy parametersRef when infrastructure=envoy (default)
+  - it: Gateway attaches the EnvoyProxy parametersRef when infrastructure=envoy
     templates:
       - templates/gateway-api/Gateway.yaml
     set:
       gateway.enabled: true
       gateway.gateway.create: true
+      gateway.infrastructure: envoy
     asserts:
       - equal:
           path: spec.infrastructure.parametersRef.group
@@ -199,11 +201,12 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: EnvoyProxy renders by default when gateway.enabled (envoyProxy.create=true)
+  - it: EnvoyProxy renders when infrastructure=envoy and envoyProxy.create=true
     templates:
       - templates/gateway-api/EnvoyProxy.yaml
     set:
       gateway.enabled: true
+      gateway.infrastructure: envoy
     asserts:
       - isKind:
           of: EnvoyProxy
@@ -219,6 +222,7 @@ tests:
       - templates/gateway-api/EnvoyProxy.yaml
     set:
       gateway.enabled: true
+      gateway.infrastructure: envoy
       gateway.envoyProxy.create: false
       gateway.envoyProxy.name: my-byo-envoyproxy
     asserts:

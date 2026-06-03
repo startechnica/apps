@@ -90,3 +90,150 @@ tests:
       - equal:
           path: spec.schedule
           value: "*/15 * * * *"
+
+  - it: housekeeping CronJob omits ttlSecondsAfterFinished by default
+    templates:
+      - templates/CronJob.yaml
+    asserts:
+      - notExists:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+
+  - it: housekeeping CronJob propagates ttlSecondsAfterFinished when set
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.ttlSecondsAfterFinished: 600
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+          value: 600
+
+  - it: housekeeping CronJob defaults history limits and suspend
+    templates:
+      - templates/CronJob.yaml
+    asserts:
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 3
+      - equal:
+          path: spec.failedJobsHistoryLimit
+          value: 3
+      - equal:
+          path: spec.suspend
+          value: false
+
+  - it: housekeeping CronJob honours suspend and history-limit overrides
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.suspend: true
+      housekeeping.successfulJobsHistoryLimit: 7
+      housekeeping.failedJobsHistoryLimit: 1
+      housekeeping.concurrencyPolicy: Replace
+    asserts:
+      - equal:
+          path: spec.suspend
+          value: true
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 7
+      - equal:
+          path: spec.failedJobsHistoryLimit
+          value: 1
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Replace
+
+  - it: housekeeping CronJob omits timeZone by default
+    templates:
+      - templates/CronJob.yaml
+    asserts:
+      - notExists:
+          path: spec.timeZone
+
+  - it: housekeeping CronJob renders timeZone from housekeeping.timezone
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.timezone: Asia/Jakarta
+    asserts:
+      - equal:
+          path: spec.timeZone
+          value: Asia/Jakarta
+
+  - it: housekeeping CronJob prefers top-level timezone over housekeeping.timezone
+    templates:
+      - templates/CronJob.yaml
+    set:
+      timezone: Europe/Berlin
+      housekeeping.timezone: Asia/Jakarta
+    asserts:
+      - equal:
+          path: spec.timeZone
+          value: Europe/Berlin
+
+  - it: housekeeping container uses default manage.py housekeeping command
+    templates:
+      - templates/CronJob.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].command
+          value:
+            - /opt/netbox/venv/bin/python
+            - /opt/netbox/netbox/manage.py
+            - housekeeping
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].env
+          content:
+            name: HOUSEKEEPING_INTERVAL
+            value: "20"
+
+  - it: housekeeping container respects housekeeping.command override
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.command:
+        - /bin/sh
+        - -c
+        - echo custom
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].command
+          value:
+            - /bin/sh
+            - -c
+            - echo custom
+
+  - it: housekeeping container swaps to diagnosticMode command when enabled
+    templates:
+      - templates/CronJob.yaml
+    set:
+      diagnosticMode.enabled: true
+      diagnosticMode.command: [sleep]
+      diagnosticMode.args: [infinity]
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].command
+          value: [sleep]
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].args
+          value: [infinity]
+
+  - it: housekeeping container appends extraEnvVars alongside HOUSEKEEPING_INTERVAL
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.extraEnvVars:
+        - name: FOO
+          value: bar
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].env
+          content:
+            name: HOUSEKEEPING_INTERVAL
+            value: "20"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].env
+          content:
+            name: FOO
+            value: bar

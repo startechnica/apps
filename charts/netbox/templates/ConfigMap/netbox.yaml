@@ -13,7 +13,7 @@ metadata:
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
 data:
   configuration.py: |-
-    {{- if .Values.allowedHostsIncludesPodIp }}
+    {{- if .Values.allowedHostsIncludesPodIP }}
     import os
     {{- end }}
     import re
@@ -78,7 +78,7 @@ data:
     REDIS['caching']['SENTINELS'] = [tuple(x.split(r":")) for x in REDIS['caching']['SENTINELS']]
     {{- end }}
 
-    {{- if .Values.allowedHostsIncludesPodIp }}
+    {{- if .Values.allowedHostsIncludesPodIP }}
     ALLOWED_HOSTS.append(os.getenv("POD_IP"))
     {{- end }}
 

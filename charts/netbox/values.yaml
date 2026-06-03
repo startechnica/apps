@@ -68,6 +68,9 @@ dnsConfig: {}
 ## @param clusterDomain Default Kubernetes cluster domain
 ##
 clusterDomain: cluster.local
+## @param timezone Chart-wide IANA timezone (e.g. `Asia/Jakarta`). Currently consumed by the housekeeping CronJob (`spec.timeZone`); when set it wins over `housekeeping.timezone`.
+##
+timezone: ""
 ## @param extraDeploy Array of extra objects to deploy with the release
 ##
 extraDeploy: []
@@ -142,17 +145,12 @@ extraFlags: []
 ##     value: "bar"
 ##
 extraEnvVars: []
-## @params extraEnvs  Additional environment variables to set
-##  - name: FOO
-##    valueFrom:
-##      secretKeyRef:
-##        key: FOO
-##        name: secret-resource
-##
-extraEnvs: []
 ## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox server nodes
 ##
 extraEnvVarsCM: ""
+## @param extraEnvVarsCMs [array] List of additional ConfigMaps to source env vars from. Each entry is a ConfigMap name; rendered into the pod spec via repeated `envFrom.configMapRef` blocks.
+##
+extraEnvVarsCMs: []
 ## @param extraEnvVarsSecrets List of existing Secret containing extra env vars for Netbox server nodes
 ##
 extraEnvVarsSecret: ""
@@ -223,7 +221,7 @@ customReadinessProbe: {}
 ## @param resources.limits The resources limits for the Netbox containers
 ## @param resources.requests The requested resources for the Netbox containers
 ##
-resourcesPreset: "none"
+resourcesPreset: "g-xsmall"
 resources:
   limits:
     cpu: 2000m
@@ -288,6 +286,9 @@ updateStrategy:
 ## @param minReadySeconds How many seconds a pod needs to be ready before killing the next, during update
 ##
 minReadySeconds: 0
+## @param terminationGracePeriodSeconds Grace period (seconds) before pods are forcibly killed during termination. Empty means use Kubernetes' default (30s).
+##
+terminationGracePeriodSeconds: ""
 ## @param priorityClassName Netbox worker pods' priorityClassName
 ##
 priorityClassName: ""
@@ -373,11 +374,6 @@ extraVolumeMounts: []
 ##         containerPort: 1234
 ##
 sidecars: []
-## @param extraContainers  Additional containers to be added to the NetBox pod.
-##  - name: my-sidecar
-##    image: nginx:latest
-##
-extraContainers: []
 ## @param initContainers Add additional init containers to the Netbox pod(s)
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 ## e.g:
@@ -388,12 +384,6 @@ extraContainers: []
 ##    command: ['sh', '-c', 'echo "hello world"']
 ##
 initContainers: []
-## @param extraInitContainers  Containers which are run before the NetBox containers are started.
-##  - name: init-myservice
-##    image: busybox
-##    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
-##
-extraInitContainers: []
 
 ## Network Policies
 ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
@@ -476,6 +466,9 @@ superuser:
   ## @param superuser.existingSecretPasswordKey Key where the Netbox superuser password is being stored inside the existing secret.
   ##
   existingSecretPasswordKey: ""
+  ## @param superuser.existingSecretApiTokenKey Key where the Netbox superuser API token is stored inside `superuser.existingSecretName`. Falls back to `superuser-api-token` when blank.
+  ##
+  existingSecretApiTokenKey: ""
   ## @param superuser.annotations Additional custom annotations for Netbox superuser secret object
   ##
   annotations: {}
@@ -613,6 +606,11 @@ email:
   sslKeyFile: ''
   timeout: 10  # seconds
   from: ''
+  ## @param email.existingSecretName Existing Secret holding the SMTP password. When set, the chart skips rendering its own `email_password` data key and reads from this Secret instead.
+  ##
+  existingSecretName: ""
+  ## @param email.existingSecretPasswordKey Key inside `email.existingSecretName` that holds the SMTP password. Falls back to `email-password` when blank.
+  ##
   existingSecretPasswordKey: ""
 
 # Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce
@@ -887,6 +885,22 @@ secretKey: ""
 ##
 existingSecretName: ""
 
+## @param existingConfigmap Name of an existing ConfigMap holding the NetBox `configuration.py`. When set, the chart skips rendering its own ConfigMap and pods mount this one instead. `tpl`-evaluated.
+##
+existingConfigmap: ""
+
+## @param initdbScripts [object] Map of script filename → script body used to seed the database / configure NetBox after install. Rendered into a chart-owned ConfigMap and mounted at the container's init path. Ignored when `initdbScriptsConfigMap` is set.
+## E.g.
+## initdbScripts:
+##   01-seed.sh: |
+##     #!/bin/sh
+##     echo seeding
+##
+initdbScripts: {}
+## @param initdbScriptsConfigMap Name of an existing ConfigMap containing init scripts. When set, the chart skips rendering its own `initdbScripts` ConfigMap and mounts this one.
+##
+initdbScriptsConfigMap: ""
+
 # Override the NGINX Unit configuration inside the container. When enabled, this
 # overrides the default configuration loaded into Unit. The upstream config is:
 # https://github.com/netbox-community/netbox-docker/blob/release/docker/nginx-unit.json
@@ -954,6 +968,9 @@ serviceAccount:
   ## @param serviceAccount.extraLabels Additional labels for the ServiceAccount
   ##
   extraLabels: {}
+  ## @param serviceAccount.imagePullSecrets [array] Image-pull Secret names attached directly to the ServiceAccount (rendered as `imagePullSecrets:` on the SA itself). Distinct from the chart-wide `imagePullSecrets` / per-image `pullSecrets`.
+  ##
+  imagePullSecrets: []
 ## Specifies whether RBAC resources should be created
 ##
 rbac:
@@ -1017,6 +1034,9 @@ persistence:
   ##     app: my-app
   ##
   selector: {}
+  ## @param persistence.dataSource Custom PVC `spec.dataSource` (clone from another PVC or restore from a VolumeSnapshot). Matches the shape used by `reportsPersistence.dataSource` / `scriptsPersistence.dataSource`.
+  ##
+  dataSource: {}
 
 ## Storage configuration for reports
 ##
@@ -1121,7 +1141,7 @@ scriptsPersistence:
 replicaCount: 1
 ## @param revisionHistoryLimitCount Number of controller revisions to keep
 ##
-revisionHistoryLimitCount: 10
+revisionHistoryLimitCount: 1
 ## @param extraContainerPorts Optionally specify extra list of additional port-mappings for Netbox container
 ##
 extraContainerPorts: []
@@ -1399,7 +1419,7 @@ housekeeping:
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
   ## @param housekeeping.resources.requests The requested resources for the Netbox housekeeping containers
   ##
-  resourcesPreset: "none"
+  resourcesPreset: "gs-2xsmall"
   resources: {}
   ## Configure Netbox housekeeping Pods Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1524,10 +1544,23 @@ housekeeping:
   initContainers: []
 
 
-  ## @param housekeeping.timeZone Set the cronjob parameter timeZone
+  ## @param housekeeping.timezone Set the cronjob parameter `spec.timeZone` (IANA name, e.g. `Asia/Jakarta`). Empty means the controller picks. Overridden by the top-level `timezone` when both are set.
+  ##
+  timezone: ""
+  ## @param housekeeping.timeZone [DEPRECATED — no longer consulted] Earlier (mis-cased) name for `housekeeping.timezone`. The template only reads the lowercase `timezone`; this field was never wired. Slated for removal in 6.0.0.
   ##
   timeZone: ""
+  ## @param housekeeping.ttlSecondsAfterFinished Sets `spec.jobTemplate.spec.ttlSecondsAfterFinished` on each Job spawned by the CronJob. Empty / 0 leaves the field unset (Job persists until garbage-collected).
+  ##
+  ttlSecondsAfterFinished: ""
 
+  ## @param housekeeping.concurrencyPolicy Concurrency policy for the housekeeping CronJob. Allowed: Allow / Forbid / Replace.
+  ## @param housekeeping.failedJobsHistoryLimit Number of failed finished Jobs to keep.
+  ## @param housekeeping.restartPolicy Pod restart policy for the housekeeping Job.
+  ## @param housekeeping.schedule Cron schedule expression for the housekeeping CronJob.
+  ## @param housekeeping.successfulJobsHistoryLimit Number of successful finished Jobs to keep.
+  ## @param housekeeping.suspend Suspend the housekeeping CronJob.
+  ##
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   restartPolicy: OnFailure
@@ -1680,7 +1713,7 @@ worker:
   ## @param worker.resources.limits The resources limits for the Netbox worker containers
   ## @param worker.resources.requests The requested resources for the Netbox worker containers
   ##
-  resourcesPreset: "none"
+  resourcesPreset: "gs-2xsmall"
   resources:
     limits: {}
     requests: {}
@@ -1855,17 +1888,20 @@ worker:
   ##
   initContainers: []
 
-  ## Network worker Pod Disruption Budget configuration
+  ## Worker Pod Disruption Budget configuration
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
   ##
   podDisruptionBudget:
-    ## @param podDisruptionBudget.create Enable/disable a Pod Disruption Budget creation
+    ## @param worker.podDisruptionBudget.enabled Render a PodDisruptionBudget for the worker Deployment.
+    ##
+    enabled: false
+    ## @param worker.podDisruptionBudget.create [DEPRECATED — no longer consulted] Earlier name for `worker.podDisruptionBudget.enabled`. The template reads `enabled`; `create` was never wired. Slated for removal in 6.0.0.
     ##
     create: false
-    ## @param podDisruptionBudget.minAvailable Minimum number/percentage of pods that should remain scheduled
+    ## @param worker.podDisruptionBudget.minAvailable Minimum number/percentage of pods that should remain scheduled. Mutually exclusive with `maxUnavailable`.
     ##
     minAvailable: 1
-    ## @param podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that may be made unavailable
+    ## @param worker.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that may be made unavailable. Mutually exclusive with `minAvailable`.
     ##
     maxUnavailable: ""
   ## Netbox worker Autoscaling configuration
@@ -1945,6 +1981,14 @@ worker:
     ## ref: https://docs.netbox.dev/en/stable/integrations/prometheus-metrics/
     ##
     enabled: false
+
+  ## @param worker.terminationGracePeriodSeconds Grace period (seconds) before worker pods are forcibly killed. Empty means use Kubernetes' default (30s).
+  ##
+  terminationGracePeriodSeconds: ""
+  ## @param worker.annotations Annotations applied to the worker Job (only — pod template annotations are still `worker.podAnnotations`).
+  ##
+  annotations: {}
+
 ## @param extraWorkers  Extra objects to deploy as worker (evaluated as a template)
 ##
 extraWorkers: []
@@ -2022,6 +2066,15 @@ metrics:
   ## @param metrics.enabled Enable metrics
   ##
   enabled: false
+  ## @param metrics.labels Extra labels merged into the metrics Service / worker-metrics Service `metadata.labels`.
+  ##
+  labels: {}
+  ## @param metrics.podLabels Extra labels merged into pod labels of NetBox pods when `metrics.enabled` is on.
+  ##
+  podLabels: {}
+  ## @param metrics.podAnnotations Extra annotations merged into pod annotations of NetBox pods when `metrics.enabled` is on (typically used for Prometheus scrape hints).
+  ##
+  podAnnotations: {}
   ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the Netbox pod(s)
   ##
   extraVolumes:
@@ -2035,6 +2088,9 @@ metrics:
   ## Netbox metrics service parameters
   ##
   service:
+    ## @param metrics.service.port [DEPRECATED — use `metrics.service.ports.http`] Legacy single-port field. The template still coalesces `ports.http || port`; prefer `ports.http`. Slated for removal in 6.0.0.
+    ##
+    port: ""
     ## @param metrics.service.ports.http Metrics service HTTP port
     ##
     ports:
@@ -2059,6 +2115,9 @@ metrics:
     ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
     ##
     enabled: false
+    ## @param metrics.serviceMonitor.annotations Annotations added to the ServiceMonitor (merged with `commonAnnotations`).
+    ##
+    annotations: {}
     ## @param metrics.serviceMonitor.port Metrics service HTTP port
     ##
     port: http-metrics
@@ -2295,7 +2354,7 @@ redis:
   image:
     registry: public.ecr.aws
     repository: bitnami/redis
-    tag: 8.6.2
+    tag: 8.6.3
   ## @param redis.architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
@@ -2385,6 +2444,9 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
+  ## @param tasksRedis.existingSecretName Existing Secret holding the tasks-Redis password. When set, takes precedence over `externalRedis.existingSecretName` for the tasks instance and suppresses the chart-rendered `redis-tasks-password` data key.
+  ##
+  existingSecretName: ""
   ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2404,6 +2466,9 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
+  ## @param cachingRedis.existingSecretName Existing Secret holding the caching-Redis password. When set, takes precedence over `externalRedis.existingSecretName` for the caching instance and suppresses the chart-rendered `redis-cache-password` data key.
+  ##
+  existingSecretName: ""
   ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2431,6 +2496,9 @@ externalRedis:
   ## @param externalRedis.existingSecretName Existing secret for the external redis
   ##
   existingSecretName: ""
+  ## @param externalRedis.annotations Additional annotations rendered on the chart-managed external-redis Secret. Merged with `commonAnnotations`.
+  ##
+  annotations: {}
   ## Password key to be retrieved from Redis secret
   ## @param externalRedis.existingSecretPasswordKey Password key for the existing secret containing the external redis password
   ## Ignored if `tasksRedis.existingSecretPasswordKey` and `cachingRedis.existingSecretPasswordKey` is set.
@@ -2455,19 +2523,25 @@ redisWait:
   image:
     registry: public.ecr.aws
     repository: bitnami/redis
-    tag: 8.6.2
+    tag: 8.6.3
     digest: ""
-  ## Specify a imagePullPolicy
-  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
-  ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param redisWait.pullPolicy [DEPRECATED — no longer consulted] Use `redisWait.image.pullPolicy`. The sibling-level field was never wired into the init container; the template reads `redisWait.image.pullPolicy`. Slated for removal in 6.0.0.
   ##
-  pullPolicy: IfNotPresent
-  ## Optionally specify an array of imagePullSecrets.
-  ## Secrets must be manually created in the namespace.
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-  ## e.g:
-  ## pullSecrets:
-  ##   - myRegistryKeySecretName
+  pullPolicy: ""
+  ## @param redisWait.pullSecrets [DEPRECATED — no longer consulted] Use `redisWait.image.pullSecrets`. Slated for removal in 6.0.0.
   ##
   pullSecrets: []
   ## Properties for the wait Redis init container
@@ -2567,9 +2641,9 @@ volumePermissions:
   ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/os-shell
-    tag: 11-debian-11-r95
+    tag: 12-debian-12-r65
     digest: ""
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
@@ -2615,9 +2689,9 @@ git:
   ## @param git.image.pullSecrets Git image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/git
-    tag: 2.43.2-debian-11-r4
+    tag: 2.54.0-debian-12-r3
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -2762,7 +2836,7 @@ gateway:
   implementation: gateway-api
   ## @param gateway.infrastructure Optional Gateway data-plane infrastructure extension. When set, the chart renders the matching infrastructure CR and attaches it to its Gateway via `spec.infrastructure.parametersRef`. Only applicable when `implementation: gateway-api`. Allowed values: `""` (none — Gateway uses its GatewayClass defaults) or `envoy` (renders an `EnvoyProxy` resource under `gateway.envoyproxy.io/v1alpha1`; pair with an Envoy Gateway-backed `gatewayClassName` such as `eg`).
   ##
-  infrastructure: envoy
+  infrastructure: istio
 
   ## ---- Gateway resource -----------------------------------------------------
   ## Configuration for the Gateway resource itself (created here, or referenced
@@ -2809,7 +2883,7 @@ gateway:
   selector: {}
   ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations). Default `eg` matches Envoy Gateway; set to `istio` for Istio gateway-api, `cilium` for Cilium, etc. Independent of `gateway.implementation` and `gateway.infrastructure` — the chart does not derive this from either knob.
   ##
-  gatewayClassName: eg
+  gatewayClassName: istio
   ## @param gateway.hostnames Hostnames the chart's routes / listeners should match. Empty means "match all" where the API allows it. Replaces the historical coupling to `ingress.hostname` / `ingress.extraHosts`; when this list is non-empty it wins.
   ##
   hostnames: []

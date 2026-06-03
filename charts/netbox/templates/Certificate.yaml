@@ -33,12 +33,12 @@ spec:
     - {{ .name | quote }}
     {{- end }}
 ---
-{{- if and .Values.gateway.enabled (not (empty .Values.gateway.namespace)) }}
+{{- if and .Values.gateway.enabled (ne (include "netbox.gateway.namespace" .) (include "st-common.names.namespace" .)) }}
 apiVersion: {{ include "st-common.capabilities.certmanagerCertificate.apiVersion" . }}
 kind: Certificate
 metadata:
   name: {{ include "st-common.names.fullname" . }}
-  namespace: {{ .Values.gateway.namespace | quote }}
+  namespace: {{ include "netbox.gateway.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
