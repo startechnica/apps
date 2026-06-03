@@ -1,3 +1,8 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{/*
 Return the proper Netbox image name
 {{ include "netbox.images.image" ( dict "imageRoot" .Values.path.to.the.image "global" .Values.global ) }}
@@ -38,34 +43,6 @@ Return the proper image version (ingores image revision/prerelease info & fallba
 {{- else -}}
     {{- print .chart.AppVersion -}}
 {{- end -}}
-{{- end -}}
-
-{{/*
-Return the proper Netbox image name
-*/}}
-{{- define "netbox.image" -}}
-{{ include "netbox.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Netbox worker image name
-*/}}
-{{- define "netbox.worker.image" -}}
-{{ include "netbox.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Netbox housekeeping image name
-*/}}
-{{- define "netbox.housekeeping.image" -}}
-{{ include "netbox.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
-{{- end -}}
-
-{{/*
-Return the proper Netbox init image name
-*/}}
-{{- define "netbox.init-dirs.image" -}}
-{{ include "st-common.images.image" (dict "imageRoot" .Values.initDirs.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*

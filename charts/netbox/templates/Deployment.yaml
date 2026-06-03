@@ -1,7 +1,12 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
-  name: {{ include "netbox.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart) ) }}  
   {{- $labels := include "st-common.tplvalues.merge" ( dict "values" (list .Values.commonLabels $versionLabel) "context" . ) }}
@@ -89,7 +94,7 @@ spec:
       {{- end }}
       containers:
         - name: netbox
-          image: {{ template "netbox.image" . }}
+          image: {{ include "netbox.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- if .Values.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
@@ -164,7 +169,9 @@ spec:
               {{- include "st-common.tplvalues.render" (dict "value" .Values.extraPorts "context" $) | nindent 12 }}
             {{- end }}
           {{- if .Values.resources }}
-          resources: {{- toYaml .Values.resources | nindent 12 }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.resourcesPreset) | nindent 12 }}
           {{- end }}
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
@@ -250,7 +257,7 @@ spec:
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.podSecurityContext.enabled .Values.containerSecurityContext.enabled }}
       initContainers:
         - name: init-dirs
-          image: {{ template "netbox.init-dirs.image" . }}
+          image: {{ include "netbox.images.image" (dict "imageRoot" .Values.initDirs.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.initDirs.image.pullPolicy }}
           command:
             - /bin/sh

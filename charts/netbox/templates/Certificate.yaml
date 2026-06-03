@@ -1,15 +1,20 @@
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if eq (include "netbox.tls.certManager.create" .) "true" -}}
 apiVersion: {{ include "st-common.capabilities.certmanagerCertificate.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "netbox.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
+  secretName: {{ printf "%s-tls" (include "st-common.names.fullname" .) }}
   issuerRef:
     kind: {{ include "netbox.tls.certManager.issuerKind" . }}
     name: {{ include "netbox.tls.certManager.issuerName" . }}
@@ -32,7 +37,7 @@ spec:
 apiVersion: {{ include "st-common.capabilities.certmanagerCertificate.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "netbox.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ .Values.gateway.namespace | quote }}
   labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
@@ -51,7 +56,7 @@ spec:
     organizations:
       - {{ .Release.Name | quote }}
     organizationalUnits:
-      - {{ include "netbox.fullname" . }}
+      - {{ include "st-common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname }}
     {{- range .Values.ingress.extraHosts }}

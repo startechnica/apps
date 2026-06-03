@@ -1,0 +1,51 @@
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "gateway-api") .Values.gateway.httpRoute.enabled -}}
+{{- $apiVersion := include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" . -}}
+{{- if and $apiVersion (ne $apiVersion "false") -}}
+apiVersion: {{ $apiVersion }}
+kind: HTTPRoute
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: server
+    app.kubernetes.io/part-of: netbox
+  {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.ingress.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- include "netbox.gateway.routeParentRefs" (dict "parentRefs" .Values.gateway.httpRoute.parentRefs "context" .) | nindent 4 }}
+  {{- $hostnames := include "netbox.gateway.hostnames" . | trim }}
+  {{- if $hostnames }}
+  hostnames:
+    {{- $hostnames | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- if not (empty .Values.ingress.path) }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ default "/" .Values.ingress.path | quote }}
+      backendRefs:
+        - name: {{ include "st-common.names.fullname" . }}
+          port: {{ .Values.service.ports.http | int }}
+    {{- end }}
+    {{- range .Values.ingress.extraPaths }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ .path | quote }}
+      backendRefs:
+        - name: {{ .backend.serviceName | quote }}
+          port: {{ .backend.servicePort | int }}
+          kind: Service
+    {{- end }}
+{{- end -}}
+{{- end -}}

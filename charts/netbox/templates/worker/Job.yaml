@@ -1,3 +1,8 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.worker.enabled (eq .Values.worker.kind "Job") }}
 apiVersion: batch/v1
 kind: Job
@@ -35,7 +40,7 @@ spec:
       {{- end }}
       containers:
         - name: worker
-          image: {{ template "netbox.worker.image" . }}
+          image: {{ include "netbox.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
@@ -113,7 +118,9 @@ spec:
             {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.extraVolumeMounts "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.worker.resources }}
-          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.worker.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.worker.resourcesPreset) | nindent 12 }}
           {{- end }}
         {{- if .Values.worker.sidecars }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
@@ -173,21 +180,21 @@ spec:
         - name: media
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "netbox.fullname" .)) }}
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-media" (include "st-common.names.fullname" .)) }}
           {{- else }}
           emptyDir: {}
           {{- end }}
         - name: reports
           {{- if .Values.reportsPersistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "netbox.fullname" .)) }}
+            claimName: {{ .Values.reportsPersistence.existingClaim | default (printf "%s-reports" (include "st-common.names.fullname" .)) }}
           {{- else }}
           emptyDir: {}
           {{- end }}
         - name: scripts
           {{- if .Values.scriptsPersistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "netbox.fullname" .)) }}
+            claimName: {{ .Values.scriptsPersistence.existingClaim | default (printf "%s-scripts" (include "st-common.names.fullname" .)) }}
           {{- else }}
           emptyDir: {}
           {{- end }}

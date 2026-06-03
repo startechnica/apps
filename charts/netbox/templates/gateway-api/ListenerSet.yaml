@@ -1,0 +1,34 @@
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "gateway-api") .Values.gateway.listenerSet.enabled .Values.gateway.listenerSet.listeners -}}
+{{- $apiVersion := include "st-common.capabilities.networkingGatewayListenerSet.apiVersion" . -}}
+{{- if and $apiVersion (ne $apiVersion "false") -}}
+{{- $kind := ternary "XListenerSet" "ListenerSet" (hasPrefix "gateway.networking.x-k8s.io" $apiVersion) -}}
+apiVersion: {{ $apiVersion }}
+kind: {{ $kind }}
+metadata:
+  name: {{ include "netbox.gateway.fullname" . }}
+  namespace: {{ include "netbox.gateway.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  parentRef:
+    {{- if .Values.gateway.listenerSet.parentRef }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listenerSet.parentRef "context" $) | nindent 4 }}
+    {{- else }}
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ include "netbox.gateway.fullname" . }}
+    {{- end }}
+  listeners:
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listenerSet.listeners "context" $) | nindent 4 }}
+{{- end -}}
+{{- end -}}

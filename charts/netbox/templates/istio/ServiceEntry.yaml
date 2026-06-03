@@ -1,10 +1,16 @@
-{{- if and .Values.gateway.enabled .Values.gateway.serviceEntry.enabled (not .Values.gateway.existingServiceEntry) (not .Values.gateway.gatewayApi.create) -}}
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "istio") .Values.gateway.serviceEntry.enabled (not .Values.gateway.serviceEntry.existingServiceEntry) -}}
 {{- $istioApiVersion := include "st-common.capabilities.istioServiceEntry.apiVersion" . -}}
-{{- if and $istioApiVersion (ne $istioApiVersion "false") (ne $istioApiVersion "<no value>") -}}
+{{- if and $istioApiVersion (ne $istioApiVersion "false") -}}
 apiVersion: {{ $istioApiVersion }}
 kind: ServiceEntry
 metadata:
-  name: {{ include "netbox.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}

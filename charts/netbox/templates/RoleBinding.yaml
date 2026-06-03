@@ -1,8 +1,13 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.serviceAccount.create .Values.rbac.create }}
 kind: RoleBinding
 apiVersion: {{ include "st-common.capabilities.rbac.apiVersion" . }}
 metadata:
-  name: {{ template "netbox.fullname" . }}
+  name: {{ template "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
   labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: netbox
@@ -12,7 +17,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ template "netbox.fullname" . }}
+  name: {{ template "st-common.names.fullname" . }}
 subjects:
   - kind: ServiceAccount
     name: {{ template "netbox.serviceAccountName" . }}

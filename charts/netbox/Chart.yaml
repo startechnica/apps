@@ -1,7 +1,4 @@
 annotations:
-  artifacthub.io/changes: |
-    - kind: changed
-      description: "5.1.0 minor release — helper namespace migrated to `st-common` (bitnami common dep removed), bug fixes for #56/#61/#63/#79/#83, additive `tls.certManager.*`/`gateway.tls.*`/`gateway.serviceEntry.*` blocks, postgresql 13.x→18.7.0 and redis 19.x→27.0.0 subchart bumps. See CHANGELOG.md and README §Upgrading."
   licenses: Apache-2.0
   images: |
     - name: netbox

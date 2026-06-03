@@ -1,10 +1,15 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
 {{- $smApiVersion := include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . -}}
-{{- if and $smApiVersion (ne $smApiVersion "false") (ne $smApiVersion "<no value>") }}
+{{- if and $smApiVersion (ne $smApiVersion "false") }}
 apiVersion: {{ $smApiVersion }}
 kind: ServiceMonitor
 metadata:
-  name: {{ template "netbox.fullname" . }}
+  name: {{ template "st-common.names.fullname" . }}
   namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" ( dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) ) }}
   {{- $labels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.metrics.serviceMonitor.labels .Values.commonLabels $versionLabel ) "context" . ) }}

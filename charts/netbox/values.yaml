@@ -219,9 +219,11 @@ customLivenessProbe: {}
 customReadinessProbe: {}
 ## Netbox resource requests and limits
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if `resources` is set (which is recommended for production).
 ## @param resources.limits The resources limits for the Netbox containers
 ## @param resources.requests The requested resources for the Netbox containers
 ##
+resourcesPreset: "none"
 resources:
   limits:
     cpu: 2000m
@@ -1393,19 +1395,11 @@ housekeeping:
   extraEnvVarsSecrets: []
   ## Netbox housekeeping resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param housekeeping.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). Ignored if `housekeeping.resources` is set.
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
   ## @param housekeeping.resources.requests The requested resources for the Netbox housekeeping containers
-  ## We usually recommend not to specify default resources and to leave this as a conscious
-  ## choice for the user. This also increases chances charts run on environments with little
-  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
-  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ## limits:
-  ##   cpu: 100m
-  ##   memory: 128Mi
-  ## requests:
-  ##   cpu: 100m
-  ##   memory: 128Mi
   ##
+  resourcesPreset: "none"
   resources: {}
   ## Configure Netbox housekeeping Pods Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1682,9 +1676,11 @@ worker:
   customReadinessProbe: {}
   ## Netbox worker resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param worker.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). Ignored if `worker.resources` is set.
   ## @param worker.resources.limits The resources limits for the Netbox worker containers
   ## @param worker.resources.requests The requested resources for the Netbox worker containers
   ##
+  resourcesPreset: "none"
   resources:
     limits: {}
     requests: {}
@@ -2191,6 +2187,9 @@ postgresql:
   ## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
   ##
   enabled: true
+  global:
+    security:
+      allowInsecureImages: true
   ## @param postgresql.commonLabels Labels to add to all deployed objects
   ##
   commonLabels:
@@ -2286,10 +2285,17 @@ redis:
   ## settings under *both* tasksRedis *and* cachingRedis
   ##
   enabled: true
+  global:
+    security:
+      allowInsecureImages: true
   ## @param redis.commonLabels Labels to add to all deployed objects
   ##
   commonLabels:
     app.kubernetes.io/part-of: netbox
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/redis
+    tag: 8.6.2
   ## @param redis.architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
@@ -2345,9 +2351,24 @@ redis:
 
 ## @section External Redis database settings.
 ##
-## Redis is used for caching and for queuing background tasks such as webhook events. A separate
-## configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
-## to use two separate database IDs.
+## Redis is used for caching and for queuing background tasks such as webhook events. NetBox addresses
+## these as two logically separate Redis databases — `tasksRedis` (queue, default DB 0) and
+## `cachingRedis` (cache, default DB 1).
+##
+## When `redis.enabled: false`, you have two equivalent ways to point NetBox at external Redis:
+##
+##   1. **One external Redis instance for both** (most common). Set `externalRedis.{host,port,…}`
+##      below; the chart fans those values out to `tasksRedis` and `cachingRedis` via the helpers.
+##      The two `database:` numbers (0 and 1) keep the queue and cache logically separated on the
+##      same Redis server.
+##
+##   2. **Two different external Redis instances**, e.g. one tuned for queue durability and a
+##      separate one for cache. Set `tasksRedis.{host,port,…}` and `cachingRedis.{host,port,…}`
+##      explicitly — when these are set they take precedence over `externalRedis.*` and the chart
+##      points each component at its own backend.
+##
+## A separate configuration exists for each. Full connection details are required in both sections,
+## and it is strongly recommended to use two separate database IDs.
 ##
 tasksRedis:
   database: 0
@@ -2432,9 +2453,9 @@ redisWait:
   ## @param redisWait.image.pullSecrets Redis image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/redis
-    tag: 7.2.4-debian-11-r5
+    tag: 8.6.2
     digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -2716,100 +2737,166 @@ git:
     ##
     resources: {}
 
+## =============================================================================
 ## @section Netbox ingress gateway parameters
-## ref: https://istio.io/latest/docs/reference/config/networking/gateway/
+## -----------------------------------------------------------------------------
+## Controls inbound HTTP/HTTPS traffic to the NetBox web service. Two
+## implementations are supported, picked via `gateway.implementation`:
+##
+##   - `gateway-api` (default): renders Gateway, HTTPRoute, ReferenceGrant,
+##     ListenerSet — Envoy/Cilium/Istio gateway-api compatible.
+##   - `istio`: renders the legacy istio Gateway + VirtualService pair.
+##
+## The chart-rendered Gateway is named `<fullname>-gateway` to avoid colliding
+## with the Service of the same name (Envoy Gateway and Istio gateway-api both
+## materialise a data-plane Deployment named after the Gateway). For BYO mode,
+## set `gateway.existingGateway` and the chart skips its own Gateway render.
+## =============================================================================
 
 gateway:
-  ## @param gateway.enabled  Enable Istio Gateway and VirtualService
+  ## @param gateway.enabled Enable rendering of Gateway / HTTPRoute / VirtualService resources for inbound NetBox traffic.
   ##
   enabled: false
-  ## @param gateway.dedicated 
-  ## 
-  dedicated: false
-  ## @param gateway.gatewayApi 
-  ## 
-  gatewayApi:
-    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway HTTPRoute
-    ## 
+  ## @param gateway.implementation Gateway implementation to render. Allowed values: `gateway-api` or `istio`.
+  ##
+  implementation: gateway-api
+  ## @param gateway.infrastructure Optional Gateway data-plane infrastructure extension. When set, the chart renders the matching infrastructure CR and attaches it to its Gateway via `spec.infrastructure.parametersRef`. Only applicable when `implementation: gateway-api`. Allowed values: `""` (none — Gateway uses its GatewayClass defaults) or `envoy` (renders an `EnvoyProxy` resource under `gateway.envoyproxy.io/v1alpha1`; pair with an Envoy Gateway-backed `gatewayClassName` such as `eg`).
+  ##
+  infrastructure: envoy
+
+  ## ---- Gateway resource -----------------------------------------------------
+  ## Configuration for the Gateway resource itself (created here, or referenced
+  ## externally via `existingGateway`).
+  ##
+  gateway:
+    ## @param gateway.gateway.create Create a Gateway API Gateway resource. When false the chart expects an existing Gateway to be referenced via `existingGateway` or per-route `parentRefs`.
+    ##
     create: false
-  ## @param gateway.clusterDomain  Name of gateway cluster domain
+    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to `<fullname>-gateway`.
+    ##
+    name: ""
+    ## @param gateway.gateway.namespace Namespace for the Gateway resource. Defaults to the release namespace.
+    ##
+    namespace: ""
+
+  ## ---- EnvoyProxy (data-plane customization for Envoy Gateway) -------------
+  ## Consumed only when `gateway.infrastructure: envoy` AND
+  ## `implementation: gateway-api`. Same `{create, name}` shape as
+  ## `gateway.gateway.*`: `create: true` renders the chart's own EnvoyProxy
+  ## manifest in the gateway namespace; `create: false` is BYO and references
+  ## an externally-managed EnvoyProxy by `name`.
   ##
-  clusterDomain: cluster.local
-  ## @param gateway.name  Name of the Gateway resource
-  ## e.g.
-  ## name: istio-ingressgateway
-  ## 
-  name: ""
-  ## @param gateway.namespace  Namespace for the Gateway resource
-  ## e.g.:
-  ## namespace: istio-ingressgateway
-  ## 
-  namespace: ""
-  ## @param gateway.selector  Gateway instance selector labels. One or more labels that indicate a specific set of pods/VMs on 
-  ## which this gateway configuration should be applied.
-  ## ref: https://istio.io/latest/docs/reference/config/networking/gateway/#Gateway
-  ## e.g.
-  ## selector:
-  ##   istio.io/gateway-name: istio-ingressgateway
-  ##
-  selector: {}
-  ## @param gateway.gatewayClassName  Cluster-scoped resource defined by the infrastructure provider. This resource represents a
-  ## class of Gateways that can be instantiated.
-  ## ref: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-  ## 
-  gatewayClassName: istio
-  ## @param gateway.listeners
-  ## e.g.
-  ## listeners:
-  ##   - name: http
-  ##     port: 80
-  ##     protocol: HTTP
-  ##   - name: https
-  ##     port: 443
-  ##     protocol: HTTPS
-  ##
-  listeners: []
-  ## @param gateway.existingGateway
+  envoyProxy:
+    ## @param gateway.envoyProxy.create Render the chart's EnvoyProxy manifest. When `true`, the chart owns the resource with an empty spec (Envoy Gateway applies defaults). When `false`, the chart skips rendering and uses `gateway.envoyProxy.name` for the Gateway's `parametersRef`.
+    ##
+    create: true
+    ## @param gateway.envoyProxy.name Name of the EnvoyProxy resource. When `create: true`, empty defaults to the chart fullname. When `create: false`, **required** — must reference an EnvoyProxy that exists in `gateway.gateway.namespace`.
+    ##
+    name: ""
+
+  ## @param gateway.existingGateway Name of an existing Gateway resource to attach the chart's routes to (skips chart-managed Gateway rendering).
   ##
   existingGateway: ~
-  ## @param gateway.existingVirtualService
-  ##
-  existingVirtualService: ~
-  ## @param gateway.existingServiceEntry
-  ##
-  existingServiceEntry: ~
-  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
-  ##
-  extraRoute: []
 
-  ## ---- TLS (added in 5.1.0) ----
-  ## Gateway-side TLS material. Independent of the in-pod `tls.*` block. The
-  ## listener and chart-managed Secret resolve through the
-  ## `netbox.gateway.tlsSecretName` helper (three-step chain: `existingSecret`
-  ## → `secrets[0].name` → `<ingress.hostname>-tls`).
+  ## @param gateway.clusterDomain Cluster domain used by the VirtualService backend FQDN. Falls back to the top-level `clusterDomain` when empty.
+  ##
+  clusterDomain: ""
+  ## @param gateway.serviceAccountName Service Account name attached to the Gateway data-plane workload (Istio Ambient / gateway-api implementations that respect it)
+  ##
+  serviceAccountName: ""
+  ## @param gateway.selector Gateway instance selector labels (Istio)
+  ##
+  selector: {}
+  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations). Default `eg` matches Envoy Gateway; set to `istio` for Istio gateway-api, `cilium` for Cilium, etc. Independent of `gateway.implementation` and `gateway.infrastructure` — the chart does not derive this from either knob.
+  ##
+  gatewayClassName: eg
+  ## @param gateway.hostnames Hostnames the chart's routes / listeners should match. Empty means "match all" where the API allows it. Replaces the historical coupling to `ingress.hostname` / `ingress.extraHosts`; when this list is non-empty it wins.
+  ##
+  hostnames: []
+  ## @param gateway.listeners Verbatim `listeners:` list rendered on the chart's Gateway. When non-empty, the chart skips its default HTTP + (optional) HTTPS listener generation.
+  ##
+  listeners: []
+
+  ## ---- TLS ------------------------------------------------------------------
+  ## TLS configuration applied to the default Gateway listener generation and
+  ## to the chart-managed TLS Secret rendered by `templates/secret/gateway-tls.yaml`.
+  ## The certificate Secret name is computed by the `netbox.gateway.tlsSecretName`
+  ## helper — single source of truth shared by both Gateway templates and the
+  ## gateway-tls Secret, so listener and Secret can never drift apart.
   ##
   tls:
-    ## @param gateway.tls.enabled Terminate TLS at the Gateway listener
+    ## @param gateway.tls.enabled Render a TLS / HTTPS listener on the default Gateway. The chart auto-derives whether to terminate (`mode: SIMPLE`) vs passthrough (`mode: PASSTHROUGH`) based on `tls.enabled` (in-pod NetBox TLS) — when in-pod TLS is on, the listener is passthrough.
     ##
     enabled: false
-    ## @param gateway.tls.existingSecret Use an externally-managed Secret for the listener (BYO). Skips chart-rendered gateway-tls Secret.
+    ## @param gateway.tls.existingSecret Name of an externally-managed Secret holding the TLS material the Gateway TLS listener references (only relevant for `mode: SIMPLE` / Terminate).
     ##
     existingSecret: ""
-    ## @param gateway.tls.selfSigned Render a self-signed cert + key into the chart-managed gateway-tls Secret
+    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret` / `gateway.tls.secrets` are set, or when cert-manager issuance is active (the cert-manager API is detected on the cluster) — in which case the gateway leaf is issued by `templates/Certificate.yaml` instead.
     ##
     selfSigned: false
-    ## @param gateway.tls.secrets User-supplied PEM Secrets to render. First entry's `name` becomes the listener `credentialName` unless `existingSecret` is set.
-    ## e.g.
-    ## secrets:
-    ##   - name: netbox-gateway-cert
-    ##     certificate: |-
-    ##       -----BEGIN CERTIFICATE-----...
-    ##     key: |-
-    ##       -----BEGIN PRIVATE KEY-----...
+    ## @param gateway.tls.secrets Custom TLS certificates rendered as Secrets in the gateway's namespace. `name` should match what the Gateway listener references.
     ##
     secrets: []
 
-  ## ---- ServiceEntry (added in 5.1.0) ----
+  ## ---- HTTPRoute -----------------------------------------------------------
+  ## Routing rules for the HTTP / HTTPS listener. Only used when
+  ## `implementation: gateway-api`.
+  ##
+  httpRoute:
+    ## @param gateway.httpRoute.enabled Render an HTTPRoute resource.
+    ##
+    enabled: true
+    ## @param gateway.httpRoute.parentRefs Explicit `parentRefs` override for the HTTPRoute. When empty, defaults to the chart-rendered ListenerSet (if any) or the chart's Gateway.
+    ##
+    parentRefs: []
+
+  ## ---- VirtualService (istio) ----------------------------------------------
+  ## Istio VirtualService overrides. Only used when `implementation: istio`.
+  ##
+  virtualService:
+    ## @param gateway.virtualService.existingVirtualService Name of an existing VirtualService to use (skips VirtualService rendering)
+    ##
+    existingVirtualService: ~
+    ## @param gateway.virtualService.tls Verbatim `spec.tls` list passthrough. When non-empty, overrides the chart's auto-derived TLS-passthrough rule.
+    ##
+    tls: []
+    ## @param gateway.virtualService.tcp Verbatim `spec.tcp` list passthrough.
+    ##
+    tcp: []
+
+  ## ---- ReferenceGrant ------------------------------------------------------
+  ## Cross-namespace permission for the gateway-api routes to point at the
+  ## NetBox Service when the Gateway is in a different namespace.
+  ##
+  referenceGrant:
+    ## @param gateway.referenceGrant.enabled Render a ReferenceGrant allowing routes in `gateway.gateway.namespace` to target the chart's Service.
+    ##
+    enabled: false
+    ## @param gateway.referenceGrant.from Verbatim `spec.from` override
+    ##
+    from: []
+    ## @param gateway.referenceGrant.to Verbatim `spec.to` override
+    ##
+    to: []
+
+  ## ---- ListenerSet ---------------------------------------------------------
+  ## Attach extra listeners to the parent Gateway via a ListenerSet
+  ## (`gateway.networking.k8s.io` v1 / x-k8s.io v1alpha1 XListenerSet). When
+  ## enabled with non-empty `listeners`, the chart's HTTPRoute default
+  ## `parentRefs` switch to this ListenerSet automatically.
+  ##
+  listenerSet:
+    ## @param gateway.listenerSet.enabled Render a ListenerSet
+    ##
+    enabled: false
+    ## @param gateway.listenerSet.parentRef Verbatim `spec.parentRef` override
+    ##
+    parentRef: {}
+    ## @param gateway.listenerSet.listeners `listeners:` list rendered on the ListenerSet
+    ##
+    listeners: []
+
+  ## ---- ServiceEntry (istio egress) -----------------------------------------
   ## Optional Istio ServiceEntry for declaring external hosts the mesh should
   ## know about (egress). Previously the template hardcoded `netbox.dev`,
   ## `github.com`, `api.github.com` — that has been removed; users opt in
@@ -2819,11 +2906,10 @@ gateway:
     ## @param gateway.serviceEntry.enabled Render the Istio ServiceEntry
     ##
     enabled: false
+    ## @param gateway.serviceEntry.existingServiceEntry Name of an existing ServiceEntry to use (skips ServiceEntry rendering)
+    ##
+    existingServiceEntry: ~
     ## @param gateway.serviceEntry.hosts External hosts to declare. No default — empty list renders an empty `hosts:` block which Istio rejects.
-    ## e.g.
-    ## hosts:
-    ##   - github.com
-    ##   - api.github.com
     ##
     hosts: []
     ## @param gateway.serviceEntry.location MESH_EXTERNAL or MESH_INTERNAL
@@ -2833,11 +2919,6 @@ gateway:
     ##
     resolution: DNS
     ## @param gateway.serviceEntry.ports Optional list of port specs (passthrough)
-    ## e.g.
-    ## ports:
-    ##   - number: 443
-    ##     name: https
-    ##     protocol: HTTPS
     ##
     ports: []
     ## @param gateway.serviceEntry.exportTo Optional list of namespaces this ServiceEntry should be visible in

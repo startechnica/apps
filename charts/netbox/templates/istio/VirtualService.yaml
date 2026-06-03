@@ -1,56 +1,68 @@
-{{- if and .Values.gateway.enabled (not .Values.gateway.existingVirtualService) (not .Values.gateway.gatewayApi.create) -}}
-{{- /*
-  Fixes #56: the previous guard `if not (eq <include> "false")` rendered the
-  apiVersion line on any non-string-"false" return — but the bitnami-common
-  helper can return boolean `false`, an empty string, or be undefined depending
-  on cluster CRDs and chart version. Trap all three by stringifying and
-  checking emptiness explicitly.
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
 */}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "istio") (not .Values.gateway.virtualService.existingVirtualService) -}}
 {{- $istioApiVersion := include "st-common.capabilities.istioVirtualService.apiVersion" . -}}
-{{- if and $istioApiVersion (ne $istioApiVersion "false") (ne $istioApiVersion "<no value>") -}}
+{{- if and $istioApiVersion (ne $istioApiVersion "false") -}}
+{{- $clusterDomain := default (default "cluster.local" .Values.clusterDomain) .Values.gateway.clusterDomain -}}
+{{- $hostnames := include "netbox.gateway.hostnames" . | trim -}}
 apiVersion: {{ $istioApiVersion }}
 kind: VirtualService
 metadata:
-  name: {{ include "netbox.fullname" . }}
+  name: {{ include "st-common.names.fullname" . }}
   namespace: {{ include "st-common.names.namespace" . | quote }}
-  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: server
+    app.kubernetes.io/part-of: netbox
   {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.ingress.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   gateways:
-    - {{ printf "%s/%s" (include "st-common.names.namespace" .) (include "netbox.fullname" .) }}
+    - {{ printf "%s/%s" (include "netbox.gateway.namespace" .) (include "netbox.gateway.fullname" .) }}
   hosts:
-    - {{ include "st-common.tplvalues.render" (dict "value" .Values.ingress.hostname "context" $) }}
-    {{- range .Values.ingress.extraHosts }}
-    - {{ .name | quote }}
+    {{- if $hostnames }}
+    {{- $hostnames | nindent 4 }}
+    {{- else }}
+    - "*"
     {{- end }}
   http:
     - match:
-        - uri: 
+        - uri:
             prefix: {{ default "/" .Values.ingress.path | quote }}
         {{- range .Values.ingress.extraPaths }}
-        - uri: 
+        - uri:
             prefix: {{ .path | quote }}
-        {{- end }}            
+        {{- end }}
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" $) (include "st-common.names.namespace" .) .Values.gateway.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "st-common.names.fullname" $) (include "st-common.names.namespace" .) $clusterDomain }}
             port:
               number: {{ .Values.service.ports.http }}
-  {{- if or .Values.tls.enabled .Values.ingress.tls }}
+  {{- if .Values.gateway.virtualService.tls }}
+  tls:
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.virtualService.tls "context" $) | nindent 4 }}
+  {{- else if or .Values.tls.enabled .Values.ingress.tls }}
   tls:
     - match:
         - port: 443
           sniHosts:
-            - {{ .Values.ingress.hostname }}
-            {{- range .Values.ingress.extraHosts }}
-            - {{ .name | quote }}
+            {{- if $hostnames }}
+            {{- $hostnames | nindent 12 }}
+            {{- else }}
+            - "*"
             {{- end }}
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "st-common.names.namespace" .) .Values.gateway.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "st-common.names.fullname" .) (include "st-common.names.namespace" .) $clusterDomain }}
+  {{- end }}
+  {{- if .Values.gateway.virtualService.tcp }}
+  tcp:
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.virtualService.tcp "context" $) | nindent 4 }}
   {{- end }}
 {{- end -}}
 {{- end -}}

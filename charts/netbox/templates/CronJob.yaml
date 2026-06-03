@@ -1,3 +1,8 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if .Values.housekeeping.enabled -}}
 apiVersion: batch/v1
 kind: CronJob
@@ -66,7 +71,7 @@ spec:
             {{- if .Values.containerSecurityContext.enabled }}
             securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
             {{- end }}
-            image: {{ template "netbox.housekeeping.image" . }}
+            image: {{ include "netbox.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
             {{- if .Values.diagnosticMode.enabled }}
             command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 14 }}
             {{- else if .Values.housekeeping.command }}
@@ -100,7 +105,9 @@ spec:
               {{- end }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
-            resources: {{- toYaml .Values.housekeeping.resources | nindent 14 }}
+            resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.resources "context" $) | nindent 14 }}
+            {{- else if ne .Values.housekeeping.resourcesPreset "none" }}
+            resources: {{- include "st-common.resources.preset" (dict "type" .Values.housekeeping.resourcesPreset) | nindent 14 }}
             {{- end }}
             volumeMounts:
             - name: config

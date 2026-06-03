@@ -1,0 +1,80 @@
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "gateway-api") .Values.gateway.gateway.create -}}
+{{- $apiVersion := include "st-common.capabilities.networkingGatewayGateway.apiVersion" . -}}
+{{- if and $apiVersion (ne $apiVersion "false") -}}
+{{- $appNs := include "st-common.names.namespace" . -}}
+{{- $gwNs := include "netbox.gateway.namespace" . -}}
+{{- $allowedFrom := ternary "Same" "All" (eq $gwNs $appNs) -}}
+apiVersion: {{ $apiVersion }}
+kind: Gateway
+metadata:
+  name: {{ include "netbox.gateway.fullname" . }}
+  namespace: {{ $gwNs | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  {{- if eq (default "" .Values.gateway.infrastructure) "envoy" }}
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: {{ include "netbox.gateway.envoyProxy.name" . }}
+  {{- end }}
+  listeners:
+    {{- if .Values.gateway.listeners }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.listeners "context" $) | nindent 4 }}
+    {{- else }}
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: {{ $allowedFrom }}
+      {{- $hostnames := include "netbox.gateway.hostnames" . | trim }}
+      {{- if and $hostnames (eq (len .Values.gateway.hostnames | int) 1) }}
+      hostname: {{ first .Values.gateway.hostnames | quote }}
+      {{- end }}
+    {{- if and .Values.gateway.tls.enabled (not .Values.tls.enabled) }}
+    - name: https
+      port: 443
+      protocol: HTTPS
+      allowedRoutes:
+        namespaces:
+          from: {{ $allowedFrom }}
+      {{- if and .Values.gateway.hostnames (eq (len .Values.gateway.hostnames | int) 1) }}
+      hostname: {{ first .Values.gateway.hostnames | quote }}
+      {{- end }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: {{ include "netbox.gateway.tlsSecretName" . }}
+    {{- end }}
+    {{- if .Values.tls.enabled }}
+    - name: https-passthrough
+      port: 443
+      protocol: TLS
+      allowedRoutes:
+        namespaces:
+          from: {{ $allowedFrom }}
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: TLSRoute
+      {{- if and .Values.gateway.hostnames (eq (len .Values.gateway.hostnames | int) 1) }}
+      hostname: {{ first .Values.gateway.hostnames | quote }}
+      {{- end }}
+      tls:
+        mode: Passthrough
+    {{- end }}
+    {{- end }}
+{{- end -}}
+{{- end -}}

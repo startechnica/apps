@@ -1,3 +1,8 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.worker.enabled (eq .Values.worker.kind "Deployment") }}
 apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
@@ -69,7 +74,7 @@ spec:
       containers:
         {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         - name: worker
-          image: {{ template "netbox.worker.image" . }}
+          image: {{ include "netbox.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy | quote }}
           {{- if .Values.worker.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.worker.containerSecurityContext "enabled" | toYaml | nindent 12 }}
@@ -117,7 +122,9 @@ spec:
           {{- end }}
 
           {{- if .Values.worker.resources }}
-          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
+          resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.resources "context" $) | nindent 12 }}
+          {{- else if ne .Values.worker.resourcesPreset "none" }}
+          resources: {{- include "st-common.resources.preset" (dict "type" .Values.worker.resourcesPreset) | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: config
