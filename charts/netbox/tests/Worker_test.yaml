@@ -1,0 +1,92 @@
+suite: Worker (Deployment + Housekeeping CronJob)
+release:
+  name: my-netbox
+  namespace: netbox
+tests:
+  - it: worker Deployment renders by default with worker.enabled
+    templates:
+      - templates/worker/Deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: my-netbox-worker
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: worker
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[?(@.name == 'worker')].command
+          value:
+            - /opt/netbox/venv/bin/python
+            - /opt/netbox/netbox/manage.py
+            - rqworker
+
+  - it: worker Deployment is suppressed when worker.enabled=false
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: worker Deployment omits replicas when autoscaling.enabled (server HPA shared)
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: worker Deployment respects worker.replicaCount override
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.replicaCount: 4
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 4
+
+  - it: housekeeping CronJob renders by default
+    templates:
+      - templates/CronJob.yaml
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: metadata.name
+          value: my-netbox-housekeeping
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: housekeeping
+      - equal:
+          path: spec.schedule
+          value: 0 0 * * *
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+
+  - it: housekeeping CronJob is suppressed when housekeeping.enabled=false
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: housekeeping CronJob honours a custom schedule
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.schedule: "*/15 * * * *"
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "*/15 * * * *"

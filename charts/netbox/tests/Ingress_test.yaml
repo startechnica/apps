@@ -1,0 +1,72 @@
+suite: Ingress
+release:
+  name: my-netbox
+  namespace: netbox
+templates:
+  - templates/Ingress.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a host rule pointing at the netbox Service when enabled
+    set:
+      ingress.enabled: true
+      ingress.hostname: netbox.example.com
+      ingress.ingressClassName: nginx
+      ingress.path: /
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: my-netbox
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+      - contains:
+          path: spec.rules
+          content:
+            host: netbox.example.com
+          any: true
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: my-netbox
+
+  - it: emits a self-signed TLS block when ingress.tls + ingress.selfSigned
+    set:
+      ingress.enabled: true
+      ingress.hostname: netbox.example.com
+      ingress.tls: true
+      ingress.selfSigned: true
+    asserts:
+      - contains:
+          path: spec.tls
+          content:
+            hosts:
+              - netbox.example.com
+            secretName: netbox.example.com-tls
+          any: true
+
+  - it: emits each extraHosts entry as an additional rule
+    set:
+      ingress.enabled: true
+      ingress.hostname: netbox.example.com
+      ingress.extraHosts:
+        - name: alt.example.com
+          path: /
+    asserts:
+      - contains:
+          path: spec.rules
+          content:
+            host: netbox.example.com
+          any: true
+      - contains:
+          path: spec.rules
+          content:
+            host: alt.example.com
+          any: true

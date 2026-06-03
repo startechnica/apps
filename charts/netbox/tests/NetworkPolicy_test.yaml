@@ -1,0 +1,70 @@
+suite: NetworkPolicy (server + worker)
+release:
+  name: my-netbox
+  namespace: netbox
+tests:
+  - it: server NetworkPolicy renders by default
+    templates:
+      - templates/NetworkPolicy.yaml
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: metadata.name
+          value: my-netbox
+      - contains:
+          path: spec.policyTypes
+          content: Ingress
+      - contains:
+          path: spec.policyTypes
+          content: Egress
+      - contains:
+          path: spec.ingress[0].ports
+          content:
+            port: 8080
+          any: true
+
+  - it: server NetworkPolicy is suppressed when networkPolicy.enabled=false
+    templates:
+      - templates/NetworkPolicy.yaml
+    set:
+      networkPolicy.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: server NetworkPolicy restricts ingress when allowExternal=false
+    templates:
+      - templates/NetworkPolicy.yaml
+    set:
+      networkPolicy.allowExternal: false
+    asserts:
+      - contains:
+          path: spec.ingress[0].from
+          content:
+            podSelector:
+              matchLabels:
+                my-netbox-client: "true"
+          any: true
+
+  - it: worker NetworkPolicy does not render by default (worker.networkPolicy.enabled=false)
+    templates:
+      - templates/worker/NetworkPolicy.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: worker NetworkPolicy renders when worker.networkPolicy.enabled
+    templates:
+      - templates/worker/NetworkPolicy.yaml
+    set:
+      worker.networkPolicy.enabled: true
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: metadata.name
+          value: my-netbox-worker
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: worker

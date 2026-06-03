@@ -1,0 +1,174 @@
+suite: Istio (Gateway / VirtualService / ServiceEntry)
+release:
+  name: my-netbox
+  namespace: netbox
+# Inject the Istio CRDs so capability lookups don't return "false".
+capabilities:
+  apiVersions:
+    - networking.istio.io/v1/Gateway
+    - networking.istio.io/v1/VirtualService
+    - networking.istio.io/v1/ServiceEntry
+tests:
+  - it: nothing is rendered when implementation=gateway-api (default)
+    templates:
+      - templates/istio/Gateway.yaml
+      - templates/istio/VirtualService.yaml
+      - templates/istio/ServiceEntry.yaml
+    set:
+      gateway.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Istio Gateway renders an HTTP server by default
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      ingress.hostname: ""
+    asserts:
+      - isKind:
+          of: Gateway
+      - equal:
+          path: metadata.name
+          value: my-netbox-gateway
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: http
+              number: 80
+              protocol: HTTP
+            hosts:
+              - "*"
+          any: true
+
+  - it: Istio Gateway adds an HTTPS SIMPLE server when gateway.tls.enabled
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      gateway.tls.enabled: true
+      ingress.hostname: netbox.example.com
+    asserts:
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: https
+              number: 443
+              protocol: HTTPS
+            hosts:
+              - "netbox.example.com"
+            tls:
+              credentialName: netbox.example.com-tls
+              mode: SIMPLE
+          any: true
+
+  - it: Istio Gateway uses PASSTHROUGH when tls.enabled (in-pod TLS)
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      tls.enabled: true
+      ingress.hostname: ""
+    asserts:
+      - contains:
+          path: spec.servers
+          content:
+            port:
+              name: https-passthrough
+              number: 443
+              protocol: TLS
+            hosts:
+              - "*"
+            tls:
+              mode: PASSTHROUGH
+          any: true
+
+  - it: Istio VirtualService renders with route to the netbox Service
+    templates:
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: spec.gateways[0]
+          value: netbox/my-netbox-gateway
+      - contains:
+          path: spec.http[0].route
+          content:
+            destination:
+              host: my-netbox.netbox.svc.cluster.local
+              port:
+                number: 80
+          any: true
+
+  - it: Istio VirtualService can be suppressed with existingVirtualService
+    templates:
+      - templates/istio/VirtualService.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      gateway.virtualService.existingVirtualService: my-byo-vs
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Istio Gateway honours `gateway.existingGateway` (skips render)
+    templates:
+      - templates/istio/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      gateway.existingGateway: external-gw
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Istio ServiceEntry renders external hosts when serviceEntry.enabled
+    templates:
+      - templates/istio/ServiceEntry.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      gateway.serviceEntry.enabled: true
+      gateway.serviceEntry.hosts:
+        - api.github.com
+    asserts:
+      - isKind:
+          of: ServiceEntry
+      - equal:
+          path: spec.location
+          value: MESH_EXTERNAL
+      - equal:
+          path: spec.resolution
+          value: DNS
+      - contains:
+          path: spec.hosts
+          content: api.github.com
+          any: true
+
+  - it: implementation=istio does not render gateway-api resources
+    templates:
+      - templates/gateway-api/Gateway.yaml
+      - templates/gateway-api/HTTPRoute.yaml
+      - templates/gateway-api/EnvoyProxy.yaml
+    capabilities:
+      apiVersions:
+        - gateway.networking.k8s.io/v1/Gateway
+        - gateway.networking.k8s.io/v1/HTTPRoute
+        - gateway.envoyproxy.io/v1alpha1/EnvoyProxy
+    set:
+      gateway.enabled: true
+      gateway.implementation: istio
+      gateway.gateway.create: true
+    asserts:
+      - hasDocuments:
+          count: 0

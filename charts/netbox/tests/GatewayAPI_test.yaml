@@ -1,0 +1,318 @@
+suite: Gateway API (Gateway / HTTPRoute / EnvoyProxy / ReferenceGrant / ListenerSet)
+release:
+  name: my-netbox
+  namespace: netbox
+# Inject the Gateway API CRDs so the chart's capability lookups don't return "false".
+capabilities:
+  apiVersions:
+    - gateway.networking.k8s.io/v1/Gateway
+    - gateway.networking.k8s.io/v1/HTTPRoute
+    - gateway.networking.k8s.io/v1/ReferenceGrant
+    - gateway.envoyproxy.io/v1alpha1/EnvoyProxy
+tests:
+  - it: nothing is rendered by default (gateway disabled)
+    templates:
+      - templates/gateway-api/Gateway.yaml
+      - templates/gateway-api/HTTPRoute.yaml
+      - templates/gateway-api/EnvoyProxy.yaml
+      - templates/gateway-api/ReferenceGrant.yaml
+      - templates/gateway-api/ListenerSet.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Gateway renders an HTTP listener on the eg GatewayClass by default
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+    asserts:
+      - isKind:
+          of: Gateway
+      - equal:
+          path: metadata.name
+          value: my-netbox-gateway
+      - equal:
+          path: spec.gatewayClassName
+          value: eg
+      - contains:
+          path: spec.listeners
+          content:
+            name: http
+            port: 80
+            protocol: HTTP
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: https
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: https-passthrough
+          any: true
+
+  - it: Gateway adds an HTTPS Terminate listener when gateway.tls.enabled (in-pod TLS off)
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      gateway.tls.enabled: true
+      ingress.hostname: netbox.example.com
+    asserts:
+      - contains:
+          path: spec.listeners
+          content:
+            name: https
+            port: 443
+            protocol: HTTPS
+            tls:
+              mode: Terminate
+              certificateRefs:
+                - name: netbox.example.com-tls
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: https-passthrough
+          any: true
+
+  - it: Gateway switches HTTPS to TLS Passthrough when tls.enabled (in-pod TLS on)
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.listeners
+          content:
+            name: https-passthrough
+            port: 443
+            protocol: TLS
+            tls:
+              mode: Passthrough
+          any: true
+      - notContains:
+          path: spec.listeners
+          content:
+            name: https
+            protocol: HTTPS
+          any: true
+
+  - it: Gateway attaches the EnvoyProxy parametersRef when infrastructure=envoy (default)
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+    asserts:
+      - equal:
+          path: spec.infrastructure.parametersRef.group
+          value: gateway.envoyproxy.io
+      - equal:
+          path: spec.infrastructure.parametersRef.kind
+          value: EnvoyProxy
+      - equal:
+          path: spec.infrastructure.parametersRef.name
+          value: my-netbox
+
+  - it: Gateway omits infrastructure block when infrastructure is empty
+    templates:
+      - templates/gateway-api/Gateway.yaml
+    set:
+      gateway.enabled: true
+      gateway.gateway.create: true
+      gateway.infrastructure: ""
+    asserts:
+      - notExists:
+          path: spec.infrastructure
+
+  - it: HTTPRoute renders by default when gateway.enabled and points at the Service
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      ingress.path: /
+    asserts:
+      - isKind:
+          of: HTTPRoute
+      - equal:
+          path: metadata.name
+          value: my-netbox
+      - contains:
+          path: spec.rules
+          content:
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: "/"
+            backendRefs:
+              - name: my-netbox
+                port: 80
+          any: true
+      - contains:
+          path: spec.parentRefs
+          content:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: my-netbox-gateway
+            namespace: netbox
+          any: true
+
+  - it: HTTPRoute attaches hostnames when gateway.hostnames is set
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      gateway.hostnames:
+        - netbox.example.com
+    asserts:
+      - contains:
+          path: spec.hostnames
+          content: netbox.example.com
+          any: true
+
+  - it: HTTPRoute falls back to ingress.hostname when gateway.hostnames is empty
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      ingress.hostname: legacy.example.com
+    asserts:
+      - contains:
+          path: spec.hostnames
+          content: legacy.example.com
+          any: true
+
+  - it: HTTPRoute can be suppressed via httpRoute.enabled=false
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      gateway.httpRoute.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: EnvoyProxy renders by default when gateway.enabled (envoyProxy.create=true)
+    templates:
+      - templates/gateway-api/EnvoyProxy.yaml
+    set:
+      gateway.enabled: true
+    asserts:
+      - isKind:
+          of: EnvoyProxy
+      - equal:
+          path: apiVersion
+          value: gateway.envoyproxy.io/v1alpha1
+      - equal:
+          path: metadata.name
+          value: my-netbox
+
+  - it: EnvoyProxy is absent in BYO mode (envoyProxy.create=false)
+    templates:
+      - templates/gateway-api/EnvoyProxy.yaml
+    set:
+      gateway.enabled: true
+      gateway.envoyProxy.create: false
+      gateway.envoyProxy.name: my-byo-envoyproxy
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: EnvoyProxy is absent when infrastructure is not envoy
+    templates:
+      - templates/gateway-api/EnvoyProxy.yaml
+    set:
+      gateway.enabled: true
+      gateway.infrastructure: ""
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: ReferenceGrant renders with default from/to when referenceGrant.enabled
+    templates:
+      - templates/gateway-api/ReferenceGrant.yaml
+    set:
+      gateway.enabled: true
+      gateway.referenceGrant.enabled: true
+    asserts:
+      - isKind:
+          of: ReferenceGrant
+      - contains:
+          path: spec.from
+          content:
+            group: gateway.networking.k8s.io
+            kind: HTTPRoute
+            namespace: netbox
+          any: true
+      - contains:
+          path: spec.to
+          content:
+            group: ""
+            kind: Service
+            name: my-netbox
+          any: true
+
+  - it: ReferenceGrant is absent by default (referenceGrant.enabled=false)
+    templates:
+      - templates/gateway-api/ReferenceGrant.yaml
+    set:
+      gateway.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: ListenerSet uses kind `XListenerSet` under x-k8s.io v1alpha1
+    templates:
+      - templates/gateway-api/ListenerSet.yaml
+    capabilities:
+      apiVersions:
+        - gateway.networking.x-k8s.io/v1alpha1/XListenerSet
+    set:
+      gateway.enabled: true
+      gateway.listenerSet.enabled: true
+      gateway.listenerSet.listeners:
+        - name: extra
+          port: 8080
+          protocol: HTTP
+    asserts:
+      - isKind:
+          of: XListenerSet
+      - equal:
+          path: apiVersion
+          value: gateway.networking.x-k8s.io/v1alpha1
+      - contains:
+          path: spec.listeners
+          content:
+            name: extra
+            port: 8080
+            protocol: HTTP
+          any: true
+
+  - it: ListenerSet is absent when no listeners are configured
+    templates:
+      - templates/gateway-api/ListenerSet.yaml
+    set:
+      gateway.enabled: true
+      gateway.listenerSet.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: implementation=gateway-api does not render any istio resources
+    templates:
+      - templates/istio/Gateway.yaml
+      - templates/istio/VirtualService.yaml
+      - templates/istio/ServiceEntry.yaml
+    set:
+      gateway.enabled: true
+      gateway.implementation: gateway-api
+    asserts:
+      - hasDocuments:
+          count: 0
