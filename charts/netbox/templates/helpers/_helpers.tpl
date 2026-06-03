@@ -69,6 +69,92 @@ Return the init-scripts ConfigMap name (user-provided or chart-managed)
 {{- end -}}
 
 {{/*
+Return the Keycloak pipeline ConfigMap name (user-provided or chart-managed)
+*/}}
+{{- define "netbox.keycloak.pipelineConfigMapName" -}}
+{{- if .Values.remoteAuth.keycloak.existingPipelineConfigMap -}}
+    {{- tpl .Values.remoteAuth.keycloak.existingPipelineConfigMap $ -}}
+{{- else -}}
+    {{- printf "%s-keycloak-pipeline" (include "st-common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render the keycloak pipeline-roles `volumes:` entry. Empty when
+`remoteAuth.keycloak.enabled` is false. Pair with `pipelineVolumeMount`.
+*/}}
+{{- define "netbox.keycloak.pipelineVolume" -}}
+{{- if .Values.remoteAuth.keycloak.enabled }}
+- name: keycloak-pipeline-roles
+  configMap:
+    name: {{ include "netbox.keycloak.pipelineConfigMapName" . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Render the keycloak pipeline-roles container `volumeMounts:` entry. Empty
+when `remoteAuth.keycloak.enabled` is false. SubPath honors
+`remoteAuth.keycloak.existingPipelineConfigMapKey` (defaults to
+`keycloak_pipeline_roles.py`, matching the chart-rendered ConfigMap data
+key).
+*/}}
+{{- define "netbox.keycloak.pipelineVolumeMount" -}}
+{{- if .Values.remoteAuth.keycloak.enabled }}
+- name: keycloak-pipeline-roles
+  mountPath: /opt/netbox/netbox/netbox/keycloak_pipeline_roles.py
+  subPath: {{ default "keycloak_pipeline_roles.py" .Values.remoteAuth.keycloak.existingPipelineConfigMapKey }}
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{/*
+Return the shared social-auth Secret name. One Secret per release holds the
+`oidc-<provider>.yaml` keys for every enabled social-auth provider
+(Keycloak today; Azure AD / Google / Okta / generic OIDC to follow). Mount
+point in pods is `/run/config/extra/remote-auth/`; configuration.py's
+extra-config glob picks each key up as Django settings at start-up.
+*/}}
+{{- define "netbox.socialAuth.secretName" -}}
+{{- printf "%s-remoteauth" (include "st-common.names.fullname" .) -}}
+{{- end -}}
+
+{{/*
+Return "true" if any social-auth provider is enabled — i.e. whether the
+shared social-auth Secret needs to render and mount. Extend this as new
+providers (azuread, google, okta, oidc) land under `remoteAuth.*`.
+*/}}
+{{- define "netbox.socialAuth.enabled" -}}
+{{- if .Values.remoteAuth.keycloak.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render the social-auth Secret `volumes:` entry. Empty when no provider is
+enabled.
+*/}}
+{{- define "netbox.socialAuth.secretVolume" -}}
+{{- if include "netbox.socialAuth.enabled" . }}
+- name: remoteauth
+  secret:
+    secretName: {{ include "netbox.socialAuth.secretName" . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Render the social-auth Secret container `volumeMounts:` entry. Empty when
+no provider is enabled. The mount path matches the subdirectory naming
+configuration.py's extra-config glob walks.
+*/}}
+{{- define "netbox.socialAuth.secretVolumeMount" -}}
+{{- if include "netbox.socialAuth.enabled" . }}
+- name: remoteauth
+  mountPath: /run/config/extra/remote-auth
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{/*
 Return the path Netbox is hosted on. This looks at httpRelativePath and returns it with a trailing slash. For example:
     / -> / (the default httpRelativePath)
     /auth -> /auth/ (trailing slash added)

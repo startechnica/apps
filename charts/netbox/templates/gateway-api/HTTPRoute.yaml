@@ -34,7 +34,9 @@ spec:
             type: PathPrefix
             value: {{ default "/" .Values.ingress.path | quote }}
       backendRefs:
-        - name: {{ include "st-common.names.fullname" . }}
+        - group: ""
+          kind: Service
+          name: {{ include "st-common.names.fullname" . }}
           port: {{ .Values.service.ports.http | int }}
     {{- end }}
     {{- /*
@@ -69,9 +71,10 @@ spec:
             type: PathPrefix
             value: {{ .path | quote }}
       backendRefs:
-        - name: {{ $svcName | quote }}
-          port: {{ $svcPort | int }}
+        - group: ""
           kind: Service
+          name: {{ $svcName | quote }}
+          port: {{ $svcPort | int }}
     {{- end }}
     {{- end }}
 {{- end -}}

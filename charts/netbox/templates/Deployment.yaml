@@ -294,6 +294,8 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
+            {{- include "netbox.keycloak.pipelineVolumeMount" . | nindent 12 }}
+            {{- include "netbox.socialAuth.secretVolumeMount" . | nindent 12 }}
             {{- if and .Values.metrics.enabled .Values.metrics.extraVolumeMounts }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -387,6 +389,8 @@ spec:
             name: {{ include "netbox.initdbScriptsCM" . }}
         {{- end }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
+        {{- include "netbox.keycloak.pipelineVolume" . | nindent 8 }}
+        {{- include "netbox.socialAuth.secretVolume" . | nindent 8 }}
         {{- if and .Values.metrics.enabled .Values.metrics.extraVolumes }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
         {{- end }}

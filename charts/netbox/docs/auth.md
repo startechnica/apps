@@ -2,7 +2,8 @@
 
 - [Configuring SSO](#configuring-sso)
 - [How group sync works](#how-group-sync-works)
-- [Configuring Keycloak](#configuring-keycloak)
+- [Configuring Keycloak (chart-managed)](#configuring-keycloak-chart-managed)
+- [Configuring Keycloak (manual via extraConfig)](#configuring-keycloak-manual-via-extraconfig)
 - [Configuring Azure AD / Entra ID](#configuring-azure-ad--entra-id)
 - [Configuring Google Workspace](#configuring-google-workspace)
 - [Configuring Okta](#configuring-okta)
@@ -51,7 +52,172 @@ configured. Azure puts them in `groups`. Google puts them in
 `hd`/`groups` (custom). Okta has a `groups` claim once you add it. The
 examples below each spell out the claim path.
 
-## Configuring Keycloak
+## Configuring Keycloak (chart-managed)
+
+The chart ships a `remoteAuth.keycloak.*` convenience block that materializes
+the Secret, ConfigMap, and pod mounts needed for a typical Keycloak setup —
+you don't need the long `extraConfig` / `extraDeploy` walkthrough below
+unless your Keycloak is non-standard. The chart-managed path covers the
+common case; the [manual section](#configuring-keycloak-manual-via-extraconfig)
+that follows is the fallback for everything else.
+
+### Audience mapper (Keycloak side)
+
+Same Keycloak-side setup as the manual path — required regardless of
+which chart approach you pick:
+
+- Clients → `<CLIENT_ID>` → [Tab] Client Scopes → [Tab] Setup → `<CLIENT_ID>-dedicated`
+- Mappers → Add mapper → By configuration → Audience
+    - Mapper type: Audience
+    - Name: `netbox-aud`
+    - Included Client Audience: `<CLIENT_ID>`
+
+You also need at least one of these mappers on the same client, matching
+your chosen [`groupSource`](#choosing-groupsource):
+
+- "User Client Role" mapper (default — drives `groupSource: client`)
+- "User Realm Role" mapper (drives `groupSource: realm`)
+- "Group Membership" mapper (drives `groupSource: groups`)
+
+### Minimal values
+
+```yaml
+remoteAuth:
+  enabled: true
+  backends:
+    - social_core.backends.keycloak.KeycloakOAuth2
+  autoCreateUser: true
+  defaultGroups: ['Guests']
+  groupSyncEnabled: true
+  keycloak:
+    enabled: true
+    clientId: <KEYCLOAK_CLIENT_ID>
+    clientSecret: <KEYCLOAK_CLIENT_SECRET>
+    realmUrl: https://keycloak.example.com/realms/<REALM_ID>
+    publicKey: |
+      MIIB...AB                 # realm RS256 public key body, no BEGIN/END markers
+    groupSource: client          # client | realm | groups
+    isStaffRole: admin           # Keycloak role → Django is_staff
+    isSuperuserRole: superuser   # Keycloak role → Django is_superuser
+    extraGroupMappings:
+      netops: Network Engineers  # Keycloak-role-name → Django-Group-name (only when they differ)
+```
+
+Note: you still list `social_core.backends.keycloak.KeycloakOAuth2` in
+`remoteAuth.backends` explicitly — the chart doesn't auto-append it.
+
+### What the chart renders
+
+When `remoteAuth.keycloak.enabled: true`:
+
+| Resource | Contains |
+|----------|----------|
+| Secret `<release>-remoteauth`, key `oidc-keycloak.yaml` | `SOCIAL_AUTH_KEYCLOAK_KEY`, `_SECRET`, `_PUBLIC_KEY`, `_AUTHORIZATION_URL`, `_ACCESS_TOKEN_URL`, `_SCOPE`, `_PIPELINE`, `SOCIAL_AUTH_JSONFIELD_ENABLED` — rendered from your values |
+| ConfigMap `<release>-keycloak-pipeline`, key `keycloak_pipeline_roles.py` | `set_role()` and `set_groups()` functions templated from `isStaffRole`, `isSuperuserRole`, `groupSource`, `extraGroupMappings` |
+
+**Pod mounts** (server pod only — the social-auth pipeline only runs
+during a web login, so worker/CronJob skip the mounts):
+
+- The Secret is mounted as a *directory* at `/run/config/extra/remote-auth/`,
+  so `oidc-keycloak.yaml` lands as a file at
+  `/run/config/extra/remote-auth/oidc-keycloak.yaml`. The chart's
+  `configuration.py` walks `/run/config/extra/<provider>/*.yaml` and
+  applies each file via `globals().update()` — every key becomes a Django
+  setting at process start.
+- The pipeline ConfigMap is mounted at
+  `/opt/netbox/netbox/netbox/keycloak_pipeline_roles.py`, so the pipeline
+  step `netbox.keycloak_pipeline_roles.set_role` (and `.set_groups`)
+  resolves as a normal Python import.
+
+### Choosing groupSource
+
+`remoteAuth.keycloak.groupSource` maps to a specific Keycloak client-side
+mapper that must exist on the OIDC client. If the mapper is missing, the
+claim returns empty and the pipeline silently leaves the user with only
+`defaultGroups`.
+
+| `groupSource` | OIDC response field read | Required Keycloak mapper |
+|---------------|--------------------------|--------------------------|
+| `client` (default) | `response['resource_access'][CLIENT_ID]['roles']` | User Client Role |
+| `realm` | `response['realm_access']['roles']` | User Realm Role |
+| `groups` | `response['groups']` | Group Membership |
+
+`is_staff` / `is_superuser` are always read from *client* roles regardless
+of `groupSource` — Keycloak realm roles and group memberships rarely
+carry app-specific privilege markers cleanly enough.
+
+### Overriding the pipeline list
+
+`remoteAuth.keycloak.pipelines` is the full ordered list of social-auth
+pipeline steps. To add your own audit / validation step, replace the
+whole list (it's not merged with the default):
+
+```yaml
+remoteAuth:
+  keycloak:
+    pipelines:
+      - social_core.pipeline.social_auth.social_details
+      - social_core.pipeline.social_auth.social_uid
+      - social_core.pipeline.social_auth.auth_allowed
+      - social_core.pipeline.social_auth.social_user
+      - social_core.pipeline.user.get_username
+      - social_core.pipeline.social_auth.associate_by_email
+      - social_core.pipeline.user.create_user
+      - social_core.pipeline.social_auth.associate_user
+      - netbox.authentication.user_default_groups_handler
+      - social_core.pipeline.social_auth.load_extra_data
+      - social_core.pipeline.user.user_details
+      - mycompany.audit.log_login           # ← your insertion
+      - netbox.keycloak_pipeline_roles.set_role
+      - netbox.keycloak_pipeline_roles.set_groups
+```
+
+If your custom step lives in a module the netbox image doesn't ship, mount
+it via `extraVolumes` / `extraVolumeMounts` alongside the chart-managed
+pieces.
+
+### Bringing your own pipeline file
+
+If the chart-generated `set_role` / `set_groups` don't fit your Keycloak
+setup (custom claim names, multiple clients, retry logic), supply your
+own ConfigMap and point the chart at it:
+
+```yaml
+remoteAuth:
+  keycloak:
+    enabled: true
+    existingPipelineConfigMap: my-custom-pipeline-cm
+    existingPipelineConfigMapKey: my_pipeline.py   # data-key inside that ConfigMap
+```
+
+The chart-rendered `<release>-keycloak-pipeline` ConfigMap is suppressed;
+your ConfigMap is mounted at
+`/opt/netbox/netbox/netbox/keycloak_pipeline_roles.py` with the subPath
+taken from `existingPipelineConfigMapKey`. Your `pipelines:` entries
+referring to `netbox.keycloak_pipeline_roles.<func>` then resolve to
+*your* implementation.
+
+### When to use the manual recipe instead
+
+The chart-managed path assumes you want one Keycloak client mapped onto
+one set of Django groups. Drop down to the
+[manual recipe below](#configuring-keycloak-manual-via-extraconfig) when:
+
+- You have multiple Keycloak clients (different realms or audiences)
+  authenticating one netbox.
+- You need to merge values with another `extraConfig` chain that's not
+  Keycloak-related (the chart-managed path is additive — coexisting
+  configurations work fine — but if your existing setup is already on the
+  manual path, migrating piecemeal is awkward).
+- You need to react to the Keycloak response at pipeline time in ways the
+  chart-generated functions don't cover (custom claim parsing, side
+  effects to external systems, fine-grained group → permission mapping).
+
+## Configuring Keycloak (manual via extraConfig)
+
+Use this approach when the chart-managed `remoteAuth.keycloak.*` block
+doesn't fit, or as a reference for what the chart does under the hood.
+
 Add Audience mapper
 
 - Clients -> <CLIENT_ID> -> [Tab] Client Scopes -> [Tab] Setup -> <CLIENT_ID>-dedicated

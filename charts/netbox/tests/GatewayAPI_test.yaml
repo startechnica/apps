@@ -154,7 +154,9 @@ tests:
                   type: PathPrefix
                   value: "/"
             backendRefs:
-              - name: my-netbox
+              - group: ""
+                kind: Service
+                name: my-netbox
                 port: 8080
           any: true
       - contains:
@@ -223,9 +225,10 @@ tests:
                   type: PathPrefix
                   value: /healthz
             backendRefs:
-              - name: ssl-redirect
-                port: 80
+              - group: ""
                 kind: Service
+                name: ssl-redirect
+                port: 80
           any: true
 
   - it: HTTPRoute also accepts legacy v1beta1 ingress.extraPaths (backend.serviceName/servicePort)
@@ -247,9 +250,10 @@ tests:
                   type: PathPrefix
                   value: /legacy
             backendRefs:
-              - name: old-svc
-                port: 8080
+              - group: ""
                 kind: Service
+                name: old-svc
+                port: 8080
           any: true
 
   - it: HTTPRoute skips extraPaths entries that only carry backend.service.port.name (no number)

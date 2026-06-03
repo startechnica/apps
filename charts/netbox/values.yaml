@@ -771,6 +771,95 @@ remoteAuth:
   ##
   existingSecretName: ""
 
+  ## Keycloak (social_core.backends.keycloak.KeycloakOAuth2) convenience block.
+  ##
+  ## When `enabled: true`, the chart materializes the supporting pieces so the
+  ## user does not need to copy-paste the long `extraConfig` / `extraDeploy`
+  ## walkthrough from `docs/auth.md`. Currently this block ships with the
+  ## auto-generated pipeline ConfigMap only — the configuration.py loader,
+  ## Secret materialization, and pod-mount wiring will follow in a subsequent
+  ## release. Until then `enabled: true` controls whether the pipeline
+  ## ConfigMap renders; you still need to wire it into your `extraVolumes` /
+  ## `extraVolumeMounts` / `extraConfig` until full integration lands.
+  ##
+  keycloak:
+    ## @param remoteAuth.keycloak.enabled Materialize the Keycloak pipeline ConfigMap and (eventually) auto-wire the social-auth backend. When `true`, the chart renders `<release>-keycloak-pipeline` ConfigMap; when `false`, no Keycloak-specific resources render.
+    ##
+    enabled: false
+    ## @param remoteAuth.keycloak.clientId Keycloak client ID. Required for `groupSource: client` and embedded in the rendered `keycloak_pipeline_roles.py` as the `CLIENT_ID` constant.
+    ##
+    clientId: ""
+    ## @param remoteAuth.keycloak.clientSecret OIDC client secret. Ignored if `remoteAuth.keycloak.existingSecretName` is set. Will be materialized into a chart-managed Secret in a later release; today this field is purely a placeholder for the values shape.
+    ##
+    clientSecret: ""
+    ## @param remoteAuth.keycloak.realmUrl Keycloak realm base URL, e.g. `https://keycloak.example.com/realms/<REALM_ID>`. Used to derive the authorization / token / userinfo endpoints in a later release.
+    ##
+    realmUrl: ""
+    ## @param remoteAuth.keycloak.publicKey Keycloak realm RS256 public key (PEM body, no `-----BEGIN PUBLIC KEY-----` markers). Required for `KeycloakOAuth2` ID-token verification. Rendered into the shared `<release>-remoteauth` Secret under the `oidc-keycloak.yaml` key.
+    ##
+    publicKey: ""
+    ## Group / role mapping. Drives the auto-generated `keycloak_pipeline_roles.py`.
+    ## See `docs/auth.md` for the meaning of each `groupSource` value and the
+    ## matching Keycloak client-side mapper that must exist.
+    ##
+    ## @param remoteAuth.keycloak.groupSource Where in the OIDC response Django Group membership claims live. Allowed values: `client` (response.resource_access[CLIENT_ID].roles, default), `realm` (response.realm_access.roles), `groups` (response.groups).
+    ##
+    groupSource: client
+    ## @param remoteAuth.keycloak.isStaffRole Keycloak role name that, when present on the user, promotes them to Django `is_staff=True` on every login.
+    ##
+    isStaffRole: admin
+    ## @param remoteAuth.keycloak.isSuperuserRole Keycloak role name that, when present on the user, promotes them to Django `is_superuser=True`. The `is_staff` flag is also set when this role is present, since superusers are implicitly staff.
+    ##
+    isSuperuserRole: superuser
+    ## @param remoteAuth.keycloak.extraGroupMappings Map of Keycloak role name → Django Group name applied when the role names differ. Entries here are looked up in addition to the direct (role name == group name) match. E.g. `{netops: Network Engineers}` adds the Django Group "Network Engineers" when the user has the `netops` Keycloak role.
+    ##
+    extraGroupMappings: {}
+    ## @param remoteAuth.keycloak.scopes OAuth2 scopes requested at login. Replaces (not extends) the social-auth Keycloak backend default — supply every scope you need, including `openid`. The default list below works for a vanilla Keycloak client with the OIDC `openid`, `email`, `profile` scopes assigned.
+    ##
+    scopes:
+      - openid
+      - email
+      - profile
+    ## @param remoteAuth.keycloak.audienceMapperName Name of the Audience mapper configured on the Keycloak client (e.g. `netbox-aud`). Stored only for documentation / future audit; not consumed by the pipeline today.
+    ##
+    audienceMapperName: ""
+    ## SOCIAL_AUTH_KEYCLOAK_PIPELINE — the ordered list of social-auth pipeline
+    ## steps applied during a Keycloak SSO login. The chart-managed default
+    ## mirrors the recipe documented in `docs/auth.md → Configuring Keycloak`
+    ## and ends with the chart-rendered `keycloak_pipeline_roles.py`
+    ## helpers (`set_role`, `set_groups`) mounted at
+    ## `/opt/netbox/netbox/netbox/`. To extend the chain (extra validation,
+    ## audit-logging hooks, custom group sync), replace this whole list.
+    ##
+    ## @param remoteAuth.keycloak.pipelines [array] Ordered list of social-auth pipeline functions (dotted import paths) applied at Keycloak login.
+    ##
+    pipelines:
+      - social_core.pipeline.social_auth.social_details
+      - social_core.pipeline.social_auth.social_uid
+      - social_core.pipeline.social_auth.auth_allowed
+      - social_core.pipeline.social_auth.social_user
+      - social_core.pipeline.user.get_username
+      - social_core.pipeline.social_auth.associate_by_email
+      - social_core.pipeline.user.create_user
+      - social_core.pipeline.social_auth.associate_user
+      - netbox.authentication.user_default_groups_handler
+      - social_core.pipeline.social_auth.load_extra_data
+      - social_core.pipeline.user.user_details
+      - netbox.keycloak_pipeline_roles.set_role
+      - netbox.keycloak_pipeline_roles.set_groups
+    ## Escape hatch: point at a ConfigMap you manage if the chart-generated
+    ## pipeline doesn't fit your Keycloak layout (custom claim names,
+    ## non-standard group sources, additional pipeline steps). When set, the
+    ## chart skips rendering `<release>-keycloak-pipeline` and you mount your
+    ## own ConfigMap via `extraVolumes` / `extraVolumeMounts`.
+    ##
+    ## @param remoteAuth.keycloak.existingPipelineConfigMap Name of a user-managed ConfigMap that already contains the pipeline file. When set, suppresses the chart-rendered `<release>-keycloak-pipeline` ConfigMap.
+    ##
+    existingPipelineConfigMap: ""
+    ## @param remoteAuth.keycloak.existingPipelineConfigMapKey Key inside `existingPipelineConfigMap` that holds `keycloak_pipeline_roles.py`.
+    ##
+    existingPipelineConfigMapKey: keycloak_pipeline_roles.py
+
   ## The following options are specific for backend "netbox.authentication.LDAPBackend"
   ## you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
   ## see https://django-auth-ldap.readthedocs.io
@@ -2248,6 +2337,10 @@ postgresql:
   global:
     security:
       allowInsecureImages: true
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/postgresql
+    tag: 18.2.0
   ## @param postgresql.commonLabels Labels to add to all deployed objects
   ##
   commonLabels:
