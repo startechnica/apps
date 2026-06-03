@@ -2487,7 +2487,7 @@ externalRedis:
   ## @param externalRedis.host External Redis host
   ## Ignored if `tasksRedis.host` and `cachingRedis.host` is set.
   ##
-  host: localhost
+  host: ""
   ## @param externalRedis.port External Redis port
   ## Ignored if `tasksRedis.port` and `cachingRedis.port` is set.
   ##
