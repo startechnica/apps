@@ -37,15 +37,42 @@ spec:
         - name: {{ include "st-common.names.fullname" . }}
           port: {{ .Values.service.ports.http | int }}
     {{- end }}
+    {{- /*
+      `ingress.extraPaths` follows the Ingress shape, which has both a legacy
+      (v1beta1) form — `backend.serviceName` / `backend.servicePort` — and the
+      modern v1 form — `backend.service.name` / `backend.service.port.{number,name}`.
+      The Ingress template splices the value through `toYaml` so it accepts
+      either; HTTPRoute has no equivalent shape, so we translate both here.
+      Entries that only carry a port `name` (no number) can't be expressed as
+      an HTTPRoute backendRef without a Service lookup at template time, so we
+      skip them — let the user pin a port `number` if they want HTTPRoute
+      coverage for that path.
+    */}}
     {{- range .Values.ingress.extraPaths }}
+    {{- $svcName := "" }}
+    {{- $svcPort := 0 }}
+    {{- with .backend }}
+      {{- if .service }}
+        {{- $svcName = .service.name }}
+        {{- with .service.port }}
+          {{- if .number }}{{- $svcPort = .number -}}{{- end }}
+        {{- end }}
+      {{- else if .serviceName }}
+        {{- $svcName = .serviceName }}
+        {{- if kindIs "int" .servicePort }}{{- $svcPort = .servicePort -}}{{- end }}
+        {{- if kindIs "float64" .servicePort }}{{- $svcPort = .servicePort | int -}}{{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if and $svcName $svcPort }}
     - matches:
         - path:
             type: PathPrefix
             value: {{ .path | quote }}
       backendRefs:
-        - name: {{ .backend.serviceName | quote }}
-          port: {{ .backend.servicePort | int }}
+        - name: {{ $svcName | quote }}
+          port: {{ $svcPort | int }}
           kind: Service
+    {{- end }}
     {{- end }}
 {{- end -}}
 {{- end -}}

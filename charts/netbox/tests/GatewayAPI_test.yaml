@@ -201,6 +201,77 @@ tests:
       - hasDocuments:
           count: 0
 
+  - it: HTTPRoute translates modern v1 ingress.extraPaths (backend.service.{name,port.number})
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      ingress.extraPaths:
+        - path: /healthz
+          pathType: Prefix
+          backend:
+            service:
+              name: ssl-redirect
+              port:
+                number: 80
+    asserts:
+      - contains:
+          path: spec.rules
+          content:
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /healthz
+            backendRefs:
+              - name: ssl-redirect
+                port: 80
+                kind: Service
+          any: true
+
+  - it: HTTPRoute also accepts legacy v1beta1 ingress.extraPaths (backend.serviceName/servicePort)
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      ingress.extraPaths:
+        - path: /legacy
+          backend:
+            serviceName: old-svc
+            servicePort: 8080
+    asserts:
+      - contains:
+          path: spec.rules
+          content:
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /legacy
+            backendRefs:
+              - name: old-svc
+                port: 8080
+                kind: Service
+          any: true
+
+  - it: HTTPRoute skips extraPaths entries that only carry backend.service.port.name (no number)
+    templates:
+      - templates/gateway-api/HTTPRoute.yaml
+    set:
+      gateway.enabled: true
+      ingress.extraPaths:
+        - path: /nameonly
+          backend:
+            service:
+              name: some-svc
+              port:
+                name: http
+    asserts:
+      - lengthEqual:
+          path: spec.rules
+          count: 1
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: my-netbox
+
   - it: EnvoyProxy renders when infrastructure=envoy and envoyProxy.create=true
     templates:
       - templates/gateway-api/EnvoyProxy.yaml
