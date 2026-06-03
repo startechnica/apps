@@ -1442,6 +1442,7 @@ housekeeping:
   ## @param housekeeping.containerSecurityContext.runAsUser Set Netbox housekeeping containers' Security Context runAsUser
   ## @param housekeeping.containerSecurityContext.runAsGroup Set Netbox housekeeping containers' Security Context runAsGroup
   ## @param housekeeping.containerSecurityContext.runAsNonRoot Set Netbox housekeeping containers' Security Context runAsNonRoot
+  ## @param housekeeping.containerSecurityContext.readOnlyRootFilesystem Set Netbox housekeeping containers' Security Context readOnlyRootFilesystem
   ## @param housekeeping.containerSecurityContext.allowPrivilegeEscalation Is it possible to escalate Netbox pod(s) privileges
   ## @param housekeeping.containerSecurityContext.seccompProfile.type Set Netbox housekeeping containers' Security Context seccompProfile
   ## @param housekeeping.containerSecurityContext.capabilities.drop Set Netbox housekeeping containers' Security Context capabilities to drop
@@ -1452,6 +1453,7 @@ housekeeping:
     runAsUser: 1000
     runAsGroup: 1000
     runAsNonRoot: true
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     seccompProfile:
       type: RuntimeDefault
@@ -1544,12 +1546,12 @@ housekeeping:
   initContainers: []
 
 
-  ## @param housekeeping.timezone Set the cronjob parameter `spec.timeZone` (IANA name, e.g. `Asia/Jakarta`). Empty means the controller picks. Overridden by the top-level `timezone` when both are set.
-  ##
-  timezone: ""
-  ## @param housekeeping.timeZone [DEPRECATED — no longer consulted] Earlier (mis-cased) name for `housekeeping.timezone`. The template only reads the lowercase `timezone`; this field was never wired. Slated for removal in 6.0.0.
+  ## @param housekeeping.timeZone Set the cronjob parameter `spec.timeZone` (IANA name, e.g. `Asia/Jakarta`). Empty means the controller picks. Overridden by the top-level `timezone` when both are set.
   ##
   timeZone: ""
+  ## @param housekeeping.timezone [DEPRECATED — use `housekeeping.timeZone`] Lower-cased alias kept for backward compat with earlier chart versions. Still consulted as a fallback when `housekeeping.timeZone` is empty. Slated for removal in 6.0.0.
+  ##
+  timezone: ""
   ## @param housekeeping.ttlSecondsAfterFinished Sets `spec.jobTemplate.spec.ttlSecondsAfterFinished` on each Job spawned by the CronJob. Empty / 0 leaves the field unset (Job persists until garbage-collected).
   ##
   ttlSecondsAfterFinished: ""
@@ -1580,6 +1582,9 @@ worker:
   ## @param worker.replicaCount Number of Netbox worker replicas to deploy
   ##
   replicaCount: 1
+  ## @param worker.revisionHistoryLimit Number of old ReplicaSets to retain for rollbacks on the worker Deployment (unset = leave default unrendered)
+  ##
+  revisionHistoryLimit: ""
   ## @param redis.master.kind Use either Deployment (default), or Job
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/job/
   ##

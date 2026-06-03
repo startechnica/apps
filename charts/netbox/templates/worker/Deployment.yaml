@@ -18,8 +18,14 @@ metadata:
   annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if not .Values.worker.autoscaling.enabled }}
   replicas: {{ .Values.worker.replicaCount }}
+  {{- end }}
+  {{- if .Values.worker.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ .Values.worker.revisionHistoryLimit }}
+  {{- end }}
+  {{- if .Values.worker.minReadySeconds }}
+  minReadySeconds: {{ .Values.worker.minReadySeconds }}
   {{- end }}
   {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
   selector:
@@ -71,6 +77,24 @@ spec:
       {{- end }}
       serviceAccountName: {{ template "netbox.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      {{- if .Values.worker.shareProcessNamespace }}
+      shareProcessNamespace: {{ .Values.worker.shareProcessNamespace }}
+      {{- end }}
+      {{- if .Values.worker.dnsConfig }}
+      dnsConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.dnsConfig "context" .) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.worker.dnsPolicy }}
+      dnsPolicy: {{ .Values.worker.dnsPolicy }}
+      {{- end }}
+      {{- if semverCompare ">= 1.13" (include "st-common.capabilities.kubeVersion" .) }}
+      enableServiceLinks: {{ .Values.worker.enableServiceLinks }}
+      {{- end }}
+      {{- if .Values.worker.schedulerName }}
+      schedulerName: {{ .Values.worker.schedulerName }}
+      {{- end }}
+      {{- if .Values.worker.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.topologySpreadConstraints "context" .) | nindent 8 }}
+      {{- end }}
       containers:
         {{- include "netbox.git.containers.sync" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         - name: worker
@@ -125,6 +149,54 @@ spec:
           resources: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.resources "context" $) | nindent 12 }}
           {{- else if ne .Values.worker.resourcesPreset "none" }}
           resources: {{- include "st-common.resources.preset" (dict "type" .Values.worker.resourcesPreset) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.worker.customStartupProbe }}
+          startupProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.customStartupProbe "context" $) | nindent 12 }}
+          {{- else if .Values.worker.startupProbe.enabled }}
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'pgrep -f "manage.py rqworker" >/dev/null'
+            initialDelaySeconds: {{ .Values.worker.startupProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.worker.startupProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.worker.startupProbe.successThreshold }}
+            periodSeconds: {{ .Values.worker.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.worker.startupProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.worker.customLivenessProbe }}
+          livenessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.worker.livenessProbe.enabled }}
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'pgrep -f "manage.py rqworker" >/dev/null'
+            initialDelaySeconds: {{ .Values.worker.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.worker.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.worker.livenessProbe.successThreshold }}
+            periodSeconds: {{ .Values.worker.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.worker.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.worker.customReadinessProbe }}
+          readinessProbe: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.customReadinessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.worker.readinessProbe.enabled }}
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'pgrep -f "manage.py rqworker" >/dev/null'
+            initialDelaySeconds: {{ .Values.worker.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.worker.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.worker.readinessProbe.successThreshold }}
+            periodSeconds: {{ .Values.worker.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.worker.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.worker.lifecycleHooks }}
+          lifecycle: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: config
@@ -229,7 +301,7 @@ spec:
         {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumes }}
           {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
-        {{- if .Values.extraVolumes }}
-          {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- if .Values.worker.extraVolumes }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
 {{- end }}

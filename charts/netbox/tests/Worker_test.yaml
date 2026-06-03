@@ -34,14 +34,25 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: worker Deployment omits replicas when autoscaling.enabled (server HPA shared)
+  - it: worker Deployment omits replicas when worker.autoscaling.enabled
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.autoscaling.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: worker Deployment keeps replicas when only server-side autoscaling is on
     templates:
       - templates/worker/Deployment.yaml
     set:
       autoscaling.enabled: true
+      worker.autoscaling.enabled: false
     asserts:
-      - notExists:
+      - equal:
           path: spec.replicas
+          value: 1
 
   - it: worker Deployment respects worker.replicaCount override
     templates:
@@ -151,7 +162,17 @@ tests:
       - notExists:
           path: spec.timeZone
 
-  - it: housekeeping CronJob renders timeZone from housekeeping.timezone
+  - it: housekeeping CronJob renders timeZone from housekeeping.timeZone
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.timeZone: Asia/Jakarta
+    asserts:
+      - equal:
+          path: spec.timeZone
+          value: Asia/Jakarta
+
+  - it: housekeeping CronJob still honours legacy housekeeping.timezone alias
     templates:
       - templates/CronJob.yaml
     set:
@@ -161,12 +182,23 @@ tests:
           path: spec.timeZone
           value: Asia/Jakarta
 
-  - it: housekeeping CronJob prefers top-level timezone over housekeeping.timezone
+  - it: housekeeping CronJob prefers housekeeping.timeZone over legacy housekeeping.timezone
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.timeZone: Asia/Jakarta
+      housekeeping.timezone: Europe/Berlin
+    asserts:
+      - equal:
+          path: spec.timeZone
+          value: Asia/Jakarta
+
+  - it: housekeeping CronJob prefers top-level timezone over housekeeping.timeZone
     templates:
       - templates/CronJob.yaml
     set:
       timezone: Europe/Berlin
-      housekeeping.timezone: Asia/Jakarta
+      housekeeping.timeZone: Asia/Jakarta
     asserts:
       - equal:
           path: spec.timeZone
@@ -237,3 +269,379 @@ tests:
           content:
             name: FOO
             value: bar
+
+  - it: housekeeping container renders imagePullPolicy from housekeeping.image.pullPolicy
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.image.pullPolicy: Always
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].imagePullPolicy
+          value: Always
+
+  - it: housekeeping container uses housekeeping.containerSecurityContext (not server's)
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.containerSecurityContext.runAsUser: 2000
+      containerSecurityContext.runAsUser: 5000
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].securityContext.runAsUser
+          value: 2000
+
+  - it: housekeeping container defaults to readOnlyRootFilesystem true
+    templates:
+      - templates/CronJob.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].securityContext.readOnlyRootFilesystem
+          value: true
+
+  - it: housekeeping container args honours housekeeping.args (not server args)
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.args:
+        - --verbose
+      args:
+        - --should-not-leak
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].args
+          value:
+            - --verbose
+
+  - it: housekeeping container envFrom uses housekeeping-scoped extraEnvVarsCM and Secret
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.extraEnvVarsCM: hk-cm
+      housekeeping.extraEnvVarsSecret: hk-sec
+      extraEnvVarsCM: server-cm
+      extraEnvVarsSecret: server-sec
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].envFrom
+          content:
+            configMapRef:
+              name: hk-cm
+          any: true
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].envFrom
+          content:
+            secretRef:
+              name: hk-sec
+          any: true
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].envFrom
+          content:
+            configMapRef:
+              name: server-cm
+          any: true
+
+  - it: housekeeping envFrom appends each housekeeping.extraEnvVarsSecrets entry
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.extraEnvVarsSecrets:
+        - extra-one
+        - extra-two
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].envFrom
+          content:
+            secretRef:
+              name: extra-one
+          any: true
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[?(@.name == 'housekeeping')].envFrom
+          content:
+            secretRef:
+              name: extra-two
+          any: true
+
+  - it: housekeeping pod renders housekeeping.sidecars (not server's)
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.sidecars:
+        - name: hk-sidecar
+          image: busybox
+      sidecars:
+        - name: server-sidecar
+          image: busybox
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers
+          content:
+            name: hk-sidecar
+            image: busybox
+          any: true
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers
+          content:
+            name: server-sidecar
+            image: busybox
+          any: true
+
+  - it: housekeeping pod renders housekeeping.extraVolumes (not server's)
+    templates:
+      - templates/CronJob.yaml
+    set:
+      housekeeping.extraVolumes:
+        - name: hk-vol
+          emptyDir: {}
+      extraVolumes:
+        - name: server-vol
+          emptyDir: {}
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: hk-vol
+            emptyDir: {}
+          any: true
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: server-vol
+            emptyDir: {}
+          any: true
+
+  - it: worker pod renders worker.extraVolumes (not top-level)
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.extraVolumes:
+        - name: worker-vol
+          emptyDir: {}
+      extraVolumes:
+        - name: server-vol
+          emptyDir: {}
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: worker-vol
+            emptyDir: {}
+          any: true
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: server-vol
+            emptyDir: {}
+          any: true
+
+  - it: worker Deployment honours revisionHistoryLimit and minReadySeconds
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.revisionHistoryLimit: 5
+      worker.minReadySeconds: 12
+    asserts:
+      - equal:
+          path: spec.revisionHistoryLimit
+          value: 5
+      - equal:
+          path: spec.minReadySeconds
+          value: 12
+
+  - it: worker pod spec renders dnsConfig / dnsPolicy / schedulerName / topologySpreadConstraints / shareProcessNamespace
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.dnsPolicy: ClusterFirstWithHostNet
+      worker.dnsConfig:
+        options:
+          - name: ndots
+            value: "4"
+      worker.schedulerName: my-sched
+      worker.shareProcessNamespace: true
+      worker.topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: ClusterFirstWithHostNet
+      - equal:
+          path: spec.template.spec.dnsConfig.options[0].name
+          value: ndots
+      - equal:
+          path: spec.template.spec.schedulerName
+          value: my-sched
+      - equal:
+          path: spec.template.spec.shareProcessNamespace
+          value: true
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].maxSkew
+          value: 1
+
+  - it: worker container renders default exec probes
+    templates:
+      - templates/worker/Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == 'worker')].livenessProbe.exec.command[2]
+          value: 'pgrep -f "manage.py rqworker" >/dev/null'
+      - equal:
+          path: spec.template.spec.containers[?(@.name == 'worker')].readinessProbe.exec.command[2]
+          value: 'pgrep -f "manage.py rqworker" >/dev/null'
+
+  - it: worker container honours customLivenessProbe override
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.customLivenessProbe:
+        tcpSocket:
+          port: http
+        initialDelaySeconds: 7
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == 'worker')].livenessProbe.tcpSocket.port
+          value: http
+      - equal:
+          path: spec.template.spec.containers[?(@.name == 'worker')].livenessProbe.initialDelaySeconds
+          value: 7
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == 'worker')].livenessProbe.exec
+
+  - it: worker container renders lifecycleHooks when set
+    templates:
+      - templates/worker/Deployment.yaml
+    set:
+      worker.lifecycleHooks:
+        preStop:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - sleep 10
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == 'worker')].lifecycle.preStop.exec.command[2]
+          value: sleep 10
+
+  - it: worker Job renders when worker.kind=Job
+    templates:
+      - templates/worker/Job.yaml
+    set:
+      worker.kind: Job
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: my-netbox-worker
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: OnFailure
+
+  - it: worker Job is suppressed when worker.kind=Deployment (default)
+    templates:
+      - templates/worker/Job.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: worker Job picks up worker.extraVolumes (not top-level extraVolumes)
+    templates:
+      - templates/worker/Job.yaml
+    set:
+      worker.kind: Job
+      worker.extraVolumes:
+        - name: worker-vol
+          emptyDir: {}
+      extraVolumes:
+        - name: server-vol
+          emptyDir: {}
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: worker-vol
+            emptyDir: {}
+          any: true
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: server-vol
+            emptyDir: {}
+          any: true
+
+  - it: worker PodDisruptionBudget is suppressed by default
+    templates:
+      - templates/worker/PodDisruptionBudget.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: worker PodDisruptionBudget renders when worker.podDisruptionBudget.enabled
+    templates:
+      - templates/worker/PodDisruptionBudget.yaml
+    set:
+      worker.podDisruptionBudget.enabled: true
+      worker.podDisruptionBudget.minAvailable: 1
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: metadata.name
+          value: my-netbox-worker
+      - equal:
+          path: spec.minAvailable
+          value: 1
+
+  - it: worker PodDisruptionBudget renders maxUnavailable when set
+    templates:
+      - templates/worker/PodDisruptionBudget.yaml
+    set:
+      worker.podDisruptionBudget.enabled: true
+      worker.podDisruptionBudget.maxUnavailable: 30%
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 30%
+
+  - it: extraWorkers passes through each entry as its own document
+    templates:
+      - templates/worker/extraWorkers.yaml
+    set:
+      extraWorkers:
+        - apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: my-custom-worker
+          spec:
+            replicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: my-custom-worker
+
+  - it: extraDeploy passes through each entry as its own document
+    templates:
+      - templates/extraDeploy.yaml
+    set:
+      extraDeploy:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: my-extra-config
+          data:
+            foo: bar
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data.foo
+          value: bar

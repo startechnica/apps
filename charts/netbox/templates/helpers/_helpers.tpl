@@ -58,6 +58,17 @@ Return true if a configmap object should be created
 {{- end -}}
 
 {{/*
+Return the init-scripts ConfigMap name (user-provided or chart-managed)
+*/}}
+{{- define "netbox.initdbScriptsCM" -}}
+{{- if .Values.initdbScriptsConfigMap -}}
+    {{- printf "%s" (tpl .Values.initdbScriptsConfigMap $) -}}
+{{- else -}}
+    {{- printf "%s-init-scripts" (include "st-common.names.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the path Netbox is hosted on. This looks at httpRelativePath and returns it with a trailing slash. For example:
     / -> / (the default httpRelativePath)
     /auth -> /auth/ (trailing slash added)

@@ -23,8 +23,9 @@ spec:
   schedule: {{ .Values.housekeeping.schedule | quote }}
   successfulJobsHistoryLimit: {{ .Values.housekeeping.successfulJobsHistoryLimit }}
   suspend: {{ .Values.housekeeping.suspend }}
-  {{- if or .Values.timezone .Values.housekeeping.timezone }}
-  timeZone: {{ coalesce .Values.timezone .Values.housekeeping.timezone | quote }}
+  {{- $hkTZ := coalesce .Values.housekeeping.timeZone .Values.housekeeping.timezone }}
+  {{- if or .Values.timezone $hkTZ }}
+  timeZone: {{ coalesce .Values.timezone $hkTZ | quote }}
   {{- end }}
   jobTemplate:
     spec:
@@ -68,10 +69,11 @@ spec:
           {{- end }}
           containers:
           - name: housekeeping
-            {{- if .Values.containerSecurityContext.enabled }}
-            securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
-            {{- end }}
             image: {{ include "netbox.images.image" (dict "imageRoot" .Values.housekeeping.image "global" .Values.global) }}
+            imagePullPolicy: {{ .Values.housekeeping.image.pullPolicy }}
+            {{- if .Values.housekeeping.containerSecurityContext.enabled }}
+            securityContext: {{- omit .Values.housekeeping.containerSecurityContext "enabled" | toYaml | nindent 14 }}
+            {{- end }}
             {{- if .Values.diagnosticMode.enabled }}
             command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 14 }}
             {{- else if .Values.housekeeping.command }}
@@ -84,7 +86,7 @@ spec:
             {{- end }}
             {{- if .Values.diagnosticMode.enabled }}
             args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 14 }}
-            {{- else if .Values.args }}
+            {{- else if .Values.housekeeping.args }}
             args: {{- include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.args "context" $) | nindent 14 }}
             {{- end }}
             env:
@@ -93,15 +95,19 @@ spec:
             {{- if .Values.housekeeping.extraEnvVars }}
               {{- include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVars "context" $) | nindent 14 }}
             {{- end }}
-            {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
+            {{- if or .Values.housekeeping.extraEnvVarsCM .Values.housekeeping.extraEnvVarsSecret .Values.housekeeping.extraEnvVarsSecrets }}
             envFrom:
-              {{- if .Values.extraEnvVarsCM }}
+              {{- if .Values.housekeeping.extraEnvVarsCM }}
               - configMapRef:
-                  name: {{ include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+                  name: {{ include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVarsCM "context" $) }}
               {{- end }}
-              {{- if .Values.extraEnvVarsSecret }}
+              {{- if .Values.housekeeping.extraEnvVarsSecret }}
               - secretRef:
-                  name: {{ include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+                  name: {{ include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.extraEnvVarsSecret "context" $) }}
+              {{- end }}
+              {{- range .Values.housekeeping.extraEnvVarsSecrets }}
+              - secretRef:
+                  name: {{ . }}
               {{- end }}
             {{- end }}
             {{- if .Values.housekeeping.resources }}
@@ -145,8 +151,8 @@ spec:
             {{- if .Values.housekeeping.extraVolumeMounts }}
               {{- include "st-common.tplvalues.render" ( dict "value" .Values.housekeeping.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
-          {{- if .Values.sidecars }}
-            {{- include "st-common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 10 }}
+          {{- if .Values.housekeeping.sidecars }}
+            {{- include "st-common.tplvalues.render" ( dict "value" .Values.housekeeping.sidecars "context" $) | nindent 10 }}
           {{- end }}
           volumes:
           - name: config
@@ -192,8 +198,8 @@ spec:
           {{- include "netbox.media.volumes" . | trim | nindent 10 }}
           {{- include "netbox.reports.volumes" . | trim | nindent 10 }}
           {{- include "netbox.scripts.volumes" . | trim | nindent 10 }}
-          {{- if .Values.extraVolumes }}
-            {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 10 }}
+          {{- if .Values.housekeeping.extraVolumes }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.housekeeping.extraVolumes "context" $) | nindent 10 }}
           {{- end }}
           {{- include "netbox.extraConfig.volumes" . | nindent 10 -}}
 {{- end -}}

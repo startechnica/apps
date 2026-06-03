@@ -1421,6 +1421,9 @@
         "timeZone": {
           "type": "string"
         },
+        "timezone": {
+          "type": "string"
+        },
         "concurrencyPolicy": {
           "type": "string"
         },
