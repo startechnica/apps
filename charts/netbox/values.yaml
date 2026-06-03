@@ -11,9 +11,9 @@
 ## @param global.storageClass Global StorageClass for Persistent Volume(s)
 ##
 global:
-  imageRegistry: docker.io
-  imageRepository: netboxcommunity/netbox
-  imageTag: "v3.7.8-2.8.0"
+  imageRegistry: ""
+  imageRepository: ""
+  imageTag: ""
   imageDigest: ""
   ## E.g.
   ## imagePullSecrets:
@@ -68,6 +68,9 @@ dnsConfig: {}
 ## @param clusterDomain Default Kubernetes cluster domain
 ##
 clusterDomain: cluster.local
+## @param timezone Chart-wide IANA timezone (e.g. `Asia/Jakarta`). Currently consumed by the housekeeping CronJob (`spec.timeZone`); when set it wins over `housekeeping.timezone`.
+##
+timezone: ""
 ## @param extraDeploy Array of extra objects to deploy with the release
 ##
 extraDeploy: []
@@ -99,9 +102,9 @@ diagnosticMode:
 ## @param image.debug Specify if debug logs should be enabled
 ##
 image:
-  registry: ""
-  repository: ""
-  tag: ""
+  registry: docker.io
+  repository: netboxcommunity/netbox
+  tag: "v3.7.8-2.8.0"
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -142,17 +145,12 @@ extraFlags: []
 ##     value: "bar"
 ##
 extraEnvVars: []
-## @params extraEnvs  Additional environment variables to set
-##  - name: FOO
-##    valueFrom:
-##      secretKeyRef:
-##        key: FOO
-##        name: secret-resource
-##
-extraEnvs: []
 ## @param extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Netbox server nodes
 ##
 extraEnvVarsCM: ""
+## @param extraEnvVarsCMs [array] List of additional ConfigMaps to source env vars from. Each entry is a ConfigMap name; rendered into the pod spec via repeated `envFrom.configMapRef` blocks.
+##
+extraEnvVarsCMs: []
 ## @param extraEnvVarsSecrets List of existing Secret containing extra env vars for Netbox server nodes
 ##
 extraEnvVarsSecret: ""
@@ -219,9 +217,11 @@ customLivenessProbe: {}
 customReadinessProbe: {}
 ## Netbox resource requests and limits
 ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if `resources` is set (which is recommended for production).
 ## @param resources.limits The resources limits for the Netbox containers
 ## @param resources.requests The requested resources for the Netbox containers
 ##
+resourcesPreset: "g-xsmall"
 resources:
   limits:
     cpu: 2000m
@@ -286,6 +286,9 @@ updateStrategy:
 ## @param minReadySeconds How many seconds a pod needs to be ready before killing the next, during update
 ##
 minReadySeconds: 0
+## @param terminationGracePeriodSeconds Grace period (seconds) before pods are forcibly killed during termination. Empty means use Kubernetes' default (30s).
+##
+terminationGracePeriodSeconds: ""
 ## @param priorityClassName Netbox worker pods' priorityClassName
 ##
 priorityClassName: ""
@@ -371,11 +374,6 @@ extraVolumeMounts: []
 ##         containerPort: 1234
 ##
 sidecars: []
-## @param extraContainers  Additional containers to be added to the NetBox pod.
-##  - name: my-sidecar
-##    image: nginx:latest
-##
-extraContainers: []
 ## @param initContainers Add additional init containers to the Netbox pod(s)
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 ## e.g:
@@ -386,12 +384,6 @@ extraContainers: []
 ##    command: ['sh', '-c', 'echo "hello world"']
 ##
 initContainers: []
-## @param extraInitContainers  Containers which are run before the NetBox containers are started.
-##  - name: init-myservice
-##    image: busybox
-##    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
-##
-extraInitContainers: []
 
 ## Network Policies
 ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
@@ -474,6 +466,9 @@ superuser:
   ## @param superuser.existingSecretPasswordKey Key where the Netbox superuser password is being stored inside the existing secret.
   ##
   existingSecretPasswordKey: ""
+  ## @param superuser.existingSecretApiTokenKey Key where the Netbox superuser API token is stored inside `superuser.existingSecretName`. Falls back to `superuser-api-token` when blank.
+  ##
+  existingSecretApiTokenKey: ""
   ## @param superuser.annotations Additional custom annotations for Netbox superuser secret object
   ##
   annotations: {}
@@ -611,6 +606,11 @@ email:
   sslKeyFile: ''
   timeout: 10  # seconds
   from: ''
+  ## @param email.existingSecretName Existing Secret holding the SMTP password. When set, the chart skips rendering its own `email_password` data key and reads from this Secret instead.
+  ##
+  existingSecretName: ""
+  ## @param email.existingSecretPasswordKey Key inside `email.existingSecretName` that holds the SMTP password. Falls back to `email-password` when blank.
+  ##
   existingSecretPasswordKey: ""
 
 # Enforcement of unique IP space can be toggled on a per-VRF basis. To enforce
@@ -771,6 +771,95 @@ remoteAuth:
   ##
   existingSecretName: ""
 
+  ## Keycloak (social_core.backends.keycloak.KeycloakOAuth2) convenience block.
+  ##
+  ## When `enabled: true`, the chart materializes the supporting pieces so the
+  ## user does not need to copy-paste the long `extraConfig` / `extraDeploy`
+  ## walkthrough from `docs/auth.md`. Currently this block ships with the
+  ## auto-generated pipeline ConfigMap only — the configuration.py loader,
+  ## Secret materialization, and pod-mount wiring will follow in a subsequent
+  ## release. Until then `enabled: true` controls whether the pipeline
+  ## ConfigMap renders; you still need to wire it into your `extraVolumes` /
+  ## `extraVolumeMounts` / `extraConfig` until full integration lands.
+  ##
+  keycloak:
+    ## @param remoteAuth.keycloak.enabled Materialize the Keycloak pipeline ConfigMap and (eventually) auto-wire the social-auth backend. When `true`, the chart renders `<release>-keycloak-pipeline` ConfigMap; when `false`, no Keycloak-specific resources render.
+    ##
+    enabled: false
+    ## @param remoteAuth.keycloak.clientId Keycloak client ID. Required for `groupSource: client` and embedded in the rendered `keycloak_pipeline_roles.py` as the `CLIENT_ID` constant.
+    ##
+    clientId: ""
+    ## @param remoteAuth.keycloak.clientSecret OIDC client secret. Ignored if `remoteAuth.keycloak.existingSecretName` is set. Will be materialized into a chart-managed Secret in a later release; today this field is purely a placeholder for the values shape.
+    ##
+    clientSecret: ""
+    ## @param remoteAuth.keycloak.realmUrl Keycloak realm base URL, e.g. `https://keycloak.example.com/realms/<REALM_ID>`. Used to derive the authorization / token / userinfo endpoints in a later release.
+    ##
+    realmUrl: ""
+    ## @param remoteAuth.keycloak.publicKey Keycloak realm RS256 public key (PEM body, no `-----BEGIN PUBLIC KEY-----` markers). Required for `KeycloakOAuth2` ID-token verification. Rendered into the shared `<release>-remoteauth` Secret under the `oidc-keycloak.yaml` key.
+    ##
+    publicKey: ""
+    ## Group / role mapping. Drives the auto-generated `keycloak_pipeline_roles.py`.
+    ## See `docs/auth.md` for the meaning of each `groupSource` value and the
+    ## matching Keycloak client-side mapper that must exist.
+    ##
+    ## @param remoteAuth.keycloak.groupSource Where in the OIDC response Django Group membership claims live. Allowed values: `client` (response.resource_access[CLIENT_ID].roles, default), `realm` (response.realm_access.roles), `groups` (response.groups).
+    ##
+    groupSource: client
+    ## @param remoteAuth.keycloak.isStaffRole Keycloak role name that, when present on the user, promotes them to Django `is_staff=True` on every login.
+    ##
+    isStaffRole: admin
+    ## @param remoteAuth.keycloak.isSuperuserRole Keycloak role name that, when present on the user, promotes them to Django `is_superuser=True`. The `is_staff` flag is also set when this role is present, since superusers are implicitly staff.
+    ##
+    isSuperuserRole: superuser
+    ## @param remoteAuth.keycloak.extraGroupMappings Map of Keycloak role name → Django Group name applied when the role names differ. Entries here are looked up in addition to the direct (role name == group name) match. E.g. `{netops: Network Engineers}` adds the Django Group "Network Engineers" when the user has the `netops` Keycloak role.
+    ##
+    extraGroupMappings: {}
+    ## @param remoteAuth.keycloak.scopes OAuth2 scopes requested at login. Replaces (not extends) the social-auth Keycloak backend default — supply every scope you need, including `openid`. The default list below works for a vanilla Keycloak client with the OIDC `openid`, `email`, `profile` scopes assigned.
+    ##
+    scopes:
+      - openid
+      - email
+      - profile
+    ## @param remoteAuth.keycloak.audienceMapperName Name of the Audience mapper configured on the Keycloak client (e.g. `netbox-aud`). Stored only for documentation / future audit; not consumed by the pipeline today.
+    ##
+    audienceMapperName: ""
+    ## SOCIAL_AUTH_KEYCLOAK_PIPELINE — the ordered list of social-auth pipeline
+    ## steps applied during a Keycloak SSO login. The chart-managed default
+    ## mirrors the recipe documented in `docs/auth.md → Configuring Keycloak`
+    ## and ends with the chart-rendered `keycloak_pipeline_roles.py`
+    ## helpers (`set_role`, `set_groups`) mounted at
+    ## `/opt/netbox/netbox/netbox/`. To extend the chain (extra validation,
+    ## audit-logging hooks, custom group sync), replace this whole list.
+    ##
+    ## @param remoteAuth.keycloak.pipelines [array] Ordered list of social-auth pipeline functions (dotted import paths) applied at Keycloak login.
+    ##
+    pipelines:
+      - social_core.pipeline.social_auth.social_details
+      - social_core.pipeline.social_auth.social_uid
+      - social_core.pipeline.social_auth.auth_allowed
+      - social_core.pipeline.social_auth.social_user
+      - social_core.pipeline.user.get_username
+      - social_core.pipeline.social_auth.associate_by_email
+      - social_core.pipeline.user.create_user
+      - social_core.pipeline.social_auth.associate_user
+      - netbox.authentication.user_default_groups_handler
+      - social_core.pipeline.social_auth.load_extra_data
+      - social_core.pipeline.user.user_details
+      - netbox.keycloak_pipeline_roles.set_role
+      - netbox.keycloak_pipeline_roles.set_groups
+    ## Escape hatch: point at a ConfigMap you manage if the chart-generated
+    ## pipeline doesn't fit your Keycloak layout (custom claim names,
+    ## non-standard group sources, additional pipeline steps). When set, the
+    ## chart skips rendering `<release>-keycloak-pipeline` and you mount your
+    ## own ConfigMap via `extraVolumes` / `extraVolumeMounts`.
+    ##
+    ## @param remoteAuth.keycloak.existingPipelineConfigMap Name of a user-managed ConfigMap that already contains the pipeline file. When set, suppresses the chart-rendered `<release>-keycloak-pipeline` ConfigMap.
+    ##
+    existingPipelineConfigMap: ""
+    ## @param remoteAuth.keycloak.existingPipelineConfigMapKey Key inside `existingPipelineConfigMap` that holds `keycloak_pipeline_roles.py`.
+    ##
+    existingPipelineConfigMapKey: keycloak_pipeline_roles.py
+
   ## The following options are specific for backend "netbox.authentication.LDAPBackend"
   ## you can use an existing netbox secret with "ldap_bind_password" instead of "bindPassword"
   ## see https://django-auth-ldap.readthedocs.io
@@ -885,6 +974,22 @@ secretKey: ""
 ##
 existingSecretName: ""
 
+## @param existingConfigmap Name of an existing ConfigMap holding the NetBox `configuration.py`. When set, the chart skips rendering its own ConfigMap and pods mount this one instead. `tpl`-evaluated.
+##
+existingConfigmap: ""
+
+## @param initdbScripts [object] Map of script filename → script body used to seed the database / configure NetBox after install. Rendered into a chart-owned ConfigMap and mounted at the container's init path. Ignored when `initdbScriptsConfigMap` is set.
+## E.g.
+## initdbScripts:
+##   01-seed.sh: |
+##     #!/bin/sh
+##     echo seeding
+##
+initdbScripts: {}
+## @param initdbScriptsConfigMap Name of an existing ConfigMap containing init scripts. When set, the chart skips rendering its own `initdbScripts` ConfigMap and mounts this one.
+##
+initdbScriptsConfigMap: ""
+
 # Override the NGINX Unit configuration inside the container. When enabled, this
 # overrides the default configuration loaded into Unit. The upstream config is:
 # https://github.com/netbox-community/netbox-docker/blob/release/docker/nginx-unit.json
@@ -952,6 +1057,9 @@ serviceAccount:
   ## @param serviceAccount.extraLabels Additional labels for the ServiceAccount
   ##
   extraLabels: {}
+  ## @param serviceAccount.imagePullSecrets [array] Image-pull Secret names attached directly to the ServiceAccount (rendered as `imagePullSecrets:` on the SA itself). Distinct from the chart-wide `imagePullSecrets` / per-image `pullSecrets`.
+  ##
+  imagePullSecrets: []
 ## Specifies whether RBAC resources should be created
 ##
 rbac:
@@ -1015,6 +1123,9 @@ persistence:
   ##     app: my-app
   ##
   selector: {}
+  ## @param persistence.dataSource Custom PVC `spec.dataSource` (clone from another PVC or restore from a VolumeSnapshot). Matches the shape used by `reportsPersistence.dataSource` / `scriptsPersistence.dataSource`.
+  ##
+  dataSource: {}
 
 ## Storage configuration for reports
 ##
@@ -1119,7 +1230,7 @@ scriptsPersistence:
 replicaCount: 1
 ## @param revisionHistoryLimitCount Number of controller revisions to keep
 ##
-revisionHistoryLimitCount: 10
+revisionHistoryLimitCount: 1
 ## @param extraContainerPorts Optionally specify extra list of additional port-mappings for Netbox container
 ##
 extraContainerPorts: []
@@ -1133,34 +1244,28 @@ service:
   ## @param service.type Kubernetes service type
   ##
   type: ClusterIP
-  ## @param service.http.enabled Enable http port on service
-  ##
-  http:
-    enabled: true
   ## @param service.ports.http Netbox service HTTP port
   ## @param service.ports.https Netbox service HTTPS port
   ##
-  port: 80
   ports:
-    http: 80
-    https: 443
+    http: 8080
+    https: 8443
   ## @param service.nodePorts [object] Specify the nodePort values for the LoadBalancer and NodePort service types.
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
-  nodePort: ""
   nodePorts:
     http: ""
     https: ""
-  ## @param service.clusterIP Netbox service clusterIP IP
+  ## @param service.clusterIPs Netbox service clusterIPs (list; use for dual-stack, or a single static ClusterIP)
   ## e.g:
-  ## clusterIP: None
+  ## clusterIPs:
+  ##   - 10.96.0.10
   ##
-  clusterIP: ""
   clusterIPs: []
   ## @param service.externalIPs  Designate an IP address block that is external to the cluster that can send traffic to services in the cluster.
   ##
   externalIPs: []
-  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for
   ## bare metal / on-prem environments that rely on VIP based LB implementations.
   ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
   ##
@@ -1340,18 +1445,20 @@ housekeeping:
   enabled: true
   ## Netbox housekeeping image version
   ## ref: https://hub.docker.com/r/netboxcommunity/netbox/tags
-  ## @param image.registry [default: REGISTRY_NAME] Netbox housekeeping image registry
-  ## @param image.repository [default: REPOSITORY_NAME/netbox] Netbox housekeeping image repository
-  ## @skip image.tag Netbox housekeeping image tag (immutable tags are recommended)
-  ## @param image.digest Netbox housekeeping image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag
-  ## @param image.pullPolicy Netbox housekeeping image pull policy
-  ## @param image.pullSecrets Specify docker-registry secret names as an array
-  ## @param image.debug Specify if debug logs should be enabled
+  ## Per-component image override (#64). When any field is empty, it falls
+  ## through to `.Values.global.image*` (precedence fixed in 5.1.0 — see #83).
+  ## @param housekeeping.image.registry [default: REGISTRY_NAME] Netbox housekeeping image registry
+  ## @param housekeeping.image.repository [default: REPOSITORY_NAME/netbox] Netbox housekeeping image repository
+  ## @skip housekeeping.image.tag Netbox housekeeping image tag (immutable tags are recommended)
+  ## @param housekeeping.image.digest Netbox housekeeping image digest in the way sha256:aa.... If set, overrides the tag.
+  ## @param housekeeping.image.pullPolicy Netbox housekeeping image pull policy
+  ## @param housekeeping.image.pullSecrets Specify docker-registry secret names as an array
+  ## @param housekeeping.image.debug Specify if debug logs should be enabled
   ##
   image:
-    registry: ""
-    repository: ""
-    tag: ""
+    registry: docker.io
+    repository: netboxcommunity/netbox
+    tag: "v3.7.8-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1391,19 +1498,11 @@ housekeeping:
   extraEnvVarsSecrets: []
   ## Netbox housekeeping resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param housekeeping.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). Ignored if `housekeeping.resources` is set.
   ## @param housekeeping.resources.limits The resources limits for the Netbox housekeeping containers
   ## @param housekeeping.resources.requests The requested resources for the Netbox housekeeping containers
-  ## We usually recommend not to specify default resources and to leave this as a conscious
-  ## choice for the user. This also increases chances charts run on environments with little
-  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
-  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ## limits:
-  ##   cpu: 100m
-  ##   memory: 128Mi
-  ## requests:
-  ##   cpu: 100m
-  ##   memory: 128Mi
   ##
+  resourcesPreset: "gs-2xsmall"
   resources: {}
   ## Configure Netbox housekeeping Pods Security Context
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
@@ -1426,6 +1525,7 @@ housekeeping:
   ## @param housekeeping.containerSecurityContext.runAsUser Set Netbox housekeeping containers' Security Context runAsUser
   ## @param housekeeping.containerSecurityContext.runAsGroup Set Netbox housekeeping containers' Security Context runAsGroup
   ## @param housekeeping.containerSecurityContext.runAsNonRoot Set Netbox housekeeping containers' Security Context runAsNonRoot
+  ## @param housekeeping.containerSecurityContext.readOnlyRootFilesystem Set Netbox housekeeping containers' Security Context readOnlyRootFilesystem
   ## @param housekeeping.containerSecurityContext.allowPrivilegeEscalation Is it possible to escalate Netbox pod(s) privileges
   ## @param housekeeping.containerSecurityContext.seccompProfile.type Set Netbox housekeeping containers' Security Context seccompProfile
   ## @param housekeeping.containerSecurityContext.capabilities.drop Set Netbox housekeeping containers' Security Context capabilities to drop
@@ -1436,6 +1536,7 @@ housekeeping:
     runAsUser: 1000
     runAsGroup: 1000
     runAsNonRoot: true
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     seccompProfile:
       type: RuntimeDefault
@@ -1528,10 +1629,23 @@ housekeeping:
   initContainers: []
 
 
-  ## @param housekeeping.timeZone Set the cronjob parameter timeZone
+  ## @param housekeeping.timeZone Set the cronjob parameter `spec.timeZone` (IANA name, e.g. `Asia/Jakarta`). Empty means the controller picks. Overridden by the top-level `timezone` when both are set.
   ##
   timeZone: ""
+  ## @param housekeeping.timezone [DEPRECATED — use `housekeeping.timeZone`] Lower-cased alias kept for backward compat with earlier chart versions. Still consulted as a fallback when `housekeeping.timeZone` is empty. Slated for removal in 6.0.0.
+  ##
+  timezone: ""
+  ## @param housekeeping.ttlSecondsAfterFinished Sets `spec.jobTemplate.spec.ttlSecondsAfterFinished` on each Job spawned by the CronJob. Empty / 0 leaves the field unset (Job persists until garbage-collected).
+  ##
+  ttlSecondsAfterFinished: ""
 
+  ## @param housekeeping.concurrencyPolicy Concurrency policy for the housekeeping CronJob. Allowed: Allow / Forbid / Replace.
+  ## @param housekeeping.failedJobsHistoryLimit Number of failed finished Jobs to keep.
+  ## @param housekeeping.restartPolicy Pod restart policy for the housekeeping Job.
+  ## @param housekeeping.schedule Cron schedule expression for the housekeeping CronJob.
+  ## @param housekeeping.successfulJobsHistoryLimit Number of successful finished Jobs to keep.
+  ## @param housekeeping.suspend Suspend the housekeeping CronJob.
+  ##
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   restartPolicy: OnFailure
@@ -1551,6 +1665,9 @@ worker:
   ## @param worker.replicaCount Number of Netbox worker replicas to deploy
   ##
   replicaCount: 1
+  ## @param worker.revisionHistoryLimit Number of old ReplicaSets to retain for rollbacks on the worker Deployment (unset = leave default unrendered)
+  ##
+  revisionHistoryLimit: ""
   ## @param redis.master.kind Use either Deployment (default), or Job
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/job/
   ##
@@ -1566,9 +1683,9 @@ worker:
   ## @param image.debug Specify if debug logs should be enabled
   ##
   image:
-    registry: ""
-    repository: ""
-    tag: ""
+    registry: docker.io
+    repository: netboxcommunity/netbox
+    tag: "v3.7.8-2.8.0"
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -1680,9 +1797,11 @@ worker:
   customReadinessProbe: {}
   ## Netbox worker resource requests and limits
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  ## @param worker.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). Ignored if `worker.resources` is set.
   ## @param worker.resources.limits The resources limits for the Netbox worker containers
   ## @param worker.resources.requests The requested resources for the Netbox worker containers
   ##
+  resourcesPreset: "gs-2xsmall"
   resources:
     limits: {}
     requests: {}
@@ -1857,17 +1976,20 @@ worker:
   ##
   initContainers: []
 
-  ## Network worker Pod Disruption Budget configuration
+  ## Worker Pod Disruption Budget configuration
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
   ##
   podDisruptionBudget:
-    ## @param podDisruptionBudget.create Enable/disable a Pod Disruption Budget creation
+    ## @param worker.podDisruptionBudget.enabled Render a PodDisruptionBudget for the worker Deployment.
+    ##
+    enabled: false
+    ## @param worker.podDisruptionBudget.create [DEPRECATED — no longer consulted] Earlier name for `worker.podDisruptionBudget.enabled`. The template reads `enabled`; `create` was never wired. Slated for removal in 6.0.0.
     ##
     create: false
-    ## @param podDisruptionBudget.minAvailable Minimum number/percentage of pods that should remain scheduled
+    ## @param worker.podDisruptionBudget.minAvailable Minimum number/percentage of pods that should remain scheduled. Mutually exclusive with `maxUnavailable`.
     ##
     minAvailable: 1
-    ## @param podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that may be made unavailable
+    ## @param worker.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that may be made unavailable. Mutually exclusive with `minAvailable`.
     ##
     maxUnavailable: ""
   ## Netbox worker Autoscaling configuration
@@ -1947,6 +2069,14 @@ worker:
     ## ref: https://docs.netbox.dev/en/stable/integrations/prometheus-metrics/
     ##
     enabled: false
+
+  ## @param worker.terminationGracePeriodSeconds Grace period (seconds) before worker pods are forcibly killed. Empty means use Kubernetes' default (30s).
+  ##
+  terminationGracePeriodSeconds: ""
+  ## @param worker.annotations Annotations applied to the worker Job (only — pod template annotations are still `worker.podAnnotations`).
+  ##
+  annotations: {}
+
 ## @param extraWorkers  Extra objects to deploy as worker (evaluated as a template)
 ##
 extraWorkers: []
@@ -1954,16 +2084,44 @@ extraWorkers: []
 ## HTTPS settings
 ##
 tls:
-  ## @param tls.enabled Enable TLS encryption. Required for HTTPs traffic.
+  ## @param tls.enabled Enable TLS encryption. Required for HTTPs traffic. When `true`, the chart auto-generates TLS material implicitly (cert-manager when its API is detected on the cluster, otherwise an in-template `genCA` self-signed pair). Override by setting `tls.certificatesSecret` to point at a pre-existing Secret.
   ##
   enabled: false
-  ## @param tls.autoGenerated Generate automatically self-signed TLS certificates
+  ## @param tls.autoGenerated [DEPRECATED — no longer consulted] When `tls.enabled: true` the chart auto-generates TLS material implicitly (cert-manager when its API is detected, otherwise genCA self-signed). Suppress by setting `tls.certificatesSecret`. Slated for removal in 6.0.0.
   ##
   autoGenerated: true
+  ## cert-manager integration. The chart auto-renders a Certificate whenever
+  ## (`tls.enabled` OR `ingress.tls`) AND the cert-manager API is detected on
+  ## the cluster AND `tls.certificatesSecret` is empty. `issuerRef` and
+  ## `tlsAcme` below tune that rendering; `create` is retained for
+  ## backward-compat only.
+  ##
+  certManager:
+    ## @param tls.certManager.create [DEPRECATED — no longer consulted] The chart auto-detects cert-manager and renders a Certificate when its API is present. To opt out, pre-create the Secret and point `tls.certificatesSecret` at it. Slated for removal in 6.0.0.
+    ##
+    create: false
+    ## @param tls.certManager.issuerRef.kind Cert-manager Issuer kind (Issuer / ClusterIssuer)
+    ## @param tls.certManager.issuerRef.name Cert-manager Issuer name
+    ##
+    issuerRef:
+      kind: ClusterIssuer
+      name: ""
+    ## @param tls.certManager.tlsAcme Add `kubernetes.io/tls-acme: "true"` annotation to Ingress
+    ##
+    tlsAcme: false
+  ## [DEPRECATED — no longer consulted] Use `tls.certManager.issuerRef.*` for
+  ## Issuer configuration. Slated for removal in 6.0.0.
+  ##
   autoGenerator:
     certManager:
+      ## @param tls.autoGenerator.certManager.enabled [DEPRECATED — no longer consulted]
+      ##
       enabled: false
+      ## @param tls.autoGenerator.certManager.issuerKind [DEPRECATED — no longer consulted] Use `tls.certManager.issuerRef.kind`
+      ##
       issuerKind: ClusterIssuer
+      ## @param tls.autoGenerator.certManager.issuerName [DEPRECATED — no longer consulted] Use `tls.certManager.issuerRef.name`
+      ##
       issuerName: selfsigned-issuer
   ## @param tls.certificatesSecret Name of the secret that contains the certificates
   ##
@@ -1996,6 +2154,15 @@ metrics:
   ## @param metrics.enabled Enable metrics
   ##
   enabled: false
+  ## @param metrics.labels Extra labels merged into the metrics Service / worker-metrics Service `metadata.labels`.
+  ##
+  labels: {}
+  ## @param metrics.podLabels Extra labels merged into pod labels of NetBox pods when `metrics.enabled` is on.
+  ##
+  podLabels: {}
+  ## @param metrics.podAnnotations Extra annotations merged into pod annotations of NetBox pods when `metrics.enabled` is on (typically used for Prometheus scrape hints).
+  ##
+  podAnnotations: {}
   ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the Netbox pod(s)
   ##
   extraVolumes:
@@ -2009,6 +2176,9 @@ metrics:
   ## Netbox metrics service parameters
   ##
   service:
+    ## @param metrics.service.port [DEPRECATED — use `metrics.service.ports.http`] Legacy single-port field. The template still coalesces `ports.http || port`; prefer `ports.http`. Slated for removal in 6.0.0.
+    ##
+    port: ""
     ## @param metrics.service.ports.http Metrics service HTTP port
     ##
     ports:
@@ -2033,6 +2203,9 @@ metrics:
     ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using Prometheus Operator
     ##
     enabled: false
+    ## @param metrics.serviceMonitor.annotations Annotations added to the ServiceMonitor (merged with `commonAnnotations`).
+    ##
+    annotations: {}
     ## @param metrics.serviceMonitor.port Metrics service HTTP port
     ##
     port: http-metrics
@@ -2161,6 +2334,13 @@ postgresql:
   ## @param postgresql.enabled Switch to enable or disable the PostgreSQL helm chart
   ##
   enabled: true
+  global:
+    security:
+      allowInsecureImages: true
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/postgresql
+    tag: 18.2.0
   ## @param postgresql.commonLabels Labels to add to all deployed objects
   ##
   commonLabels:
@@ -2207,6 +2387,7 @@ postgresql:
 ## @param externalDatabase.port Database port number
 ## @param externalDatabase.user Non-root username for Netbox
 ## @param externalDatabase.password Password for the non-root username for Netbox
+## @param externalDatabase.passwordless Skip db_password mount entirely (Fixes #63 — for CloudSQL IAM auth and other passwordless auth flows where no DATABASE.PASSWORD is configured)
 ## @param externalDatabase.database Netbox database name
 ## @param externalDatabase.existingSecretName Name of an existing secret resource containing the database credentials
 ## @param externalDatabase.existingSecretHostKey Name of an existing secret key containing the database host name
@@ -2222,6 +2403,7 @@ externalDatabase:
   database: netbox
   username: netbox
   password: ""
+  passwordless: false
   existingSecretName: ""
   existingSecretHostKey: ""
   existingSecretPortKey: ""
@@ -2254,10 +2436,17 @@ redis:
   ## settings under *both* tasksRedis *and* cachingRedis
   ##
   enabled: true
+  global:
+    security:
+      allowInsecureImages: true
   ## @param redis.commonLabels Labels to add to all deployed objects
   ##
   commonLabels:
     app.kubernetes.io/part-of: netbox
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/redis
+    tag: 8.6.3
   ## @param redis.architecture Netbox architecture. Allowed values: `standalone` or `replication`
   ##
   architecture: standalone
@@ -2310,12 +2499,55 @@ redis:
     ## @param redis.tls.existingSecret The name of the existing secret that contains the TLS certificates
     ##
     existingSecret: ""
+  ## Bitnami redis subchart NetworkPolicy.
+  ## Tighter-than-default: only netbox server / worker / housekeeping pods
+  ## in the release namespace may reach redis. `allowExternal: false`
+  ## flips the policy from "allow everything on port 6379" to "deny by
+  ## default, allow only what `extraIngress` permits." Cross-namespace
+  ## clients (e.g. shared monitoring) must be added via
+  ## `ingressNSMatchLabels` / `extraIngress`.
+  ## @param redis.networkPolicy.allowExternal Whether to allow ingress from any pod (`true`) or only those matched below (`false`)
+  ## @param redis.networkPolicy.extraIngress Extra ingress rules for the redis NetworkPolicy. Default opens 6379 to netbox component pods (server/worker/housekeeping) co-located in the release namespace.
+  ##
+  networkPolicy:
+    allowExternal: false
+    extraIngress:
+      - ports:
+          - port: 6379
+        from:
+          - podSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/part-of
+                  operator: In
+                  values:
+                    - netbox
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - server
+                    - worker
+                    - housekeeping
 
 ## @section External Redis database settings.
 ##
-## Redis is used for caching and for queuing background tasks such as webhook events. A separate
-## configuration exists for each. Full connection details are required in both sections, and it is strongly recommended
-## to use two separate database IDs.
+## Redis is used for caching and for queuing background tasks such as webhook events. NetBox addresses
+## these as two logically separate Redis databases — `tasksRedis` (queue, default DB 0) and
+## `cachingRedis` (cache, default DB 1).
+##
+## When `redis.enabled: false`, you have two equivalent ways to point NetBox at external Redis:
+##
+##   1. **One external Redis instance for both** (most common). Set `externalRedis.{host,port,…}`
+##      below; the chart fans those values out to `tasksRedis` and `cachingRedis` via the helpers.
+##      The two `database:` numbers (0 and 1) keep the queue and cache logically separated on the
+##      same Redis server.
+##
+##   2. **Two different external Redis instances**, e.g. one tuned for queue durability and a
+##      separate one for cache. Set `tasksRedis.{host,port,…}` and `cachingRedis.{host,port,…}`
+##      explicitly — when these are set they take precedence over `externalRedis.*` and the chart
+##      points each component at its own backend.
+##
+## A separate configuration exists for each. Full connection details are required in both sections,
+## and it is strongly recommended to use two separate database IDs.
 ##
 tasksRedis:
   database: 0
@@ -2332,6 +2564,9 @@ tasksRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
+  ## @param tasksRedis.existingSecretName Existing Secret holding the tasks-Redis password. When set, takes precedence over `externalRedis.existingSecretName` for the tasks instance and suppresses the chart-rendered `redis-tasks-password` data key.
+  ##
+  existingSecretName: ""
   ## @param tasksRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2351,6 +2586,9 @@ cachingRedis:
   sentinelTimeout: 300
   username: ""
   password: ""
+  ## @param cachingRedis.existingSecretName Existing Secret holding the caching-Redis password. When set, takes precedence over `externalRedis.existingSecretName` for the caching instance and suppresses the chart-rendered `redis-cache-password` data key.
+  ##
+  existingSecretName: ""
   ## @param cachingRedis.existingSecretPasswordKey Pasword key name inside the existing secret
   ##
   existingSecretPasswordKey: ""
@@ -2364,7 +2602,7 @@ externalRedis:
   ## @param externalRedis.host External Redis host
   ## Ignored if `tasksRedis.host` and `cachingRedis.host` is set.
   ##
-  host: localhost
+  host: ""
   ## @param externalRedis.port External Redis port
   ## Ignored if `tasksRedis.port` and `cachingRedis.port` is set.
   ##
@@ -2378,6 +2616,9 @@ externalRedis:
   ## @param externalRedis.existingSecretName Existing secret for the external redis
   ##
   existingSecretName: ""
+  ## @param externalRedis.annotations Additional annotations rendered on the chart-managed external-redis Secret. Merged with `commonAnnotations`.
+  ##
+  annotations: {}
   ## Password key to be retrieved from Redis secret
   ## @param externalRedis.existingSecretPasswordKey Password key for the existing secret containing the external redis password
   ## Ignored if `tasksRedis.existingSecretPasswordKey` and `cachingRedis.existingSecretPasswordKey` is set.
@@ -2400,21 +2641,27 @@ redisWait:
   ## @param redisWait.image.pullSecrets Redis image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/redis
-    tag: 7.2.4-debian-11-r5
+    tag: 8.6.3
     digest: ""
-  ## Specify a imagePullPolicy
-  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
-  ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
+    ##
+    pullPolicy: IfNotPresent
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+    ## e.g:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: []
+  ## @param redisWait.pullPolicy [DEPRECATED — no longer consulted] Use `redisWait.image.pullPolicy`. The sibling-level field was never wired into the init container; the template reads `redisWait.image.pullPolicy`. Slated for removal in 6.0.0.
   ##
-  pullPolicy: IfNotPresent
-  ## Optionally specify an array of imagePullSecrets.
-  ## Secrets must be manually created in the namespace.
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-  ## e.g:
-  ## pullSecrets:
-  ##   - myRegistryKeySecretName
+  pullPolicy: ""
+  ## @param redisWait.pullSecrets [DEPRECATED — no longer consulted] Use `redisWait.image.pullSecrets`. Slated for removal in 6.0.0.
   ##
   pullSecrets: []
   ## Properties for the wait Redis init container
@@ -2514,9 +2761,9 @@ volumePermissions:
   ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/os-shell
-    tag: 11-debian-11-r95
+    tag: 12-debian-12-r65
     digest: ""
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
@@ -2562,9 +2809,9 @@ git:
   ## @param git.image.pullSecrets Git image pull secrets
   ##
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/git
-    tag: 2.43.2-debian-11-r4
+    tag: 2.54.0-debian-12-r3
     digest: ""
     ## Specify a imagePullPolicy
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -2684,68 +2931,190 @@ git:
     ##
     resources: {}
 
+## =============================================================================
 ## @section Netbox ingress gateway parameters
-## ref: https://istio.io/latest/docs/reference/config/networking/gateway/
+## -----------------------------------------------------------------------------
+## Controls inbound HTTP/HTTPS traffic to the NetBox web service. Two
+## implementations are supported, picked via `gateway.implementation`:
+##
+##   - `gateway-api` (default): renders Gateway, HTTPRoute, ReferenceGrant,
+##     ListenerSet — Envoy/Cilium/Istio gateway-api compatible.
+##   - `istio`: renders the legacy istio Gateway + VirtualService pair.
+##
+## The chart-rendered Gateway is named `<fullname>-gateway` to avoid colliding
+## with the Service of the same name (Envoy Gateway and Istio gateway-api both
+## materialise a data-plane Deployment named after the Gateway). For BYO mode,
+## set `gateway.existingGateway` and the chart skips its own Gateway render.
+## =============================================================================
 
 gateway:
-  ## @param gateway.enabled  Enable Istio Gateway and VirtualService
+  ## @param gateway.enabled Enable rendering of Gateway / HTTPRoute / VirtualService resources for inbound NetBox traffic.
   ##
   enabled: false
-  ## @param gateway.dedicated 
-  ## 
-  dedicated: false
-  ## @param gateway.gatewayApi 
-  ## 
-  gatewayApi:
-    ## @param gateway.gatewayApi.create  Create Kubernetes Gateway API gateway HTTPRoute
-    ## 
+  ## @param gateway.implementation Gateway implementation to render. Allowed values: `gateway-api` or `istio`.
+  ##
+  implementation: gateway-api
+  ## @param gateway.infrastructure Optional Gateway data-plane infrastructure extension. When set, the chart renders the matching infrastructure CR and attaches it to its Gateway via `spec.infrastructure.parametersRef`. Only applicable when `implementation: gateway-api`. Allowed values: `""` (none — Gateway uses its GatewayClass defaults) or `envoy` (renders an `EnvoyProxy` resource under `gateway.envoyproxy.io/v1alpha1`; pair with an Envoy Gateway-backed `gatewayClassName` such as `eg`).
+  ##
+  infrastructure: istio
+
+  ## ---- Gateway resource -----------------------------------------------------
+  ## Configuration for the Gateway resource itself (created here, or referenced
+  ## externally via `existingGateway`).
+  ##
+  gateway:
+    ## @param gateway.gateway.create Create a Gateway API Gateway resource. When false the chart expects an existing Gateway to be referenced via `existingGateway` or per-route `parentRefs`.
+    ##
     create: false
-  ## @param gateway.clusterDomain  Name of gateway cluster domain
+    ## @param gateway.gateway.name Name of the Gateway resource to create. Defaults to `<fullname>-gateway`.
+    ##
+    name: ""
+    ## @param gateway.gateway.namespace Namespace for the Gateway resource. Defaults to the release namespace.
+    ##
+    namespace: ""
+
+  ## ---- EnvoyProxy (data-plane customization for Envoy Gateway) -------------
+  ## Consumed only when `gateway.infrastructure: envoy` AND
+  ## `implementation: gateway-api`. Same `{create, name}` shape as
+  ## `gateway.gateway.*`: `create: true` renders the chart's own EnvoyProxy
+  ## manifest in the gateway namespace; `create: false` is BYO and references
+  ## an externally-managed EnvoyProxy by `name`.
   ##
-  clusterDomain: cluster.local
-  ## @param gateway.name  Name of the Gateway resource
-  ## e.g.
-  ## name: istio-ingressgateway
-  ## 
-  name: ""
-  ## @param gateway.namespace  Namespace for the Gateway resource
-  ## e.g.:
-  ## namespace: istio-ingressgateway
-  ## 
-  namespace: ""
-  ## @param gateway.selector  Gateway instance selector labels. One or more labels that indicate a specific set of pods/VMs on 
-  ## which this gateway configuration should be applied.
-  ## ref: https://istio.io/latest/docs/reference/config/networking/gateway/#Gateway
-  ## e.g.
-  ## selector:
-  ##   istio.io/gateway-name: istio-ingressgateway
-  ##
-  selector: {}
-  ## @param gateway.gatewayClassName  Cluster-scoped resource defined by the infrastructure provider. This resource represents a
-  ## class of Gateways that can be instantiated.
-  ## ref: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-  ## 
-  gatewayClassName: istio
-  ## @param gateway.listeners
-  ## e.g.
-  ## listeners:
-  ##   - name: http
-  ##     port: 80
-  ##     protocol: HTTP
-  ##   - name: https
-  ##     port: 443
-  ##     protocol: HTTPS
-  ##
-  listeners: []
-  ## @param gateway.existingGateway
+  envoyProxy:
+    ## @param gateway.envoyProxy.create Render the chart's EnvoyProxy manifest. When `true`, the chart owns the resource with an empty spec (Envoy Gateway applies defaults). When `false`, the chart skips rendering and uses `gateway.envoyProxy.name` for the Gateway's `parametersRef`.
+    ##
+    create: true
+    ## @param gateway.envoyProxy.name Name of the EnvoyProxy resource. When `create: true`, empty defaults to the chart fullname. When `create: false`, **required** — must reference an EnvoyProxy that exists in `gateway.gateway.namespace`.
+    ##
+    name: ""
+
+  ## @param gateway.existingGateway Name of an existing Gateway resource to attach the chart's routes to (skips chart-managed Gateway rendering).
   ##
   existingGateway: ~
-  ## @param gateway.existingVirtualService
+
+  ## @param gateway.clusterDomain Cluster domain used by the VirtualService backend FQDN. Falls back to the top-level `clusterDomain` when empty.
   ##
-  existingVirtualService: ~
-  ## @param gateway.existingServiceEntry
+  clusterDomain: ""
+  ## @param gateway.serviceAccountName Service Account name attached to the Gateway data-plane workload (Istio Ambient / gateway-api implementations that respect it)
   ##
-  existingServiceEntry: ~  
-  ## @param gateway.extraRoute Array of extra Kubernetes Gateway API Route to deploy with the release
+  serviceAccountName: ""
+  ## @param gateway.selector Gateway instance selector labels (Istio)
   ##
-  extraRoute: []
+  selector: {}
+  ## @param gateway.gatewayClassName Cluster-scoped GatewayClass that backs the Gateway (gateway-api implementations). Default `eg` matches Envoy Gateway; set to `istio` for Istio gateway-api, `cilium` for Cilium, etc. Independent of `gateway.implementation` and `gateway.infrastructure` — the chart does not derive this from either knob.
+  ##
+  gatewayClassName: istio
+  ## @param gateway.hostnames Hostnames the chart's routes / listeners should match. Empty means "match all" where the API allows it. Replaces the historical coupling to `ingress.hostname` / `ingress.extraHosts`; when this list is non-empty it wins.
+  ##
+  hostnames: []
+  ## @param gateway.listeners Verbatim `listeners:` list rendered on the chart's Gateway. When non-empty, the chart skips its default HTTP + (optional) HTTPS listener generation.
+  ##
+  listeners: []
+
+  ## ---- TLS ------------------------------------------------------------------
+  ## TLS configuration applied to the default Gateway listener generation and
+  ## to the chart-managed TLS Secret rendered by `templates/secret/gateway-tls.yaml`.
+  ## The certificate Secret name is computed by the `netbox.gateway.tlsSecretName`
+  ## helper — single source of truth shared by both Gateway templates and the
+  ## gateway-tls Secret, so listener and Secret can never drift apart.
+  ##
+  tls:
+    ## @param gateway.tls.enabled Render a TLS / HTTPS listener on the default Gateway. The chart auto-derives whether to terminate (`mode: SIMPLE`) vs passthrough (`mode: PASSTHROUGH`) based on `tls.enabled` (in-pod NetBox TLS) — when in-pod TLS is on, the listener is passthrough.
+    ##
+    enabled: false
+    ## @param gateway.tls.existingSecret Name of an externally-managed Secret holding the TLS material the Gateway TLS listener references (only relevant for `mode: SIMPLE` / Terminate).
+    ##
+    existingSecret: ""
+    ## @param gateway.tls.selfSigned Generate a self-signed TLS Secret in the gateway's namespace via `templates/secret/gateway-tls.yaml`. Skipped when `gateway.tls.existingSecret` / `gateway.tls.secrets` are set, or when cert-manager issuance is active (the cert-manager API is detected on the cluster) — in which case the gateway leaf is issued by `templates/Certificate.yaml` instead.
+    ##
+    selfSigned: false
+    ## @param gateway.tls.secrets Custom TLS certificates rendered as Secrets in the gateway's namespace. `name` should match what the Gateway listener references.
+    ##
+    secrets: []
+
+  ## ---- HTTPRoute -----------------------------------------------------------
+  ## Routing rules for the HTTP / HTTPS listener. Only used when
+  ## `implementation: gateway-api`.
+  ##
+  httpRoute:
+    ## @param gateway.httpRoute.enabled Render an HTTPRoute resource.
+    ##
+    enabled: true
+    ## @param gateway.httpRoute.parentRefs Explicit `parentRefs` override for the HTTPRoute. When empty, defaults to the chart-rendered ListenerSet (if any) or the chart's Gateway.
+    ##
+    parentRefs: []
+
+  ## ---- VirtualService (istio) ----------------------------------------------
+  ## Istio VirtualService overrides. Only used when `implementation: istio`.
+  ##
+  virtualService:
+    ## @param gateway.virtualService.existingVirtualService Name of an existing VirtualService to use (skips VirtualService rendering)
+    ##
+    existingVirtualService: ~
+    ## @param gateway.virtualService.tls Verbatim `spec.tls` list passthrough. When non-empty, overrides the chart's auto-derived TLS-passthrough rule.
+    ##
+    tls: []
+    ## @param gateway.virtualService.tcp Verbatim `spec.tcp` list passthrough.
+    ##
+    tcp: []
+
+  ## ---- ReferenceGrant ------------------------------------------------------
+  ## Cross-namespace permission for the gateway-api routes to point at the
+  ## NetBox Service when the Gateway is in a different namespace.
+  ##
+  referenceGrant:
+    ## @param gateway.referenceGrant.enabled Render a ReferenceGrant allowing routes in `gateway.gateway.namespace` to target the chart's Service.
+    ##
+    enabled: false
+    ## @param gateway.referenceGrant.from Verbatim `spec.from` override
+    ##
+    from: []
+    ## @param gateway.referenceGrant.to Verbatim `spec.to` override
+    ##
+    to: []
+
+  ## ---- ListenerSet ---------------------------------------------------------
+  ## Attach extra listeners to the parent Gateway via a ListenerSet
+  ## (`gateway.networking.k8s.io` v1 / x-k8s.io v1alpha1 XListenerSet). When
+  ## enabled with non-empty `listeners`, the chart's HTTPRoute default
+  ## `parentRefs` switch to this ListenerSet automatically.
+  ##
+  listenerSet:
+    ## @param gateway.listenerSet.enabled Render a ListenerSet
+    ##
+    enabled: false
+    ## @param gateway.listenerSet.parentRef Verbatim `spec.parentRef` override
+    ##
+    parentRef: {}
+    ## @param gateway.listenerSet.listeners `listeners:` list rendered on the ListenerSet
+    ##
+    listeners: []
+
+  ## ---- ServiceEntry (istio egress) -----------------------------------------
+  ## Optional Istio ServiceEntry for declaring external hosts the mesh should
+  ## know about (egress). Previously the template hardcoded `netbox.dev`,
+  ## `github.com`, `api.github.com` — that has been removed; users opt in
+  ## explicitly via this block.
+  ##
+  serviceEntry:
+    ## @param gateway.serviceEntry.enabled Render the Istio ServiceEntry
+    ##
+    enabled: false
+    ## @param gateway.serviceEntry.existingServiceEntry Name of an existing ServiceEntry to use (skips ServiceEntry rendering)
+    ##
+    existingServiceEntry: ~
+    ## @param gateway.serviceEntry.hosts External hosts to declare. No default — empty list renders an empty `hosts:` block which Istio rejects.
+    ##
+    hosts: []
+    ## @param gateway.serviceEntry.location MESH_EXTERNAL or MESH_INTERNAL
+    ##
+    location: MESH_EXTERNAL
+    ## @param gateway.serviceEntry.resolution DNS / STATIC / NONE
+    ##
+    resolution: DNS
+    ## @param gateway.serviceEntry.ports Optional list of port specs (passthrough)
+    ##
+    ports: []
+    ## @param gateway.serviceEntry.exportTo Optional list of namespaces this ServiceEntry should be visible in
+    ##
+    exportTo: []

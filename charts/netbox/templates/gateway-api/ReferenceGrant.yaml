@@ -1,0 +1,39 @@
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "gateway-api") .Values.gateway.referenceGrant.enabled -}}
+{{- $apiVersion := include "st-common.capabilities.networkingGatewayReferenceGrant.apiVersion" . -}}
+{{- if and $apiVersion (ne $apiVersion "false") -}}
+apiVersion: {{ $apiVersion }}
+kind: ReferenceGrant
+metadata:
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: netbox
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  from:
+    {{- if .Values.gateway.referenceGrant.from }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.referenceGrant.from "context" $) | nindent 4 }}
+    {{- else }}
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: {{ include "netbox.gateway.namespace" . | quote }}
+    {{- end }}
+  to:
+    {{- if .Values.gateway.referenceGrant.to }}
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.referenceGrant.to "context" $) | nindent 4 }}
+    {{- else }}
+    - group: ""
+      kind: Service
+      name: {{ include "st-common.names.fullname" . }}
+    {{- end }}
+{{- end -}}
+{{- end -}}

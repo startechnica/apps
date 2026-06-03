@@ -1,9 +1,14 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{/* vim: set filetype=mustache: */}}
 {{/*
 Return the proper git image name
 */}}
 {{- define "netbox.git.image" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.git.image "global" .Values.global) -}}
+{{- include "st-common.images.image" (dict "imageRoot" .Values.git.image "global" .Values.global) -}}
 {{- end -}}
 
 {{/*
@@ -87,16 +92,16 @@ Usage:
 {{- if .context.Values.git.clone.resources }}
   resources: {{- toYaml .context.Values.git.clone.resources | nindent 4 }}
   {{- else if ne .context.Values.git.clone.resourcesPreset "none" }}
-  resources: {{- include "common.resources.preset" (dict "type" .context.Values.git.clone.resourcesPreset) | nindent 4 }}
+  resources: {{- include "st-common.resources.preset" (dict "type" .context.Values.git.clone.resourcesPreset) | nindent 4 }}
 {{- end }}
 {{- if .context.Values.git.clone.command }}
-  command: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.clone.command "context" .context) | nindent 4 }}
+  command: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.clone.command "context" .context) | nindent 4 }}
 {{- else }}
   command:
     - /bin/bash
 {{- end }}
 {{- if .context.Values.git.clone.args }}
-  args: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.clone.args "context" .context) | nindent 4 }}
+  args: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.clone.args "context" .context) | nindent 4 }}
 {{- else }}
   args:
     - -ec
@@ -117,10 +122,10 @@ Usage:
   volumeMounts:
     {{- include "netbox.git.volumeMounts" .context | trim | nindent 4 }}
   {{- if .context.Values.git.clone.extraVolumeMounts }}
-    {{- include "common.tplvalues.render" (dict "value" .context.Values.git.clone.extraVolumeMounts "context" .context) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.clone.extraVolumeMounts "context" .context) | nindent 4 }}
   {{- end }}
 {{- if .context.Values.git.clone.extraEnvVars }}
-  env: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.clone.extraEnvVars "context" .context) | nindent 4 }}
+  env: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.clone.extraEnvVars "context" .context) | nindent 4 }}
 {{- end }}
 {{- if or .context.Values.git.clone.extraEnvVarsCM .context.Values.git.clone.extraEnvVarsSecret }}
   envFrom:
@@ -153,13 +158,13 @@ Usage:
   resources: {{- toYaml .context.Values.git.sync.resources | nindent 4 }}
   {{- end }}
   {{- if .context.Values.git.sync.command }}
-  command: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.sync.command "context" .context) | nindent 4 }}
+  command: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.sync.command "context" .context) | nindent 4 }}
   {{- else }}
   command:
     - /bin/bash
   {{- end }}
   {{- if .context.Values.git.sync.args }}
-  args: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.sync.args "context" .context) | nindent 4 }}
+  args: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.sync.args "context" .context) | nindent 4 }}
   {{- else }}
   args:
     - -ec
@@ -182,10 +187,10 @@ Usage:
   volumeMounts:
     {{- include "netbox.git.volumeMounts" .context | trim | nindent 4 }}
   {{- if .context.Values.git.sync.extraVolumeMounts }}
-    {{- include "common.tplvalues.render" (dict "value" .context.Values.git.sync.extraVolumeMounts "context" .context) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.sync.extraVolumeMounts "context" .context) | nindent 4 }}
   {{- end }}
 {{- if .context.Values.git.sync.extraEnvVars }}
-  env: {{- include "common.tplvalues.render" (dict "value" .context.Values.git.sync.extraEnvVars "context" .context) | nindent 4 }}
+  env: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.git.sync.extraEnvVars "context" .context) | nindent 4 }}
 {{- end }}
 {{- if or .context.Values.git.sync.extraEnvVarsCM .context.Values.git.sync.extraEnvVarsSecret }}
   envFrom:

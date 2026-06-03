@@ -1,0 +1,230 @@
+suite: Application (Deployment + Service)
+release:
+  name: my-netbox
+  namespace: netbox
+templates:
+  - templates/**
+tests:
+  - it: defaults to a single-replica Deployment named after the release
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    set:
+      worker.enabled: false
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: my-netbox
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: server
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: netbox
+
+  - it: omits replicas when autoscaling is enabled
+    templates:
+      - templates/Deployment.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: respects replicaCount override
+    templates:
+      - templates/Deployment.yaml
+    set:
+      replicaCount: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: Service exposes only http on ClusterIP by default
+    templates:
+      - templates/Service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - contains:
+          path: spec.ports
+          content:
+            name: http
+            port: 8080
+            protocol: TCP
+            targetPort: http
+            nodePort: null
+          any: true
+      - notContains:
+          path: spec.ports
+          content:
+            name: https
+          any: true
+
+  - it: Service adds an https port when tls.enabled
+    templates:
+      - templates/Service.yaml
+    set:
+      tls.enabled: true
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: https
+            port: 8443
+            protocol: TCP
+            targetPort: https
+            nodePort: null
+          any: true
+
+  - it: Service.type=NodePort emits nodePort values when provided
+    templates:
+      - templates/Service.yaml
+    set:
+      service.type: NodePort
+      service.nodePorts.http: 30080
+      tls.enabled: true
+      service.nodePorts.https: 30443
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+      - contains:
+          path: spec.ports
+          content:
+            name: http
+            nodePort: 30080
+          any: true
+      - contains:
+          path: spec.ports
+          content:
+            name: https
+            nodePort: 30443
+          any: true
+
+  - it: ServiceAccount renders by default and is referenced by the Deployment
+    set:
+      worker.enabled: false
+    asserts:
+      - documentSelector:
+          path: kind
+          value: ServiceAccount
+          skipEmptyTemplates: true
+        equal:
+          path: metadata.name
+          value: my-netbox
+      - documentSelector:
+          path: kind
+          value: Deployment
+          skipEmptyTemplates: true
+        equal:
+          path: spec.template.spec.serviceAccountName
+          value: my-netbox
+
+  - it: ServiceAccount is suppressed when serviceAccount.create=false
+    templates:
+      - templates/ServiceAccount.yaml
+    set:
+      serviceAccount.create: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Role and RoleBinding only render when rbac.create=true
+    templates:
+      - templates/Role.yaml
+      - templates/RoleBinding.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Role renders rules when rbac.create=true
+    templates:
+      - templates/Role.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - isKind:
+          of: Role
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - ""
+            resources:
+              - pods
+            verbs:
+              - get
+              - list
+          any: true
+
+  - it: RoleBinding renders when rbac.create=true
+    templates:
+      - templates/RoleBinding.yaml
+    set:
+      rbac.create: true
+    asserts:
+      - isKind:
+          of: RoleBinding
+      - equal:
+          path: roleRef.name
+          value: my-netbox
+
+  - it: server Deployment mounts the redis Secret when redis subchart is enabled
+    templates:
+      - templates/Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes[?(@.name == 'secrets')].projected.sources
+          content:
+            secret:
+              name: my-netbox-redis
+              items:
+                - key: redis-password
+                  path: redis_cache_password
+                - key: redis-password
+                  path: redis_tasks_password
+          any: true
+
+  - it: server Deployment omits the redis Secret source when no redis target configured
+    templates:
+      - templates/Deployment.yaml
+    set:
+      redis.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes[?(@.name == 'secrets')].projected.sources
+          content:
+            secret:
+              name: my-netbox-external-redis
+          any: true
+
+  - it: server Deployment mounts an existing redis Secret when externalRedis.existingSecretName is set
+    templates:
+      - templates/Deployment.yaml
+    set:
+      redis.enabled: false
+      externalRedis.existingSecretName: byo-redis
+      externalRedis.host: redis.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes[?(@.name == 'secrets')].projected.sources
+          content:
+            secret:
+              name: byo-redis
+              items:
+                - key: redis-cache-password
+                  path: redis_cache_password
+                - key: redis-tasks-password
+                  path: redis_tasks_password
+          any: true

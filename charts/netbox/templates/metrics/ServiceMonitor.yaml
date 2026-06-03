@@ -1,18 +1,24 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
-{{- if not (eq (include "common.capabilities.coreosMonitoring.apiVersion" .) "false") }}
-apiVersion: {{ include "common.capabilities.coreosMonitoring.apiVersion" . }}
+{{- $smApiVersion := include "st-common.capabilities.coreosMonitoringServiceMonitor.apiVersion" . -}}
+{{- if and $smApiVersion (ne $smApiVersion "false") }}
+apiVersion: {{ $smApiVersion }}
 kind: ServiceMonitor
 metadata:
-  name: {{ template "netbox.fullname" . }}
-  namespace: {{ default (include "common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" ( dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) ) }}  
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.metrics.serviceMonitor.labels .Values.commonLabels $versionLabel ) "context" . ) }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+  name: {{ template "st-common.names.fullname" . }}
+  namespace: {{ default (include "st-common.names.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" ( dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) ) }}
+  {{- $labels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.metrics.serviceMonitor.labels .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: server
     app.kubernetes.io/part-of: netbox
-   {{- if or .Values.commonAnnotations .Values.metrics.serviceMonitor.annotations }}
-   {{- $annotations := merge.Values.metrics.serviceMonitor.annotations .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- if or .Values.commonAnnotations .Values.metrics.serviceMonitor.annotations }}
+  {{- $annotations := include "st-common.tplvalues.merge" (dict "values" (list .Values.metrics.serviceMonitor.annotations .Values.commonAnnotations) "context" .) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   {{- if .Values.metrics.serviceMonitor.jobLabel }}
@@ -24,7 +30,7 @@ spec:
     {{- range $endpoints }}
     {{- $endpoint := merge . $defaultEndpoint }}
     - port: {{ $endpoint.port | quote }}
-      path: {{ include "common.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
+      path: {{ include "st-common.tplvalues.render" ( dict "value" $endpoint.path "context" $) }}
       {{- if $endpoint.interval }}
       interval: {{ $endpoint.interval }}
       {{- end }}
@@ -32,10 +38,10 @@ spec:
       scrapeTimeout: {{ $endpoint.scrapeTimeout }}
       {{- end }}
       {{- if $endpoint.relabelings }}
-      relabelings: {{- include "common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
+      relabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.relabelings "context" $) | nindent 6 }}
       {{- end }}
       {{- if $endpoint.metricRelabelings }}
-      metricRelabelings: {{- include "common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
+      metricRelabelings: {{- include "st-common.tplvalues.render" (dict "value" $endpoint.metricRelabelings "context" $) | nindent 6 }}
       {{- end }}
       {{- if $endpoint.honorLabels }}
       honorLabels: {{ $endpoint.honorLabels }}
@@ -43,11 +49,11 @@ spec:
     {{- end }}
   namespaceSelector:
     matchNames:
-      - {{ include "common.names.namespace" . | quote }}
+      - {{ include "st-common.names.namespace" . | quote }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
       {{- if .Values.metrics.serviceMonitor.selector }}
-      {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
+      {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.selector "context" $) | nindent 6 }}
       {{- end }}
       app.kubernetes.io/component: metrics
       app.kubernetes.io/part-of: netbox

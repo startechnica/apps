@@ -1,0 +1,109 @@
+suite: HorizontalPodAutoscaler (server + worker)
+release:
+  name: my-netbox
+  namespace: netbox
+# Pin k8s >= 1.23 so we exercise the autoscaling/v2 `target.type/averageUtilization`
+# shape; the chart falls back to the legacy `targetAverageUtilization` for <1.23.
+capabilities:
+  majorVersion: 1
+  minorVersion: 30
+tests:
+  - it: server HPA is not rendered by default
+    templates:
+      - templates/HorizontalPodAutoscaler.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: server HPA targets the Deployment when autoscaling.enabled
+    templates:
+      - templates/HorizontalPodAutoscaler.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: my-netbox
+      - equal:
+          path: spec.minReplicas
+          value: 1
+      - equal:
+          path: spec.maxReplicas
+          value: 5
+
+  - it: server HPA emits both CPU and memory metrics when both targets are set
+    templates:
+      - templates/HorizontalPodAutoscaler.yaml
+    set:
+      autoscaling.enabled: true
+      autoscaling.targetCPU: 70
+      autoscaling.targetMemory: 80
+    asserts:
+      - lengthEqual:
+          path: spec.metrics
+          count: 2
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 70
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 80
+
+  - it: worker HPA is not rendered by default
+    templates:
+      - templates/worker/HorizontalPodAutoscaler.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: worker HPA targets the worker Deployment when worker.autoscaling.enabled
+    templates:
+      - templates/worker/HorizontalPodAutoscaler.yaml
+    set:
+      worker.enabled: true
+      worker.autoscaling.enabled: true
+      worker.autoscaling.minReplicas: 2
+      worker.autoscaling.maxReplicas: 6
+      worker.autoscaling.targetCPU: 60
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: my-netbox-worker
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 6
+      - contains:
+          path: spec.metrics
+          content:
+            type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 60

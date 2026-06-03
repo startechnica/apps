@@ -1,49 +1,53 @@
-{{- if or .Values.tls.enabled .Values.ingress.tls -}}
-{{- if not (eq (include "common.capabilities.certManager.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if eq (include "netbox.tls.certManager.create" .) "true" -}}
+apiVersion: {{ include "st-common.capabilities.certmanagerCertificate.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "netbox.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
+  secretName: {{ printf "%s-tls" (include "st-common.names.fullname" .) }}
   issuerRef:
-    kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
-    name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
+    kind: {{ include "netbox.tls.certManager.issuerKind" . }}
+    name: {{ include "netbox.tls.certManager.issuerName" . }}
   privateKey:
     algorithm: ECDSA
     rotationPolicy: Always
     size: 256
   subject:
     organizations:
-      - {{ include "common.names.namespace" . | quote }}
+      - {{ include "st-common.names.namespace" . | quote }}
     organizationalUnits:
-      - {{ include "common.names.fullname" . }}
+      - {{ include "st-common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname }}
     {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
 ---
-{{- if and .Values.gateway.enabled (not (empty .Values.gateway.namespace)) }}
-apiVersion: {{ include "common.capabilities.certManager.apiVersion" . }}
+{{- if and .Values.gateway.enabled (ne (include "netbox.gateway.namespace" .) (include "st-common.names.namespace" .)) }}
+apiVersion: {{ include "st-common.capabilities.certmanagerCertificate.apiVersion" . }}
 kind: Certificate
 metadata:
-  name: {{ include "netbox.fullname" . }}
-  namespace: {{ .Values.gateway.namespace | quote }}
-  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "netbox.gateway.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  secretName: {{ printf "%s-tls" (include "netbox.fullname" .) }}
+  secretName: {{ include "netbox.gateway.tlsSecretName" . }}
   issuerRef:
-    kind: {{ .Values.tls.autoGenerator.certManager.issuerKind }}
-    name: {{ .Values.tls.autoGenerator.certManager.issuerName }}
+    kind: {{ include "netbox.tls.certManager.issuerKind" . }}
+    name: {{ include "netbox.tls.certManager.issuerName" . }}
   privateKey:
     algorithm: ECDSA
     rotationPolicy: Always
@@ -52,12 +56,11 @@ spec:
     organizations:
       - {{ .Release.Name | quote }}
     organizationalUnits:
-      - {{ include "netbox.fullname" . }}
+      - {{ include "st-common.names.fullname" . }}
   dnsNames:
     - {{ .Values.ingress.hostname }}
     {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
 {{- end }}
-{{- end -}}
 {{- end -}}

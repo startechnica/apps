@@ -1,0 +1,65 @@
+suite: PersistentVolumeClaim (media / reports / scripts)
+release:
+  name: my-netbox
+  namespace: netbox
+tests:
+  - it: no PVCs render when all persistence flags are disabled (default)
+    templates:
+      - templates/PersistentVolumeClaim/media.yaml
+      - templates/PersistentVolumeClaim/reports.yaml
+      - templates/PersistentVolumeClaim/scripts.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: media PVC renders when persistence.enabled
+    templates:
+      - templates/PersistentVolumeClaim/media.yaml
+    set:
+      persistence.enabled: true
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: my-netbox-media
+      - equal:
+          path: spec.resources.requests.storage
+          value: 1Gi
+      - contains:
+          path: spec.accessModes
+          content: ReadWriteOnce
+
+  - it: media PVC is skipped when persistence.existingClaim is set
+    templates:
+      - templates/PersistentVolumeClaim/media.yaml
+    set:
+      persistence.enabled: true
+      persistence.existingClaim: my-byo-pvc
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: reports PVC renders when reportsPersistence.enabled
+    templates:
+      - templates/PersistentVolumeClaim/reports.yaml
+    set:
+      reportsPersistence.enabled: true
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: my-netbox-reports
+
+  - it: scripts PVC renders when scriptsPersistence.enabled
+    templates:
+      - templates/PersistentVolumeClaim/scripts.yaml
+    set:
+      scriptsPersistence.enabled: true
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: my-netbox-scripts

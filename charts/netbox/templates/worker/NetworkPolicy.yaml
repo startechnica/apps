@@ -1,18 +1,23 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if .Values.worker.networkPolicy.enabled }}
-apiVersion: {{ include "common.capabilities.networkPolicy.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.networkPolicy.apiVersion" . }}
 kind: NetworkPolicy
 metadata:
   name: {{ template "netbox.worker.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
   podSelector:
-    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
       app.kubernetes.io/component: worker
   policyTypes:
     - Ingress
@@ -55,9 +60,9 @@ spec:
         {{- end }}
       to:
         - podSelector:
-            matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 14 }}
+            matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 14 }}
     {{- if .Values.worker.networkPolicy.extraEgress }}
-      {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
+      {{- include "st-common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraEgress "context" $ ) | nindent 4 }}
     {{- end }}
   ingress:
     {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled }}
@@ -94,6 +99,6 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Values.worker.networkPolicy.extraIngress }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" ( dict "value" .Values.worker.networkPolicy.extraIngress "context" $ ) | nindent 4 }}
     {{- end }}
 {{- end }}

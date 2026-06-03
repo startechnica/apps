@@ -1,23 +1,37 @@
-{{- if and .Values.gateway.enabled (not .Values.gateway.existingServiceEntry) (not .Values.gateway.gatewayApi.create) -}}
-{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+﻿{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- $implementation := default "gateway-api" .Values.gateway.implementation -}}
+{{- if and .Values.gateway.enabled (eq $implementation "istio") .Values.gateway.serviceEntry.enabled (not .Values.gateway.serviceEntry.existingServiceEntry) -}}
+{{- $istioApiVersion := include "st-common.capabilities.istioServiceEntry.apiVersion" . -}}
+{{- if and $istioApiVersion (ne $istioApiVersion "false") -}}
+apiVersion: {{ $istioApiVersion }}
 kind: ServiceEntry
 metadata:
-  name: {{ include "netbox.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
+  name: {{ include "st-common.names.fullname" . }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
 spec:
   hosts:
-    - netbox.dev
-    - github.com
-    - api.github.com
-  location: MESH_EXTERNAL
+    {{- range .Values.gateway.serviceEntry.hosts }}
+    - {{ . | quote }}
+    {{- end }}
+  location: {{ default "MESH_EXTERNAL" .Values.gateway.serviceEntry.location }}
+  resolution: {{ default "DNS" .Values.gateway.serviceEntry.resolution }}
+  {{- if .Values.gateway.serviceEntry.ports }}
   ports:
-    - number: 80
-      name: http
-      protocol: HTTP
-    - number: 443
-      name: https
-      protocol: HTTPS
-  resolution: DNS
+    {{- include "st-common.tplvalues.render" (dict "value" .Values.gateway.serviceEntry.ports "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.gateway.serviceEntry.exportTo }}
+  exportTo:
+    {{- range .Values.gateway.serviceEntry.exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
 {{- end -}}
 {{- end -}}

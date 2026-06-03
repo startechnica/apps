@@ -1,14 +1,19 @@
+{{- /*
+(c) 2026 Firmansyah Nainggolan <firmansyah@nainggolan.id>. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "netbox.configmapName" . }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
 data:
   configuration.py: |-
-    {{- if .Values.allowedHostsIncludesPodIp }}
+    {{- if .Values.allowedHostsIncludesPodIP }}
     import os
     {{- end }}
     import re
@@ -56,7 +61,9 @@ data:
 
     _load_yaml()
 
+    {{- if not .Values.externalDatabase.passwordless }}
     DATABASE["PASSWORD"] = _load_secret("netbox", "db_password")
+    {{- end }}
     EMAIL["PASSWORD"] = _load_secret("netbox", "email_password")
     REDIS["tasks"]["PASSWORD"] = _load_secret("netbox", "redis_tasks_password")
     REDIS["caching"]["PASSWORD"] = _load_secret("netbox", "redis_cache_password")
@@ -71,7 +78,7 @@ data:
     REDIS['caching']['SENTINELS'] = [tuple(x.split(r":")) for x in REDIS['caching']['SENTINELS']]
     {{- end }}
 
-    {{- if .Values.allowedHostsIncludesPodIp }}
+    {{- if .Values.allowedHostsIncludesPodIP }}
     ALLOWED_HOSTS.append(os.getenv("POD_IP"))
     {{- end }}
 

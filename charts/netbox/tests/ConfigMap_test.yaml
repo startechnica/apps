@@ -1,0 +1,49 @@
+suite: ConfigMap (netbox configuration.py + init-scripts)
+release:
+  name: my-netbox
+  namespace: netbox
+tests:
+  - it: netbox ConfigMap renders by default with configuration.py key
+    templates:
+      - templates/ConfigMap/netbox.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: my-netbox
+      - exists:
+          path: data["configuration.py"]
+
+  - it: netbox ConfigMap also renders ldap_config.py when LDAP backend is enabled
+    templates:
+      - templates/ConfigMap/netbox.yaml
+    set:
+      remoteAuth.enabled: true
+      remoteAuth.backends:
+        - netbox.authentication.LDAPBackend
+      remoteAuth.ldap.enabled: true
+      remoteAuth.ldap.serverUri: ldap://example.com
+    asserts:
+      - exists:
+          path: data["ldap_config.py"]
+
+  - it: init-scripts ConfigMap is skipped without initdbScripts and without initdbScriptsConfigMap
+    templates:
+      - templates/ConfigMap/init-scripts.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: init-scripts ConfigMap renders when initdbScripts is set
+    templates:
+      - templates/ConfigMap/init-scripts.yaml
+    set:
+      initdbScripts:
+        bootstrap.sh: |
+          echo hello
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - exists:
+          path: data["bootstrap.sh"]

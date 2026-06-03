@@ -1,0 +1,141 @@
+suite: Metrics (Service / ServiceMonitor / PrometheusRule)
+release:
+  name: my-netbox
+  namespace: netbox
+# Inject Prometheus Operator CRDs so capability lookups don't return "false".
+capabilities:
+  apiVersions:
+    - monitoring.coreos.com/v1/ServiceMonitor
+    - monitoring.coreos.com/v1/PrometheusRule
+tests:
+  - it: nothing renders when metrics.enabled=false (default)
+    templates:
+      - templates/metrics/Service.yaml
+      - templates/metrics/ServiceMonitor.yaml
+      - templates/metrics/PrometheusRule.yaml
+      - templates/worker/Service.yaml
+      - templates/worker/ServiceMonitor.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metrics Service renders when metrics.enabled
+    templates:
+      - templates/metrics/Service.yaml
+    set:
+      metrics.enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: my-netbox-metrics
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: metrics
+      - contains:
+          path: spec.ports
+          content:
+            name: http-metrics
+            port: 8080
+            protocol: TCP
+            targetPort: http
+          any: true
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: server
+
+  - it: ServiceMonitor is gated by metrics.serviceMonitor.enabled
+    templates:
+      - templates/metrics/ServiceMonitor.yaml
+    set:
+      metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: ServiceMonitor renders when both flags are on
+    templates:
+      - templates/metrics/ServiceMonitor.yaml
+    set:
+      metrics.enabled: true
+      metrics.serviceMonitor.enabled: true
+    asserts:
+      - isKind:
+          of: ServiceMonitor
+      - contains:
+          path: spec.endpoints
+          content:
+            port: http-metrics
+            path: /metrics
+          any: true
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: metrics
+
+  - it: PrometheusRule is gated by metrics.prometheusRule.enabled AND a non-empty groups list
+    templates:
+      - templates/metrics/PrometheusRule.yaml
+    set:
+      metrics.enabled: true
+      metrics.prometheusRule.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: PrometheusRule renders when groups are supplied
+    templates:
+      - templates/metrics/PrometheusRule.yaml
+    set:
+      metrics.enabled: true
+      metrics.prometheusRule.enabled: true
+      metrics.prometheusRule.groups:
+        - name: netbox
+          rules:
+            - alert: NetboxDown
+              expr: up{job="netbox"} == 0
+              for: 5m
+              labels:
+                severity: critical
+    asserts:
+      - isKind:
+          of: PrometheusRule
+      - contains:
+          path: spec.groups
+          content:
+            name: netbox
+            rules:
+              - alert: NetboxDown
+                expr: up{job="netbox"} == 0
+                for: 5m
+                labels:
+                  severity: critical
+          any: true
+
+  - it: worker metrics Service requires both metrics.enabled AND worker.metrics.enabled
+    templates:
+      - templates/worker/Service.yaml
+    set:
+      metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: worker metrics Service renders when both flags are on
+    templates:
+      - templates/worker/Service.yaml
+    set:
+      metrics.enabled: true
+      worker.metrics.enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: my-netbox-worker-metrics
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: worker-metrics
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: worker
