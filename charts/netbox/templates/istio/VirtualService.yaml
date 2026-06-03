@@ -1,20 +1,28 @@
 {{- if and .Values.gateway.enabled (not .Values.gateway.existingVirtualService) (not .Values.gateway.gatewayApi.create) -}}
-{{- if not (eq (include "common.capabilities.istioNetworking.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.istioNetworking.apiVersion" . }}
+{{- /*
+  Fixes #56: the previous guard `if not (eq <include> "false")` rendered the
+  apiVersion line on any non-string-"false" return — but the bitnami-common
+  helper can return boolean `false`, an empty string, or be undefined depending
+  on cluster CRDs and chart version. Trap all three by stringifying and
+  checking emptiness explicitly.
+*/}}
+{{- $istioApiVersion := include "st-common.capabilities.istioVirtualService.apiVersion" . -}}
+{{- if and $istioApiVersion (ne $istioApiVersion "false") (ne $istioApiVersion "<no value>") -}}
+apiVersion: {{ $istioApiVersion }}
 kind: VirtualService
 metadata:
   name: {{ include "netbox.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   gateways:
-    - {{ printf "%s/%s" (include "common.names.namespace" .) (include "netbox.fullname" .) }}
+    - {{ printf "%s/%s" (include "st-common.names.namespace" .) (include "netbox.fullname" .) }}
   hosts:
-    - {{ include "common.tplvalues.render" (dict "value" .Values.ingress.hostname "context" $) }}
+    - {{ include "st-common.tplvalues.render" (dict "value" .Values.ingress.hostname "context" $) }}
     {{- range .Values.ingress.extraHosts }}
     - {{ .name | quote }}
     {{- end }}
@@ -28,7 +36,7 @@ spec:
         {{- end }}            
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" $) (include "common.names.namespace" .) .Values.gateway.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" $) (include "st-common.names.namespace" .) .Values.gateway.clusterDomain }}
             port:
               number: {{ .Values.service.ports.http }}
   {{- if or .Values.tls.enabled .Values.ingress.tls }}
@@ -42,7 +50,7 @@ spec:
             {{- end }}
       route:
         - destination:
-            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "common.names.namespace" .) .Values.gateway.clusterDomain }}
+            host: {{ printf "%s.%s.svc.%s" (include "netbox.fullname" .) (include "st-common.names.namespace" .) .Values.gateway.clusterDomain }}
   {{- end }}
 {{- end -}}
 {{- end -}}

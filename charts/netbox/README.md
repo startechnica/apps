@@ -1,4 +1,4 @@
-# Helm Chart for Netbox
+﻿# Helm Chart for Netbox
 
 NetBox is the leading solution for modeling and documenting modern networks. By combining the traditional disciplines of IP address management
 (IPAM) and datacenter infrastructure management (DCIM) with powerful APIs and extensions, NetBox provides the ideal "source of truth" to power
@@ -18,10 +18,9 @@ network automation. Read on to discover why thousands of organizations worldwide
 ## TL;DR
 
 ```console
-helm repo add startechnica https://startechnica.github.io/apps
-helm install netbox startechnica/netbox
+helm install netbox oci://ghcr.io/startechnica/charts/netbox
 ```
-⚠️ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
+âš ï¸ **WARNING:** Please see [Production Usage](#production-usage) below before using this chart for production environment.
 
 ## Compatibility
 
@@ -34,7 +33,6 @@ helm install netbox startechnica/netbox
 To install the chart with the release name `netbox` and default configuration:
 
 ```console
-helm repo add startechnica https://startechnica.github.io/apps
 helm install netbox \
     --set postgresql.auth.password=<db-password> \
     --set postgresql.auth.postgresPassword=<posgres-password> \
@@ -42,7 +40,7 @@ helm install netbox \
     --set superuser.password=<superuser-password> \
     --set superuser.apiToken=<superuser-api-token> \
     --set secretKey=<secret-key> \
-    startechnica/netbox
+    oci://ghcr.io/startechnica/charts/netbox
 ```
 
 The default configuration includes the required PostgreSQL and Redis database
@@ -118,6 +116,105 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ## Upgrading
 
+### To 5.1.0
+
+5.1.0 is a minor release. Existing user `values.yaml` overrides keep working
+unchanged — the modernization is additive and the renamed cert-manager keys
+keep a fallback shim. The areas that need attention:
+
+#### 1. Bitnami subchart bumps (image major version change)
+
+`postgresql` (`13.x.x` → `18.7.0`) and `redis` (`19.x.x` → `27.0.0`) bring
+matching server-image bumps (PostgreSQL → 17, Redis → 8). If you run the
+bundled subcharts, review the upstream upgrade notes before upgrading. To
+stay on the previous major, pin in your overrides:
+
+```yaml
+postgresql:
+  image:
+    tag: 16-debian-12   # or whatever your data is on
+redis:
+  image:
+    tag: 7.2-debian-12
+```
+
+#### 2. Cert-manager Certificate is now auto-detected
+
+The Certificate resource renders whenever `tls.enabled: true` (or
+`ingress.tls` is non-empty) AND the cluster has the cert-manager API
+installed AND `tls.certificatesSecret` is empty. The `tls.certManager.create`
+and `tls.autoGenerator.certManager.enabled` flags are **no longer consulted**
+(deprecated, slated for removal in 6.0.0). To opt out of the chart-managed
+Certificate when running an external controller, pre-create the Secret and
+point `tls.certificatesSecret` at it:
+
+```yaml
+tls:
+  enabled: true
+  certificatesSecret: my-external-cert-secret   # chart skips Certificate render
+```
+
+The `tls.certManager.issuerRef.{kind,name}` keys still drive the Issuer
+reference on the rendered Certificate:
+
+```yaml
+tls:
+  enabled: true
+  certManager:
+    issuerRef:
+      kind: ClusterIssuer
+      name: letsencrypt-prod
+```
+
+#### 3. ServiceEntry no longer ships hardcoded hosts
+
+Previously `templates/istio/ServiceEntry.yaml` always rendered with
+hardcoded `hosts: [netbox.dev, github.com, api.github.com]`. The resource
+is now opt-in via `gateway.serviceEntry.enabled: true` and `hosts` comes
+from values — empty by default. If you relied on the implicit egress
+declaration, restore it explicitly:
+
+```yaml
+gateway:
+  serviceEntry:
+    enabled: true
+    hosts:
+      - github.com
+      - api.github.com
+```
+
+#### 4. New gateway.tls.* block
+
+Independent of in-pod `tls.*`. For a chart-managed gateway TLS Secret with
+your own PEM material, use `gateway.tls.secrets[]`; for a Secret already
+managed elsewhere (e.g. cert-manager in the gateway namespace), set
+`gateway.tls.existingSecret`. Both istio Gateway and gateway-api routes
+funnel through the new `netbox.gateway.tlsSecretName` helper.
+
+#### 5. CloudSQL IAM / passwordless external DB ([#63](https://github.com/startechnica/apps/issues/63))
+
+For external databases authenticated without a password (CloudSQL IAM, AWS
+RDS IAM, Workload Identity, …), set:
+
+```yaml
+externalDatabase:
+  passwordless: true
+  host: <cloudsql-or-iam-host>
+```
+
+The `db_password` mount item, the `DATABASE["PASSWORD"]` loader line and
+the `<release>-external-db` Secret are all skipped.
+
+#### 6. Helper namespace migration (template-only, no user impact)
+
+All chart templates now reference `st-common.*` instead of bitnami
+`common.*`. The `bitnami common` dependency was removed from `Chart.yaml`.
+If you maintain a fork or custom subcharts that re-include this chart's
+helpers, update any `include "common.X"` calls to `include "st-common.X"`
+and re-namespace capability lookups (e.g.
+`common.capabilities.certManager.apiVersion` →
+`st-common.capabilities.certmanagerCertificate.apiVersion`).
+
 ### Bundled PostgreSQL
 
 When upgrading or changing settings and using the bundled Bitnami PostgreSQL
@@ -171,6 +268,109 @@ The chart dependencies on PostgreSQL and Redis have been upgraded, so you may
 need to take action depending on how you have configured the chart. The
 PostgreSQL chart was upgraded from 5.x.x to 7.x.x, and Redis from 8.x.x to
 9.x.x.
+
+## Persistent storage pitfalls
+
+Persistent storage for media is enabled by default, but unless you take special
+care you will run into issues. The most common issue is that one of the NetBox
+pods gets stuck in the `ContainerCreating` state. There are several ways around
+this problem:
+
+1. For production usage it is recommended to **disable** persistent storage by setting
+   `persistence.enabled` to `false` and using the S3 `storageBackend` instead. This can
+   be used with any S3-compatible storage provider including Amazon S3, MinIo,
+   Ceph RGW, and many others. See further down for an example of this.
+2. Use a `ReadWriteMany` volume that can be mounted by several pods across
+   nodes simultaneously.
+3. Configure pod affinity settings to keep all the pods on the same node. This
+   allows a `ReadWriteOnce` volume to be mounted in several pods at the same time.
+4. Disable persistent storage of `media` altogether and just manage without. The
+   storage functionality is only needed to store uploaded image attachments.
+
+To configure the pod affinity to allow using a `ReadWriteOnce` volume you can
+use the following example configuration:
+
+```yaml
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: netbox
+      topologyKey: kubernetes.io/hostname
+
+
+housekeeping:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: netbox
+        topologyKey: kubernetes.io/hostname
+
+worker:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: netbox
+        topologyKey: kubernetes.io/hostname
+```
+
+## Using an Existing Secret
+
+Rather than specifying passwords and secrets as part of the Helm release values,
+you may pass these to NetBox using a pre-existing `Secret` resource. When using
+this, the `Secret` must contain the following keys:
+
+| Key                    | Description                                                   | Remarks                                                                                           |
+| -----------------------|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| `db-password`          | The password for the external PostgreSQL database             | If `postgresql.enabled` is `false` and `externalDatabase.existingSecretName` is unset             |
+| `email-password`       | SMTP user password                                            | Yes, but the value may be left blank if not required                                              |
+| `ldap-bind-password`   | Password for LDAP bind DN                                     | If `remoteAuth.enabled` is `true` and `remoteAuth.backend` is `netbox.authentication.LDAPBackend` |
+| `redis-tasks-password` | Password for the external Redis tasks database                | If `redis.enabled` is `false` and `tasksRedis.existingSecretName` is unset                        |
+| `redis-cache-password` | Password for the external Redis cache database                | If `redis.enabled` is `false` and `cachingRedis.existingSecretName` is unset                      |
+| `secret-key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
+| `superuser-password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
+| `superuser-api-token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
+
+## Using extraConfig for S3 storage configuration
+
+If you want to use S3 as your storage backend and not have the config in the `values.yaml` (credentials!)
+you can use an existing secret that is then referenced under the `extraConfig` key.
+
+The secret would look like this:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/instance: netbox
+  name: netbox-extra
+stringData:
+  s3-config.yaml: |
+    STORAGE_CONFIG:
+      AWS_S3_ENDPOINT_URL: <endpoint-URL>
+      AWS_S3_REGION_NAME: <region>
+      AWS_STORAGE_BUCKET_NAME: <bucket-name>
+      AWS_ACCESS_KEY_ID: <access-key>
+      AWS_SECRET_ACCESS_KEY: <secret-key>
+```
+
+And the secret then has to be referenced like this:
+
+```yaml
+extraConfig:
+  - secret: # same as pod.spec.volumes.secret
+      secretName: netbox-extra
+```
+
+## Authentication
+* [Single Sign On](docs/auth.md#configuring-sso)
+* [LDAP Authentication](docs/auth.md#using-ldap-authentication)
 
 ## Configurations
 
@@ -677,109 +877,6 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install --name my-release startechnica/netbox --values values.yaml
 ```
-
-## Persistent storage pitfalls
-
-Persistent storage for media is enabled by default, but unless you take special
-care you will run into issues. The most common issue is that one of the NetBox
-pods gets stuck in the `ContainerCreating` state. There are several ways around
-this problem:
-
-1. For production usage it is recommended to **disable** persistent storage by setting
-   `persistence.enabled` to `false` and using the S3 `storageBackend` instead. This can
-   be used with any S3-compatible storage provider including Amazon S3, MinIo,
-   Ceph RGW, and many others. See further down for an example of this.
-2. Use a `ReadWriteMany` volume that can be mounted by several pods across
-   nodes simultaneously.
-3. Configure pod affinity settings to keep all the pods on the same node. This
-   allows a `ReadWriteOnce` volume to be mounted in several pods at the same time.
-4. Disable persistent storage of `media` altogether and just manage without. The
-   storage functionality is only needed to store uploaded image attachments.
-
-To configure the pod affinity to allow using a `ReadWriteOnce` volume you can
-use the following example configuration:
-
-```yaml
-affinity:
-  podAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchLabels:
-          app.kubernetes.io/name: netbox
-      topologyKey: kubernetes.io/hostname
-
-
-housekeeping:
-  affinity:
-    podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app.kubernetes.io/name: netbox
-        topologyKey: kubernetes.io/hostname
-
-worker:
-  affinity:
-    podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app.kubernetes.io/name: netbox
-        topologyKey: kubernetes.io/hostname
-```
-
-## Using an Existing Secret
-
-Rather than specifying passwords and secrets as part of the Helm release values,
-you may pass these to NetBox using a pre-existing `Secret` resource. When using
-this, the `Secret` must contain the following keys:
-
-| Key                    | Description                                                   | Remarks                                                                                           |
-| -----------------------|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| `db-password`          | The password for the external PostgreSQL database             | If `postgresql.enabled` is `false` and `externalDatabase.existingSecretName` is unset             |
-| `email-password`       | SMTP user password                                            | Yes, but the value may be left blank if not required                                              |
-| `ldap-bind-password`   | Password for LDAP bind DN                                     | If `remoteAuth.enabled` is `true` and `remoteAuth.backend` is `netbox.authentication.LDAPBackend` |
-| `redis-tasks-password` | Password for the external Redis tasks database                | If `redis.enabled` is `false` and `tasksRedis.existingSecretName` is unset                        |
-| `redis-cache-password` | Password for the external Redis cache database                | If `redis.enabled` is `false` and `cachingRedis.existingSecretName` is unset                      |
-| `secret-key`           | Django secret key used for sessions and password reset tokens | Required! Auto generated if left blank                                                            |
-| `superuser-password`   | Password for the initial super-user account                   | Required! Auto generated if left blank                                                            |
-| `superuser-api-token`  | API token created for the initial super-user account          | Required! Auto generated if left blank                                                            |
-
-## Using extraConfig for S3 storage configuration
-
-If you want to use S3 as your storage backend and not have the config in the `values.yaml` (credentials!)
-you can use an existing secret that is then referenced under the `extraConfig` key.
-
-The secret would look like this:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    app.kubernetes.io/instance: netbox
-  name: netbox-extra
-stringData:
-  s3-config.yaml: |
-    STORAGE_CONFIG:
-      AWS_S3_ENDPOINT_URL: <endpoint-URL>
-      AWS_S3_REGION_NAME: <region>
-      AWS_STORAGE_BUCKET_NAME: <bucket-name>
-      AWS_ACCESS_KEY_ID: <access-key>
-      AWS_SECRET_ACCESS_KEY: <secret-key>
-```
-
-And the secret then has to be referenced like this:
-
-```yaml
-extraConfig:
-  - secret: # same as pod.spec.volumes.secret
-      secretName: netbox-extra
-```
-
-## Authentication
-* [Single Sign On](docs/auth.md#configuring-sso)
-* [LDAP Authentication](docs/auth.md#using-ldap-authentication)
 
 ## License
 

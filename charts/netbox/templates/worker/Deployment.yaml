@@ -1,24 +1,24 @@
 {{- if and .Values.worker.enabled (eq .Values.worker.kind "Deployment") }}
-apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
   name: {{ template "netbox.worker.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
   {{- $versionLabel := dict "app.kubernetes.io/version" ( include "netbox.images.version" (dict "imageRoot" .Values.worker.image "global" .Values.global "chart" .Chart) ) }}  
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+  {{- $labels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker
     app.kubernetes.io/part-of: netbox
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.worker.replicaCount }}
   {{- end }}
-  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
+  {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels $versionLabel ) "context" . ) }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+    matchLabels: {{- include "st-common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
       app.kubernetes.io/component: worker
       app.kubernetes.io/part-of: netbox
   {{ if .Values.worker.updateStrategy -}}
@@ -33,33 +33,33 @@ spec:
         checksum/secret: {{ include (print $.Template.BasePath "/Secret/netbox.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.worker.podAnnotations }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
+        {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
         {{- end }}
-      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: netbox
     spec:
       {{- include "netbox.imagePullSecrets" . | nindent 6 }}
       {{- if .Values.worker.hostAliases }}
-      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.worker.hostAliases "context" $) | nindent 8 }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.hostAliases "context" $) | nindent 8 }}
       {{- end }}
       automountServiceAccountToken: {{ .Values.worker.automountServiceAccountToken }}
       {{- if .Values.worker.priorityClassName }}
       priorityClassName: {{ .Values.worker.priorityClassName | quote }}
       {{- end }}
       {{- if .Values.worker.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.worker.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
-        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.worker.podAffinityPreset "component" "worker" "customLabels" $podLabels "context" $) | nindent 10 }}
-        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.worker.podAntiAffinityPreset "component" "worker" "customLabels" $podLabels "context" $) | nindent 10 }}
-        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.worker.nodeAffinityPreset.type "key" .Values.worker.nodeAffinityPreset.key "values" .Values.worker.nodeAffinityPreset.values) | nindent 10 }}
+        podAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.worker.podAffinityPreset "component" "worker" "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "st-common.affinities.pods" (dict "type" .Values.worker.podAntiAffinityPreset "component" "worker" "customLabels" $podLabels "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "st-common.affinities.nodes" (dict "type" .Values.worker.nodeAffinityPreset.type "key" .Values.worker.nodeAffinityPreset.key "values" .Values.worker.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
       {{- if .Values.worker.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.worker.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.worker.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.worker.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.worker.podSecurityContext.enabled }}
       securityContext: {{- omit .Values.worker.podSecurityContext "enabled" | toYaml | nindent 8 }}
@@ -75,9 +75,9 @@ spec:
           securityContext: {{- omit .Values.worker.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.worker.command }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.worker.command "context" $) | nindent 12 }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.command "context" $) | nindent 12 }}
           {{- else }}
           command:
             - /opt/netbox/venv/bin/python
@@ -85,9 +85,9 @@ spec:
             - rqworker
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.args "context" $) | nindent 12 }}
           {{- else if .Values.worker.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
           {{- end }}
           {{- if or .Values.worker.extraPorts (and .Values.metrics.enabled .Values.worker.metrics.enabled) }}
           ports:
@@ -97,22 +97,22 @@ spec:
               protocol: TCP
             {{- end }}
             {{- if .Values.worker.extraPorts }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.extraPorts "context" $) | nindent 12 }}
             {{- end }}
           {{- end }}
           {{- if .Values.worker.extraEnvVars }}
           env:
-            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
           {{- end }}
           {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:
-                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
+                name: {{ include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVarsCM "context" $) }}
             {{- end }}
             {{- if .Values.extraEnvVarsSecret }}
             - secretRef:
-                name: {{ include "common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
+                name: {{ include "st-common.tplvalues.render" (dict "value" .Values.extraEnvVarsSecret "context" $) }}
             {{- end }}
           {{- end }}
 
@@ -155,14 +155,14 @@ spec:
               {{- end }}
             {{- include "netbox.git.maincontainer.volumeMounts" . | trim | nindent 12 }}
             {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
+              {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
             {{- include "netbox.extraConfig.volumeMounts" . | nindent 12 }}
             {{- if .Values.worker.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" ( dict "value" .Values.worker.extraVolumeMounts "context" $ ) | nindent 12 }}
+              {{- include "st-common.tplvalues.render" ( dict "value" .Values.worker.extraVolumeMounts "context" $ ) | nindent 12 }}
             {{- end }}
         {{- if .Values.worker.sidecars }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
         {{- end }}
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.worker.podSecurityContext.enabled .Values.worker.containerSecurityContext.enabled }}
       {{- if or .Values.redisWait.enabled .Values.git.reports.enabled .Values.git.scripts.enabled .Values.worker.initContainers $needsVolumePermissions }}
@@ -170,7 +170,7 @@ spec:
         {{- include "netbox.redisWait.container" (dict "securityContext" .Values.redisWait.containerSecurityContext "context" $) | trim | nindent 8 }}
         {{- include "netbox.git.containers.clone" (dict "securityContext" .Values.git.securityContext "context" $) | trim | nindent 8 }}
         {{- if .Values.worker.initContainers }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
         {{- end }}
       {{- end }}
       volumes:
@@ -197,11 +197,13 @@ spec:
                       path: ldap_bind_password
                     {{- end }}
               {{- end }}
+              {{- if not .Values.externalDatabase.passwordless }}
               - secret:
                   name: {{ include "netbox.databaseSecretName" . | quote }}
                   items:
                     - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
                       path: db_password
+              {{- end }}
               - secret:
                   name: {{ include "netbox.redis.secretName" . | quote }}
                   items:
@@ -218,9 +220,9 @@ spec:
         {{- include "netbox.git.volumes" . | trim | nindent 8 }}
         {{- include "netbox.extraConfig.volumes" . | nindent 8 }}
         {{- if and .Values.metrics.enabled .Values.worker.metrics.enabled .Values.metrics.extraVolumes }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.metrics.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
         {{- if .Values.extraVolumes }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
 {{- end }}

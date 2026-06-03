@@ -3,14 +3,20 @@ Return the proper Netbox image name
 {{ include "netbox.images.image" ( dict "imageRoot" .Values.path.to.the.image "global" .Values.global ) }}
 */}}
 {{- define "netbox.images.image" -}}
-{{- $registryName := default .imageRoot.registry ((.global).imageRegistry) -}}
-{{- $repositoryName := default .imageRoot.repository ((.global).imageRepository) -}}
+{{/*
+  Per-component (.imageRoot) takes precedence over global. Sprig's `default A B`
+  returns B if B is non-empty, so the per-component value goes in the B slot.
+  Fixes #83: previously `default .imageRoot.X .global.imageX` flipped this and
+  silently ignored any per-component override.
+*/}}
+{{- $registryName := default ((.global).imageRegistry) .imageRoot.registry -}}
+{{- $repositoryName := default ((.global).imageRepository) .imageRoot.repository -}}
 {{- $separator := ":" -}}
-{{- $termination := default .imageRoot.tag ((.global).imageTag) | toString -}}
+{{- $termination := default ((.global).imageTag) .imageRoot.tag | toString -}}
 
 {{- if or (.imageRoot.digest) ((.global).imageDigest) }}
     {{- $separator = "@" -}}
-    {{- $termination = default .imageRoot.digest ((.global).imageDigest) | toString -}}
+    {{- $termination = default ((.global).imageDigest) .imageRoot.digest | toString -}}
 {{- end -}}
 {{- if $registryName }}
     {{- printf "%s/%s%s%s" $registryName $repositoryName $separator $termination -}}
@@ -59,7 +65,7 @@ Return the proper Netbox housekeeping image name
 Return the proper Netbox init image name
 */}}
 {{- define "netbox.init-dirs.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.initDirs.image "global" .Values.global) }}
+{{ include "st-common.images.image" (dict "imageRoot" .Values.initDirs.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*
@@ -69,7 +75,7 @@ Return the proper Redis image name
 {{- if .Values.redis.enabled -}}
     {{- include "redis.image" .Subcharts.redis -}}
 {{- else -}}
-    {{ include "common.images.image" (dict "imageRoot" .Values.redis.image "global" .Values.global) }}
+    {{ include "st-common.images.image" (dict "imageRoot" .Values.redis.image "global" .Values.global) }}
 {{- end -}}
 {{- end -}}
 
@@ -80,6 +86,6 @@ Return the proper Redis wait image name
 {{- if .Values.redis.enabled -}}
     {{- include "redis.image" .Subcharts.redis -}}
 {{- else -}}
-    {{ include "common.images.image" ( dict "imageRoot" .Values.redisWait.image "global" .Values.global ) }}
+    {{ include "st-common.images.image" ( dict "imageRoot" .Values.redisWait.image "global" .Values.global ) }}
 {{- end -}}
 {{- end -}}

@@ -15,13 +15,13 @@ Usage:
   resources: {{- toYaml .context.Values.redisWait.resources | nindent 4 }}
   {{- end }}
   {{- if .context.Values.redisWait.command }}
-  command: {{- include "common.tplvalues.render" (dict "value" .context.Values.redisWait.command "context" .context) | nindent 4 }}
+  command: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.redisWait.command "context" .context) | nindent 4 }}
   {{- else }}
   command:
     - /bin/bash
   {{- end }}
   {{- if .context.Values.redisWait.args }}
-  args: {{- include "common.tplvalues.render" (dict "value" .context.Values.redisWait.args "context" .context) | nindent 4 }}
+  args: {{- include "st-common.tplvalues.render" (dict "value" .context.Values.redisWait.args "context" .context) | nindent 4 }}
   {{- else }}
   args:
     - -ec

@@ -3,25 +3,25 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "netbox.worker.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.worker.image "chart" .Chart ) ) }}  
-  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "st-common.images.version" ( dict "imageRoot" .Values.worker.image "chart" .Chart ) ) }}  
+  {{- $labels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: worker
     app.kubernetes.io/part-of: netbox
   {{- if or .Values.worker.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.worker.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   parallelism: 1
   template:
     metadata:
-      {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
-      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
+      {{- $podLabels := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.worker.podLabels .Values.commonLabels ) "context" . ) }}
+      labels: {{- include "st-common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
         app.kubernetes.io/component: worker
       {{- if .Values.worker.podAnnotations }}
-      annotations: {{- include "common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
+      annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
       {{- include "netbox.imagePullSecrets" . | nindent 6 }}
@@ -31,16 +31,16 @@ spec:
       {{- end }}
       automountServiceAccountToken: {{ .Values.worker.automountServiceAccountToken }}
       {{- if .Values.worker.hostAliases }}
-      hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.worker.hostAliases "context" $) | nindent 8 }}
+      hostAliases: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.hostAliases "context" $) | nindent 8 }}
       {{- end }}
       containers:
         - name: worker
           image: {{ template "netbox.worker.image" . }}
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
           {{- if .Values.diagnosticMode.enabled }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
           {{- else if .Values.worker.command }}
-          command: {{- include "common.tplvalues.render" (dict "value" .Values.worker.command "context" $) | nindent 12 }}
+          command: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.command "context" $) | nindent 12 }}
           {{- else }}
           command:
             - /opt/netbox/venv/bin/python
@@ -50,7 +50,7 @@ spec:
             - "1"
           {{- end }}
           {{- if .Values.worker.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
+          args: {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.args "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.worker.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.worker.containerSecurityContext "enabled" | toYaml | nindent 12 }}
@@ -61,7 +61,7 @@ spec:
               value: "1"
             {{- end }}
             {{- if .Values.worker.extraEnvVars }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
           {{- if or .Values.worker.extraEnvVarsCM .Values.worker.extraEnvVarsSecret }}
           envFrom:
@@ -110,13 +110,13 @@ spec:
               subPath: {{ .Values.scriptsPersistence.subPath | quote }}
               {{- end }}
           {{- if .Values.worker.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.worker.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.extraVolumeMounts "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.worker.resources }}
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}
         {{- if .Values.worker.sidecars }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.sidecars "context" $) | nindent 8 }}
         {{- end }}
       {{- $needsVolumePermissions := and .Values.volumePermissions.enabled .Values.persistence.enabled .Values.worker.podSecurityContext.enabled .Values.worker.containerSecurityContext.enabled }}
       initContainers:
@@ -125,7 +125,7 @@ spec:
         {{- end }}
         {{- if or .Values.worker.initContainers $needsVolumePermissions }}
         {{- if .Values.worker.initContainers }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
+          {{- include "st-common.tplvalues.render" (dict "value" .Values.worker.initContainers "context" $) | nindent 8 }}
         {{- end }}
         {{- end }}
       volumes:
@@ -152,11 +152,13 @@ spec:
                       path: ldap_bind_password
                     {{- end }}
               {{- end }}
+              {{- if not .Values.externalDatabase.passwordless }}
               - secret:
                   name: {{ include "netbox.databaseSecretName" . | quote }}
                   items:
                     - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
                       path: db_password
+              {{- end }}
               - secret:
                   name: {{ include "netbox.redis.secretName" . | quote }}
                   items:
@@ -190,6 +192,6 @@ spec:
           emptyDir: {}
           {{- end }}
         {{- if .Values.extraVolumes }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- include "st-common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
 {{- end }}

@@ -1,15 +1,15 @@
 {{- if and .Values.gateway.enabled .Values.gateway.gatewayApi.create -}}
-{{- if not (eq (include "common.capabilities.networkingGateway.apiVersion" .) "false") -}}
-apiVersion: {{ include "common.capabilities.networkingGateway.apiVersion" . }}
+{{- if not (eq (include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" .) "false") -}}
+apiVersion: {{ include "st-common.capabilities.networkingGatewayHTTPRoute.apiVersion" . }}
 kind: HTTPRoute
 metadata:
   name: {{ include "netbox.fullname" . }}
-  namespace: {{ include "common.names.namespace" . }}
-  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  namespace: {{ include "st-common.names.namespace" . }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
     app.kubernetes.io/component: netbox
   {{- if or .Values.ingress.annotations .Values.commonAnnotations }}
-  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
+  {{- $annotations := include "st-common.tplvalues.merge" ( dict "values" ( list .Values.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   parentRefs:

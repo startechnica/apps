@@ -28,14 +28,14 @@ If release name contains chart name it will be used as a full name.
 Return the proper Netbox worker fullname
 */}}
 {{- define "netbox.worker.fullname" -}}
-{{- printf "%s-%s" (include "common.names.fullname" .) "worker" | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" (include "st-common.names.fullname" .) "worker" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
 Return the proper Netbox housekeeping fullname
 */}}
 {{- define "netbox.housekeeping.fullname" -}}
-{{- printf "%s-%s" (include "common.names.fullname" .) "housekeeping" | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" (include "st-common.names.fullname" .) "housekeeping" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -43,7 +43,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "netbox.postgresql.fullname" -}}
-{{ include "common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) }}
+{{ include "st-common.names.dependency.fullname" (dict "chartName" "postgresql" "chartValues" .Values.postgresql "context" $) }}
 {{- end -}}
 
 {{/*
@@ -51,14 +51,14 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "netbox.redis.fullname" -}}
-{{ include "common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) }}
+{{ include "st-common.names.dependency.fullname" (dict "chartName" "redis" "chartValues" .Values.redis "context" $) }}
 {{- end -}}
 
 {{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "netbox.imagePullSecrets" -}}
-{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image .Values.worker.image .Values.housekeeping.image .Values.initDirs.image .Values.volumePermissions.image) "context" $) -}}
+{{- include "st-common.images.renderPullSecrets" (dict "images" (list .Values.image .Values.worker.image .Values.housekeeping.image .Values.initDirs.image .Values.volumePermissions.image) "context" $) -}}
 {{- end -}}
 
 {{/*
@@ -83,18 +83,18 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 
 {{/*
 Kubernetes standard labels
-{{ include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) -}}
+{{ include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) -}}
 */}}
 {{- define "netbox.labels.standard" -}}
 {{- if and (hasKey . "customLabels") (hasKey . "context") -}}
-{{- $default := dict "app.kubernetes.io/name" (include "common.names.name" .context) "helm.sh/chart" (include "common.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
+{{- $default := dict "app.kubernetes.io/name" (include "st-common.names.name" .context) "helm.sh/chart" (include "st-common.names.chart" .context) "app.kubernetes.io/instance" .context.Release.Name "app.kubernetes.io/managed-by" .context.Release.Service -}}
 {{- with .context.Chart.AppVersion -}}
 {{- $_ := set $default "app.kubernetes.io/version" . -}}
 {{- end -}}
-{{ template "common.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
+{{ template "st-common.tplvalues.merge" (dict "values" (list .customLabels $default) "context" .context) }}
 {{- else -}}
-app.kubernetes.io/name: {{ include "common.names.name" . }}
-helm.sh/chart: {{ include "common.names.chart" . }}
+app.kubernetes.io/name: {{ include "st-common.names.name" . }}
+helm.sh/chart: {{ include "st-common.names.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- with .Chart.AppVersion }}
@@ -258,7 +258,7 @@ Return the Database secret object name
 {{- else if .Values.externalDatabase.existingSecretName -}}
     {{- .Values.externalDatabase.existingSecretName }}
 {{- else -}}
-    {{- default (printf "%s-%s" (include "netbox.fullname" .) "external-db") .Values.existingSecretName -}}
+    {{- printf "%s-%s" (include "netbox.fullname" .) "external-db" -}}
 {{- end -}}
 {{- end -}}
 
@@ -288,7 +288,7 @@ Return Database password
 {{- if .Values.postgresql.enabled -}}
     {{ include "postgresql.v1.password" .Subcharts.postgresql }}
 {{- else -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.databaseSecretName" .) "key" (include "netbox.databaseSecretPasswordKey" .) "defaultValue" .Values.externalDatabase.password "context" $) }}
+    {{ include "st-common.secrets.lookup" (dict "secret" (include "netbox.databaseSecretName" .) "key" (include "netbox.databaseSecretPasswordKey" .) "defaultValue" .Values.externalDatabase.password "context" $) }}
 {{- end -}}
 {{- end -}}
 
@@ -325,7 +325,11 @@ Return Database password
 {{- end -}}
 
 {{/*
-Return the Redis secret name
+Return the Redis secret name.
+Fixes #61: the previous fallback was `default <fullname>-external-redis .Values.existingSecretName`,
+which conflated the top-level Netbox secret with the external-redis secret.
+With `redis.enabled=false` and a user-set top-level `existingSecretName`, the
+mount referenced a secret that lacked the redis-cache/tasks keys.
 */}}
 {{- define "netbox.redis.secretName" -}}
 {{- if .Values.redis.enabled -}}
@@ -333,7 +337,7 @@ Return the Redis secret name
 {{- else if .Values.externalRedis.existingSecretName -}}
     {{- printf "%s" .Values.externalRedis.existingSecretName -}}
 {{- else -}}
-    {{- default (printf "%s-%s"  (include "netbox.fullname" .) "external-redis") .Values.existingSecretName -}}
+    {{- printf "%s-%s" (include "netbox.fullname" .) "external-redis" -}}
 {{- end -}}
 {{- end -}}
 
@@ -395,9 +399,9 @@ Return Redis password
 {{- if .Values.redis.enabled -}}
     {{- include "redis.password" .Subcharts.redis -}}
 {{- else if .Values.cachingRedis.password -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.cachingRedis.secretPasswordKey" .) "defaultValue" .Values.cachingRedis.password "context" $) }}
+    {{ include "st-common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.cachingRedis.secretPasswordKey" .) "defaultValue" .Values.cachingRedis.password "context" $) }}
 {{- else -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
+    {{ include "st-common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
 {{- end -}}
 {{- end -}}
 
@@ -405,9 +409,9 @@ Return Redis password
 {{- if .Values.redis.enabled -}}
     {{- include "redis.password" .Subcharts.redis -}}
 {{- else if .Values.tasksRedis.password -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.tasksRedis.secretPasswordKey" .) "defaultValue" .Values.tasksRedis.password "context" $) }}
+    {{ include "st-common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.tasksRedis.secretPasswordKey" .) "defaultValue" .Values.tasksRedis.password "context" $) }}
 {{- else -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
+    {{ include "st-common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
 {{- end -}}
 {{- end -}}
 
@@ -415,7 +419,7 @@ Return Redis password
 {{- if .Values.redis.enabled -}}
     {{ include "redis.password" .Subcharts.redis }}
 {{- else -}}
-    {{ include "common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
+    {{ include "st-common.secrets.lookup" (dict "secret" (include "netbox.redis.secretName" .) "key" (include "netbox.redis.secretPasswordKey" .) "defaultValue" .Values.externalRedis.password "context" $) }}
 {{- end -}}
 {{- end -}}
 
@@ -601,6 +605,74 @@ Return true if a TLS secret object should be created
 {{- define "netbox.tls.isCreateSecret" -}}
 {{- if and .Values.tls.enabled .Values.tls.autoGenerated (not .Values.tls.existingSecretName) }}
     {{- true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve whether the chart should render a cert-manager Certificate. Returns
+string "true" when:
+  - TLS is wanted (`tls.enabled` OR `ingress.tls` non-empty),
+  - cert-manager API is detected on the cluster, AND
+  - the user has NOT pinned an external secret via `tls.certificatesSecret`.
+
+The legacy flags `tls.certManager.create` and `tls.autoGenerator.certManager.enabled`
+are no longer consulted (cert-manager is auto-detected). Slated for removal
+in 6.0.0.
+*/}}
+{{- define "netbox.tls.certManager.create" -}}
+{{- $wantsTls := or .Values.tls.enabled .Values.ingress.tls -}}
+{{- $cmApi := include "st-common.capabilities.certmanagerCertificate.apiVersion" . -}}
+{{- $hasCm := and $cmApi (ne $cmApi "false") (ne $cmApi "<no value>") -}}
+{{- $externalSecret := .Values.tls.certificatesSecret -}}
+{{- if and $wantsTls $hasCm (not $externalSecret) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve cert-manager Issuer kind. Prefers `tls.certManager.issuerRef.kind`,
+falls back to the deprecated `tls.autoGenerator.certManager.issuerKind`.
+*/}}
+{{- define "netbox.tls.certManager.issuerKind" -}}
+{{- if and .Values.tls.certManager .Values.tls.certManager.issuerRef .Values.tls.certManager.issuerRef.kind -}}
+{{- .Values.tls.certManager.issuerRef.kind -}}
+{{- else if and .Values.tls.autoGenerator .Values.tls.autoGenerator.certManager .Values.tls.autoGenerator.certManager.issuerKind -}}
+{{- .Values.tls.autoGenerator.certManager.issuerKind -}}
+{{- else -}}
+ClusterIssuer
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve cert-manager Issuer name. Prefers `tls.certManager.issuerRef.name`,
+falls back to the deprecated `tls.autoGenerator.certManager.issuerName`.
+*/}}
+{{- define "netbox.tls.certManager.issuerName" -}}
+{{- if and .Values.tls.certManager .Values.tls.certManager.issuerRef .Values.tls.certManager.issuerRef.name -}}
+{{- .Values.tls.certManager.issuerRef.name -}}
+{{- else if and .Values.tls.autoGenerator .Values.tls.autoGenerator.certManager .Values.tls.autoGenerator.certManager.issuerName -}}
+{{- .Values.tls.autoGenerator.certManager.issuerName -}}
+{{- else -}}
+selfsigned-issuer
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve the chart-managed gateway-side TLS Secret name. Three-step chain
+(first match wins):
+  1. `gateway.tls.existingSecret` — BYO Secret managed outside the chart.
+  2. `gateway.tls.secrets[0].name` — first user-supplied PEM Secret rendered
+     by the chart.
+  3. `<ingress.hostname>-tls` — backward-compatible default for self-signed
+     and cert-manager paths (matches the historical Certificate.yaml secretName).
+*/}}
+{{- define "netbox.gateway.tlsSecretName" -}}
+{{- if and .Values.gateway.tls .Values.gateway.tls.existingSecret -}}
+{{- .Values.gateway.tls.existingSecret -}}
+{{- else if and .Values.gateway.tls .Values.gateway.tls.secrets -}}
+{{- (first .Values.gateway.tls.secrets).name -}}
+{{- else -}}
+{{- printf "%s-tls" .Values.ingress.hostname -}}
 {{- end -}}
 {{- end -}}
 

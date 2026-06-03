@@ -1,18 +1,18 @@
 {{- if .Values.autoscaling.enabled }}
-apiVersion: {{ include "common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
+apiVersion: {{ include "st-common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ template "netbox.fullname" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  namespace: {{ include "st-common.names.namespace" . | quote }}
+  labels: {{- include "st-common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: server
     app.kubernetes.io/part-of: netbox
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
   scaleTargetRef:
-    apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+    apiVersion: {{ include "st-common.capabilities.deployment.apiVersion" . }}
     kind: Deployment
     name: {{ template "netbox.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
@@ -22,7 +22,7 @@ spec:
     - type: Resource
       resource:
         name: cpu
-        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
+        {{- if semverCompare "<1.23-0" (include "st-common.capabilities.kubeVersion" .) }}
         targetAverageUtilization: {{ .Values.autoscaling.targetCPU }}
         {{- else }}
         target:
@@ -34,7 +34,7 @@ spec:
     - type: Resource
       resource:
         name: memory
-        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
+        {{- if semverCompare "<1.23-0" (include "st-common.capabilities.kubeVersion" .) }}
         targetAverageUtilization: {{ .Values.autoscaling.targetMemory }}
         {{- else }}
         target:

@@ -3,9 +3,9 @@ kind: ConfigMap
 metadata:
   name: {{ include "netbox.configmapName" . }}
   {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  annotations: {{- include "st-common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
-  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+  labels: {{- include "st-common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
 data:
   configuration.py: |-
     {{- if .Values.allowedHostsIncludesPodIp }}
@@ -56,7 +56,9 @@ data:
 
     _load_yaml()
 
+    {{- if not .Values.externalDatabase.passwordless }}
     DATABASE["PASSWORD"] = _load_secret("netbox", "db_password")
+    {{- end }}
     EMAIL["PASSWORD"] = _load_secret("netbox", "email_password")
     REDIS["tasks"]["PASSWORD"] = _load_secret("netbox", "redis_tasks_password")
     REDIS["caching"]["PASSWORD"] = _load_secret("netbox", "redis_cache_password")
