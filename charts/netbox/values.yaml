@@ -1182,7 +1182,7 @@ service:
   ## @param service.externalIPs  Designate an IP address block that is external to the cluster that can send traffic to services in the cluster.
   ##
   externalIPs: []
-  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
+  ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for
   ## bare metal / on-prem environments that rely on VIP based LB implementations.
   ## ref https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation
   ##
@@ -2412,6 +2412,34 @@ redis:
     ## @param redis.tls.existingSecret The name of the existing secret that contains the TLS certificates
     ##
     existingSecret: ""
+  ## Bitnami redis subchart NetworkPolicy.
+  ## Tighter-than-default: only netbox server / worker / housekeeping pods
+  ## in the release namespace may reach redis. `allowExternal: false`
+  ## flips the policy from "allow everything on port 6379" to "deny by
+  ## default, allow only what `extraIngress` permits." Cross-namespace
+  ## clients (e.g. shared monitoring) must be added via
+  ## `ingressNSMatchLabels` / `extraIngress`.
+  ## @param redis.networkPolicy.allowExternal Whether to allow ingress from any pod (`true`) or only those matched below (`false`)
+  ## @param redis.networkPolicy.extraIngress Extra ingress rules for the redis NetworkPolicy. Default opens 6379 to netbox component pods (server/worker/housekeeping) co-located in the release namespace.
+  ##
+  networkPolicy:
+    allowExternal: false
+    extraIngress:
+      - ports:
+          - port: 6379
+        from:
+          - podSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/part-of
+                  operator: In
+                  values:
+                    - netbox
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - server
+                    - worker
+                    - housekeeping
 
 ## @section External Redis database settings.
 ##
