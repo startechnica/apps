@@ -1155,29 +1155,23 @@ service:
   ## @param service.type Kubernetes service type
   ##
   type: ClusterIP
-  ## @param service.http.enabled Enable http port on service
-  ##
-  http:
-    enabled: true
   ## @param service.ports.http Netbox service HTTP port
   ## @param service.ports.https Netbox service HTTPS port
   ##
-  port: 80
   ports:
-    http: 80
-    https: 443
+    http: 8080
+    https: 8443
   ## @param service.nodePorts [object] Specify the nodePort values for the LoadBalancer and NodePort service types.
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
-  nodePort: ""
   nodePorts:
     http: ""
     https: ""
-  ## @param service.clusterIP Netbox service clusterIP IP
+  ## @param service.clusterIPs Netbox service clusterIPs (list; use for dual-stack, or a single static ClusterIP)
   ## e.g:
-  ## clusterIP: None
+  ## clusterIPs:
+  ##   - 10.96.0.10
   ##
-  clusterIP: ""
   clusterIPs: []
   ## @param service.externalIPs  Designate an IP address block that is external to the cluster that can send traffic to services in the cluster.
   ##

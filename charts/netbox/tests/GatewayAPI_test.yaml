@@ -155,7 +155,7 @@ tests:
                   value: "/"
             backendRefs:
               - name: my-netbox
-                port: 80
+                port: 8080
           any: true
       - contains:
           path: spec.parentRefs

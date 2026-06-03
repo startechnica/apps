@@ -60,7 +60,7 @@ tests:
           path: spec.ports
           content:
             name: http
-            port: 80
+            port: 8080
             protocol: TCP
             targetPort: http
             nodePort: null
@@ -81,7 +81,7 @@ tests:
           path: spec.ports
           content:
             name: https
-            port: 443
+            port: 8443
             protocol: TCP
             targetPort: https
             nodePort: null

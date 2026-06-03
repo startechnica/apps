@@ -22,8 +22,11 @@ spec:
   {{- if eq .Values.service.type "LoadBalancer" }}
   allocateLoadBalancerNodePorts: {{ eq .Values.service.allocateLoadBalancerNodePorts "true" }}
   {{- end }}
-  {{- if and .Values.service.clusterIP (eq .Values.service.type "ClusterIP") }}
-  clusterIP: {{ .Values.service.clusterIP }}
+  {{- if and .Values.service.clusterIPs (eq .Values.service.type "ClusterIP") }}
+  clusterIPs:
+  {{- range $clusterIP := .Values.service.clusterIPs }}
+  - {{ $clusterIP | quote }}
+  {{- end }}
   {{- end }}
   {{- if .Values.service.externalIPs }}
   externalIPs:
@@ -51,9 +54,8 @@ spec:
   sessionAffinityConfig: {{- include "st-common.tplvalues.render" (dict "value" .Values.service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   ports:
-    {{- if .Values.service.http.enabled }}
     - name: http
-      port: {{ coalesce .Values.service.ports.http .Values.service.port }}
+      port: {{ .Values.service.ports.http }}
       protocol: TCP
       targetPort: http
       {{- if (and (or (eq .Values.service.type "NodePort") (eq .Values.service.type "LoadBalancer")) (not (empty .Values.service.nodePorts.http))) }}
@@ -61,7 +63,6 @@ spec:
       {{- else if eq .Values.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    {{- end }}
     {{- if .Values.tls.enabled }}
     - name: https
       port: {{ .Values.service.ports.https }}

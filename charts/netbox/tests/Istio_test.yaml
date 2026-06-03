@@ -107,7 +107,7 @@ tests:
             destination:
               host: my-netbox.netbox.svc.cluster.local
               port:
-                number: 80
+                number: 8080
           any: true
 
   - it: Istio VirtualService can be suppressed with existingVirtualService
