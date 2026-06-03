@@ -95,19 +95,41 @@ extraDeploy:
         # this must match your actual keycloak client ID string!
         CLIENT_ID = "<KEYCLOAK_CLIENT_ID>"
 
-        def set_role(response, user, backend, *args, **kwargs):
+        # Source for Django group mapping:
+        #   "client" -> response['resource_access'][CLIENT_ID]['roles']
+        #               (requires a "User Client Role" mapper on the client)
+        #   "realm"  -> response['realm_access']['roles']
+        #               (requires a "User Realm Role" mapper on the client)
+        #   "groups" -> response['groups']
+        #               (requires a "Group Membership" mapper on the client)
+        GROUP_SOURCE = "client"
+
+        def _client_roles(response):
             try:
-                roles = response['resource_access'][CLIENT_ID]['roles']
+                return response['resource_access'][CLIENT_ID]['roles']
             except KeyError:
-                roles = []
+                return []
+
+        def _realm_roles(response):
+            try:
+                return response['realm_access']['roles']
+            except KeyError:
+                return []
+
+        def set_role(response, user, backend, *args, **kwargs):
+            roles = _client_roles(response)
             user.is_staff = 'admin' in roles
             user.is_superuser = 'superuser' in roles
             user.save()
 
         def set_groups(response, user, backend, *args, **kwargs):
-            django_groups = Group.objects.all()
-            sso_groups = response.get('groups', [])
-            for group in django_groups:
+            if GROUP_SOURCE == "client":
+                sso_groups = _client_roles(response)
+            elif GROUP_SOURCE == "realm":
+                sso_groups = _realm_roles(response)
+            else:
+                sso_groups = response.get('groups', [])
+            for group in Group.objects.all():
                 try:
                     if group.name in sso_groups:
                         group.user_set.add(user)
