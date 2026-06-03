@@ -467,6 +467,13 @@ extraConfig:
 * [Single Sign On](docs/auth.md#configuring-sso)
 * [LDAP Authentication](docs/auth.md#using-ldap-authentication)
 
+## Installing plugins
+
+NetBox plugins need both a derived container image (to make the plugin
+package importable) and the chart's `plugins:` / `pluginsConfig:`
+values populated. See [docs/plugins.md](docs/plugins.md) for the full
+recipe, including post-install migration patterns and troubleshooting.
+
 ## Configurations
 
 The following table lists the configurable parameters for this chart and their default values.
