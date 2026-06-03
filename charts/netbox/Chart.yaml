@@ -25,9 +25,9 @@ keywords:
   - netbox
 kubeVersion: ">=1.25.0"
 maintainers:
-- name: Firmansyah Nainggolan
-  email: firmansyah@nainggolan.id
-  url: https://firmansyah.nainggolan.id
+  - name: firmansyahn
+    email: firmansyah@nainggolan.id
+    url: https://firmansyah.nainggolan.id
 name: netbox
 type: application
 version: 5.1.0
