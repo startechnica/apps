@@ -179,3 +179,52 @@ tests:
       - equal:
           path: roleRef.name
           value: my-netbox
+
+  - it: server Deployment mounts the redis Secret when redis subchart is enabled
+    templates:
+      - templates/Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes[?(@.name == 'secrets')].projected.sources
+          content:
+            secret:
+              name: my-netbox-redis
+              items:
+                - key: redis-password
+                  path: redis_cache_password
+                - key: redis-password
+                  path: redis_tasks_password
+          any: true
+
+  - it: server Deployment omits the redis Secret source when no redis target configured
+    templates:
+      - templates/Deployment.yaml
+    set:
+      redis.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes[?(@.name == 'secrets')].projected.sources
+          content:
+            secret:
+              name: my-netbox-external-redis
+          any: true
+
+  - it: server Deployment mounts an existing redis Secret when externalRedis.existingSecretName is set
+    templates:
+      - templates/Deployment.yaml
+    set:
+      redis.enabled: false
+      externalRedis.existingSecretName: byo-redis
+      externalRedis.host: redis.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes[?(@.name == 'secrets')].projected.sources
+          content:
+            secret:
+              name: byo-redis
+              items:
+                - key: redis-cache-password
+                  path: redis_cache_password
+                - key: redis-tasks-password
+                  path: redis_tasks_password
+          any: true

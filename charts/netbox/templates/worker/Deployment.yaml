@@ -283,6 +283,7 @@ spec:
                     - key: {{ include "netbox.databaseSecretPasswordKey" . | quote }}
                       path: db_password
               {{- end }}
+              {{- if include "netbox.redis.mountSecret" . }}
               - secret:
                   name: {{ include "netbox.redis.secretName" . | quote }}
                   items:
@@ -290,6 +291,7 @@ spec:
                       path: redis_cache_password
                     - key: {{ include "netbox.tasksRedis.secretPasswordKey" . | quote }}
                       path: redis_tasks_password
+              {{- end }}
         - name: netbox-tmp
           emptyDir:
             medium: Memory

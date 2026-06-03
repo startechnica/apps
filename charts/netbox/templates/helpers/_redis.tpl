@@ -29,6 +29,18 @@ mount referenced a secret that lacked the redis-cache/tasks keys.
 {{- end -}}
 
 {{/*
+Return "true" if a redis Secret should be mounted into pods (subchart
+or BYO existing-secret or chart-rendered Secret/external-redis.yaml).
+Mirrors the Secret/external-redis.yaml render gate so we don't try to
+mount a Secret that was suppressed for being empty.
+*/}}
+{{- define "netbox.redis.mountSecret" -}}
+{{- if or .Values.redis.enabled .Values.externalRedis.existingSecretName .Values.tasksRedis.existingSecretName .Values.cachingRedis.existingSecretName .Values.externalRedis.host .Values.externalRedis.password .Values.tasksRedis.password .Values.cachingRedis.password -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the Redis secret key
 */}}
 {{- define "netbox.cachingRedis.secretPasswordKey" -}}
