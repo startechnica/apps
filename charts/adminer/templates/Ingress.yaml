@@ -17,7 +17,7 @@ metadata:
     {{- end }}
     {{- if or .Values.commonAnnotations .Values.ingress.annotations }}
     {{- $annotations := merge .Values.ingress.annotations .Values.commonAnnotations }}
-    annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
+    {{- include "st-common.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
     {{- end }}
   {{- end }}
 spec:
