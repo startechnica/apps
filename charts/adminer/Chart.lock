@@ -1,0 +1,6 @@
+dependencies:
+- name: st-common
+  repository: oci://ghcr.io/startechnica/charts
+  version: 0.1.21
+digest: sha256:fbe7d1335c8e14f449988f351cddc4765d4ee3473f0f4eb630a8cfb677a071e2
+generated: "2026-06-19T23:32:51.4898883+07:00"

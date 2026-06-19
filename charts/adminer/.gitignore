@@ -1,7 +1,6 @@
 *.tgz
 
-# Helm Charts dependencies
+# Helm Charts dependencies (downloaded subcharts). Chart.lock IS committed.
 /charts
-*.lock
 
 .idea
