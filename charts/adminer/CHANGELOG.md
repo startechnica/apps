@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.2 (2026-06-19)
+
+Bug-fix release on top of 1.0.1. Template-only changes — no values defaults or
+appVersion change; installs from 1.0.1 upgrade in place with no action.
+
+### Fixed
+
+- `templates/Ingress.yaml`: ingress annotations failed to render whenever `ingress.annotations` or `commonAnnotations` was set, aborting the template with `no template "common.tplvalues.render" associated with template "gotpl"`. The block called the pre-migration helper name and also emitted a second nested `annotations:` key inside `metadata.annotations`. Now uses `st-common.tplvalues.render` and renders the merged map directly under `metadata.annotations`. ([#125](https://github.com/startechnica/apps/issues/125), reported by [@attilaolah](https://github.com/attilaolah))
+- `templates/Deployment.yaml`: the documented top-level `automountServiceAccountToken` value was never rendered into `spec.template.spec.automountServiceAccountToken`, so token automounting could only be disabled via the chart-created ServiceAccount. Deployments reusing an existing or the namespace `default` ServiceAccount (`serviceAccount.create: false`) had no pod-level override. The pod spec now renders `automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}`. ([#127](https://github.com/startechnica/apps/issues/127), reported by [@attilaolah](https://github.com/attilaolah))
+
+### Changed
+
+- `Chart.yaml`: the `st-common` dependency moved from the GitHub Pages HTTP repo (`https://startechnica.github.io/apps`) to the GHCR OCI registry (`oci://ghcr.io/startechnica/charts`) and bumped 0.1.20 → 0.1.21. Aligns with the `freeradius`/`netbox` charts and removes the Pages-index round-trip. `Chart.lock` is regenerated and committed so ArgoCD's `helm dependency build` resolves the pinned digest.
+
 ## 1.0.1 (2026-05-02)
 
 Documentation and validation polish on top of 1.0.0. No template or values
