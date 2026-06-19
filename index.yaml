@@ -3,6 +3,60 @@ entries:
   adminer:
   - annotations:
       artifacthub.io/changes: |
+        - kind: fixed
+          description: "Ingress annotations now render (st-common.tplvalues.render helper + dropped stray nested annotations key)."
+          links:
+            - name: GitHub Issue
+              url: https://github.com/startechnica/apps/issues/125
+        - kind: fixed
+          description: "Top-level automountServiceAccountToken now renders on the pod spec, covering serviceAccount.create=false."
+          links:
+            - name: GitHub Issue
+              url: https://github.com/startechnica/apps/issues/127
+        - kind: changed
+          description: "st-common dependency moved from the GitHub Pages HTTP repo to the GHCR OCI registry (oci://ghcr.io/startechnica/charts) and bumped to 0.1.21."
+      artifacthub.io/images: |
+        - name: adminer
+          image: docker.io/adminer:5.4.2-standalone
+      category: DatabaseManagement
+    apiVersion: v2
+    appVersion: 5.4.2
+    created: "2026-06-19T16:41:08.68857502Z"
+    dependencies:
+    - alias: startechnica-common
+      name: st-common
+      repository: oci://ghcr.io/startechnica/charts
+      version: 0.1.21
+    description: Adminer is a full-featured database management tool written in PHP.
+      Conversely to phpMyAdmin, it consist of a single file ready to deploy to the
+      target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite,
+      MS SQL, Oracle, Firebird, SimpleDB, Elasticsearch and MongoDB
+    digest: 000eeee62860ec1c381cfe2da88797fa2429f9477c17ea3dab95c94e6b2260e1
+    home: https://github.com/startechnica/apps/tree/main/charts/adminer
+    icon: https://raw.githubusercontent.com/vrana/adminer/master/adminer/static/logo.png
+    keywords:
+    - adminer
+    - postgres
+    - mysql
+    - sqlite
+    - elasticsearch
+    - mongodb
+    - database
+    - sql
+    maintainers:
+    - email: firmansyah@nainggolan.id
+      name: firmansyahn
+      url: https://firmansyah.nainggolan.id
+    name: adminer
+    sources:
+    - https://www.adminer.org
+    - https://github.com/startechnica/apps.git
+    type: application
+    urls:
+    - https://github.com/startechnica/apps/releases/download/adminer-1.0.2/adminer-1.0.2.tgz
+    version: 1.0.2
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: "values.schema.json for runtime validation of values overrides."
         - kind: added
@@ -3471,4 +3525,4 @@ entries:
     urls:
     - https://github.com/startechnica/apps/releases/download/unifi-0.1.0/unifi-0.1.0.tgz
     version: 0.1.0
-generated: "2026-06-03T15:39:50.329945617Z"
+generated: "2026-06-19T16:41:08.688726476Z"
