@@ -73,6 +73,9 @@ spec:
       {{- if .Values.podSecurityContext.enabled }}
       securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
+      {{- if .Values.initContainers }}
+      initContainers: {{- include "st-common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+      {{- end }}
       containers:
         - name: adminer
           image: {{ include "st-common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}

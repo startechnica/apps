@@ -583,6 +583,20 @@ extraVolumes: []
 ##     mountPath: /tmp
 ##
 extraVolumeMounts: []
+## @param initContainers Additional init containers added to the Adminer pod. Useful for preparing shared volumes before the main container starts (e.g. assembling a combined CA bundle for a sidecar). Pair with `extraVolumes`/`extraVolumeMounts`.
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+## E.g.
+## initContainers:
+##   - name: prepare-ca
+##     image: alpine:3
+##     command: ["sh", "-c", "cat /etc/ssl/certs/ca-certificates.crt /custom-ca/ca.crt > /shared-ca/bundle.crt"]
+##     volumeMounts:
+##       - name: custom-ca
+##         mountPath: /custom-ca
+##       - name: shared-ca
+##         mountPath: /shared-ca
+##
+initContainers: []
 ## @param sidecars Additional sidecar containers added to the Adminer pod
 ## E.g.
 ## sidecars:

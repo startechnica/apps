@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 (2026-06-20)
+
+Feature release on top of 1.0.2. Additive only — no breaking changes; installs
+from 1.0.x upgrade in place with no action.
+
+### Added
+
+- `templates/Deployment.yaml` + `initContainers` value: additional init containers can now be injected into the Adminer pod, rendered into the pod spec's `initContainers:` array (running to completion before the main container starts). Useful for preparing shared volumes ahead of the main container — e.g. assembling a combined CA bundle (public trust anchors + a self-signed private CA) into an `emptyDir` for an oauth2-proxy sidecar. Pairs with `extraVolumes`/`extraVolumeMounts`. Complements the existing `sidecars` value (long-running co-containers) rather than replacing it. ([#129](https://github.com/startechnica/apps/issues/129), reported by [@attilaolah](https://github.com/attilaolah))
+
 ## 1.0.2 (2026-06-19)
 
 Bug-fix release on top of 1.0.1. Template-only changes — no values defaults or
