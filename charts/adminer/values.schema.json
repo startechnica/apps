@@ -466,6 +466,9 @@
     "extraVolumeMounts": {
       "type": "array"
     },
+    "initContainers": {
+      "type": "array"
+    },
     "sidecars": {
       "type": "array"
     },

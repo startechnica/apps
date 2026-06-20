@@ -200,6 +200,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `startupWaitOptions` | Override default builtin startup wait check options | `{}` |
 | `extraVolumes` | Additional volumes attached to the Adminer pod | `[]` |
 | `extraVolumeMounts` | Additional volume mounts attached to the Adminer container | `[]` |
+| `initContainers` | Additional init containers added to the Adminer pod. Useful for preparing shared volumes before the main container starts (e.g. assembling a combined CA bundle for a sidecar). Pair with `extraVolumes`/`extraVolumeMounts`. | `[]` |
 | `sidecars` | Additional sidecar containers added to the Adminer pod | `[]` |
 
 ### Persistence parameters
