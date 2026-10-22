@@ -816,8 +816,8 @@ ingress:
   ## NOTE: You may need to set this to '/*' in order to use this with ALB ingress controllers
   ##
   path: /
-  ## @param ingress.servicePort Backend service port to use
-  ## Default is http. Alternative is https.
+  ## @param ingress.servicePort Backend service port to use (port name or number)
+  ## Default is http. Alternative is https. Can also reference a custom port name from `service.extraPorts`.
   ##
   servicePort: http
   ## @param ingress.annotations Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.

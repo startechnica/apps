@@ -1,0 +1,48 @@
+suite: Ingress
+release:
+  name: my-adminer
+  namespace: adminer
+templates:
+  - templates/Ingress.yaml
+tests:
+  - it: is not rendered by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the default http service port when enabled
+    set:
+      ingress.enabled: true
+      ingress.hostname: adminer.example.com
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: my-adminer
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
+
+  - it: renders a custom named service port from ingress.servicePort
+    set:
+      ingress.enabled: true
+      ingress.hostname: adminer.example.com
+      ingress.servicePort: oauth-proxy
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: oauth-proxy
+
+  - it: applies the custom service port to extraHosts rules
+    set:
+      ingress.enabled: true
+      ingress.hostname: adminer.example.com
+      ingress.servicePort: oauth-proxy
+      ingress.extraHosts:
+        - name: alt.example.com
+          path: /
+    asserts:
+      - equal:
+          path: spec.rules[1].http.paths[0].backend.service.port.name
+          value: oauth-proxy

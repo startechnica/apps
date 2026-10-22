@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1 (2026-10-23)
+
+Bug-fix release on top of 1.1.0. Template-only change — no values defaults or
+appVersion change; installs from 1.1.0 upgrade in place with no action.
+
+### Fixed
+
+- `templates/Ingress.yaml`: `ingress.servicePort` was ignored. Both the main host rule and `ingress.extraHosts` rules passed a hardcoded `"http"` to the `st-common.ingress.backend` helper, so configuring a named service port (for example one added via `service.extraPorts`) still rendered `name: http`. The helper now receives `.Values.ingress.servicePort`, so named and numbered ports are honoured.
+
 ## 1.1.0 (2026-06-20)
 
 Feature release on top of 1.0.2. Additive only — no breaking changes; installs
