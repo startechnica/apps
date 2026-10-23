@@ -4,11 +4,8 @@ annotations:
     - name: adminer
       image: docker.io/adminer:5.4.2-standalone
   artifacthub.io/changes: |
-    - kind: added
-      description: "initContainers value: inject init containers into the Adminer pod (e.g. assemble a combined CA bundle before the main container starts). Complements sidecars."
-      links:
-        - name: GitHub Issue
-          url: https://github.com/startechnica/apps/issues/129
+    - kind: fixed
+      description: "ingress.servicePort was ignored — the Ingress backend always rendered the hardcoded port name `http`. It now uses the configured value, so named service ports (e.g. from service.extraPorts) work."
 apiVersion: v2
 appVersion: 5.4.2
 dependencies:
@@ -40,4 +37,4 @@ sources:
   - https://www.adminer.org
   - https://github.com/startechnica/apps.git
 type: application
-version: 1.1.0
+version: 1.1.1
